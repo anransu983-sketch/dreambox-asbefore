@@ -22,6 +22,7 @@
 package com.suanran.dreambox.presentation.component.card
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
