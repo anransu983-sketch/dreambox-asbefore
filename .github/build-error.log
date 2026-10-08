@@ -1,12 +1,11 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':ui:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':feature:settings:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: CONFLICTING_OVERLOADS
+   > Kotlin compiler: UNRESOLVED_REFERENCE
        Kotlin compiler error
-         Conflicting overloads:
-         fun <T> BocchiEnumItem(title: String, currentValue: T, items: List<String>, values: List<T>, onValueChange: (T) -> Unit, summary: String? = ...): Unit
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/misc/BocchiSettings.kt:248
+         Unresolved reference 'Card'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:74
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -20,12 +19,67 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 47s
-293 actionable tasks: 110 executed, 183 from cache
+BUILD FAILED in 48s
+326 actionable tasks: 127 executed, 199 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/misc/BocchiSettings.kt:248:1 Conflicting overloads:
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/misc/BocchiSettings.kt:344:1 Conflicting overloads:
-> Task :ui:compileDebugKotlin FAILED
-BUILD FAILED in 47s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:74:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:75:21 Unresolved reference 'BocchiSwitchItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:80:21 Unresolved reference 'BocchiSwitchItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:85:21 Unresolved reference 'BocchiSwitchItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:90:21 Unresolved reference 'BocchiSwitchItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/IpTestScreen.kt:141:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/IpTestScreen.kt:143:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/LabScreen.kt:224:17 Unresolved reference 'Color'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/LabScreen.kt:229:17 Unresolved reference 'Color'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:125:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:126:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:158:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:159:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:190:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:191:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:76:5 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:77:9 Unresolved reference 'BocchiSwitchItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:80:33 Cannot infer type for value parameter 'enabled'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:92:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:107:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:126:9 Unresolved reference 'BocchiArrowItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:134:24 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:135:13 Unresolved reference 'BocchiArrowItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:162:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:163:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:173:59 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:174:57 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:190:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:191:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:197:59 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:198:57 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:243:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:244:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:248:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:360:5 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:361:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:515:13 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:516:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:541:13 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:542:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:561:13 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:562:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:581:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:582:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:584:44 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:585:44 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:622:5 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:623:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/TunServiceOptionsScreen.kt:83:17 Unresolved reference 'Card'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/TunServiceOptionsScreen.kt:84:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/TunServiceOptionsScreen.kt:87:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:205:9 Unresolved reference 'BocchiSwitchItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:208:33 Cannot infer type for value parameter 'enabled'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:215:9 Unresolved reference 'BocchiArrowItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:223:9 Unresolved reference 'BocchiArrowItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:230:9 Unresolved reference 'BocchiEnumItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:244:9 Unresolved reference 'BocchiEnumItem'.
+> Task :feature:settings:compileDebugKotlin FAILED
+BUILD FAILED in 48s
