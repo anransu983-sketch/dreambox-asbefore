@@ -69,8 +69,7 @@ import com.suanran.dreambox.core.model.WifiAutomationRule
 import com.suanran.dreambox.core.model.profile.Profile
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.WifiAutomationViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
-import com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
+import com.suanran.dreambox.presentation.component.card.Cardimport com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
 import com.suanran.dreambox.presentation.component.dialog.AppBottomSheetCloseAction
 import com.suanran.dreambox.presentation.component.dialog.AppBottomSheetConfirmAction
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
@@ -89,7 +88,6 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.RadioButton
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
