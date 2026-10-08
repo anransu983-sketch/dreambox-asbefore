@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "themes": [
+    {
+      "id": "sakura-pink",
+      "name": "樱花粉",
+      "description": "粉色少女心，温柔治愈",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FFFF6B9D",
+      "preview": [
+        "#FFFF6B9D"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/sakura-pink.json"
+    },
+    {
+      "id": "ocean-blue",
+      "name": "深海蓝",
+      "description": "沉稳深邃的海洋蓝",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FF1B6EF3",
+      "preview": [
+        "#FF1B6EF3"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/ocean-blue.json"
+    },
+    {
+      "id": "mint-green",
+      "name": "薄荷绿",
+      "description": "清爽薄荷，干净利落",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FF10B981",
+      "preview": [
+        "#FF10B981"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/mint-green.json"
+    },
+    {
+      "id": "sunset-orange",
+      "name": "日落橙",
+      "description": "落日余晖般的暖橙",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FFFF6B35",
+      "preview": [
+        "#FFFF6B35"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/sunset-orange.json"
+    },
+    {
+      "id": "lavender",
+      "name": "薰衣草紫",
+      "description": "浪漫薰衣草，优雅梦幻",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FF8B5CF6",
+      "preview": [
+        "#FF8B5CF6"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/lavender.json"
+    },
+    {
+      "id": "lemon",
+      "name": "柠檬黄",
+      "description": "明亮活泼的柠檬黄",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FFFACC15",
+      "preview": [
+        "#FFFACC15"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/lemon.json"
+    },
+    {
+      "id": "cherry-red",
+      "name": "樱桃红",
+      "description": "热烈樱桃红，活力全开",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FFEF4444",
+      "preview": [
+        "#FFEF4444"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/cherry-red.json"
+    },
+    {
+      "id": "lake-teal",
+      "name": "湖水青",
+      "description": "宁静湖水青，宠辱不惊",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FF06B6D4",
+      "preview": [
+        "#FF06B6D4"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/lake-teal.json"
+    },
+    {
+      "id": "grape",
+      "name": "葡萄紫",
+      "description": "神秘葡萄紫，低调奢华",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FF7C3AED",
+      "preview": [
+        "#FF7C3AED"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/grape.json"
+    },
+    {
+      "id": "matcha",
+      "name": "抹茶绿",
+      "description": "日式抹茶，清新自然",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FF65A30D",
+      "preview": [
+        "#FF65A30D"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/matcha.json"
+    },
+    {
+      "id": "milk-tea",
+      "name": "奶茶棕",
+      "description": "温暖奶茶棕，秋日氛围",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FFB45309",
+      "preview": [
+        "#FFB45309"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/milk-tea.json"
+    },
+    {
+      "id": "ink",
+      "name": "墨黑金",
+      "description": "墨黑底色配鎏金，商务范",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "dark",
+      "seedColor": "#FFD4A017",
+      "preview": [
+        "#FFD4A017"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/ink.json"
+    },
+    {
+      "id": "paper-light",
+      "name": "宣纸白",
+      "description": "浅色主题，纸一样干净",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "light",
+      "seedColor": "#FF138A74",
+      "preview": [
+        "#FF138A74"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/paper-light.json"
+    },
+    {
+      "id": "sky-light",
+      "name": "晴空白",
+      "description": "浅色天蓝，通透明亮",
+      "version": "1.0",
+      "author": "梦盒",
+      "url": "https://github.com/anransu983-sketch/dreambox-android",
+      "themeMode": "light",
+      "seedColor": "#FF0284C7",
+      "preview": [
+        "#FF0284C7"
+      ],
+      "download": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/sky-light.json"
+    }
+  ]
+}

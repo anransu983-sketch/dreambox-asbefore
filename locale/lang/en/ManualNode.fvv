@@ -1,0 +1,38 @@
+<Manual Node>
+ManualNode = {
+    Protocol = "Protocol"
+    Name = "Remark"
+    Server = "Server Address"
+    Port = "Port"
+    Uuid = "User ID (UUID)"
+    AlterId = "AlterId"
+    Password = "Password"
+    Cipher = "Cipher"
+    Transport = "Transport"
+    Tls = "Enable TLS"
+    Sni = "SNI"
+    SkipCertVerify = "Skip Cert Verify"
+    WsPath = "WS Path"
+    WsHost = "WS Host"
+    GrpcServiceName = "gRPC ServiceName"
+    Flow = "Flow"
+    Username = "Username"
+    Obfs = "Obfuscation"
+    ObfsPassword = "Obfs Password"
+    PrivateKey = "Private Key"
+    PublicKey = "Public Key"
+    PresharedKey = "Preshared Key (Optional)"
+    LocalIp = "Local IP"
+    Dns = "DNS"
+    Mtu = "MTU"
+    Save = "Save"
+
+    Validation = {
+        ServerRequired = "Please enter the server address"
+        PortInvalid = "Invalid port (1-65535)"
+        UuidRequired = "Please enter the user ID"
+        PasswordRequired = "Please enter the password"
+        PrivateKeyRequired = "Please enter the private key"
+        PublicKeyRequired = "Please enter the public key"
+    }
+}

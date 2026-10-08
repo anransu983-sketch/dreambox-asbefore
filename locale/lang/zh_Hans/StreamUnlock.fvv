@@ -1,0 +1,16 @@
+<Stream Unlock Page>
+StreamUnlock = {
+    Title = "流媒体解锁检测"
+
+    CheckAll = "全部检测"
+    Recheck = "重新检测"
+
+    Status = {
+        Idle = "未检测"
+        Checking = "检测中..."
+        Unlocked = "已解锁"
+        UnlockedWithRegion = "已解锁（%s）"
+        Locked = "未解锁"
+        Failed = "检测失败"
+    }
+}

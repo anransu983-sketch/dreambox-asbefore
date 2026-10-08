@@ -1,0 +1,103 @@
+/*
+ * This file is part of FlyCat.
+ *
+ * FlyCat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c)  YumeYucca 2025 - Present
+ * Based on YumeBox by YumeYucca
+ *
+ */
+
+package com.suanran.dreambox.feature.dashboard.presentation.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.suanran.dreambox.core.contract.CustomRoutingInitializer
+import com.suanran.dreambox.core.contract.OverrideApplier
+import com.suanran.dreambox.core.contract.OverrideConfigRepository
+import com.suanran.dreambox.core.model.override.OverrideInternalConstants
+import com.suanran.dreambox.core.util.YamlCodec
+import com.suanran.dreambox.feature.dashboard.presentation.util.OverridePresetTemplateSelection
+import com.suanran.dreambox.feature.dashboard.presentation.util.analyzePresetTemplateContent
+import com.suanran.dreambox.feature.dashboard.presentation.util.buildPresetTemplateYaml
+import com.suanran.dreambox.feature.dashboard.presentation.util.defaultOverridePresetTemplateSelection
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import timber.log.Timber
+
+class CustomRoutingViewModel(
+    private val overrideConfigRepository: OverrideConfigRepository,
+    private val activeProfileOverrideApplier: OverrideApplier,
+    private val customRoutingInitializer: CustomRoutingInitializer,
+) : ViewModel() {
+    private val presetSelectionState = MutableStateFlow(defaultOverridePresetTemplateSelection())
+    val presetSelection: StateFlow<OverridePresetTemplateSelection> =
+        presetSelectionState.asStateFlow()
+
+    private val customRoutingContentState = MutableStateFlow("")
+    val customRoutingContent: StateFlow<String> = customRoutingContentState.asStateFlow()
+
+    private val templateRoundTripSafeState = MutableStateFlow(false)
+    val templateRoundTripSafe: StateFlow<Boolean> = templateRoundTripSafeState.asStateFlow()
+
+    init {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reloadStateFromStoredContent() }
+                .onFailure {
+                    Timber.e(it, "Failed to reload custom routing state from stored content")
+                }
+        }
+    }
+
+    suspend fun savePresetSelection(
+        updatedPresetSelection: OverridePresetTemplateSelection
+    ): Result<Unit> = runCatching {
+        check(templateRoundTripSafeState.value) { "Preset changes cannot overwrite manually edited custom routing YAML" }
+        val generatedYaml = buildPresetTemplateYaml(updatedPresetSelection)
+        overrideConfigRepository.saveCustomRoutingContent(generatedYaml)
+        applyContentState(generatedYaml)
+        activeProfileOverrideApplier.reapplyActiveProfileIfUsingOverride(
+            OverrideInternalConstants.CUSTOM_ROUTING_OVERRIDE_ID
+        )
+    }
+
+    suspend fun saveCustomRoutingYaml(content: String): Result<Unit> = runCatching {
+        val contentToSave =
+            if (content.isBlank()) {
+                buildPresetTemplateYaml(defaultOverridePresetTemplateSelection())
+            } else {
+                YamlCodec.validate(content)
+                content
+            }
+        overrideConfigRepository.saveCustomRoutingContent(contentToSave)
+        applyContentState(contentToSave)
+        activeProfileOverrideApplier.reapplyActiveProfileIfUsingOverride(
+            OverrideInternalConstants.CUSTOM_ROUTING_OVERRIDE_ID
+        )
+    }
+
+    private suspend fun reloadStateFromStoredContent() {
+        applyContentState(customRoutingInitializer.ensureDefaultContent())
+    }
+
+    private fun applyContentState(content: String?) {
+        val analysis = analyzePresetTemplateContent(content)
+        customRoutingContentState.value = content.orEmpty()
+        presetSelectionState.value = analysis.selection
+        templateRoundTripSafeState.value = analysis.matchesTemplateExactly
+    }
+}

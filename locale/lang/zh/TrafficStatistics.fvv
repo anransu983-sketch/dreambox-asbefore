@@ -1,0 +1,62 @@
+<Traffic Statistics Page>
+TrafficStatistics = {
+    Title = "流量統計"
+    EntrySummary = "檢視流量使用情況"
+
+    TimeRange = {
+        Day = "日"
+        Week = "週"
+        Month = "月"
+    }
+
+    Summary = {
+        DayTraffic = "日流量"
+        WeekTraffic = "週流量"
+        MonthTraffic = "月流量"
+    }
+
+
+
+    Donut = {
+        Other = "其他"
+    }
+
+    Sort = {
+        ByName = "應用名稱"
+        ByUpload = "上行"
+        ByDownload = "下行"
+        ByTotal = "流量"
+    }
+
+    Action = {
+        Clear = "清空統計"
+        ClearSuccess = "統計資料已清空"
+    }
+
+    Section = {
+        Traffic = "流量"
+        PerAppTraffic = "分應用流量"
+        EmptyApps = "暫無應用流量統計"
+        PerNodeTraffic = "按節點流量"
+        EmptyNodes = "暫無節點流量統計"
+        Footprint = "流量足跡"
+        EmptyFootprint = "暫無足跡記錄"
+    }
+
+    Metric = {
+        Download = "下行"
+        Upload = "上行"
+        Total = "流量"
+        UsageLine = "下行 %s  上行 %s"
+    }
+
+    Footprint = {
+        TopApp = "主要使用：%s"
+    }
+
+    Buckets = {
+        UnknownAppName = "未知應用"
+        UnattributedTrafficName = "未歸屬流量"
+        UnattributedRouteName = "未歸屬線路"
+    }
+}

@@ -1,0 +1,66 @@
+/*
+ * This file is part of FlyCat.
+ *
+ * FlyCat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c)  YumeYucca 2025 - Present
+ * Based on YumeBox by YumeYucca
+ *
+ */
+
+package com.suanran.dreambox.core.model
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+enum class RemoteProtocol(
+    val scheme: String,
+) {
+    HTTP("http"),
+    HTTPS("https"),
+}
+
+/**
+ * A saved external mihomo controller backend (RESTful API endpoint).
+ *
+ * When external-controller mode is active, the app steers this backend via its REST API instead of running a local core.
+ * [secret] is sent as a `Authorization: Bearer <secret>` header (blank = no auth configured).
+ */
+@Serializable
+data class RemoteBackend(
+    val id: String,
+    val name: String,
+    val host: String,
+    val port: Int,
+    val secret: String = "",
+    val protocol: RemoteProtocol = RemoteProtocol.HTTP,
+) {
+    /** Base URL assembled from [protocol], [host], and [port]. */
+    val baseUrl: String
+        get() = "${protocol.scheme}://${host.trim()}:$port"
+
+    /** Base URL with any trailing slash stripped so paths can be appended directly. */
+    val normalizedBaseUrl: String
+        get() = baseUrl.trimEnd('/')
+
+    companion object {
+        fun newId(): String = java.util.UUID.randomUUID().toString()
+    }
+}
+
+/** 本地运行时暂停，以便应用能够连接到外部控制器。名称以字符串形式存储，因此该模型独立于运行时API类型。 */
+data class PausedLocalRuntime(
+    val ownerName: String,
+    val modeName: String,
+)

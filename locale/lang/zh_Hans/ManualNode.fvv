@@ -1,0 +1,38 @@
+<手动节点>
+ManualNode = {
+    Protocol = "协议"
+    Name = "备注名"
+    Server = "地址"
+    Port = "端口"
+    Uuid = "用户 ID (UUID)"
+    AlterId = "AlterId"
+    Password = "密码"
+    Cipher = "加密方式"
+    Transport = "传输方式"
+    Tls = "启用 TLS"
+    Sni = "SNI"
+    SkipCertVerify = "跳过证书验证"
+    WsPath = "WS 路径"
+    WsHost = "WS Host"
+    GrpcServiceName = "gRPC ServiceName"
+    Flow = "Flow"
+    Username = "用户名"
+    Obfs = "混淆"
+    ObfsPassword = "混淆密码"
+    PrivateKey = "私钥"
+    PublicKey = "公钥"
+    PresharedKey = "预共享密钥（可选）"
+    LocalIp = "本地 IP"
+    Dns = "DNS"
+    Mtu = "MTU"
+    Save = "保存"
+
+    Validation = {
+        ServerRequired = "请填写服务器地址"
+        PortInvalid = "端口无效（1-65535）"
+        UuidRequired = "请填写用户 ID"
+        PasswordRequired = "请填写密码"
+        PrivateKeyRequired = "请填写私钥"
+        PublicKeyRequired = "请填写公钥"
+    }
+}

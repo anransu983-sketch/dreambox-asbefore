@@ -1,0 +1,10 @@
+{
+  "id": "ink",
+  "name": "墨黑金",
+  "version": "1.0",
+  "author": "梦盒",
+  "description": "墨黑底色配鎏金，商务范",
+  "themeMode": "dark",
+  "seedColor": "#FFD4A017",
+  "sourceUrl": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/ink.json"
+}

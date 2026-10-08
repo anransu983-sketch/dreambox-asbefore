@@ -1,0 +1,796 @@
+/*
+ * This file is part of FlyCat.
+ *
+ * FlyCat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c)  YumeYucca 2025 - Present
+ * Based on YumeBox by YumeYucca
+ *
+ */
+
+package com.suanran.dreambox.feature.proxy.presentation.screen
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.suanran.dreambox.core.model.proxy.Proxy
+import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
+import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
+import com.suanran.dreambox.core.model.proxy.ProxySortMode
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.NodeSearchToolbar
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.NodeSortPopup
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.NodeTestPullToRefresh
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.nodeGroupItems
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.nodeListRows
+import com.suanran.dreambox.feature.proxy.presentation.util.KeepLazyListTopAnchorOnReorder
+import com.suanran.dreambox.feature.proxy.presentation.viewmodel.ProxyViewModel
+import com.suanran.dreambox.locale.FlyTxt
+import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
+import com.suanran.dreambox.presentation.component.misc.CenteredText
+import com.suanran.dreambox.presentation.component.misc.EmojiAwareText
+import com.suanran.dreambox.presentation.component.navigation.LocalDetailNavigator
+import com.suanran.dreambox.presentation.component.navigation.LocalPagerState
+import com.suanran.dreambox.presentation.component.navigation.LocalTopBarHazeState
+import com.suanran.dreambox.presentation.component.navigation.TopBar
+import com.suanran.dreambox.presentation.component.navigation.isSplitShell
+import com.suanran.dreambox.presentation.icon.FlyCat
+import com.suanran.dreambox.presentation.icon.flycat.ListChevronsUpDown
+import com.suanran.dreambox.presentation.icon.flycat.Search
+import com.suanran.dreambox.presentation.icon.flycat.Folders
+import com.suanran.dreambox.presentation.icon.flycat.Speed
+import com.suanran.dreambox.presentation.theme.AnimationSpecs
+import com.suanran.dreambox.presentation.theme.AppTheme
+import com.suanran.dreambox.presentation.theme.LocalSpacing
+import com.suanran.dreambox.presentation.theme.UiDp
+import com.suanran.dreambox.presentation.theme.rememberRowReveal
+import dev.chrisbanes.haze.hazeSource
+import kotlin.math.abs
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.SinkFeedback
+import top.yukonga.miuix.kmp.utils.pressable
+
+private fun LazyListState.isScrolledFromTop(): Boolean =
+    firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0
+
+// animateScrollToItem races across arbitrary distances at full speed, so locating a far-away
+// node reads as a blink. Cap the animated stretch at roughly one viewport: snap silently to
+// just outside it, then glide the remainder in with a fixed-duration decelerating tween.
+internal suspend fun LazyListState.animateLocateToItem(targetIndex: Int) {
+    if (layoutInfo.visibleItemsInfo.isEmpty()) {
+        scrollToItem(targetIndex)
+        return
+    }
+    val viewport = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+    val visible = layoutInfo.visibleItemsInfo
+    val avgItemSize =
+        (visible.sumOf { it.size } / visible.size + layoutInfo.mainAxisItemSpacing).coerceAtLeast(1)
+    val approachItems = viewport / avgItemSize + 1
+    val distanceItems = targetIndex - firstVisibleItemIndex
+    if (abs(distanceItems) > approachItems) {
+        val preIndex =
+            if (distanceItems > 0) targetIndex - approachItems else targetIndex + approachItems
+        scrollToItem(preIndex.coerceAtLeast(0))
+    }
+    val remaining =
+        layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }?.offset?.toFloat()
+            ?: ((targetIndex - firstVisibleItemIndex) * avgItemSize.toFloat() -
+                firstVisibleItemScrollOffset)
+    animateScrollBy(
+        value = remaining,
+        animationSpec = tween(durationMillis = 650, easing = AnimationSpecs.EmphasizedDecelerate),
+    )
+    // Node cards are uniform so the estimate lands exactly; settle any residual drift quietly.
+    val residual = layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }?.offset
+    when {
+        residual == null -> scrollToItem(targetIndex)
+        residual != 0 -> scrollBy(residual.toFloat())
+    }
+}
+
+@Composable
+fun ProxyPager(
+    mainInnerPadding: PaddingValues,
+    onNavigateToProviders: (() -> Unit)?,
+    isActive: Boolean,
+) {
+    val proxyViewModel = koinViewModel<ProxyViewModel>()
+    val proxyGroups by proxyViewModel.sortedProxyGroups.collectAsStateWithLifecycle()
+    val testingGroupNames by proxyViewModel.testingGroupNames.collectAsStateWithLifecycle()
+    val testingProxyNames by proxyViewModel.testingProxyNames.collectAsStateWithLifecycle()
+    val delayTestProgress by proxyViewModel.delayTestProgress.collectAsStateWithLifecycle()
+    val sortMode by proxyViewModel.sortMode.collectAsStateWithLifecycle()
+    val displayMode by proxyViewModel.displayMode.collectAsStateWithLifecycle()
+    val groupScrollBehavior = MiuixScrollBehavior(snapAnimationSpec = null)
+    val pagerState = LocalPagerState.current
+    val topBarHazeState = LocalTopBarHazeState.current
+    var showSortPopup by rememberSaveable { mutableStateOf(false) }
+    val inSplitShell = LocalDetailNavigator.current.isSplitShell
+    val uiSelectedGroupName by proxyViewModel.uiSelectedGroupName.collectAsStateWithLifecycle()
+    val groupSelection = rememberProxyGroupSelectionState(
+        proxyGroups = proxyGroups,
+        onRefreshGroup = proxyViewModel::refreshGroup,
+        retainLastKnownGroup = !inSplitShell,
+        controlledSelectedGroupName = if (inSplitShell) uiSelectedGroupName else null,
+        onControlledSelectedGroupNameChange = if (inSplitShell) proxyViewModel::selectUiGroup else null,
+    )
+    val selectedGroupName = groupSelection.selectedGroupName
+    val displayGroup = groupSelection.displayGroup
+    val coroutineScope = rememberCoroutineScope()
+    val groupListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val nodeListState = rememberSaveable(selectedGroupName, saver = LazyListState.Saver) { LazyListState() }
+    var nodeSearchQuery by rememberSaveable(selectedGroupName) { mutableStateOf("") }
+    var nodeSearchVisible by rememberSaveable(selectedGroupName) { mutableStateOf(false) }
+    val requestSelectedGroupDelayTest = remember(coroutineScope, nodeListState, selectedGroupName, proxyViewModel) {
+        {
+            val groupName = selectedGroupName ?: return@remember
+            coroutineScope.launch {
+                if (nodeListState.isScrolledFromTop()) {
+                    nodeListState.scrollToItem(0)
+                }
+                proxyViewModel.testDelay(groupName)
+            }
+        }
+    }
+    val locateCurrentProxy = remember(coroutineScope, displayGroup, nodeListState, selectedGroupName, displayMode) {
+        if (selectedGroupName == null) {
+            null
+        } else {
+            displayGroup?.takeIf { group -> group.name == selectedGroupName }?.let { group ->
+                fun() {
+                    val proxyIndex =
+                        group.proxies.indexOfFirst { proxy -> proxy.name == group.now }
+                    if (proxyIndex < 0) return
+                    // 搜索栏固定在滚动列表外，列表无头部偏移。
+                    // 在双栏模式中，每行容纳 2 个代理，因此除以 2。
+                    val listItemIndex =
+                        if (displayMode.isSingleColumn) proxyIndex
+                        else proxyIndex / 2
+                    coroutineScope.launch {
+                        nodeListState.animateLocateToItem(listItemIndex)
+                    }
+                }
+            }
+        }
+    }
+    BackHandler(enabled = nodeSearchVisible) {
+        nodeSearchVisible = false
+        nodeSearchQuery = ""
+    }
+    BackHandler(enabled = selectedGroupName != null && !inSplitShell) { groupSelection.clearSelection() }
+    // Tablet: auto-select the first group so the right pane is never empty.
+    LaunchedEffect(inSplitShell, proxyGroups, selectedGroupName) {
+        if (!inSplitShell || proxyGroups.isEmpty()) return@LaunchedEffect
+        if (selectedGroupName == null || proxyGroups.none { it.name == selectedGroupName }) {
+            groupSelection.selectGroup(proxyGroups.first())
+        }
+    }
+
+    LaunchedEffect(isActive) { proxyViewModel.ensureCoreLoaded(isActive, source = "proxy_page") }
+    LaunchedEffect(isActive, inSplitShell) { if (!isActive && !inSplitShell) nodeSearchQuery = "" }
+
+    // 应用在长时间后台运行后返回前台时强制刷新，因为WhileSubscribed(5000)会停止上游收集，且同步循环可能已被限流或阻塞在旧互斥锁后面。
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (isActive) proxyViewModel.onForegroundResume()
+    }
+
+    DisposableEffect(proxyViewModel) {
+        onDispose { proxyViewModel.ensureCoreLoaded(false, source = "proxy_page") }
+    }
+
+    Scaffold(
+        floatingActionButton = {},
+        topBar = {
+            PagerTopBar(
+                scrollBehavior = groupScrollBehavior,
+                onNavigateToProviders = if (inSplitShell) null else onNavigateToProviders,
+                onTestAllDelay = { proxyViewModel.testDelay() },
+                locateCurrentProxy = if (inSplitShell) null else locateCurrentProxy,
+                showSortPopup = showSortPopup,
+                onShowSortPopupChange = { showSortPopup = it },
+                displayMode = displayMode,
+                sortMode = sortMode,
+                onDisplayModeSelected = proxyViewModel::setDisplayMode,
+                onSortSelected = proxyViewModel::setSortMode,
+                selectedGroupName = if (inSplitShell) null else selectedGroupName,
+                onBackToGroups = groupSelection.clearSelection,
+                searchVisible = nodeSearchVisible,
+                // 搜索只挂在节点列表页：组列表/双栏左栏不放搜索入口。
+                onSearchToggle = if (inSplitShell || selectedGroupName == null) {
+                    null
+                } else {
+                    {
+                        nodeSearchVisible = !nodeSearchVisible
+                        if (!nodeSearchVisible) nodeSearchQuery = ""
+                    }
+                },
+                onTitleScrollTop = {
+                    // 双栏左栏只挂 groupListState（nodeListState 未上屏）；单栏在组列表/节点列表间切换。
+                    val listState = if (inSplitShell || selectedGroupName == null) groupListState else nodeListState
+                    coroutineScope.launch {
+                        if (listState.isScrolledFromTop()) {
+                            listState.animateScrollToItem(0)
+                        }
+                    }
+                },
+            )
+        },
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().let { mod -> if (topBarHazeState != null) mod.hazeSource(state = topBarHazeState) else mod }
+        ) {
+            if (inSplitShell) {
+                // Tablet: only show group list; node detail is in the right pane.
+                if (proxyGroups.isEmpty()) {
+                    CenteredText(
+                        firstLine = FlyTxt.Proxy.Empty.NoNodes,
+                        secondLine = FlyTxt.Proxy.Empty.Hint,
+                        showEmptyResourceIllustration = true,
+                    )
+                } else {
+                    ProxyContent(
+                        proxyGroups = proxyGroups,
+                        displayMode = displayMode,
+                        scrollBehavior = groupScrollBehavior,
+                        listState = groupListState,
+                        innerPadding = it,
+                        mainInnerPadding = mainInnerPadding,
+                        testingGroupNames = testingGroupNames,
+                        onGroupClick = groupSelection.selectGroup,
+                        onGroupDelayTestClick = { group -> proxyViewModel.testDelay(group.name) },
+                        onGroupBoundsChanged = { _, _ -> },
+                    )
+                }
+            } else {
+                AnimatedContent(
+                    targetState = selectedGroupName,
+                    transitionSpec = {
+                        if (targetState != null) {
+                            (slideInHorizontally(
+                                animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetSlideInDuration, easing = AnimationSpecs.Legacy),
+                                initialOffsetX = { it },
+                            ) + fadeIn(animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetFadeInDuration))) togetherWith
+                                (slideOutHorizontally(
+                                    animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetSlideOutDuration, easing = AnimationSpecs.Legacy),
+                                    targetOffsetX = { -it / 3 },
+                                ) + fadeOut(animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetFadeOutDuration)))
+                        } else {
+                            (slideInHorizontally(
+                                animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetSlideOutDuration, easing = AnimationSpecs.Legacy),
+                                initialOffsetX = { -it / 3 },
+                            ) + fadeIn(animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetFadeInDuration))) togetherWith
+                                (slideOutHorizontally(
+                                    animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetSlideInDuration, easing = AnimationSpecs.Legacy),
+                                    targetOffsetX = { it },
+                                ) + fadeOut(animationSpec = tween(durationMillis = AnimationSpecs.Proxy.SheetFadeOutDuration)))
+                        }
+                    },
+                    label = "proxy_content_slide",
+                ) { targetGroupName ->
+                    if (targetGroupName == null) {
+                        if (proxyGroups.isEmpty()) {
+                            CenteredText(
+                                firstLine = FlyTxt.Proxy.Empty.NoNodes,
+                                secondLine = FlyTxt.Proxy.Empty.Hint,
+                                showEmptyResourceIllustration = true,
+                            )
+                        } else {
+                            ProxyContent(
+                                proxyGroups = proxyGroups,
+                                displayMode = displayMode,
+                                scrollBehavior = groupScrollBehavior,
+                                listState = groupListState,
+                                innerPadding = it,
+                                mainInnerPadding = mainInnerPadding,
+                                testingGroupNames = testingGroupNames,
+                                onGroupClick = groupSelection.selectGroup,
+                                onGroupDelayTestClick = { group -> proxyViewModel.testDelay(group.name) },
+                                onGroupBoundsChanged = { _, _ -> },
+                            )
+                        }
+                    } else {
+                        val currentGroup = groupSelection.selectedGroup ?: displayGroup
+                        NodeListPage(
+                            group = currentGroup,
+                            allGroups = proxyGroups,
+                            displayMode = displayMode,
+                            sortMode = sortMode,
+                            testingGroupNames = testingGroupNames,
+                            testingProxyNames = testingProxyNames,
+                            mainInnerPadding = mainInnerPadding,
+                            outerInnerPadding = it,
+                            scrollBehavior = groupScrollBehavior,
+                            listState = nodeListState,
+                            onSelectProxy = { groupName, proxyName -> proxyViewModel.selectProxy(groupName, proxyName) },
+                            onForceSelectProxy = { groupName, proxyName -> proxyViewModel.forceSelectProxy(groupName, proxyName) },
+                            onTestDelay = requestSelectedGroupDelayTest,
+                            onTestProxyDelay = { proxyName -> currentGroup?.name?.let { groupName -> proxyViewModel.testProxyDelay(groupName, proxyName) } },
+                            onScrollDirectionChanged = {},
+                            searchQuery = nodeSearchQuery,
+                            onSearchQueryChange = { nodeSearchQuery = it },
+                            searchVisible = nodeSearchVisible,
+                            onSearchVisibleChange = { nodeSearchVisible = it },
+                            testProgress = delayTestProgress,
+                        )
+                    }
+                }
+            } // else (phone mode)
+        }
+    }
+}
+
+/** 代理页大标题面包屑：根段“代理”可点，[segmentLabel] 非空时显示“代理 > 组名”分段。 */
+@Composable
+internal fun ProxyTitleBreadcrumb(rootLabel: String, onRootClick: () -> Unit, segmentLabel: String? = null, onSegmentClick: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = TopAppBarDefaults.TitlePadding),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProxyCrumbText(label = rootLabel, onClick = onRootClick)
+        if (segmentLabel != null) {
+            Text(
+                text = " > ",
+                style = MiuixTheme.textStyles.title1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                maxLines = 1,
+            )
+            ProxyCrumbText(
+                label = segmentLabel,
+                onClick = onSegmentClick,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+    }
+}
+
+/**
+ * 面包屑可点段。
+ * Press 时序是按压动效能被看见的前提：clickable 会把 Press/Release 折叠到同一拍，collectIsPressedAsState 观察不到 pressed=true，animate*AsState 就永远不会离开静止值。
+ * 这里用 pressable(delay=null) 在 down 瞬间 emit Press，短按也有完整的按压帧。
+ * 缩放走 SinkFeedback 节点内 Animatable（不依赖 recomposition）；降透明/底色按下 snap、松手弹簧回弹。
+ */
+@Composable
+private fun ProxyCrumbText(label: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val pressSource = remember { MutableInteractionSource() }
+    val clickSource = remember { MutableInteractionSource() }
+    val sinkFeedback = remember { SinkFeedback(sinkAmount = 0.88f, animationSpec = AnimationSpecs.ButtonPressSpring) }
+    val pressed by pressSource.collectIsPressedAsState()
+    val pressTransition = updateTransition(targetState = pressed, label = "crumb_press")
+    val textAlpha by pressTransition.animateFloat(
+        transitionSpec = {
+            if (targetState) snap()
+            else AnimationSpecs.ButtonPressSpring
+        },
+        label = "crumb_press_alpha",
+    ) { if (it) 0.4f else 1f }
+    val pressBg by pressTransition.animateColor(
+        transitionSpec = {
+            if (targetState) snap()
+            else tween(AnimationSpecs.DURATION_FAST)
+        },
+        label = "crumb_press_bg",
+    ) {
+        if (it) {
+            MiuixTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+        } else {
+            Color.Transparent
+        }
+    }
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(UiDp.dp8))
+            .background(pressBg)
+            .pressable(
+                interactionSource = pressSource,
+                indication = sinkFeedback,
+                enabled = onClick != null,
+                delay = null,
+            )
+            .clickable(
+                interactionSource = clickSource,
+                indication = null,
+                enabled = onClick != null,
+                role = Role.Button,
+            ) { onClick?.invoke() },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        EmojiAwareText(
+            text = label,
+            style = MiuixTheme.textStyles.title1,
+            color = MiuixTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .graphicsLayer { this.alpha = textAlpha }
+                .padding(horizontal = UiDp.dp8, vertical = UiDp.dp4),
+        )
+    }
+}
+
+/** Stable TopBar sub-composable for [ProxyPager] — only recomposes when sort/display params change. */
+@Composable
+private fun PagerTopBar(
+    scrollBehavior: ScrollBehavior,
+    onNavigateToProviders: (() -> Unit)?,
+    onTestAllDelay: () -> Unit,
+    locateCurrentProxy: (() -> Unit)?,
+    showSortPopup: Boolean,
+    onShowSortPopupChange: (Boolean) -> Unit,
+    displayMode: ProxyDisplayMode,
+    sortMode: ProxySortMode,
+    onDisplayModeSelected: (ProxyDisplayMode) -> Unit,
+    onSortSelected: (ProxySortMode) -> Unit,
+    selectedGroupName: String?,
+    onBackToGroups: () -> Unit,
+    onTitleScrollTop: () -> Unit,
+    searchVisible: Boolean = false,
+    onSearchToggle: (() -> Unit)? = null,
+) {
+    ProxyTopBar(
+        title = if (selectedGroupName == null) {
+            FlyTxt.Component.BottomBar.Proxy
+        } else {
+            "${FlyTxt.Component.BottomBar.Proxy} > $selectedGroupName"
+        },
+        groupName = selectedGroupName,
+        onTitleRootClick = { if (selectedGroupName == null) onTitleScrollTop() else onBackToGroups() },
+        onTitleGroupClick = onTitleScrollTop,
+        scrollBehavior = scrollBehavior,
+        showBack = false,
+        onBack = {},
+        onNavigateToProviders = onNavigateToProviders,
+        onTestAllDelay = onTestAllDelay,
+        onLocateCurrentProxy = locateCurrentProxy,
+        showSortPopup = showSortPopup,
+        onShowSortPopupChange = onShowSortPopupChange,
+        displayMode = displayMode,
+        sortMode = sortMode,
+        onDisplayModeSelected = onDisplayModeSelected,
+        onSortSelected = onSortSelected,
+        searchVisible = searchVisible,
+        onSearchToggle = onSearchToggle,
+    )
+}
+
+@Composable
+internal fun ProxyTopBar(
+    title: String,
+    groupName: String? = null,
+    /** 面包屑根段文案；双栏右栏用组名作单段可点标题时传入。 */
+    titleRootLabel: String = FlyTxt.Component.BottomBar.Proxy,
+    onTitleRootClick: (() -> Unit)? = null,
+    onTitleGroupClick: (() -> Unit)? = null,
+    scrollBehavior: ScrollBehavior,
+    showBack: Boolean,
+    onBack: () -> Unit,
+    onNavigateToProviders: (() -> Unit)?,
+    onTestAllDelay: () -> Unit = {},
+    onLocateCurrentProxy: (() -> Unit)?,
+    showSortPopup: Boolean,
+    onShowSortPopupChange: (Boolean) -> Unit,
+    displayMode: ProxyDisplayMode,
+    sortMode: ProxySortMode,
+    onDisplayModeSelected: (ProxyDisplayMode) -> Unit,
+    onSortSelected: (ProxySortMode) -> Unit,
+    searchVisible: Boolean = false,
+    onSearchToggle: (() -> Unit)? = null,
+) {
+    val titleContent: (@Composable () -> Unit)? = if (onTitleRootClick == null) {
+        null
+    } else {
+        {
+            ProxyTitleBreadcrumb(
+                rootLabel = titleRootLabel,
+                onRootClick = onTitleRootClick,
+                segmentLabel = groupName,
+                onSegmentClick = onTitleGroupClick,
+            )
+        }
+    }
+
+    TopBar(
+        title = title,
+        titleContent = titleContent,
+        scrollBehavior = scrollBehavior,
+        navigationIconPadding = UiDp.dp24,
+        actionIconPadding = UiDp.dp24,
+        navigationIcon = {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiDp.dp12)) {
+                if (showBack) {
+                    IconButton(onClick = onBack) {
+                        Icon(MiuixIcons.Back, contentDescription = FlyTxt.Component.Navigation.Back)
+                    }
+                } else {
+                    if (onNavigateToProviders != null) {
+                        IconButton(onClick = onNavigateToProviders) {
+                            Icon(FlyCat.Folders, contentDescription = FlyTxt.Providers.Title)
+                        }
+                    }
+                }
+            }
+        },
+        actions = {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiDp.dp4)) {
+                if (onSearchToggle != null) {
+                    IconButton(onClick = onSearchToggle) {
+                        Icon(
+                            imageVector = FlyCat.Search,
+                            contentDescription = FlyTxt.Component.Editor.Action.Search,
+                        )
+                    }
+                }
+                IconButton(onClick = onTestAllDelay) {
+                    Icon(FlyCat.Speed, contentDescription = FlyTxt.Proxy.Action.Test)
+                }
+                Box {
+                    IconButton(onClick = { onShowSortPopupChange(true) }) {
+                        Icon(FlyCat.ListChevronsUpDown, contentDescription = FlyTxt.Proxy.Action.Sort)
+                    }
+                    NodeSortPopup(
+                        show = showSortPopup,
+                        onDismiss = { onShowSortPopupChange(false) },
+                        displayMode = displayMode,
+                        sortMode = sortMode,
+                        alignment = PopupPositionProvider.Align.BottomEnd,
+                        onDisplayModeSelected = onDisplayModeSelected,
+                        onSortSelected = onSortSelected,
+                        onLocateCurrentProxy = onLocateCurrentProxy,
+                    )
+                }
+            }
+        },
+    )
+}
+
+private fun ProxyGroupInfo.filterNodes(query: String): List<Proxy> {
+    val normalizedQuery = query.trim()
+    if (normalizedQuery.isEmpty()) return proxies
+    return proxies.filter { proxy ->
+        proxy.name.contains(normalizedQuery, ignoreCase = true) ||
+            proxy.title.contains(normalizedQuery, ignoreCase = true) ||
+            proxy.subtitle.contains(normalizedQuery, ignoreCase = true)
+    }
+}
+
+@Composable
+internal fun NodeListPage(
+    group: ProxyGroupInfo?,
+    allGroups: List<ProxyGroupInfo>,
+    displayMode: ProxyDisplayMode,
+    sortMode: ProxySortMode,
+    testingGroupNames: Set<String>,
+    testingProxyNames: Set<String>,
+    mainInnerPadding: PaddingValues,
+    outerInnerPadding: PaddingValues,
+    scrollBehavior: ScrollBehavior,
+    listState: LazyListState,
+    onSelectProxy: (groupName: String, proxyName: String) -> Unit,
+    onForceSelectProxy: (groupName: String, proxyName: String) -> Unit,
+    onTestDelay: () -> Unit,
+    onTestProxyDelay: (proxyName: String) -> Unit,
+    onScrollDirectionChanged: (Boolean) -> Unit,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    searchVisible: Boolean = false,
+    onSearchVisibleChange: (Boolean) -> Unit = {},
+    testProgress: ProxyViewModel.DelayTestProgress? = null,
+) {
+    if (group == null) {
+        CenteredText(
+            firstLine = FlyTxt.Proxy.Empty.NoNodes,
+            secondLine = FlyTxt.Proxy.Empty.Hint,
+            showEmptyResourceIllustration = true,
+        )
+        return
+    }
+    val spacing = LocalSpacing.current
+    val isTesting = testingGroupNames.contains(group.name)
+    val listItemKeys = remember(group.proxies) { group.proxies.map { it.name } }
+
+    val visibleProxies = remember(group.proxies, searchQuery) { group.filterNodes(searchQuery) }
+    val revealCount = rememberRowReveal(itemCount = visibleProxies.size, replayKey = group.name, listState = listState)
+    // 滚动列表即收起搜索框：搜索是低频操作，避免常驻占位。
+    if (searchVisible) {
+        LaunchedEffect(listState) {
+            snapshotFlow { listState.isScrollInProgress }
+                .collect { scrolling -> if (scrolling) onSearchVisibleChange(false) }
+        }
+    }
+
+    KeepLazyListTopAnchorOnReorder(
+        listState = listState,
+        itemKeys = listItemKeys,
+        enabled = sortMode == ProxySortMode.BY_LATENCY,
+        scrollToTopOnEnabled = true,
+    )
+
+    LaunchedEffect(isTesting) {
+        if (isTesting && listState.isScrolledFromTop()) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = outerInnerPadding.calculateTopPadding()),
+    ) {
+        if (group.chainPath.isNotEmpty()) {
+            ProxyChainIndicator(
+                chain = group.chainPath,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        AnimatedVisibility(visible = searchVisible) {
+            NodeSearchToolbar(
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange,
+                modifier = Modifier.fillMaxWidth().padding(
+                    start = UiDp.dp12,
+                    end = UiDp.dp12,
+                    // Column 已扣除 topBar 高度，这里不要再加 outerInnerPadding.top。
+                    top = if (group.chainPath.isNotEmpty()) UiDp.dp10 else UiDp.dp12,
+                    bottom = UiDp.dp8,
+                ),
+            )
+        }
+        NodeTestPullToRefresh(
+            isRefreshing = isTesting,
+            onRefresh = onTestDelay,
+            tested = testProgress?.tested ?: 0,
+            total = testProgress?.total ?: 0,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
+            ScreenLazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                lazyListState = listState,
+                scrollBehavior = scrollBehavior,
+                innerPadding = outerInnerPadding,
+                enableGlobalScroll = true,
+                onScrollDirectionChanged = onScrollDirectionChanged,
+                contentPadding =
+                    PaddingValues(
+                        start = UiDp.dp12,
+                        end = UiDp.dp12,
+                        bottom = mainInnerPadding.calculateBottomPadding() + spacing.space12,
+                    ),
+            ) {
+                nodeListRows(
+                    proxies = visibleProxies,
+                    selectedProxyName = group.now,
+                    onProxyClick = { proxyName ->
+                        if (group.type == Proxy.Type.Selector) {
+                            onSelectProxy(group.name, proxyName)
+                        } else if (
+                            group.type == Proxy.Type.URLTest ||
+                            group.type == Proxy.Type.Fallback
+                        ) {
+                            val target = if (proxyName == group.fixed) "" else proxyName
+                            onForceSelectProxy(group.name, target)
+                        } else {
+                            onTestDelay()
+                        }
+                    },
+                    isDelayTesting = isTesting,
+                    testingProxyNames = testingProxyNames,
+                    onSingleNodeTestClick = { proxyName ->
+                        onTestProxyDelay(proxyName)
+                    },
+                    itemVerticalPadding = UiDp.dp6,
+                    revealCount = revealCount,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProxyContent(
+    proxyGroups: List<ProxyGroupInfo>,
+    displayMode: ProxyDisplayMode,
+    scrollBehavior: ScrollBehavior,
+    listState: LazyListState,
+    innerPadding: PaddingValues,
+    mainInnerPadding: PaddingValues,
+    onGroupClick: (ProxyGroupInfo) -> Unit,
+    onGroupDelayTestClick: (ProxyGroupInfo) -> Unit,
+    testingGroupNames: Set<String>,
+    onGroupBoundsChanged: ((String, Rect) -> Unit)? = null,
+) {
+    val spacing = LocalSpacing.current
+    val revealCount = rememberRowReveal(itemCount = proxyGroups.size, listState = listState)
+    ScreenLazyColumn(
+        scrollBehavior = scrollBehavior,
+        lazyListState = listState,
+        innerPadding = innerPadding,
+        enableGlobalScroll = true,
+        contentPadding =
+            PaddingValues(
+                start = UiDp.dp12,
+                end = UiDp.dp12,
+                top = innerPadding.calculateTopPadding() + UiDp.dp2,
+                bottom = mainInnerPadding.calculateBottomPadding() + spacing.space12,
+            ),
+    ) {
+        nodeGroupItems(
+            groups = proxyGroups,
+            displayMode = displayMode,
+            onGroupClick = onGroupClick,
+            testingGroupNames = testingGroupNames,
+            onGroupDelayTestClick = onGroupDelayTestClick,
+            onGroupBoundsChanged = onGroupBoundsChanged,
+            itemVerticalPadding = UiDp.dp6,
+            revealCount = revealCount,
+        )
+    }
+}

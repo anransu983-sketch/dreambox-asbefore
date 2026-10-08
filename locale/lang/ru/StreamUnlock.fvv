@@ -1,0 +1,16 @@
+<Stream Unlock Page>
+StreamUnlock = {
+    Title = "Проверка разблокировки стримингов"
+
+    CheckAll = "Проверить все"
+    Recheck = "Проверить снова"
+
+    Status = {
+        Idle = "Не проверено"
+        Checking = "Проверка..."
+        Unlocked = "Разблокировано"
+        UnlockedWithRegion = "Разблокировано (%s)"
+        Locked = "Заблокировано"
+        Failed = "Ошибка проверки"
+    }
+}

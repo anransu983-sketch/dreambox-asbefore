@@ -1,0 +1,193 @@
+<App Settings Page>
+AppSettings = {
+    Title = "Настройки приложения"
+
+    Section = {
+        Behavior = "Поведение"
+        Interface = "Интерфейс"
+        Navigation = "Навигация"
+        Privacy = "Конфиденциальность"
+        Service = "Служба"
+        Network = "Сеть"
+        Home = "Главная"
+    }
+
+    Behavior = {
+        AutoStartTitle = "Автозапуск"
+        AutoStartSummary = "Автоматически запускать прокси при открытии приложения и при загрузке устройства"
+        AutoUpdateOnStartTitle = "Обновлять при запуске"
+        AutoUpdateOnStartSummary = "Автоматически обновлять текущий профиль при запуске приложения"
+    }
+
+    Interface = {
+        ThemeModeTitle = "Режим темы"
+        ThemeModeSummary = "Выберите стиль темы приложения"
+        ThemeModeSystem = "Как в системе"
+        ThemeModeLight = "Светлая"
+        ThemeModeDark = "Тёмная"
+        LanguageTitle = "Язык приложения"
+        LanguageSummary = "Выберите язык приложения"
+        LanguageSystem = "Как в системе"
+        LanguageChinese = "简体中文"
+        LanguageChineseTraditional = "繁體中文"
+        LanguageEnglish = "English"
+        LanguageJapanese = "日本語"
+        LanguageRussian = "Русский"
+
+        ColorThemeTitle = "Палитра темы"
+        ColorThemePickerTitle = "Выбрать цвет темы"
+        ColorThemeCodeLabel = "Код цвета темы (#AARRGGBB)"
+        ColorThemeCustomSummary = "Текущий цвет темы: %s"
+        ThemeColorPolarityInvertTitle = "Инвертировать цвет переднего плана"
+        ThemeColorPolarityInvertSummary = "Если цвета темы выглядят странно, попробуйте включить эту опцию"
+
+        Theme = {
+            Title = "Тема"
+            BuiltIn = "Встроенная"
+            InUse = "Используется"
+            Enable = "Включить"
+            CustomTitle = "Своя"
+            PresetDefaultDarkName = "Тёмная по умолчанию"
+            PresetDefaultDarkDesc = "DreamBox · глубокий сине-чёрный космос, стиль по умолчанию"
+            PresetDefaultDarkAuthor = "DreamBox"
+            PresetBocchiName = "Боччи · Звёздное небо"
+            PresetBocchiDesc = "DreamBox · розовое звёздное небо, в стиле «Одинокого рока»"
+            PresetBocchiAuthor = "DreamBox"
+            MarketTitle = "Каталог тем"
+            MarketHint = "Просматривайте и устанавливайте темы из онлайн-каталога."
+            MarketBrowse = "Смотреть темы онлайн"
+            MarketLoading = "Загрузка тем..."
+            MarketEmpty = "В каталоге пока нет тем."
+            MarketLoadFailed = "Не удалось загрузить каталог."
+            MarketRetry = "Повторить"
+            MarketInstall = "Установить"
+            MarketInstalled = "Установлено"
+            StoreTitle = "Магазин тем"
+            StoreHint = "Можно установить тему JSON по URL (id / name / version / author / description / themeMode / seedColor / sourceUrl); themeMode — dark, light или system, seedColor вида #FF6B9D."
+            InstallFromUrl = "Установить по URL"
+            InstallFromZip = "Импорт из локального ZIP"
+            UrlDialogTitle = "Установка темы по URL"
+            UrlDialogSummary = "Введите адрес загрузки JSON-файла темы"
+            UrlLabel = "URL темы"
+            AuthorFormat = "Автор: %s"
+            Delete = "Удалить"
+            Update = "Обновить"
+            DeleteConfirmTitle = "Удалить тему"
+            DeleteConfirmMessage = "Удалить тему «%s»?"
+            WorkingTitle = "Подождите"
+            Applied = "Переключено на тему «%s»"
+            InstallSuccess = "Тема «%s» установлена"
+            DeleteSuccess = "Тема «%s» удалена"
+            UpdateSuccess = "Тема обновлена до v%s"
+            NoUpdate = "Уже последняя версия"
+            ErrEmptyUrl = "Введите URL"
+            ErrDownload = "Ошибка загрузки: %s"
+            ErrRead = "Не удалось прочитать файл: %s"
+            ErrSave = "Не удалось сохранить: %s"
+            ErrExists = "Тема уже существует: %s"
+            ErrBuiltin = "Встроенные темы удалить нельзя"
+            ErrNotFound = "Тема не найдена: %s"
+            ErrNoSource = "У темы нет адреса обновлений"
+            ErrNotJson = "Некорректный JSON"
+            ErrMissingId = "Отсутствует поле id"
+            ErrInvalidId = "Недопустимый id: %s (только строчные буквы/цифры/дефис)"
+            ErrMissingName = "Отсутствует поле name"
+            ErrInvalidMode = "Недопустимый themeMode: %s (dark / light / system)"
+            ErrInvalidColor = "Недопустимый seedColor: %s (#RRGGBB или #AARRGGBB)"
+            ErrBuiltinConflict = "Нельзя перезаписать встроенную тему: %s"
+            ErrUnknown = "Неизвестная ошибка: %s"
+        }
+        TopBarBlurTitle = "Размытие"
+        TopBarBlurSummary = "Применить размытый фон к"
+        AutoHideNavbarTitle = "Автоскрытие панели навигации"
+        AutoHideNavbarSummary = "Скрывать панель навигации при прокрутке вниз и показывать при прокрутке вверх"
+
+        PageScaleTitle = "Масштаб страницы"
+        PageScaleDialogSummary = "80% - 120%"
+
+        ClassicHomeTitle = "Классическая главная"
+        JianLaiStyleTitle = "Стиль Цзяньлай"
+        StickerStyleTitle = "Стикер-рабочий стол"
+        HitokotoTitle = "Hitokoto"
+        HitokotoSummary = "Показывать цитату Hitokoto на классической главной"
+        SidebarExpandedTitle = "Развернуть боковую панель"
+        HomeQuoteTitle = "Цитата на главной"
+        HomeQuoteDefault = "Always believe that something wonderful is about to happen"
+        HomeQuoteAuthorTitle = "Автор цитаты"
+        HomeQuoteAuthorDefault = "Firefly"
+        EditHomeQuoteTitle = "Изменить цитату"
+        EditHomeQuoteAuthorTitle = "Изменить автора цитаты"
+        HomeWallpaperImportFailed = "Не удалось скопировать обои локально; используется исходный источник"
+        HomeWallpaperSourceTitle = "Источник обоев"
+        HomeWallpaperSourceSummary = "Выбрать из галереи или ввести URL"
+        HomeWallpaperSourceGallery = "Выбрать из галереи"
+        HomeWallpaperSourceUrl = "Введите URL"
+        HomeWallpaperUrlDialogTitle = "Установить удалённые обои"
+        WallpaperScrimTitle = "Затемнение нижней части обоев"
+        MusicLyricInSignatureTitle = "Показывать текст песни в подписи"
+        MusicPlayerInSidebarTitle = "Показывать плеер в боковой панели"
+    }
+
+    Privacy = {
+
+        HideIconTitle = "Скрыть значок приложения"
+        HideIconSummary = "После скрытия можно открыть через набор *#*#0721#*#*"
+        HideFromRecentsTitle = "Скрыть карточку в недавних"
+        HideFromRecentsSummary = "Не показывать это приложение в списке недавних задач"
+    }
+
+    ServiceSection = {
+        TrafficNotificationTitle = "Показывать уведомление о трафике"
+        TrafficNotificationSummary = "Отображать использование трафика в панели уведомлений"
+        LogLevelTitle = "Уровень журнала"
+        LogLevelSummary = "Установить минимальный уровень журнала приложения"
+        SingleNodeTestTitle = "Тест одного узла"
+        SingleNodeTestSummary = "Нажмите значок на карточке узла для тестирования задержки"
+        ExitUiWhenBackgroundTitle = "Освобождать UI в фоне"
+        ExitUiWhenBackgroundSummary = "Освобождать интерфейс при сворачивании в фон, сохраняя работу прокси"
+        SuperIslandTitle = "Super Island"
+        ShizukuTitle = "Доступ через Shizuku"
+        ShizukuNotRunning = "Сначала установите и запустите Shizuku"
+        ShizukuPermissionRequired = "Нажмите, чтобы запросить разрешение Shizuku"
+        ShizukuReady = "Shizuku разрешён, Super Island готов"
+        ShizukuStatusUnavailable = "Недоступен"
+        ShizukuStatusPending = "Не разрешён"
+        ShizukuStatusGranted = "Разрешён"
+        BatteryOptimizationTitle = "Без ограничений батареи"
+        BatteryOptimizationSummaryEnabled = "Фоновая работа без ограничений разрешена"
+        BatteryOptimizationSummaryDisabled = "Ограничено оптимизацией батареи; нажмите, чтобы исправить"
+    }
+
+    Network = {
+        UpdateChannelTitle = "Канал обновлений"
+        UpdateChannelSummary = "Выберите канал GitHub Release для проверки обновлений"
+        UpdateChannelStable = "Стабильный"
+        UpdateChannelPre = "Предрелизный"
+        UpdateChannelSmart = "Умный"
+        AutoCheckAppUpdateTitle = "Автопроверка обновлений"
+        AutoCheckAppUpdateSummary = "Автоматически проверять обновления GitHub Release каждые 1 час в фоне"
+        CustomUserAgentTitle = "User-Agent ядра и подписок"
+        CustomUserAgentSummaryDefault = "Не задан (по умолчанию: ClashMetaForAndroid)"
+    }
+
+    PredictiveBack = {
+        Title = "Предсказывающий жест назад"
+        RestartSummary = "Вступит в силу при следующем запуске приложения"
+        ProgressTitle = "Амплитуда предсказания"
+    }
+
+    WarningDialog = {
+        Title = "Предупреждение"
+        HideIconMsg1 = "Перед скрытием убедитесь, что можете открыть настройки этого приложения!"
+        HideIconMsg2 = "Для HyperOS включите автозапуск и всплывающие окна в фоне, чтобы принимать коды с экрана набора!"
+    }
+
+    EditDialog = {
+        UserAgentTitle = "Изменить User-Agent"
+    }
+
+    Button = {
+        Apply = "Применить"
+    }
+
+}

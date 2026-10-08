@@ -1,0 +1,38 @@
+<手動節點>
+ManualNode = {
+    Protocol = "協議"
+    Name = "備註名"
+    Server = "地址"
+    Port = "端口"
+    Uuid = "用戶 ID (UUID)"
+    AlterId = "AlterId"
+    Password = "密碼"
+    Cipher = "加密方式"
+    Transport = "傳輸方式"
+    Tls = "啟用 TLS"
+    Sni = "SNI"
+    SkipCertVerify = "跳過證書驗證"
+    WsPath = "WS 路徑"
+    WsHost = "WS Host"
+    GrpcServiceName = "gRPC ServiceName"
+    Flow = "Flow"
+    Username = "用戶名"
+    Obfs = "混淆"
+    ObfsPassword = "混淆密碼"
+    PrivateKey = "私鑰"
+    PublicKey = "公鑰"
+    PresharedKey = "預共享密鑰（可選）"
+    LocalIp = "本地 IP"
+    Dns = "DNS"
+    Mtu = "MTU"
+    Save = "保存"
+
+    Validation = {
+        ServerRequired = "請填寫服務器地址"
+        PortInvalid = "端口無效（1-65535）"
+        UuidRequired = "請填寫用戶 ID"
+        PasswordRequired = "請填寫密碼"
+        PrivateKeyRequired = "請填寫私鑰"
+        PublicKeyRequired = "請填寫公鑰"
+    }
+}

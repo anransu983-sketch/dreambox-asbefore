@@ -1,0 +1,10 @@
+{
+  "id": "lemon",
+  "name": "柠檬黄",
+  "version": "1.0",
+  "author": "梦盒",
+  "description": "明亮活泼的柠檬黄",
+  "themeMode": "dark",
+  "seedColor": "#FFFACC15",
+  "sourceUrl": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/lemon.json"
+}

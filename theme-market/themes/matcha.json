@@ -1,0 +1,10 @@
+{
+  "id": "matcha",
+  "name": "抹茶绿",
+  "version": "1.0",
+  "author": "梦盒",
+  "description": "日式抹茶，清新自然",
+  "themeMode": "dark",
+  "seedColor": "#FF65A30D",
+  "sourceUrl": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/matcha.json"
+}

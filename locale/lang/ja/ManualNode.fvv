@@ -1,0 +1,38 @@
+<手動ノード>
+ManualNode = {
+    Protocol = "プロトコル"
+    Name = "備考"
+    Server = "サーバーアドレス"
+    Port = "ポート"
+    Uuid = "ユーザーID (UUID)"
+    AlterId = "AlterId"
+    Password = "パスワード"
+    Cipher = "暗号化方式"
+    Transport = "転送方式"
+    Tls = "TLSを有効化"
+    Sni = "SNI"
+    SkipCertVerify = "証明書検証をスキップ"
+    WsPath = "WS パス"
+    WsHost = "WS Host"
+    GrpcServiceName = "gRPC ServiceName"
+    Flow = "Flow"
+    Username = "ユーザー名"
+    Obfs = "難読化"
+    ObfsPassword = "難読化パスワード"
+    PrivateKey = "秘密鍵"
+    PublicKey = "公開鍵"
+    PresharedKey = "事前共有鍵（任意）"
+    LocalIp = "ローカルIP"
+    Dns = "DNS"
+    Mtu = "MTU"
+    Save = "保存"
+
+    Validation = {
+        ServerRequired = "サーバーアドレスを入力してください"
+        PortInvalid = "ポートが無効です（1-65535）"
+        UuidRequired = "ユーザーIDを入力してください"
+        PasswordRequired = "パスワードを入力してください"
+        PrivateKeyRequired = "秘密鍵を入力してください"
+        PublicKeyRequired = "公開鍵を入力してください"
+    }
+}

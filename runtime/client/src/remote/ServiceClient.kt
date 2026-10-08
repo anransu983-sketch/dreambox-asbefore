@@ -1,0 +1,130 @@
+/*
+ * This file is part of FlyCat.
+ *
+ * FlyCat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c)  YumeYucca 2025 - Present
+ * Based on YumeBox by YumeYucca
+ *
+ */
+
+package com.suanran.dreambox.runtime.client.remote
+
+import android.content.Context
+import com.suanran.dreambox.core.Global
+import com.suanran.dreambox.core.appContextOrSelf
+import com.suanran.dreambox.core.contract.RemoteControllerStoreReader
+import com.suanran.dreambox.runtime.api.remote.IClashManager
+import com.suanran.dreambox.runtime.api.remote.IProfileManager
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import timber.log.Timber
+
+object ServiceClient {
+    private const val CONNECT_TIMEOUT_MS = 10_000L
+    private const val PROFILE_MANAGER_CLASS = "com.suanran.dreambox.runtime.service.profile.ProfileManager"
+    private val mutex = Mutex()
+    private var initialized = false
+    private var clashManager: IClashManager? = null
+    private var httpManager: HttpClashManager? = null
+    private var profileManager: IProfileManager? = null
+    private var remoteStore: RemoteControllerStoreReader? = null
+
+    fun configure(store: RemoteControllerStoreReader) {
+        remoteStore = store
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun connect(ctx: Context) {
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val appContext = ctx.appContextOrSelf
+                if (initialized && clashManager != null && profileManager != null) {
+                    return@withLock
+                }
+
+                val startedAt = System.currentTimeMillis()
+
+                try {
+                    withTimeout(CONNECT_TIMEOUT_MS) {
+                        Global.init(appContext)
+                        val store = remoteStore
+                            ?: error("ServiceClient not configured: call configure() before connect()")
+                        val httpManager =
+                            HttpClashManager(backendProvider = { store.activeBackend() })
+                        clashManager =
+                            ClashGateway(
+                                appContext,
+                                remote = httpManager,
+                                isRemoteControllerActive = {
+                                    store.isActive()
+                                },
+                            )
+                        profileManager = instantiateServiceObject(
+                            className = PROFILE_MANAGER_CLASS,
+                            context = appContext,
+                        )
+                        initialized = true
+                    }
+                    Timber.d(
+                        "ServiceClient gateway initialized in pid=${android.os.Process.myPid()}, process=${android.app.Application.getProcessName()}, cost=${System.currentTimeMillis() - startedAt}ms"
+                    )
+                } catch (error: Exception) {
+                    // fault barrier: gateway init spans MMKV/native/service wiring; reset state, log, and rethrow so the caller sees the original failure.
+                    if (error is CancellationException) throw error
+                    httpManager?.destroy()
+                    httpManager = null
+                    initialized = false
+                    clashManager = null
+                    profileManager = null
+                    Timber.e(error, "Failed to initialize local service gateway")
+                    throw error
+                }
+            }
+        }
+    }
+
+    fun disconnect() {
+        httpManager?.destroy()
+        httpManager = null
+        clashManager = null
+        profileManager = null
+        initialized = false
+    }
+
+    fun clash(): IClashManager =
+        clashManager ?: throw IllegalStateException("ServiceClient not connected")
+
+    fun profile(): IProfileManager =
+        profileManager ?: throw IllegalStateException("ServiceClient not connected")
+
+    fun isConnected(): Boolean = initialized && clashManager != null && profileManager != null
+
+    /** 探测已配置的远程后端，无需执行完整的 [connect] 调用。可在 [connect] 之前安全调用；会创建临时的 [HttpClashManager] 用于可达性检查。 */
+    suspend fun probe(): Boolean {
+        val store = remoteStore ?: return false
+        val backend = store.activeBackend() ?: return false
+        return HttpClashManager(backendProvider = { backend }).probe()
+    }
+
+    private inline fun <reified T> instantiateServiceObject(className: String, context: Context): T {
+        val clazz = Class.forName(className)
+        val instance = clazz.getConstructor(Context::class.java).newInstance(context)
+        return (instance as? T) ?: error("$className does not implement ${T::class.java.name}")
+    }
+}

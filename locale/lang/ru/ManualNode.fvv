@@ -1,0 +1,38 @@
+<Ручной узел>
+ManualNode = {
+    Protocol = "Протокол"
+    Name = "Заметка"
+    Server = "Адрес сервера"
+    Port = "Порт"
+    Uuid = "ID пользователя (UUID)"
+    AlterId = "AlterId"
+    Password = "Пароль"
+    Cipher = "Шифр"
+    Transport = "Транспорт"
+    Tls = "Включить TLS"
+    Sni = "SNI"
+    SkipCertVerify = "Пропустить проверку сертификата"
+    WsPath = "WS путь"
+    WsHost = "WS Host"
+    GrpcServiceName = "gRPC ServiceName"
+    Flow = "Flow"
+    Username = "Имя пользователя"
+    Obfs = "Обфускация"
+    ObfsPassword = "Пароль обфускации"
+    PrivateKey = "Приватный ключ"
+    PublicKey = "Публичный ключ"
+    PresharedKey = "Предварительный ключ (необязательно)"
+    LocalIp = "Локальный IP"
+    Dns = "DNS"
+    Mtu = "MTU"
+    Save = "Сохранить"
+
+    Validation = {
+        ServerRequired = "Введите адрес сервера"
+        PortInvalid = "Неверный порт (1-65535)"
+        UuidRequired = "Введите ID пользователя"
+        PasswordRequired = "Введите пароль"
+        PrivateKeyRequired = "Введите приватный ключ"
+        PublicKeyRequired = "Введите публичный ключ"
+    }
+}

@@ -1,0 +1,16 @@
+<Stream Unlock Page>
+StreamUnlock = {
+    Title = "ストリーミング解鎖チェック"
+
+    CheckAll = "すべてチェック"
+    Recheck = "再チェック"
+
+    Status = {
+        Idle = "未チェック"
+        Checking = "チェック中..."
+        Unlocked = "解鎖済み"
+        UnlockedWithRegion = "解鎖済み（%s）"
+        Locked = "未解鎖"
+        Failed = "チェック失敗"
+    }
+}

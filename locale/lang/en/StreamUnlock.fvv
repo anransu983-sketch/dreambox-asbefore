@@ -1,0 +1,16 @@
+<Stream Unlock Page>
+StreamUnlock = {
+    Title = "Streaming Unlock Check"
+
+    CheckAll = "Check All"
+    Recheck = "Recheck"
+
+    Status = {
+        Idle = "Not checked"
+        Checking = "Checking..."
+        Unlocked = "Unlocked"
+        UnlockedWithRegion = "Unlocked (%s)"
+        Locked = "Locked"
+        Failed = "Check failed"
+    }
+}

@@ -1,0 +1,621 @@
+/*
+ * This file is part of FlyCat.
+ *
+ * FlyCat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c)  YumeYucca 2025 - Present
+ * Based on YumeBox by YumeYucca
+ *
+ */
+
+package com.suanran.dreambox.feature.profiles.presentation.screen
+
+import android.Manifest
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.provider.OpenableColumns
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.suanran.dreambox.core.model.profile.Profile
+import com.suanran.dreambox.feature.profiles.presentation.viewmodel.DownloadProgress
+import com.suanran.dreambox.feature.profiles.presentation.viewmodel.ProfilesViewModel
+import com.suanran.dreambox.locale.FlyTxt
+import com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
+import com.suanran.dreambox.presentation.component.dialog.AppBottomSheetCloseAction
+import com.suanran.dreambox.presentation.component.dialog.AppBottomSheetConfirmAction
+import com.suanran.dreambox.presentation.theme.AnimationSpecs
+import com.suanran.dreambox.presentation.theme.UiDp
+import com.suanran.dreambox.presentation.util.ProfileImportType
+import com.suanran.dreambox.presentation.util.isYamlConfigFileName
+import com.suanran.dreambox.presentation.util.profileNameFromConfigFileName
+import com.suanran.dreambox.presentation.util.readClipboardSubscriptionUrl
+import com.suanran.dreambox.presentation.util.readDisplayName
+import com.suanran.dreambox.presentation.util.sourceFileName
+import com.suanran.dreambox.presentation.util.toast
+import java.io.File
+import java.util.UUID
+import kotlin.math.max
+import kotlinx.coroutines.launch
+
+@Composable
+internal fun AddProfileSheet(
+    show: MutableState<Boolean>,
+    profileToEdit: Profile? = null,
+    importUrl: String? = null,
+    onAddProfile:
+        (
+            name: String,
+            source: String,
+            type: Profile.Type,
+            interval: Long,
+            fileUri: android.net.Uri?,
+            ageSecretKey: String,
+        ) -> Unit,
+    onUpdateProfile: (uuid: UUID, name: String, source: String, interval: Long, ageSecretKey: String?) -> Unit,
+    onDownloadComplete: () -> Unit,
+    profilesViewModel: ProfilesViewModel,
+) {
+    val configuration = LocalConfiguration.current
+    val downloadSheetContentHeight = configuration.screenHeightDp.dp * 0.3f
+    val downloadCompleteSheetContentHeight = configuration.screenHeightDp.dp * 0.42f
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var selectedImportType by remember { mutableStateOf(ProfileImportType.Url) }
+    var name by remember { mutableStateOf("") }
+    var nameTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var url by remember { mutableStateOf("") }
+    var urlTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var clipboardLinks by remember { mutableStateOf("") }
+    var clipboardTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var manualProtocol by remember { mutableStateOf(ManualNodeProtocol.VLESS) }
+    val manualForm = remember { ManualNodeFormState() }
+    var filePath by remember { mutableStateOf("") }
+    var fileName by remember { mutableStateOf("") }
+    var fileNameTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var ageSecretKey by remember { mutableStateOf("") }
+    var ageSecretKeyTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var initialAgeSecretKey by remember { mutableStateOf("") }
+    var interval by remember { mutableStateOf("") }
+    var intervalTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var error by remember { mutableStateOf("") }
+    var isDownloading by remember { mutableStateOf(false) }
+    val downloadProgress by profilesViewModel.downloadProgress.collectAsStateWithLifecycle()
+    val uiState by profilesViewModel.uiState.collectAsStateWithLifecycle()
+    var hasShownCompleteAnimation by remember { mutableStateOf(false) }
+    var stableSheetHeightPx by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(show.value) {
+        if (!show.value) {
+            hasShownCompleteAnimation = false
+            isDownloading = false
+        }
+    }
+
+    val applyNameText: (String) -> Unit = { updatedText ->
+        name = updatedText
+        nameTextFieldValue = textFieldValueAtEnd(updatedText)
+    }
+    val applyUrlText: (String) -> Unit = { updatedText ->
+        url = updatedText
+        urlTextFieldValue = textFieldValueAtEnd(updatedText)
+    }
+    val applyFileNameText: (String) -> Unit = { updatedText ->
+        fileName = updatedText
+        fileNameTextFieldValue = textFieldValueAtEnd(updatedText)
+    }
+
+    val clearAllState = {
+        applyNameText("")
+        applyUrlText("")
+        clipboardLinks = ""
+        clipboardTextFieldValue = TextFieldValue()
+        filePath = ""
+        applyFileNameText("")
+        ageSecretKey = ""
+        ageSecretKeyTextFieldValue = TextFieldValue()
+        initialAgeSecretKey = ""
+        interval = ""
+        intervalTextFieldValue = TextFieldValue()
+        error = ""
+        isDownloading = false
+        hasShownCompleteAnimation = false
+    }
+
+    val clearCurrentTypeState = {
+        when (selectedImportType) {
+            ProfileImportType.Url -> applyUrlText("")
+            ProfileImportType.NodeSub -> applyUrlText("")
+            ProfileImportType.LocalFile -> {
+                filePath = ""
+                applyFileNameText("")
+            }
+            ProfileImportType.Clipboard -> {
+                clipboardLinks = ""
+                clipboardTextFieldValue = TextFieldValue()
+            }
+            ProfileImportType.Manual -> {}
+            ProfileImportType.Qr -> {}
+        }
+        error = ""
+    }
+
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+        isGranted ->
+        hasCameraPermission = isGranted
+        if (!isGranted) {
+            context.toast(FlyTxt.ProfilesPage.QrScanner.NeedCamera, Toast.LENGTH_LONG)
+            selectedImportType = ProfileImportType.Url
+        }
+    }
+
+    LaunchedEffect(selectedImportType) {
+        if (selectedImportType == ProfileImportType.Qr && !hasCameraPermission) {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    val showCameraPreview by remember(show.value, selectedImportType, isDownloading, hasCameraPermission) {
+        derivedStateOf {
+            show.value &&
+                selectedImportType == ProfileImportType.Qr &&
+                !isDownloading &&
+                hasCameraPermission
+        }
+    }
+
+    DisposableEffect(show.value, profileToEdit, importUrl) {
+        if (show.value) {
+            clearAllState()
+            if (profileToEdit != null) {
+                applyNameText(profileToEdit.name)
+                ageSecretKey = profileToEdit.ageSecretKey
+                ageSecretKeyTextFieldValue = TextFieldValue(
+                    profileToEdit.ageSecretKey,
+                    TextRange(profileToEdit.ageSecretKey.length),
+                )
+                initialAgeSecretKey = profileToEdit.ageSecretKey
+                interval = if (profileToEdit.interval > 0) profileToEdit.interval.toString() else ""
+                intervalTextFieldValue = textFieldValueAtEnd(interval)
+                if (profileToEdit.type == Profile.Type.Url) {
+                    selectedImportType = ProfileImportType.Url
+                    applyUrlText(profileToEdit.source)
+                } else {
+                    selectedImportType = ProfileImportType.fromProfile(profileToEdit.type)
+                    filePath = profileToEdit.source
+                    applyFileNameText(sourceFileName(profileToEdit.source))
+                }
+            } else if (!importUrl.isNullOrBlank()) {
+                selectedImportType = ProfileImportType.Url
+                applyUrlText(importUrl)
+            } else {
+                selectedImportType = ProfileImportType.Url
+                readClipboardSubscriptionUrl(context)?.let(applyUrlText)
+            }
+        }
+        onDispose {}
+    }
+    LaunchedEffect(uiState.error) {
+        val errorMessage = uiState.error
+        if (errorMessage != null) {
+            context.toast(errorMessage, Toast.LENGTH_LONG)
+            if (isDownloading) {
+                isDownloading = false
+                error = errorMessage
+            }
+            profilesViewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(downloadProgress?.isCompleted, isDownloading) {
+        if (isDownloading && downloadProgress?.isCompleted == true && !hasShownCompleteAnimation) {
+            hasShownCompleteAnimation = true
+            onDownloadComplete()
+        }
+    }
+
+    LaunchedEffect(uiState.message) {
+        if (uiState.message != null && isDownloading && !hasShownCompleteAnimation) {
+            hasShownCompleteAnimation = true
+            onDownloadComplete()
+        }
+        if (uiState.message != null) {
+            profilesViewModel.clearMessage()
+        }
+    }
+
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                val actualFileName =
+                    readDisplayName(context, it, FlyTxt.ProfilesPage.Message.UnknownFile)
+
+                if (!isYamlConfigFileName(actualFileName)) {
+                    error = FlyTxt.ProfilesPage.Validation.YamlOnly
+                    return@let
+                }
+
+                filePath = it.toString()
+                error = ""
+                applyFileNameText(actualFileName)
+
+                if (
+                    nameTextFieldValue.text.isBlank() || nameTextFieldValue.text == actualFileName
+                ) {
+                    applyNameText(
+                        profileNameFromConfigFileName(
+                            actualFileName,
+                            FlyTxt.ProfilesPage.Input.NewProfile,
+                        )
+                    )
+                }
+            }
+        }
+
+    val qrImageLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                scope.launch {
+                    // QR decode fault barrier: any ML Kit/IO failure is surfaced as a toast.
+                    @Suppress("TooGenericExceptionCaught")
+                    try {
+                        val result = readQrFromImage(context, it)
+                        if (result != null) {
+                            applyUrlText(result)
+                            selectedImportType = ProfileImportType.Url
+                            context.toast(FlyTxt.ProfilesPage.QrScanner.RecognizeSuccess)
+                        } else {
+                            context.toast(FlyTxt.ProfilesPage.QrScanner.RecognizeFailed)
+                        }
+                    } catch (error: Exception) {
+                        context.toast(
+                            FlyTxt.ProfilesPage.QrScanner.RecognizeError.format(error.message ?: "")
+                        )
+                    }
+                }
+            }
+        }
+
+    val dismissSheet = {
+        if (!isDownloading) {
+            show.value = false
+            profilesViewModel.clearDownloadProgress()
+        }
+    }
+
+    fun submitProfile() {
+        if (selectedImportType == ProfileImportType.Qr ||
+            selectedImportType == ProfileImportType.Manual ||
+            isDownloading
+        ) {
+            return
+        }
+        if (selectedImportType == ProfileImportType.Url && urlTextFieldValue.text.isBlank()) {
+            error = FlyTxt.ProfilesPage.Validation.EnterUrl
+            return
+        }
+        if (selectedImportType == ProfileImportType.LocalFile && filePath.isBlank()) {
+            error = FlyTxt.ProfilesPage.Validation.SelectFile
+            return
+        }
+        if (selectedImportType == ProfileImportType.Clipboard && clipboardTextFieldValue.text.isBlank()) {
+            error = FlyTxt.ProfilesPage.Validation.EnterLinks
+            return
+        }
+        keyboardController?.hide()
+        profilesViewModel.clearError()
+        hasShownCompleteAnimation = false
+
+        // 节点订阅：直接走节点导入流程
+        if (selectedImportType == ProfileImportType.NodeSub) {
+            if (urlTextFieldValue.text.isBlank()) {
+                error = FlyTxt.ProfilesPage.Validation.EnterUrl
+                return
+            }
+            keyboardController?.hide()
+            profilesViewModel.clearError()
+            hasShownCompleteAnimation = false
+            isDownloading = true
+            profilesViewModel.importNodeSubscription(
+                name = nameTextFieldValue.text.ifBlank { FlyTxt.ProfilesPage.Input.NewProfile },
+                url = urlTextFieldValue.text.trim(),
+            )
+            return
+        }
+
+        // 剪贴板导入：解析链接后直接建配置
+        if (selectedImportType == ProfileImportType.Clipboard) {
+            val (nodes, failed) = com.suanran.dreambox.core.util.NodeLinkParser.parseAll(clipboardTextFieldValue.text)
+            if (nodes.isEmpty()) {
+                error = FlyTxt.ProfilesPage.Validation.NoValidNode
+                return
+            }
+            // 节点订阅：直接走节点导入流程
+            profilesViewModel.createProfileFromNodes(
+                name = nameTextFieldValue.text.ifBlank { FlyTxt.ProfilesPage.Input.NewProfile },
+                nodes = nodes,
+            ) { success, _ ->
+                isDownloading = false
+                if (success) {
+                    if (failed > 0) {
+                        context.toast(FlyTxt.ProfilesPage.Message.NodesAddedWithFailed.format(nodes.size, failed))
+                    }
+                    onDownloadComplete()
+                }
+            }
+            return
+        }
+
+        isDownloading = true
+        val trimmedAgeSecretKey = ageSecretKeyTextFieldValue.text.trim()
+        val ageKeyUpdate = if (trimmedAgeSecretKey != initialAgeSecretKey) trimmedAgeSecretKey else null
+        if (selectedImportType == ProfileImportType.Url) {
+            val newInterval = intervalTextFieldValue.text.toLongOrNull() ?: 0L
+            if (profileToEdit != null) {
+                onUpdateProfile(
+                    profileToEdit.uuid,
+                    nameTextFieldValue.text,
+                    urlTextFieldValue.text,
+                    newInterval,
+                    ageKeyUpdate,
+                )
+            } else {
+                onAddProfile(
+                    nameTextFieldValue.text.ifBlank { FlyTxt.ProfilesPage.Input.NewProfile },
+                    urlTextFieldValue.text,
+                    Profile.Type.Url,
+                    newInterval,
+                    null,
+                    trimmedAgeSecretKey,
+                )
+            }
+        } else {
+            if (profileToEdit != null) {
+                onUpdateProfile(
+                    profileToEdit.uuid,
+                    name,
+                    profileToEdit.source,
+                    profileToEdit.interval,
+                    ageKeyUpdate,
+                )
+            } else {
+                onAddProfile(
+                    nameTextFieldValue.text.ifBlank { FlyTxt.ProfilesPage.Input.NewProfile },
+                    filePath,
+                    Profile.Type.File,
+                    0L,
+                    filePath.toUri(),
+                    trimmedAgeSecretKey,
+                )
+            }
+        }
+    }
+
+    AppActionBottomSheet(
+        show = show.value,
+        title = if (profileToEdit != null) {
+            FlyTxt.ProfilesPage.Sheet.EditTitle
+        } else {
+            FlyTxt.ProfilesPage.Sheet.AddTitle
+        },
+        startAction = {
+            if (!isDownloading) {
+                AppBottomSheetCloseAction(contentDescription = FlyTxt.Component.Action.Cancel, onClick = dismissSheet)
+            }
+        },
+        endAction = {
+            if (!isDownloading &&
+                selectedImportType != ProfileImportType.Qr &&
+                selectedImportType != ProfileImportType.Manual
+            ) {
+                AppBottomSheetConfirmAction(
+                    contentDescription = "Confirm",
+                    onClick = { submitProfile() },
+                )
+            }
+        },
+        onDismissRequest = dismissSheet,
+    ) {
+        val stableSheetHeight =
+            remember(stableSheetHeightPx, density) {
+                if (stableSheetHeightPx <= 0) {
+                    UiDp.dp0
+                } else {
+                    with(density) { stableSheetHeightPx.toDp() }
+                }
+            }
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .wrapContentHeight()
+                    .animateContentSize(animationSpec = tween(AnimationSpecs.DURATION_NORMAL, easing = AnimationSpecs.StandardEasing))
+                    .padding(bottom = UiDp.dp16)
+        ) {
+            AnimatedContent(
+                targetState = isDownloading,
+                transitionSpec = {
+                    if (targetState) {
+                        (slideInHorizontally(animationSpec = tween(AnimationSpecs.DURATION_SLIDE_ENTER), initialOffsetX = { it }) +
+                            fadeIn(animationSpec = tween(AnimationSpecs.DURATION_FAST))) togetherWith
+                            (slideOutHorizontally(
+                                animationSpec = tween(AnimationSpecs.DURATION_MEDIUM),
+                                targetOffsetX = { -it / 3 },
+                            ) + fadeOut(animationSpec = tween(AnimationSpecs.DURATION_FAST)))
+                    } else {
+                        (slideInHorizontally(
+                            animationSpec = tween(AnimationSpecs.DURATION_MEDIUM),
+                            initialOffsetX = { -it / 3 },
+                        ) + fadeIn(animationSpec = tween(AnimationSpecs.DURATION_FAST))) togetherWith
+                            (slideOutHorizontally(
+                                animationSpec = tween(AnimationSpecs.DURATION_SLIDE_ENTER),
+                                targetOffsetX = { it },
+                            ) + fadeOut(animationSpec = tween(AnimationSpecs.DURATION_FAST)))
+                    }
+                },
+                label = "ProfileImportContentSwitch",
+            ) { downloading ->
+                if (downloading) {
+                    DownloadProgressContent(
+                        downloadProgress = downloadProgress,
+                        stableSheetHeightPx = stableSheetHeightPx,
+                        stableSheetHeight = stableSheetHeight,
+                        downloadSheetContentHeight = downloadSheetContentHeight,
+                        downloadCompleteSheetContentHeight = downloadCompleteSheetContentHeight,
+                    )
+                } else {
+                    ProfileFormContent(
+                        selectedImportType = selectedImportType,
+                        profileLocked = profileToEdit != null,
+                        nameTextFieldValue = nameTextFieldValue,
+                        urlTextFieldValue = urlTextFieldValue,
+                        fileNameTextFieldValue = fileNameTextFieldValue,
+                        clipboardTextFieldValue = clipboardTextFieldValue,
+                        manualProtocol = manualProtocol,
+                        manualForm = manualForm,
+                        ageSecretKeyTextFieldValue = ageSecretKeyTextFieldValue,
+                        intervalTextFieldValue = intervalTextFieldValue,
+                        error = error,
+                        hasCameraPermission = hasCameraPermission,
+                        showCameraPreview = showCameraPreview,
+                        onContainerMeasured = {
+                            stableSheetHeightPx = max(stableSheetHeightPx, it.height)
+                        },
+                        onTypeSelected = {
+                            selectedImportType = it
+                            clearCurrentTypeState()
+                        },
+                        onNameChange = { updatedTextFieldValue ->
+                            nameTextFieldValue = updatedTextFieldValue
+                            name = updatedTextFieldValue.text
+                            error = ""
+                        },
+                        onUrlChange = { updatedTextFieldValue ->
+                            urlTextFieldValue = updatedTextFieldValue
+                            url = updatedTextFieldValue.text
+                            error = ""
+                        },
+                        onClipboardChange = { updatedTextFieldValue ->
+                            clipboardTextFieldValue = updatedTextFieldValue
+                            clipboardLinks = updatedTextFieldValue.text
+                            error = ""
+                        },
+                        onPasteFromClipboard = {
+                            val text = readClipboardText(context)
+                            if (!text.isNullOrBlank()) {
+                                clipboardTextFieldValue = textFieldValueAtEnd(text)
+                                clipboardLinks = text
+                                error = ""
+                            } else {
+                                context.toast(FlyTxt.ProfilesPage.Message.ClipboardEmpty)
+                            }
+                        },
+                        onManualProtocolChange = {
+                            manualProtocol = it
+                            error = ""
+                        },
+                        onManualSave = {
+                            val validationError = manualForm.validate(manualProtocol)
+                            if (validationError != null) {
+                                error = validationError
+                                return@ProfileFormContent
+                            }
+                            error = ""
+                            isDownloading = true
+                            val node = manualForm.buildProxyMap(manualProtocol)
+                            profilesViewModel.createProfileFromNodes(
+                                name = manualForm.name.text.ifBlank { FlyTxt.ProfilesPage.Input.NewProfile },
+                                nodes = listOf(node),
+                            ) { success, _ ->
+                                isDownloading = false
+                                if (success) onDownloadComplete()
+                            }
+                        },
+                        onAgeSecretKeyChange = { updatedTextFieldValue ->
+                            ageSecretKeyTextFieldValue = updatedTextFieldValue
+                            ageSecretKey = updatedTextFieldValue.text
+                        },
+                        onIntervalChange = { updatedTextFieldValue ->
+                            val filtered = updatedTextFieldValue.text.filter(Char::isDigit).take(6)
+                            intervalTextFieldValue = TextFieldValue(filtered, TextRange(filtered.length))
+                            interval = filtered
+                            error = ""
+                        },
+                        onPickFile = { launcher.launch("*/*") },
+                        onSelectQrImage = { qrImageLauncher.launch("image/*") },
+                        onQrScanned = { scannedUrl ->
+                            applyUrlText(scannedUrl)
+                            selectedImportType = ProfileImportType.Url
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun textFieldValueAtEnd(text: String): TextFieldValue =
+    TextFieldValue(text = text, selection = TextRange(text.length))
+
+private fun readClipboardText(context: Context): String? {
+    return runCatching {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = clipboard.primaryClip ?: return null
+        if (clip.itemCount <= 0) return null
+        clip.getItemAt(0)?.coerceToText(context)?.toString()?.trim()?.takeIf { it.isNotBlank() }
+    }.getOrNull()
+}

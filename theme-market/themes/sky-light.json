@@ -1,0 +1,10 @@
+{
+  "id": "sky-light",
+  "name": "晴空白",
+  "version": "1.0",
+  "author": "梦盒",
+  "description": "浅色天蓝，通透明亮",
+  "themeMode": "light",
+  "seedColor": "#FF0284C7",
+  "sourceUrl": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/sky-light.json"
+}

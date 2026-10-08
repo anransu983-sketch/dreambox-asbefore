@@ -1,0 +1,271 @@
+/*
+ * This file is part of FlyCat.
+ *
+ * FlyCat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c)  YumeYucca 2025 - Present
+ * Based on YumeBox by YumeYucca
+ *
+ */
+
+package com.suanran.dreambox.feature.proxy.presentation.screen.node
+
+import android.annotation.SuppressLint
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.suanran.dreambox.core.model.proxy.Proxy
+import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
+import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
+import com.suanran.dreambox.core.model.proxy.normalizeProxySheetHeightFraction
+import com.suanran.dreambox.locale.FlyTxt
+import com.suanran.dreambox.presentation.component.navigation.LocalTopBarHazeState
+import com.suanran.dreambox.presentation.component.navigation.LocalTopBarHazeStyle
+import com.suanran.dreambox.presentation.theme.SheetLeadMillis
+import com.suanran.dreambox.presentation.theme.UiDp
+import com.suanran.dreambox.presentation.theme.rememberRowReveal
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollHorizontal
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+
+val NodeSheetContentPadding =
+    PaddingValues(start = UiDp.dp0, end = UiDp.dp0, top = UiDp.dp8, bottom = UiDp.dp16)
+
+private fun LazyListState.isScrolledFromTop(): Boolean =
+    firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0
+
+private fun Modifier.nodeTabHaze(state: HazeState?, style: HazeBlurStyle?): Modifier {
+    if (state == null || style == null) return this
+    return hazeBlur(
+        input = HazeInput.Sources(state),
+        style = style.then {
+            blurRadius(UiDp.dp30)
+            noiseFactor(0f)
+            progressive(
+                HazeProgressive.verticalGradient(
+                    startIntensity = 1f,
+                    endIntensity = 0f,
+                )
+            )
+        },
+    )
+}
+
+@Composable
+internal fun NodeTabs(groups: List<ProxyGroupInfo>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    val hazeState = LocalTopBarHazeState.current
+    val hazeStyle = LocalTopBarHazeStyle.current
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(selectedIndex, groups.size) {
+        if (groups.isEmpty()) return@LaunchedEffect
+        val target = (selectedIndex - 1).coerceAtLeast(0).coerceAtMost(groups.lastIndex)
+        if (target != listState.firstVisibleItemIndex) {
+            listState.animateScrollToItem(target)
+        }
+    }
+
+    LazyRow(
+        state = listState,
+        modifier =
+            Modifier.fillMaxWidth()
+                .nodeTabHaze(hazeState, hazeStyle)
+                .background(MiuixTheme.colorScheme.surface)
+                .overScrollHorizontal(),
+        contentPadding =
+            PaddingValues(start = UiDp.dp14, end = UiDp.dp14, top = UiDp.dp10, bottom = UiDp.dp10),
+        horizontalArrangement = Arrangement.spacedBy(UiDp.dp8),
+        overscrollEffect = null,
+    ) {
+        itemsIndexed(groups, key = { _, group -> group.name }) { index, group ->
+            val selected = index == selectedIndex
+            val background =
+                if (selected) {
+                    MiuixTheme.colorScheme.primary
+                } else {
+                    MiuixTheme.colorScheme.surface
+                }
+            val textColor =
+                if (selected) {
+                    MiuixTheme.colorScheme.onPrimary
+                } else {
+                    MiuixTheme.colorScheme.onSurface
+                }
+
+            Box(
+                modifier =
+                    Modifier.clip(RoundedCornerShape(50))
+                        .background(background)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onSelect(index) },
+                        )
+                        .padding(horizontal = UiDp.dp11, vertical = UiDp.dp6)
+            ) {
+                Text(text = group.name, color = textColor, style = MiuixTheme.textStyles.footnote1)
+            }
+        }
+    }
+}
+
+@SuppressLint("ConfigurationScreenWidthHeight")
+@Composable
+internal fun rememberNodeSheetHeight(sheetHeightFraction: Float): Dp {
+    val normalized = normalizeProxySheetHeightFraction(sheetHeightFraction)
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp
+    return remember(screenHeightDp, normalized) { screenHeightDp.dp * normalized }
+}
+
+@Composable
+internal fun NodeGroupSheetContent(
+    groups: List<ProxyGroupInfo>,
+    displayMode: ProxyDisplayMode,
+    testingGroupNames: Set<String>,
+    sheetHeightFraction: Float,
+    onGroupClick: (ProxyGroupInfo) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
+) {
+    val sheetHeight = rememberNodeSheetHeight(sheetHeightFraction)
+    val revealCount = rememberRowReveal(itemCount = groups.size, listState = listState, leadMillis = SheetLeadMillis)
+
+    LaunchedEffect(testingGroupNames) {
+        if (testingGroupNames.isNotEmpty() && listState.isScrolledFromTop()) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth().height(sheetHeight).overScrollVertical(),
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(UiDp.dp12),
+        contentPadding = NodeSheetContentPadding,
+        overscrollEffect = null,
+    ) {
+        nodeGroupItems(
+            groups = groups,
+            displayMode = displayMode,
+            onGroupClick = onGroupClick,
+            testingGroupNames = testingGroupNames,
+            itemVerticalPadding = UiDp.dp0,
+            revealCount = revealCount,
+        )
+    }
+}
+
+@Composable
+fun NodeSheetContent(
+    group: ProxyGroupInfo,
+    displayMode: ProxyDisplayMode = ProxyDisplayMode.DOUBLE_DETAILED,
+    onSelectProxy: (String) -> Unit,
+    onForceSelectProxy: ((String) -> Unit)? = null,
+    isDelayTesting: Boolean,
+    testingProxyNames: Set<String>,
+    onTestDelay: () -> Unit,
+    onTestProxyDelay: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+    pinnedProxyName: String = "",
+) {
+    val revealCount = rememberRowReveal(itemCount = group.proxies.size, replayKey = group.name, listState = listState, leadMillis = SheetLeadMillis)
+    LaunchedEffect(isDelayTesting) {
+        if (isDelayTesting && listState.isScrolledFromTop()) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize().overScrollVertical(),
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(UiDp.dp12),
+        contentPadding = NodeSheetContentPadding,
+        overscrollEffect = null,
+    ) {
+        nodeGridItems(
+            proxies = group.proxies,
+            selectedProxyName = group.now,
+            pinnedProxyName = pinnedProxyName,
+            displayMode = displayMode,
+            onProxyClick = { proxyName ->
+                if (group.type == Proxy.Type.Selector) {
+                    onSelectProxy(proxyName)
+                } else if (
+                    (group.type == Proxy.Type.URLTest || group.type == Proxy.Type.Fallback) &&
+                    onForceSelectProxy != null
+                ) {
+                    val target = if (proxyName == group.fixed) "" else proxyName
+                    onForceSelectProxy(target)
+                } else {
+                    onTestDelay()
+                }
+            },
+            isDelayTesting = isDelayTesting,
+            testingProxyNames = testingProxyNames,
+            onSingleNodeTestClick = onTestProxyDelay,
+            revealCount = revealCount,
+        )
+    }
+}
+
+/**
+ * 节点页统一的下拉测试容器：下拉触发当前策略组延迟测试，顶部指示动画在测试期间显示 "正在测试 x/xxx" 进度。
+ */
+@Composable
+internal fun NodeTestPullToRefresh(isRefreshing: Boolean, onRefresh: () -> Unit, tested: Int, total: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val refreshTexts = listOf(
+        FlyTxt.Proxy.Testing.Pull,
+        FlyTxt.Proxy.Testing.Release,
+        if (total > 0) {
+            FlyTxt.Proxy.Testing.Progress.format(tested, total)
+        } else {
+            FlyTxt.Proxy.Testing.InProgress
+        },
+        FlyTxt.Proxy.Testing.Complete,
+    )
+    PullToRefresh(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        refreshTexts = refreshTexts,
+        modifier = modifier,
+        content = content,
+    )
+}

@@ -1,0 +1,193 @@
+<App Settings Page>
+AppSettings = {
+    Title = "App Settings"
+
+    Section = {
+        Behavior = "Behavior"
+        Interface = "Interface"
+        Navigation = "Navigation"
+        Privacy = "Privacy"
+        Service = "Service"
+        Network = "Network"
+        Home = "Home"
+    }
+
+    Behavior = {
+        AutoStartTitle = "Auto Start"
+        AutoStartSummary = "Automatically start proxy service on app launch and boot"
+        AutoUpdateOnStartTitle = "Update on Start"
+        AutoUpdateOnStartSummary = "Automatically update the current profile on app launch"
+    }
+
+    Interface = {
+        ThemeModeTitle = "Theme Mode"
+        ThemeModeSummary = "Select the app's theme style"
+        ThemeModeSystem = "Follow System"
+        ThemeModeLight = "Light"
+        ThemeModeDark = "Dark"
+        LanguageTitle = "App Language"
+        LanguageSummary = "Choose the app language"
+        LanguageSystem = "Follow System"
+        LanguageChinese = "简体中文"
+        LanguageChineseTraditional = "繁體中文"
+        LanguageEnglish = "English"
+        LanguageJapanese = "日本語"
+        LanguageRussian = "Русский"
+
+        ColorThemeTitle = "Theme Palette"
+        ColorThemePickerTitle = "Pick Theme Color"
+        ColorThemeCodeLabel = "Theme Color Code (#AARRGGBB)"
+        ColorThemeCustomSummary = "Current theme color: %s"
+        ThemeColorPolarityInvertTitle = "Invert Theme Foreground"
+        ThemeColorPolarityInvertSummary = "If themed colors look odd, try enabling this"
+
+        Theme = {
+            Title = "Theme"
+            BuiltIn = "Built-in"
+            InUse = "In use"
+            Enable = "Enable"
+            CustomTitle = "Custom"
+            PresetDefaultDarkName = "Default Dark"
+            PresetDefaultDarkDesc = "DreamBox · deep-space teal black, the default look"
+            PresetDefaultDarkAuthor = "DreamBox"
+            PresetBocchiName = "Bocchi Starlight"
+            PresetBocchiDesc = "DreamBox · pink starry sky, Bocchi the Rock style"
+            PresetBocchiAuthor = "DreamBox"
+            MarketTitle = "Theme Market"
+            MarketHint = "Browse and install themes from the online catalog."
+            MarketBrowse = "Browse online themes"
+            MarketLoading = "Loading themes..."
+            MarketEmpty = "No themes in the catalog yet."
+            MarketLoadFailed = "Failed to load the catalog."
+            MarketRetry = "Retry"
+            MarketInstall = "Install"
+            MarketInstalled = "Installed"
+            StoreTitle = "Theme Store"
+            StoreHint = "Install theme JSON from a URL (id / name / version / author / description / themeMode / seedColor / sourceUrl); themeMode is dark, light or system, seedColor looks like #FF6B9D."
+            InstallFromUrl = "Install from URL"
+            InstallFromZip = "Import from local ZIP"
+            UrlDialogTitle = "Install theme from URL"
+            UrlDialogSummary = "Enter the download address of the theme JSON file"
+            UrlLabel = "Theme URL"
+            AuthorFormat = "By %s"
+            Delete = "Delete"
+            Update = "Update"
+            DeleteConfirmTitle = "Delete theme"
+            DeleteConfirmMessage = "Delete theme \"%s\"?"
+            WorkingTitle = "Please wait"
+            Applied = "Switched to theme \"%s\""
+            InstallSuccess = "Theme \"%s\" installed"
+            DeleteSuccess = "Theme \"%s\" deleted"
+            UpdateSuccess = "Theme updated to v%s"
+            NoUpdate = "Already up to date"
+            ErrEmptyUrl = "Please enter a URL"
+            ErrDownload = "Download failed: %s"
+            ErrRead = "Failed to read file: %s"
+            ErrSave = "Save failed: %s"
+            ErrExists = "Theme already exists: %s"
+            ErrBuiltin = "Built-in themes cannot be deleted"
+            ErrNotFound = "Theme not found: %s"
+            ErrNoSource = "This theme has no update URL"
+            ErrNotJson = "Not valid JSON"
+            ErrMissingId = "Missing id field"
+            ErrInvalidId = "Invalid id: %s (lowercase letters/digits/hyphen only)"
+            ErrMissingName = "Missing name field"
+            ErrInvalidMode = "Invalid themeMode: %s (dark / light / system)"
+            ErrInvalidColor = "Invalid seedColor: %s (#RRGGBB or #AARRGGBB)"
+            ErrBuiltinConflict = "Cannot overwrite built-in theme: %s"
+            ErrUnknown = "Unknown error: %s"
+        }
+        TopBarBlurTitle = "Blur"
+        TopBarBlurSummary = "Apply a  blur background to"
+        AutoHideNavbarTitle = "Auto-hide Navbar"
+        AutoHideNavbarSummary = "Hide navbar on scroll down and show on scroll up"
+
+        PageScaleTitle = "Page Scale"
+        PageScaleDialogSummary = "80% - 120%"
+
+        ClassicHomeTitle = "Classic Home"
+        JianLaiStyleTitle = "JianLai Style"
+        StickerStyleTitle = "Sticker Desktop"
+        HitokotoTitle = "Hitokoto"
+        HitokotoSummary = "Show Hitokoto quote on classic home TopBar"
+        SidebarExpandedTitle = "Expand Sidebar"
+        HomeQuoteTitle = "Home Quote"
+        HomeQuoteDefault = "Always believe that something wonderful is about to happen"
+        HomeQuoteAuthorTitle = "Home Quote Author"
+        HomeQuoteAuthorDefault = "Firefly"
+        EditHomeQuoteTitle = "Edit Home Quote"
+        EditHomeQuoteAuthorTitle = "Edit Home Quote Author"
+        HomeWallpaperImportFailed = "Could not copy the wallpaper locally; using the original source"
+        HomeWallpaperSourceTitle = "Wallpaper Source"
+        HomeWallpaperSourceSummary = "Pick from gallery or enter a URL"
+        HomeWallpaperSourceGallery = "Pick from Gallery"
+        HomeWallpaperSourceUrl = "Enter URL"
+        HomeWallpaperUrlDialogTitle = "Set Remote Wallpaper"
+        WallpaperScrimTitle = "Wallpaper Bottom Dimming"
+        MusicLyricInSignatureTitle = "Show lyrics at signature"
+        MusicPlayerInSidebarTitle = "Show player in sidebar"
+    }
+
+    Privacy = {
+
+        HideIconTitle = "Hide App Icon"
+        HideIconSummary = "After hiding, you can open via dialer *#*#0721#*#*"
+        HideFromRecentsTitle = "Hide Recents Card"
+        HideFromRecentsSummary = "Do not show this app in the recent tasks list (recents card)"
+    }
+
+    ServiceSection = {
+        TrafficNotificationTitle = "Show Traffic Notification"
+        TrafficNotificationSummary = "Display traffic usage in notification bar"
+        LogLevelTitle = "Log Level"
+        LogLevelSummary = "Set the minimum app runtime log level"
+        SingleNodeTestTitle = "Single Node Test"
+        SingleNodeTestSummary = "Tap icon on node card to test individual node delay"
+        ExitUiWhenBackgroundTitle = "Release UI In Background"
+        ExitUiWhenBackgroundSummary = "Release the activity UI when the app is fully hidden in background while keeping the proxy service running"
+        SuperIslandTitle = "Super Island"
+        ShizukuTitle = "Shizuku Access"
+        ShizukuNotRunning = "Install and start Shizuku first"
+        ShizukuPermissionRequired = "Tap to request Shizuku permission"
+        ShizukuReady = "Shizuku authorized; Super Island is ready"
+        ShizukuStatusUnavailable = "Unavailable"
+        ShizukuStatusPending = "Needs access"
+        ShizukuStatusGranted = "Authorized"
+        BatteryOptimizationTitle = "Unrestricted Battery"
+        BatteryOptimizationSummaryEnabled = "Background activity is unrestricted"
+        BatteryOptimizationSummaryDisabled = "Restricted by battery optimization; tap to fix"
+    }
+
+    Network = {
+        UpdateChannelTitle = "Update Channel"
+        UpdateChannelSummary = "Choose which GitHub Release channel is used for update checks"
+        UpdateChannelStable = "Stable"
+        UpdateChannelPre = "Pre-release"
+        UpdateChannelSmart = "Smart"
+        AutoCheckAppUpdateTitle = "Auto-check App Updates"
+        AutoCheckAppUpdateSummary = "Check GitHub Release updates automatically every 1 hour in background"
+        CustomUserAgentTitle = "Core & Subscription User-Agent"
+        CustomUserAgentSummaryDefault = "Not set (default: ClashMetaForAndroid)"
+    }
+
+    PredictiveBack = {
+        Title = "Predictive Back Gesture"
+        RestartSummary = "Takes effect the next time the app starts"
+        ProgressTitle = "Predictive Back Amplitude"
+    }
+
+    WarningDialog = {
+        Title = "Warning"
+        HideIconMsg1 = "Please make sure you can access this app's settings before hiding!"
+        HideIconMsg2 = "For HyperOS, please enable Auto-start and Background Pop-up permissions to receive dialer codes!"
+    }
+
+    EditDialog = {
+        UserAgentTitle = "Edit User-Agent"
+    }
+
+    Button = {
+        Apply = "Apply"
+    }
+
+}

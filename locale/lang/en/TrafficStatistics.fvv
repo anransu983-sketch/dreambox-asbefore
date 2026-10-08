@@ -1,0 +1,62 @@
+<Traffic Statistics Page>
+TrafficStatistics = {
+    Title = "Traffic Statistics"
+    EntrySummary = "View traffic usage"
+
+    TimeRange = {
+        Day = "Day"
+        Week = "Week"
+        Month = "Month"
+    }
+
+    Summary = {
+        DayTraffic = "Day's Traffic"
+        WeekTraffic = "Week's Traffic"
+        MonthTraffic = "Month's Traffic"
+    }
+
+
+
+    Donut = {
+        Other = "Other"
+    }
+
+    Sort = {
+        ByName = "App Name"
+        ByUpload = "Upload"
+        ByDownload = "Download"
+        ByTotal = "Traffic"
+    }
+
+    Action = {
+        Clear = "Clear Statistics"
+        ClearSuccess = "Statistics cleared"
+    }
+
+    Section = {
+        Traffic = "Traffic"
+        PerAppTraffic = "Per-App Traffic"
+        EmptyApps = "No app traffic statistics"
+        PerNodeTraffic = "Per-Node Traffic"
+        EmptyNodes = "No node traffic statistics"
+        Footprint = "Traffic Footprint"
+        EmptyFootprint = "No footprint records yet"
+    }
+
+    Metric = {
+        Download = "Download"
+        Upload = "Upload"
+        Total = "Total"
+        UsageLine = "Down %s  Up %s"
+    }
+
+    Footprint = {
+        TopApp = "Top app: %s"
+    }
+
+    Buckets = {
+        UnknownAppName = "Unknown app"
+        UnattributedTrafficName = "Unattributed traffic"
+        UnattributedRouteName = "Unattributed route"
+    }
+}

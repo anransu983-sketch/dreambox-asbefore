@@ -1,0 +1,16 @@
+<Stream Unlock Page>
+StreamUnlock = {
+    Title = "串流解鎖檢測"
+
+    CheckAll = "全部檢測"
+    Recheck = "重新檢測"
+
+    Status = {
+        Idle = "未檢測"
+        Checking = "檢測中..."
+        Unlocked = "已解鎖"
+        UnlockedWithRegion = "已解鎖（%s）"
+        Locked = "未解鎖"
+        Failed = "檢測失敗"
+    }
+}

@@ -1,0 +1,138 @@
+name: Build DreamBox APK
+
+# 手动触发：Actions 页选这个 workflow 点 Run workflow
+on:
+  workflow_dispatch:
+
+jobs:
+  geo:
+    name: Geo assets
+    uses: ./.github/workflows/reusable-build-geo.yml
+    with:
+      channel: dreambox
+    secrets: inherit
+
+  native-arm64:
+    name: Native arm64-v8a
+    uses: ./.github/workflows/reusable-build-native-abi.yml
+    with:
+      channel: dreambox
+      kernel_channel: alpha
+      abi: arm64-v8a
+    secrets: inherit
+
+  apk:
+    name: Build debug APK
+    needs: [geo, native-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "26"
+
+      - name: Setup Kotlin
+        uses: fwilhe2/setup-kotlin@main
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ""
+
+      - name: Restore debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: dreambox-debug-keystore-v1
+
+      - name: Download native arm64 artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: native-dreambox-arm64-v8a
+          path: _artifacts/native
+
+      - name: Download core version stamp
+        uses: actions/download-artifact@v8
+        with:
+          name: native-dreambox-core-stamp
+          path: _artifacts/stamp
+
+      - name: Download geo artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: native-dreambox-geo
+          path: _artifacts/geo
+
+      - name: Stage native libs and geo assets
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p jniLibs/arm64-v8a
+          cp _artifacts/native/*.so jniLibs/arm64-v8a/
+          mkdir -p build/generated
+          cp _artifacts/stamp/core-version.properties build/generated/core-version.properties
+          mkdir -p build/generated/assets/geo
+          cp _artifacts/geo/* build/generated/assets/geo/
+          echo "--- jniLibs ---"
+          ls -la jniLibs/arm64-v8a
+          echo "--- geo ---"
+          ls -la build/generated/assets/geo
+
+      - name: Build debug APK
+        id: gradle_build
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleDebug 2>&1 | tee gradle-build.log
+
+      - name: Report build error log
+        if: failure() && steps.gradle_build.outcome == 'failure'
+        shell: bash
+        run: |
+          python3 - <<'EOF'
+          import re
+          txt = open('gradle-build.log', encoding='utf-8', errors='replace').read()
+          lines = txt.splitlines()
+          out, cap = [], False
+          for ln in lines:
+              if '* What went wrong:' in ln:
+                  cap = True
+              if cap:
+                  out.append(ln)
+                  if len(out) > 80:
+                      break
+          errs = [ln for ln in lines if re.match(r'^e: ', ln) or 'FAILED' in ln or 'error:' in ln.lower()]
+          with open('.github/build-error.log', 'w', encoding='utf-8') as f:
+              f.write('=== What went wrong ===\n')
+              f.write('\n'.join(out) + '\n')
+              f.write('\n=== e: / FAILED lines ===\n')
+              f.write('\n'.join(errs[:120]) + '\n')
+          EOF
+          git config user.name "dreambox-ci"
+          git config user.email "ci@dreambox.local"
+          git add -f .github/build-error.log
+          git commit -m "ci: build error log [skip ci]" || true
+          git push origin HEAD:main || true
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: dreambox-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          compression-level: 0

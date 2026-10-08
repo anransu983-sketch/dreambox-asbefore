@@ -1,0 +1,10 @@
+{
+  "id": "paper-light",
+  "name": "宣纸白",
+  "version": "1.0",
+  "author": "梦盒",
+  "description": "浅色主题，纸一样干净",
+  "themeMode": "light",
+  "seedColor": "#FF138A74",
+  "sourceUrl": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/paper-light.json"
+}

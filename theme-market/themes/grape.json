@@ -1,0 +1,10 @@
+{
+  "id": "grape",
+  "name": "葡萄紫",
+  "version": "1.0",
+  "author": "梦盒",
+  "description": "神秘葡萄紫，低调奢华",
+  "themeMode": "dark",
+  "seedColor": "#FF7C3AED",
+  "sourceUrl": "https://raw.githubusercontent.com/anransu983-sketch/dreambox-android/main/theme-market/themes/grape.json"
+}
