@@ -35,6 +35,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -46,6 +47,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
@@ -68,6 +70,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -105,6 +109,7 @@ import dev.chrisbanes.haze.hazeSource
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -112,6 +117,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -122,6 +128,12 @@ import top.yukonga.miuix.kmp.utils.pressable
 
 private fun LazyListState.isScrolledFromTop(): Boolean =
     firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0
+
+// 波奇酱风配色
+private val BocchiPink = Color(0xFFFFB7C5)
+private val BocchiBlue = Color(0xFFA8D8F0)
+private val BocchiStar = Color(0xFFFF8FAB)
+private val BocchiGreen = Color(0xFF66BB6A)
 
 // animateScrollToItem races across arbitrary distances at full speed, so locating a far-away
 // node reads as a blink. Cap the animated stretch at roughly one viewport: snap silently to
@@ -165,6 +177,10 @@ fun ProxyPager(
     isActive: Boolean,
 ) {
     val proxyViewModel = koinViewModel<ProxyViewModel>()
+    val proxyControl = koinInject<com.suanran.dreambox.runtime.api.contract.ProxyControlContract>()
+    val networkSettings = koinInject<com.suanran.dreambox.core.contract.NetworkSettingsReader>()
+    val isProxyRunning by proxyControl.isRunning.collectAsStateWithLifecycle()
+    val primaryNode by proxyControl.resolvedPrimaryNode.collectAsStateWithLifecycle()
     val proxyGroups by proxyViewModel.sortedProxyGroups.collectAsStateWithLifecycle()
     val testingGroupNames by proxyViewModel.testingGroupNames.collectAsStateWithLifecycle()
     val testingProxyNames by proxyViewModel.testingProxyNames.collectAsStateWithLifecycle()
@@ -187,6 +203,32 @@ fun ProxyPager(
     val selectedGroupName = groupSelection.selectedGroupName
     val displayGroup = groupSelection.displayGroup
     val coroutineScope = rememberCoroutineScope()
+    val onToggleProxyRunning: (Boolean) -> Unit = remember(coroutineScope, proxyControl, networkSettings) {
+        { enable ->
+            coroutineScope.launch {
+                try {
+                    if (enable) {
+                        proxyControl.startProxy(networkSettings.runMode.value)
+                    } else {
+                        proxyControl.stopProxy()
+                    }
+                } catch (_: Exception) {
+                    // 状态以 isRunning 流为准，失败时开关会自动回弹
+                }
+            }
+        }
+    }
+    val statusBarContent: @Composable () -> Unit = {
+        val nodeName = remember(primaryNode, proxyGroups) {
+            (primaryNode?.name ?: proxyGroups.firstOrNull()?.now.orEmpty()).trim()
+                .ifBlank { FlyTxt.Proxy.Mode.Direct }
+        }
+        ProxyStatusBar(
+            isRunning = isProxyRunning,
+            nodeName = nodeName,
+            onToggle = onToggleProxyRunning,
+        )
+    }
     val groupListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val nodeListState = rememberSaveable(selectedGroupName, saver = LazyListState.Saver) { LazyListState() }
     var nodeSearchQuery by rememberSaveable(selectedGroupName) { mutableStateOf("") }
@@ -309,6 +351,7 @@ fun ProxyPager(
                         onGroupClick = groupSelection.selectGroup,
                         onGroupDelayTestClick = { group -> proxyViewModel.testDelay(group.name) },
                         onGroupBoundsChanged = { _, _ -> },
+                        statusBar = statusBarContent,
                     )
                 }
             } else {
@@ -356,6 +399,7 @@ fun ProxyPager(
                                 onGroupClick = groupSelection.selectGroup,
                                 onGroupDelayTestClick = { group -> proxyViewModel.testDelay(group.name) },
                                 onGroupBoundsChanged = { _, _ -> },
+                                statusBar = statusBarContent,
                             )
                         }
                     } else {
@@ -754,6 +798,51 @@ internal fun NodeListPage(
     }
 }
 
+/** 代理页顶部细状态条：连接圆点 + 状态文案，右侧小电源开关。波奇酱风。 */
+@Composable
+private fun ProxyStatusBar(
+    isRunning: Boolean,
+    nodeName: String,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(AppTheme.radii.radius12)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Color.White)
+            .border(1.dp, BocchiPink.copy(alpha = 0.5f), shape)
+            .padding(horizontal = UiDp.dp12, vertical = UiDp.dp10),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(UiDp.dp8)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(if (isRunning) BocchiGreen else MiuixTheme.colorScheme.onSurfaceVariantSummary),
+        )
+        Text(
+            text = if (isRunning) "已连接 · $nodeName" else "未连接",
+            style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp),
+            color = MiuixTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(start = UiDp.dp8),
+        )
+        Text(
+            text = "✦",
+            style = MiuixTheme.textStyles.footnote1.copy(fontSize = 10.sp),
+            color = BocchiStar,
+            modifier = Modifier.padding(end = UiDp.dp6),
+        )
+        Switch(
+            checked = isRunning,
+            onCheckedChange = onToggle,
+        )
+    }
+}
+
 @Composable
 private fun ProxyContent(
     proxyGroups: List<ProxyGroupInfo>,
@@ -766,6 +855,7 @@ private fun ProxyContent(
     onGroupDelayTestClick: (ProxyGroupInfo) -> Unit,
     testingGroupNames: Set<String>,
     onGroupBoundsChanged: ((String, Rect) -> Unit)? = null,
+    statusBar: (@Composable () -> Unit)? = null,
 ) {
     val spacing = LocalSpacing.current
     val revealCount = rememberRowReveal(itemCount = proxyGroups.size, listState = listState)
@@ -782,6 +872,13 @@ private fun ProxyContent(
                 bottom = mainInnerPadding.calculateBottomPadding() + spacing.space12,
             ),
     ) {
+        if (statusBar != null) {
+            item(key = "proxy_status_bar", contentType = "ProxyStatusBar") {
+                Box(modifier = Modifier.fillMaxWidth().padding(bottom = UiDp.dp8)) {
+                    statusBar()
+                }
+            }
+        }
         nodeGroupItems(
             groups = proxyGroups,
             displayMode = displayMode,

@@ -22,7 +22,7 @@
 package com.suanran.dreambox.feature.proxy.presentation.screen.node
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
@@ -43,14 +44,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
 import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
-import com.suanran.dreambox.feature.proxy.presentation.util.NodeFlagBadge
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.EmojiAwareText
 import com.suanran.dreambox.presentation.component.state.LoadingDotsWave
@@ -67,6 +69,13 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.SinkFeedback
 import top.yukonga.miuix.kmp.utils.pressable
+
+// 波奇酱风配色
+private val BocchiPink = Color(0xFFFFB7C5)
+private val BocchiBlue = Color(0xFFA8D8F0)
+private val BocchiPinkBg = Color(0xFFFFE9EE)
+private val BocchiBlueBg = Color(0xFFE4F3FE)
+private val BocchiStar = Color(0xFFFF8FAB)
 
 internal fun LazyListScope.nodeGroupItems(
     groups: List<ProxyGroupInfo>,
@@ -105,107 +114,107 @@ internal fun NodeGroupCard(
     val cardShape = RoundedCornerShape(AppTheme.radii.radius12)
     val interactionSource = remember { MutableInteractionSource() }
     val testInteractionSource = remember { MutableInteractionSource() }
-    val primary = MiuixTheme.colorScheme.primary
 
     val proxiesByName = remember(group.proxies) { group.proxies.associateBy(Proxy::name) }
     val currentProxy = remember(group.now, proxiesByName) { proxiesByName[group.now] }
     val currentNodeName = remember(currentProxy?.name, group.now) {
         (currentProxy?.name ?: group.now).trim().ifBlank { FlyTxt.Proxy.Mode.Direct }
     }
+    // 贴纸徽章配色：Selector 粉 / URLTest·Fallback 蓝
+    val isSelector = group.type == Proxy.Type.Selector
+    val badgeBg = if (isSelector) BocchiPinkBg else BocchiBlueBg
+    val badgeFg = if (isSelector) BocchiStar else Color(0xFF4A90D9)
 
-    Column(
+    Row(
         modifier = modifier
             .clip(cardShape)
-            .background(MiuixTheme.colorScheme.background)
-            .padding(horizontal = UiDp.dp16, vertical = UiDp.dp14),
-        verticalArrangement = Arrangement.spacedBy(UiDp.dp10),
+            .background(Color.White)
+            .border(
+                width = 1.dp,
+                color = if (isSelector) BocchiPink.copy(alpha = 0.5f) else BocchiBlue.copy(alpha = 0.5f),
+                shape = cardShape,
+            )
+            .pressable(interactionSource = interactionSource, indication = SinkFeedback())
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { onClick(group) },
+            )
+            .padding(horizontal = UiDp.dp12, vertical = UiDp.dp8)
+            .heightIn(min = UiDp.dp48),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 第一行：组名 + 类型徽章 + 测速按钮
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            EmojiAwareText(
-                text = group.name,
-                style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.SemiBold),
-                color = MiuixTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = group.type,
-                style = MiuixTheme.textStyles.footnote1.copy(fontSize = 10.sp),
-                color = primary,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(primary.copy(alpha = 0.1f))
-                    .padding(horizontal = UiDp.dp8, vertical = UiDp.dp3),
-            )
-            if (onTestClick != null) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = UiDp.dp8)
-                        .size(UiDp.dp28)
-                        .clip(CircleShape)
-                        .background(primary.copy(alpha = 0.1f))
-                        .clickable(
-                            interactionSource = testInteractionSource,
-                            indication = null,
-                            enabled = !isDelayTesting,
-                            onClick = { onTestClick(group) },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (isDelayTesting) {
-                        LoadingDotsWave(
-                            color = primary,
-                            modifier = Modifier.size(UiDp.dp14),
-                        )
-                    } else {
-                        Icon(
-                            FlyCat.Speed,
-                            contentDescription = FlyTxt.Proxy.Action.Test,
-                            modifier = Modifier.size(UiDp.dp14),
-                            tint = primary,
-                        )
-                    }
-                }
-            }
-        }
-        // 第二行：当前节点条，点击进入节点列表
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(UiDp.dp12))
-                .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-                .pressable(interactionSource = interactionSource, indication = SinkFeedback())
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = { onClick(group) },
-                )
-                .padding(horizontal = UiDp.dp12, vertical = UiDp.dp10),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(UiDp.dp10),
-        ) {
-            NodeFlagBadge(nodeName = currentNodeName, size = UiDp.dp36, emojiSize = 20.sp)
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 EmojiAwareText(
-                    text = currentNodeName,
-                    style = MiuixTheme.textStyles.body2,
+                    text = group.name,
+                    style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                     color = MiuixTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.basicMarquee(),
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(
+                    text = "✦",
+                    style = MiuixTheme.textStyles.footnote1.copy(fontSize = 10.sp),
+                    color = badgeFg,
+                    modifier = Modifier.padding(start = UiDp.dp2),
+                )
+                Text(
+                    text = group.type,
+                    style = MiuixTheme.textStyles.footnote1.copy(fontSize = 10.sp),
+                    color = badgeFg,
+                    modifier = Modifier
+                        .padding(start = UiDp.dp6)
+                        .clip(RoundedCornerShape(50))
+                        .background(badgeBg)
+                        .padding(horizontal = UiDp.dp8, vertical = UiDp.dp2),
                 )
             }
-            Icon(
-                FlyCat.chevron,
-                contentDescription = null,
-                modifier = Modifier.size(UiDp.dp18),
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            EmojiAwareText(
+                text = currentNodeName,
+                style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = UiDp.dp2),
             )
         }
+        if (onTestClick != null) {
+            Box(
+                modifier = Modifier
+                    .padding(start = UiDp.dp8)
+                    .size(UiDp.dp28)
+                    .clip(CircleShape)
+                    .background(badgeBg)
+                    .clickable(
+                        interactionSource = testInteractionSource,
+                        indication = null,
+                        enabled = !isDelayTesting,
+                        onClick = { onTestClick(group) },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isDelayTesting) {
+                    LoadingDotsWave(
+                        color = badgeFg,
+                        modifier = Modifier.size(UiDp.dp14),
+                    )
+                } else {
+                    Icon(
+                        FlyCat.Speed,
+                        contentDescription = FlyTxt.Proxy.Action.Test,
+                        modifier = Modifier.size(UiDp.dp14),
+                        tint = badgeFg,
+                    )
+                }
+            }
+        }
+        Icon(
+            FlyCat.chevron,
+            contentDescription = null,
+            modifier = Modifier.size(UiDp.dp18).padding(start = UiDp.dp4),
+            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
     }
 }
