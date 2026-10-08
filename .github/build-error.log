@@ -2,10 +2,13 @@
 * What went wrong:
 Execution failed for task ':feature:settings:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_REFERENCE
+   > Kotlin compiler: OVERLOAD_RESOLUTION_AMBIGUITY
        Kotlin compiler error
-         Unresolved reference 'Card'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:74
+         Overload resolution ambiguity between candidates:
+         fun Card(modifier: Modifier = ..., cornerRadius: Int = ..., insideMargin: PaddingValues = ..., applyHorizontalPadding: Boolean = ..., colors: CardColors = ..., content: ComposableFunction0<Unit>): Unit
+         fun Card(modifier: Modifier = ..., cornerRadius: Dp = ..., insideMargin: PaddingValues = ..., colors: CardColors = ..., content: ComposableFunction1<ColumnScope, Unit>): Unit
+         fun Card(modifier: Modifier = ..., cornerRadius: Dp = ..., insideMargin: PaddingValues = ..., colors: CardColors = ..., pressFeedbackType: PressFeedbackType = ..., showIndication: Boolean = ..., holdDownState: Boolean = ..., onClick: (() -> Unit)? = ..., onLongPress: (() -> Unit)? = ..., content: ComposableFunction1<ColumnScope, Unit>): Unit
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:208
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,67 +22,34 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 48s
-326 actionable tasks: 127 executed, 199 from cache
+BUILD FAILED in 36s
+329 actionable tasks: 128 executed, 201 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:74:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:75:21 Unresolved reference 'BocchiSwitchItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:80:21 Unresolved reference 'BocchiSwitchItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:85:21 Unresolved reference 'BocchiSwitchItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/EbpfServiceOptionsScreen.kt:90:21 Unresolved reference 'BocchiSwitchItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/IpTestScreen.kt:141:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/IpTestScreen.kt:143:25 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/LabScreen.kt:224:17 Unresolved reference 'Color'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/LabScreen.kt:229:17 Unresolved reference 'Color'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:125:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:126:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:158:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:159:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:190:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/MusicServerScreen.kt:191:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:76:5 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:77:9 Unresolved reference 'BocchiSwitchItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:80:33 Cannot infer type for value parameter 'enabled'. Specify it explicitly.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:92:13 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:107:13 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:126:9 Unresolved reference 'BocchiArrowItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:134:24 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/RemoteControllerSection.kt:135:13 Unresolved reference 'BocchiArrowItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:162:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:163:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:173:59 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:174:57 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:190:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:191:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:197:59 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:198:57 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:243:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:244:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:248:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:360:5 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:361:9 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:515:13 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:516:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:541:13 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:542:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:561:13 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:562:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:581:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:582:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:584:44 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:585:44 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:622:5 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/ThemeScreen.kt:623:9 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/TunServiceOptionsScreen.kt:83:17 Unresolved reference 'Card'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/TunServiceOptionsScreen.kt:84:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/TunServiceOptionsScreen.kt:87:35 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:205:9 Unresolved reference 'BocchiSwitchItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:208:33 Cannot infer type for value parameter 'enabled'. Specify it explicitly.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:215:9 Unresolved reference 'BocchiArrowItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:223:9 Unresolved reference 'BocchiArrowItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:230:9 Unresolved reference 'BocchiEnumItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:244:9 Unresolved reference 'BocchiEnumItem'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:208:5 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:209:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:218:5 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:219:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:227:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:233:5 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:234:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:237:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:242:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:248:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:251:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:256:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:447:29 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:448:33 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:466:33 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:467:37 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:476:21 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:477:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:557:21 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:558:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:572:25 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:573:29 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:585:17 Overload resolution ambiguity between candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/WifiAutomationScreen.kt:586:21 @Composable invocations can only happen from the context of a @Composable function
 > Task :feature:settings:compileDebugKotlin FAILED
-BUILD FAILED in 48s
+BUILD FAILED in 36s
