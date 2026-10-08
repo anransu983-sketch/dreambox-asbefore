@@ -216,7 +216,7 @@ fun ProfileCard(
             val daysLeft = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), expireDate).toInt()
             val expireLabel = when {
                 daysLeft > 0 -> "📅 $expireDate · 剩余${daysLeft}天"
-                daysLeft == 0L -> "📅 $expireDate · 今天到期"
+                daysLeft == 0 -> "📅 $expireDate · 今天到期"
                 else -> "📅 $expireDate · 已过期"
             }
             val badgeBg = if (daysLeft > 30) BocchiBlueBg else BocchiPinkBg
