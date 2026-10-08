@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suanran.dreambox.presentation.theme.horizontalPadding
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.CardColors
@@ -239,6 +241,29 @@ fun BocchiValueItem(
     endActions: @Composable (RowScope.() -> Unit)? = null,
 ) {
     BocchiArrowItem(title = title, onClick = onClick, summary = summary, endActions = endActions)
+}
+
+/** 波奇酱枚举选择行：13sp 标题 + 11sp 灰字，点开选值。 */
+@Composable
+fun <T> BocchiEnumItem(
+    title: String,
+    currentValue: T,
+    items: List<String>,
+    values: List<T>,
+    onValueChange: (T) -> Unit,
+    summary: String? = null,
+) {
+    val selectedIndex = values.indexOf(currentValue).coerceAtLeast(0)
+    val dropdownItems = remember(items) { items.map { DropdownItem(title = it) } }
+    WindowSpinnerPreference(
+        title = title,
+        summary = summary,
+        items = dropdownItems,
+        selectedIndex = selectedIndex,
+        onSelectedIndexChange = { index ->
+            values.getOrNull(index)?.let(onValueChange)
+        },
+    )
 }
 
 /** 波奇酱小圆形按钮：48dp，粉/蓝。 */

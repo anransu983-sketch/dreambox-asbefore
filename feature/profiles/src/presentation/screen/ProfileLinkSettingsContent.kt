@@ -48,6 +48,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.suanran.dreambox.presentation.component.misc.BocchiEnumItem
 
 @Composable
 internal fun LinkSettingsContent(
