@@ -1,11 +1,11 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':ui:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':feature:proxy:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: EQUALITY_NOT_APPLICABLE
+   > Kotlin compiler: UNRESOLVED_REFERENCE
        Kotlin compiler error
-         Operator '==' cannot be applied to 'Int' and 'Long'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/card/ProfileCard.kt:219
+         Unresolved reference 'runtime'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:180
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,11 +19,22 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 48s
-293 actionable tasks: 110 executed, 183 from cache
+BUILD FAILED in 1m 14s
+310 actionable tasks: 126 executed, 184 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-> Task :ui:compileDebugKotlin FAILED
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/card/ProfileCard.kt:219:17 Operator '==' cannot be applied to 'Int' and 'Long'.
-BUILD FAILED in 48s
+> Task :feature:proxy:compileDebugKotlin FAILED
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:180:56 Unresolved reference 'runtime'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:182:24 Property delegate must have a 'getValue(Nothing?, KProperty0<??? (Unknown type for type parameter T)>)' method. None of the following functions is applicable:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:182:27 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:182:40 Unresolved reference 'isRunning'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:182:50 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:183:21 Property delegate must have a 'getValue(Nothing?, KProperty0<??? (Unknown type for type parameter T)>)' method. None of the following functions is applicable:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:183:24 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:183:37 Unresolved reference 'resolvedPrimaryNode'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:183:57 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:211:38 Unresolved reference 'startProxy'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:213:38 Unresolved reference 'stopProxy'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/Proxy.kt:223:27 Unresolved reference 'name'.
+BUILD FAILED in 1m 14s
