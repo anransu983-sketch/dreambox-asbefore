@@ -396,3 +396,47 @@ fun <T> BocchiEnumItem(
         }
     }
 }
+
+/** 波奇酱小 pastel 分段按钮：日/周/月切换用。 */
+@Composable
+fun BocchiSegmentedTabs(
+    tabs: List<String>,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (tabs.isEmpty()) return
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier =
+            modifier
+                .clip(shape)
+                .background(Color.White)
+                .border(1.dp, BocchiPink.copy(alpha = 0.4f), shape)
+                .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            val selected = index == selectedTabIndex
+            val bg = if (selected) BocchiPink else Color.Transparent
+            val fg = if (selected) Color.White else BocchiTextGray
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(bg)
+                        .clickable { onTabSelected(index) }
+                        .padding(vertical = 7.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = tab,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = fg,
+                )
+            }
+        }
+    }
+}

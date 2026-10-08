@@ -28,9 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import com.suanran.dreambox.presentation.icon.FlyCat
 import com.suanran.dreambox.presentation.icon.flycat.Activity
 import com.suanran.dreambox.presentation.icon.flycat.ChartColumn
@@ -68,8 +71,9 @@ fun HomeShortcutGrid(
     ) {
         Text(
             text = FlyTxt.Home.Shortcut.Title,
-            style = MiuixTheme.textStyles.body1,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = BocchiStar,
         )
         shortcuts.chunked(2).forEach { row ->
             Row(
@@ -77,7 +81,7 @@ fun HomeShortcutGrid(
                 horizontalArrangement = Arrangement.spacedBy(UiDp.dp12),
             ) {
                 row.forEach { shortcut ->
-                    Card(
+                    BocchiCard(
                         modifier = Modifier.weight(1f).clickable(onClick = shortcut.onClick),
                     ) {
                         Row(

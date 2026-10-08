@@ -81,6 +81,9 @@ import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
+import com.suanran.dreambox.presentation.component.misc.BocchiPink
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.extended.Delete
@@ -389,8 +392,8 @@ private fun StashConnectionCard(
             .fillMaxWidth()
             .pressable(interactionSource = interactionSource, indication = SinkFeedback())
             .clip(shape)
-            .background(MiuixTheme.colorScheme.background)
-            .border(sizes.nodeCardBorderWidth, MiuixTheme.colorScheme.surfaceVariant, shape)
+            .background(Color.White)
+            .border(1.dp, BocchiPink.copy(alpha = 0.45f), shape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -472,12 +475,12 @@ private fun StashConnectionCard(
                 SpeedText(
                     label = "↑",
                     speedText = item.uploadSpeedText,
-                    accentColor = Color(0xFF2196F3),
+                    accentColor = BocchiBlueFg,
                 )
                 SpeedText(
                     label = "↓",
                     speedText = item.downloadSpeedText,
-                    accentColor = Color(0xFF4CAF50),
+                    accentColor = BocchiStar,
                 )
             }
         }

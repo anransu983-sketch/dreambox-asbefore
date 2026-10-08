@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.model.traffic.AppTrafficUsage
 import com.suanran.dreambox.core.model.traffic.FootprintDay
@@ -39,16 +40,19 @@ import com.suanran.dreambox.presentation.component.chart.TrafficDonutChart
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
+import com.suanran.dreambox.presentation.component.misc.BocchiSegmentedTabs
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiPink
+import com.suanran.dreambox.presentation.component.misc.BocchiBlue
+import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
-import com.suanran.dreambox.presentation.component.navigation.TabRowWithContour
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.component.rememberAppIconBitmap
 import com.suanran.dreambox.presentation.theme.AppTheme
 import com.suanran.dreambox.presentation.util.toast
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -109,7 +113,7 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
         ) {
             item {
-                TabRowWithContour(
+                BocchiSegmentedTabs(
                     tabs = tabLabels,
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = { index ->
@@ -120,7 +124,7 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
             }
 
             item {
-                Card(
+                BocchiCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = spacing.space16),
@@ -133,8 +137,8 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
                         TimeSlotBarChart(
                             items = uiState.barChartItems,
                             labels = uiState.barChartLabels,
-                            downloadColor = semanticColors.traffic.download,
-                            uploadColor = semanticColors.traffic.upload,
+                            downloadColor = BocchiPink,
+                            uploadColor = BocchiBlue,
                             averageLineColor = MiuixTheme.colorScheme.primary,
                         )
                     }
@@ -142,7 +146,7 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
             }
 
             item {
-                Title(FlyTxt.TrafficStatistics.Section.Traffic)
+                BocchiSectionTitle(FlyTxt.TrafficStatistics.Section.Traffic)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -164,7 +168,7 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Title(FlyTxt.TrafficStatistics.Section.PerAppTraffic)
+                    BocchiSectionTitle(FlyTxt.TrafficStatistics.Section.PerAppTraffic)
                     Box(modifier = Modifier.padding(end = spacing.space16)) {
                         var sortExpanded by remember { mutableStateOf(false) }
                         val currentMode = uiState.appSortMode
@@ -213,7 +217,7 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
 
             if (uiState.topApps.isEmpty()) {
                 item {
-                    Card(
+                    BocchiCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = spacing.space16),
@@ -253,11 +257,11 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
 
             // 按节点（出口）流量：参考 Shadowrocket Traffic Usage 页，DIRECT 与各节点分开列
             item {
-                Title(FlyTxt.TrafficStatistics.Section.PerNodeTraffic)
+                BocchiSectionTitle(FlyTxt.TrafficStatistics.Section.PerNodeTraffic)
             }
             if (uiState.nodeUsages.isEmpty()) {
                 item {
-                    Card(
+                    BocchiCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = spacing.space16),
@@ -297,11 +301,11 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
 
             // 流量足迹时间线
             item {
-                Title(FlyTxt.TrafficStatistics.Section.Footprint)
+                BocchiSectionTitle(FlyTxt.TrafficStatistics.Section.Footprint)
             }
             if (uiState.footprintDays.isEmpty()) {
                 item {
-                    Card(
+                    BocchiCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = spacing.space16),
@@ -340,7 +344,7 @@ private fun TrafficMetricCard(
     val spacing = AppTheme.spacing
     val semanticColors = AppTheme.colors
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    BocchiCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -350,12 +354,12 @@ private fun TrafficMetricCard(
             TrafficMetricLine(
                 label = FlyTxt.TrafficStatistics.Metric.Download,
                 value = downloadValue,
-                valueColor = semanticColors.traffic.download,
+                valueColor = BocchiPink,
             )
             TrafficMetricLine(
                 label = FlyTxt.TrafficStatistics.Metric.Upload,
                 value = uploadValue,
-                valueColor = semanticColors.traffic.upload,
+                valueColor = BocchiBlue,
             )
         }
     }
@@ -374,13 +378,13 @@ private fun TrafficMetricLine(
     ) {
         Text(
             text = label,
-            style = MiuixTheme.textStyles.body1,
-            color = MiuixTheme.colorScheme.onSurface,
+            fontSize = 13.sp,
+            color = BocchiTextDark,
             fontWeight = FontWeight.Medium,
         )
         Text(
             text = value,
-            style = MiuixTheme.textStyles.body1,
+            fontSize = 13.sp,
             color = valueColor,
             fontWeight = FontWeight.SemiBold,
         )
@@ -396,7 +400,7 @@ private fun AppTrafficRow(
     val componentSizes = AppTheme.sizes
 
     val share = if (total > 0L) usage.totalBytes.toDouble() / total.toDouble() else 0.0
-    Card(
+    BocchiCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -417,9 +421,10 @@ private fun AppTrafficRow(
             ) {
                 Text(
                     text = usage.appName,
-                    style = MiuixTheme.textStyles.body1,
-                    color = MiuixTheme.colorScheme.onSurface,
+                    fontSize = 13.sp,
+                    color = BocchiTextDark,
                     fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                 )
                 Text(
                     text = FlyTxt.TrafficStatistics.Metric.UsageLine.format(
@@ -516,7 +521,7 @@ private fun NodeTrafficRow(
     val componentSizes = AppTheme.sizes
 
     val share = if (total > 0L) usage.totalBytes.toDouble() / total.toDouble() else 0.0
-    Card(
+    BocchiCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -533,9 +538,10 @@ private fun NodeTrafficRow(
             ) {
                 Text(
                     text = usage.nodeName,
-                    style = MiuixTheme.textStyles.body1,
-                    color = MiuixTheme.colorScheme.onSurface,
+                    fontSize = 13.sp,
+                    color = BocchiTextDark,
                     fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                 )
                 Text(
                     text = FlyTxt.TrafficStatistics.Metric.UsageLine.format(
@@ -617,7 +623,7 @@ private fun FootprintTimelineRow(day: FootprintDay) {
                     .background(MiuixTheme.colorScheme.primary),
             )
         }
-        Card(modifier = Modifier.weight(1f)) {
+        BocchiCard(modifier = Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
