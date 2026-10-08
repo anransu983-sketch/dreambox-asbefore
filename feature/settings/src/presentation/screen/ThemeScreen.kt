@@ -65,14 +65,14 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.MarketState
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreEvent
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.navigation.Navigator
@@ -158,7 +158,7 @@ fun ThemeScreen(navigator: Navigator) {
             verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.space12),
         ) {
             item {
-                Title(themeTxt.StoreTitle)
+                BocchiSectionTitle(themeTxt.StoreTitle)
                 Card {
                     Row(
                         modifier =
@@ -212,7 +212,7 @@ fun ThemeScreen(navigator: Navigator) {
                 }
             }
             item {
-                Title(themeTxt.MarketTitle)
+                BocchiSectionTitle(themeTxt.MarketTitle)
                 ThemeMarketSection(
                     marketState = marketState,
                     marketThemes = marketThemes,
@@ -239,7 +239,7 @@ fun ThemeScreen(navigator: Navigator) {
                 )
             }
             item {
-                Title(themeTxt.CustomTitle)
+                BocchiSectionTitle(themeTxt.CustomTitle)
                 Card {
                     ThemeModeSelectorItem(
                         themeMode = themeMode,

@@ -40,11 +40,11 @@ import com.suanran.dreambox.core.model.RemoteBackend
 import com.suanran.dreambox.core.model.RemoteProtocol
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.RemoteControllerViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
 import com.suanran.dreambox.presentation.component.misc.PreferenceArrowItem
 import com.suanran.dreambox.presentation.component.misc.PreferenceSwitchItem
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.theme.AppTheme
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -72,9 +72,9 @@ fun RemoteControllerSection(
         backends.indexOfFirst { it.id == activeBackend?.id }.takeIf { it >= 0 } ?: 0
     val backendItems = remember(backends) { backends.map { it.displayName() } }
 
-    Title(FlyTxt.Feature.RemoteController.Section)
+    BocchiSectionTitle(FlyTxt.Feature.RemoteController.Section)
     Card {
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.Feature.RemoteController.ModeTitle,
             checked = controllerEnabled,
             onCheckedChange = { enabled ->
@@ -123,7 +123,7 @@ fun RemoteControllerSection(
             )
         }
 
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.Feature.RemoteController.AddBackend,
             onClick = {
                 sheetState = BackendSheetState.Add(BackendFormState.empty())
@@ -132,7 +132,7 @@ fun RemoteControllerSection(
         )
 
         activeBackend?.let { backend ->
-            PreferenceArrowItem(
+            BocchiArrowItem(
                 title = FlyTxt.Feature.RemoteController.EditBackend,
                 onClick = {
                     sheetState = BackendSheetState.Edit(BackendFormState.from(backend))

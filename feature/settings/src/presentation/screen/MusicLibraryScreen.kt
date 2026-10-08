@@ -80,7 +80,7 @@ import com.suanran.dreambox.feature.settings.presentation.music.MusicSectionTitl
 import com.suanran.dreambox.feature.settings.presentation.music.SongRow
 import com.suanran.dreambox.feature.settings.presentation.music.rememberSubsonicClient
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
@@ -262,7 +262,7 @@ fun MusicLibraryScreen(navigator: Navigator) {
                     modifier = Modifier.weight(1f),
                 ) {
                     item {
-                        Card(
+                        BocchiCard(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp).clickable { navigator.push(Route.MusicServer) },
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
@@ -286,7 +286,7 @@ fun MusicLibraryScreen(navigator: Navigator) {
                 ) {
             // 欢迎卡片（仿流云音乐）：喜欢/最近/歌单统计
             item {
-                Card(
+                BocchiCard(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -310,7 +310,7 @@ fun MusicLibraryScreen(navigator: Navigator) {
             if (playlists.isNotEmpty()) {
                 item {
                     val featured = playlists.first()
-                    Card(
+                    BocchiCard(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
                             .clickable { navigator.push(Route.MusicBrowser(kind = "playlists")) },
                     ) {
@@ -360,7 +360,7 @@ fun MusicLibraryScreen(navigator: Navigator) {
                         ) {
                             for (col in 0..3) {
                                 val cat = categories[row * 4 + col]
-                                Card(
+                                BocchiCard(
                                     modifier = Modifier.weight(1f).clickable { onCategoryClick(cat.kind) },
                                 ) {
                                     Column(

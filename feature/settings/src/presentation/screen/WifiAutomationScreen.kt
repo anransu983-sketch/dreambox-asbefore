@@ -202,7 +202,7 @@ fun WifiAutomationSettingsSection() {
 
     Title(FlyTxt.NetworkSettings.WifiAutomation.Title)
     Card {
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.NetworkSettings.WifiAutomation.EnabledTitle,
             checked = state.enabled,
             onCheckedChange = { enabled ->
@@ -212,7 +212,7 @@ fun WifiAutomationSettingsSection() {
     }
     Title(FlyTxt.NetworkSettings.WifiAutomation.WifiNameHeading)
     Card {
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.NetworkSettings.WifiAutomation.ManualDialogTitle,
             onClick = {
                 viewModel.resetScan()
@@ -220,14 +220,14 @@ fun WifiAutomationSettingsSection() {
                 requestSsidAccess(WifiPermissionAction.Scan)
             },
         )
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.NetworkSettings.WifiAutomation.EditDialogTitle,
             onClick = { editSheetVisible = true },
         )
     }
     Title(FlyTxt.NetworkSettings.WifiAutomation.NetworkChangeSection)
     Card {
-        PreferenceEnumItem(
+        BocchiEnumItem(
             title = FlyTxt.NetworkSettings.WifiAutomation.OtherWifiTitle,
             currentValue = state.otherWifiAction,
             items = fallbackActionLabels(),
@@ -241,7 +241,7 @@ fun WifiAutomationSettingsSection() {
                 onProfileUuidChange = viewModel::changeOtherWifiProfileUuid,
             )
         }
-        PreferenceEnumItem(
+        BocchiEnumItem(
             title = FlyTxt.NetworkSettings.WifiAutomation.NoWifiTitle,
             currentValue = state.noWifiAction,
             items = fallbackActionLabels(),

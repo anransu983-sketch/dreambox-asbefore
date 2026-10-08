@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
@@ -93,7 +93,7 @@ fun MusicSettingsScreen(navigator: Navigator) {
         ) {
             // 音乐服总模块：点进去是地址/账号/密码三张小卡
             item {
-                Card(
+                BocchiCard(
                     modifier = Modifier.fillMaxWidth()
                         .clickable { navigator.push(Route.MusicServer) },
                 ) {
@@ -135,7 +135,7 @@ fun MusicSettingsScreen(navigator: Navigator) {
 
             // 歌词样式模块：点进去调字号/颜色/预览
             item {
-                Card(
+                BocchiCard(
                     modifier = Modifier.fillMaxWidth()
                         .clickable { navigator.push(Route.LyricStyle) },
                 ) {

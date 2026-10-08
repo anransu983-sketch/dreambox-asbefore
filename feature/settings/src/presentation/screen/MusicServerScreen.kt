@@ -49,7 +49,7 @@ import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.feature.settings.data.music.SubsonicClient
 import com.suanran.dreambox.feature.settings.presentation.music.MusicSectionTitle
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding

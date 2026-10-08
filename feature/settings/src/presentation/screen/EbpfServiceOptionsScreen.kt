@@ -30,12 +30,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.NetworkSettingsViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
 import com.suanran.dreambox.presentation.component.misc.PreferenceSwitchItem
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.navigation.Navigator
@@ -70,24 +70,24 @@ fun EbpfServiceOptionsScreen(navigator: Navigator) {
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
         ) {
             item {
-                Title(FlyTxt.NetworkSettings.RunMode.EbpfTitle)
+                BocchiSectionTitle(FlyTxt.NetworkSettings.RunMode.EbpfTitle)
                 Card {
-                    PreferenceSwitchItem(
+                    BocchiSwitchItem(
                         title = FlyTxt.NetworkSettings.VpnOptions.BypassPrivateTitle,
                         checked = tunServiceOptionsUiState.common.bypassPrivateNetwork,
                         onCheckedChange = viewModel::onBypassPrivateNetworkChange,
                     )
-                    PreferenceSwitchItem(
+                    BocchiSwitchItem(
                         title = FlyTxt.NetworkSettings.VpnOptions.DnsHijackTitle,
                         checked = tunServiceOptionsUiState.common.dnsHijack,
                         onCheckedChange = viewModel::onDnsHijackChange,
                     )
-                    PreferenceSwitchItem(
+                    BocchiSwitchItem(
                         title = FlyTxt.NetworkSettings.VpnOptions.EnableIpv6Title,
                         checked = tunServiceOptionsUiState.common.enableIPv6,
                         onCheckedChange = viewModel::onEnableIPv6Change,
                     )
-                    PreferenceSwitchItem(
+                    BocchiSwitchItem(
                         title = FlyTxt.NetworkSettings.EbpfOptions.BypassCnTitle,
                         summary = FlyTxt.NetworkSettings.EbpfOptions.BypassCnSummary,
                         checked = ebpfOptions.bypassCn,

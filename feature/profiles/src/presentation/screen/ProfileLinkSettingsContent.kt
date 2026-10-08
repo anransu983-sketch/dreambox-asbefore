@@ -76,7 +76,7 @@ internal fun LinkSettingsContent(
 @Composable
 private fun LinkOpenModeSection(mode: LinkOpenMode, onChange: (LinkOpenMode) -> Unit) {
     SectionCard(title = FlyTxt.ProfilesPage.LinkSettings.OpenMode) {
-        PreferenceEnumItem(
+        BocchiEnumItem(
             title = FlyTxt.ProfilesPage.LinkSettings.OpenMode,
             currentValue = mode,
             items =
@@ -99,7 +99,7 @@ private fun DefaultLinkSection(
     if (links.isEmpty()) return
 
     SectionCard(title = FlyTxt.ProfilesPage.LinkSettings.DefaultLink) {
-        PreferenceEnumItem(
+        BocchiEnumItem(
             title = FlyTxt.ProfilesPage.LinkSettings.DefaultLink,
             summary = FlyTxt.ProfilesPage.LinkSettings.DefaultLinkSummary,
             currentValue = links.firstOrNull { it.id == defaultLinkId }?.id ?: links.first().id,

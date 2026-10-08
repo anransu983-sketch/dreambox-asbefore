@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.contract.AppSettingsReader
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
@@ -77,7 +77,7 @@ fun LyricStyleScreen(navigator: Navigator) {
             verticalArrangement = Arrangement.spacedBy(spacing.space12),
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                BocchiCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(
                             horizontal = spacing.space16,

@@ -64,7 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AccessControlViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
@@ -573,7 +573,7 @@ private fun AppCard(
     val spacing = spacing
     val componentSizes = AppTheme.sizes
 
-    Card(modifier = Modifier.padding(vertical = spacing.space4), applyHorizontalPadding = false) {
+    BocchiCard(modifier = Modifier.padding(vertical = spacing.space4), applyHorizontalPadding = false) {
         BasicComponent(
             // Reduce the default 16dp vertical inside-margin a little for a tighter row, keep
             // horizontal at 16dp so the card width is unchanged.

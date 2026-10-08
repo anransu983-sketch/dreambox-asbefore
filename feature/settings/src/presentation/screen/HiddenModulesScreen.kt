@@ -20,7 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.suanran.dreambox.feature.settings.presentation.custommodule.CustomModuleStore
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
@@ -146,7 +146,7 @@ fun HiddenModulesScreen(navigator: Navigator) {
                     }
                     items(hidden.size) { i ->
                         val key = hidden[i]
-                        Card(
+                        BocchiCard(
                             modifier = Modifier.fillMaxWidth()
                                 .clickable { restore(group, key) },
                         ) {
@@ -183,7 +183,7 @@ fun HiddenModulesScreen(navigator: Navigator) {
                 }
                 items(customHidden.size) { i ->
                     val m = customHidden[i]
-                    Card(
+                    BocchiCard(
                         modifier = Modifier.fillMaxWidth()
                             .clickable {
                                 val all = customStore.load()
