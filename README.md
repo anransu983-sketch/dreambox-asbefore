@@ -1,14 +1,14 @@
 # DreamBox（梦盒）
 
-基于 **FlyCat / YumeBox** 的换皮 fork —— Mihomo 内核的 Android 代理客户端。
+借鉴 **FlyCat / YumeBox** 的定制版 —— Mihomo 内核的 Android 代理客户端。
 
 - **上游原作者**：YumeYucca（GitHub [@lm-firefly](https://github.com/lm-firefly)，原仓库 <https://github.com/lm-firefly/yumebox>）
 - **许可证**：AGPL-3.0（见 [LICENSE](LICENSE)、[LICENSE-F2DL](LICENSE)；许可证文件与原作者署名均保留未动）
-- **本 fork 改动**：换皮（包名、应用名、图标、文案、更新地址、签名）+ 新增 sing-box JSON → Mihomo 转换器；**未改动内核/代理逻辑**
+- **本 fork 改动**：品牌定制（包名、应用名、图标、文案、更新地址、签名）+ 新增 sing-box JSON → Mihomo 转换器；**未改动内核/代理逻辑**
 
 > 源码文件头部的原作者版权注释全部保留，另追加 "Modified for DreamBox" 说明。
 
-## 换皮清单
+## 定制清单
 
 | 项目 | 上游 | 本 fork |
 |---|---|---|
