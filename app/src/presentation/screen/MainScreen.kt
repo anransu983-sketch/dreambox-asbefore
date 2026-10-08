@@ -124,7 +124,7 @@ fun MainScreen(
     onConsumePendingDetailRoute: () -> Unit = {},
 ) {
     val initialMainPage = initialPage.coerceIn(0, 4)
-    val pagerState = rememberPagerState(initialPage = initialMainPage, pageCount = { 5 })
+    val pagerState = rememberPagerState(initialPage = initialMainPage, pageCount = { 4 })
     val mainPagerState = rememberMainPagerState(pagerState)
     val hazeState = remember { HazeState() }
     val windowLayoutMode = rememberWindowLayoutMode()

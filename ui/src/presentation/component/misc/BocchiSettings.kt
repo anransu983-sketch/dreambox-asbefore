@@ -98,7 +98,7 @@ fun BocchiCard(
     content: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius.dp)
-    Box(
+    Column(
         modifier =
             (if (applyHorizontalPadding) modifier.horizontalPadding() else modifier)
                 .clip(shape)

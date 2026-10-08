@@ -71,8 +71,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.model.override.OverrideConfig
 import com.suanran.dreambox.core.model.override.OverrideContentType
 import com.suanran.dreambox.feature.override.presentation.component.OverrideAnimatedFab
-import com.suanran.dreambox.feature.override.presentation.component.OverrideCardActionIconButton
-import com.suanran.dreambox.feature.override.presentation.component.OverrideStatusBadge
 import com.suanran.dreambox.feature.override.presentation.viewmodel.OverrideConfigViewModel
 import com.suanran.dreambox.feature.override.presentation.component.rememberOverrideFabController
 import com.suanran.dreambox.locale.FlyTxt
@@ -110,13 +108,26 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
+import com.suanran.dreambox.presentation.component.misc.BocchiStickerButton
+import com.suanran.dreambox.presentation.component.misc.BocchiCircleButton
+import com.suanran.dreambox.presentation.component.misc.BocchiPink
+import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueBg
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
+import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
+import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
 
 private val overrideConfigItemGap = Spacing().space12
 
@@ -238,7 +249,7 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
                     // Built-in overrides section
                     if (builtInConfigs.isNotEmpty()) {
                         item(key = "builtin-section-header", contentType = "section-header") {
-                            Title(FlyTxt.Override.Section.BuiltIn)
+                            BocchiSectionTitle(FlyTxt.Override.Section.BuiltIn)
                         }
                         items(
                             items = builtInConfigs,
@@ -268,7 +279,7 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
                     // User overrides section
                     if (userConfigs.isNotEmpty()) {
                         item(key = "user-section-header", contentType = "section-header") {
-                            Title(FlyTxt.Override.Section.User)
+                            BocchiSectionTitle(FlyTxt.Override.Section.User)
                         }
                         items(
                             items = configItems,
@@ -360,144 +371,113 @@ private fun ReorderableCollectionItemScope.OverrideConfigCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val accentTintColor = colorScheme.primary
-
-    Card(
+    BocchiCard(
         modifier =
             Modifier.fillMaxWidth()
                 .padding(vertical = overrideConfigItemGap / 2)
                 .longPressDraggableHandle()
                 .alpha(if (isDragging) 0.92f else 1f),
-        insideMargin = PaddingValues(UiDp.dp16),
+        insideMargin = PaddingValues(horizontal = UiDp.dp14, vertical = UiDp.dp12),
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(UiDp.dp12),
-                verticalAlignment = Alignment.Top,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UiDp.dp12),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(UiDp.dp8),
-                ) {
-                    Text(
-                        text = config.name,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight(550),
-                        color = colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = config.contentType.label,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colorScheme.onSurfaceVariantSummary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                OverrideConfigStateIndicator(inUse = isInUse)
+                Text(
+                    text = config.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = BocchiTextDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = config.contentType.label,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = BocchiTextGray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
+            OverrideConfigStateIndicator(inUse = isInUse, modifier = Modifier.size(30.dp))
+        }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = UiDp.dp12),
-                thickness = UiDp.dp0_5,
-                color = colorScheme.outline.copy(alpha = 0.5f),
-            )
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = UiDp.dp10),
+            thickness = UiDp.dp0_5,
+            color = BocchiPink.copy(alpha = 0.35f),
+        )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(UiDp.dp8)) {
-                    OverrideCardActionIconButton(
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiDp.dp8)) {
+                BocchiCircleButton(
+                    pink = false,
+                    onClick = onExport,
+                ) {
+                    Icon(
                         imageVector = FlyCat.Share,
                         contentDescription = FlyTxt.Override.Card.Export,
-                        onClick = onExport,
+                        tint = Color.White,
+                        modifier = Modifier.size(UiDp.dp18),
                     )
-                    OverrideCardActionIconButton(
+                }
+                BocchiCircleButton(
+                    pink = false,
+                    onClick = onDelete,
+                ) {
+                    Icon(
                         imageVector = FlyCat.Delete,
                         contentDescription = FlyTxt.Override.Card.Delete,
-                        onClick = onDelete,
+                        tint = Color.White,
+                        modifier = Modifier.size(UiDp.dp18),
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                IconButton(
-                    modifier = Modifier.padding(start = UiDp.dp4),
-                    backgroundColor = colorScheme.secondaryContainer.copy(alpha = 0.78f),
-                    minHeight = UiDp.dp35,
-                    minWidth = UiDp.dp35,
-                    onClick = onApply,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = UiDp.dp10),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(UiDp.dp2),
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(UiDp.dp20),
-                            imageVector = FlyCat.Diff,
-                            tint = colorScheme.onSurface.copy(alpha = 0.85f),
-                            contentDescription = FlyTxt.Override.Card.Apply,
-                        )
-                        Text(
-                            modifier = Modifier.padding(end = UiDp.dp3),
-                            text = FlyTxt.Override.Card.ApplyButton,
-                            color = colorScheme.onSurface.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 15.sp,
-                        )
-                    }
-                }
-
-                IconButton(
-                    modifier = Modifier.padding(start = UiDp.dp4, end = UiDp.dp8),
-                    backgroundColor = colorScheme.primary.copy(alpha = 0.1f),
-                    minHeight = UiDp.dp35,
-                    minWidth = UiDp.dp35,
-                    onClick = onEdit,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = UiDp.dp10),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(UiDp.dp2),
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(UiDp.dp20),
-                            imageVector = FlyCat.Edit,
-                            tint = accentTintColor,
-                            contentDescription = FlyTxt.Override.Card.Edit,
-                        )
-                        Text(
-                            modifier = Modifier.padding(end = UiDp.dp3),
-                            text = FlyTxt.Override.Card.EditButton,
-                            color = accentTintColor,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 15.sp,
-                        )
-                    }
-                }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            BocchiStickerButton(
+                text = FlyTxt.Override.Card.ApplyButton,
+                onClick = onApply,
+                pink = false,
+                modifier = Modifier.padding(end = UiDp.dp8),
+            )
+            BocchiStickerButton(
+                text = FlyTxt.Override.Card.EditButton,
+                onClick = onEdit,
+                pink = true,
+            )
         }
     }
 }
 
 @Composable
-private fun OverrideConfigStateIndicator(inUse: Boolean) {
-    val tint = if (inUse) colorScheme.primary else colorScheme.onSurfaceVariantSummary
-    OverrideStatusBadge(
-        imageVector = if (inUse) FlyCat.ShieldCheck else FlyCat.ShieldMinus,
-        contentDescription =
-            if (inUse) FlyTxt.Override.Status.InUse else FlyTxt.Override.Status.NotInUse,
-        tint = tint,
-        backgroundColor =
-            if (inUse) {
-                colorScheme.primary.copy(alpha = 0.1f)
-            } else {
-                colorScheme.secondaryContainer.copy(alpha = 0.78f)
-            },
-    )
+private fun OverrideConfigStateIndicator(inUse: Boolean, modifier: Modifier = Modifier) {
+    val tint = if (inUse) BocchiBlueFg else BocchiTextGray
+    Box(
+        modifier =
+            modifier
+                .size(30.dp)
+                .background(
+                    color = if (inUse) BocchiBlueBg else BocchiPinkBg,
+                    shape = CircleShape,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (inUse) FlyCat.ShieldCheck else FlyCat.ShieldMinus,
+            contentDescription =
+                if (inUse) FlyTxt.Override.Status.InUse else FlyTxt.Override.Status.NotInUse,
+            tint = tint,
+            modifier = Modifier.size(16.dp),
+        )
+    }
 }
 
 @Composable
@@ -507,129 +487,90 @@ private fun OverrideBuiltInConfigCard(
     onApply: () -> Unit,
     onEdit: () -> Unit,
 ) {
-    val accentTintColor = colorScheme.primary
-
-    Card(
+    BocchiCard(
         modifier = Modifier.fillMaxWidth().padding(vertical = overrideConfigItemGap / 2),
-        insideMargin = PaddingValues(UiDp.dp16),
+        insideMargin = PaddingValues(horizontal = UiDp.dp14, vertical = UiDp.dp12),
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(UiDp.dp12),
-                verticalAlignment = Alignment.Top,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UiDp.dp12),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(UiDp.dp8),
-                ) {
-                    Text(
-                        text = config.name,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight(550),
-                        color = colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = config.contentType.label,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colorScheme.onSurfaceVariantSummary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                OverrideBuiltInIndicator()
+                Text(
+                    text = config.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = BocchiTextDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = config.contentType.label,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = BocchiTextGray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            OverrideBuiltInIndicator()
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = UiDp.dp10),
+            thickness = UiDp.dp0_5,
+            color = BocchiPink.copy(alpha = 0.35f),
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BocchiCircleButton(
+                pink = false,
+                onClick = onExport,
+            ) {
+                Icon(
+                    imageVector = FlyCat.Share,
+                    contentDescription = FlyTxt.Override.Card.Export,
+                    tint = Color.White,
+                    modifier = Modifier.size(UiDp.dp18),
+                )
             }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = UiDp.dp12),
-                thickness = UiDp.dp0_5,
-                color = colorScheme.outline.copy(alpha = 0.5f),
+            Spacer(modifier = Modifier.weight(1f))
+
+            BocchiStickerButton(
+                text = FlyTxt.Override.Card.ApplyButton,
+                onClick = onApply,
+                pink = false,
+                modifier = Modifier.padding(end = UiDp.dp8),
             )
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(UiDp.dp8)) {
-                    OverrideCardActionIconButton(
-                        imageVector = FlyCat.Share,
-                        contentDescription = FlyTxt.Override.Card.Export,
-                        onClick = onExport,
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                IconButton(
-                    modifier = Modifier.padding(start = UiDp.dp4),
-                    backgroundColor = colorScheme.secondaryContainer.copy(alpha = 0.78f),
-                    minHeight = UiDp.dp35,
-                    minWidth = UiDp.dp35,
-                    onClick = onApply,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = UiDp.dp10),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(UiDp.dp2),
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(UiDp.dp20),
-                            imageVector = FlyCat.Diff,
-                            tint = colorScheme.onSurface.copy(alpha = 0.85f),
-                            contentDescription = FlyTxt.Override.Card.Apply,
-                        )
-                        Text(
-                            modifier = Modifier.padding(end = UiDp.dp3),
-                            text = FlyTxt.Override.Card.ApplyButton,
-                            color = colorScheme.onSurface.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 15.sp,
-                        )
-                    }
-                }
-
-                IconButton(
-                    modifier = Modifier.padding(start = UiDp.dp4),
-                    backgroundColor = colorScheme.primary.copy(alpha = 0.1f),
-                    minHeight = UiDp.dp35,
-                    minWidth = UiDp.dp35,
-                    onClick = onEdit,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = UiDp.dp10),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(UiDp.dp2),
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(UiDp.dp20),
-                            imageVector = FlyCat.Edit,
-                            tint = accentTintColor,
-                            contentDescription = FlyTxt.Override.Card.Edit,
-                        )
-                        Text(
-                            modifier = Modifier.padding(end = UiDp.dp3),
-                            text = FlyTxt.Override.Card.EditButton,
-                            color = accentTintColor,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 15.sp,
-                        )
-                    }
-                }
-            }
+            BocchiStickerButton(
+                text = FlyTxt.Override.Card.EditButton,
+                onClick = onEdit,
+                pink = true,
+            )
         }
     }
 }
 
 @Composable
 private fun OverrideBuiltInIndicator() {
-    val tint = colorScheme.primary
-    OverrideStatusBadge(
-        imageVector = FlyCat.ShieldCheck,
-        contentDescription = FlyTxt.Override.Status.BuiltIn,
-        tint = tint,
-        backgroundColor = tint.copy(alpha = 0.15f),
-    )
+    Box(
+        modifier =
+            Modifier.size(30.dp)
+                .background(color = BocchiPinkBg, shape = CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = FlyCat.ShieldCheck,
+            contentDescription = FlyTxt.Override.Status.BuiltIn,
+            tint = BocchiStar,
+            modifier = Modifier.size(16.dp),
+        )
+    }
 }
 
 @Composable
