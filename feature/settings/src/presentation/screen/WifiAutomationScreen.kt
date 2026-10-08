@@ -69,7 +69,8 @@ import com.suanran.dreambox.core.model.WifiAutomationRule
 import com.suanran.dreambox.core.model.profile.Profile
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.WifiAutomationViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Cardimport com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
+import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
 import com.suanran.dreambox.presentation.component.dialog.AppBottomSheetCloseAction
 import com.suanran.dreambox.presentation.component.dialog.AppBottomSheetConfirmAction
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
