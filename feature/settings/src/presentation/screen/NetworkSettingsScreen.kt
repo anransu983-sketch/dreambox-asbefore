@@ -66,16 +66,16 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.NetworkSetti
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.RootTunServiceOptionsUiState
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.TunServiceOptionsUiState
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog
 import com.suanran.dreambox.presentation.component.dialog.AppTextFieldDialog
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
-import com.suanran.dreambox.presentation.component.misc.PreferenceArrowItem
-import com.suanran.dreambox.presentation.component.misc.PreferenceEnumItem
-import com.suanran.dreambox.presentation.component.misc.PreferenceSwitchItem
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiArrowItem
+import com.suanran.dreambox.presentation.component.misc.BocchiEnumItem
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.icon.FlyCat
@@ -188,7 +188,7 @@ private fun NetworkRunModeSection(
     rootAvailable: Boolean,
     ebpfAvailable: Boolean,
 ) {
-    Title(FlyTxt.NetworkSettings.RunMode.SectionTitle)
+    BocchiSectionTitle(FlyTxt.NetworkSettings.RunMode.SectionTitle)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ModeCard(
             icon = FlyCat.PlaneTakeoff,
@@ -223,9 +223,9 @@ private fun NetworkAdvancedSection(
     viewModel: NetworkSettingsViewModel,
     runMode: RunMode,
 ) {
-    Title(FlyTxt.NetworkSettings.Section.Advanced)
-    Card {
-        PreferenceArrowItem(
+    BocchiSectionTitle(FlyTxt.NetworkSettings.Section.Advanced)
+    BocchiCard {
+        BocchiArrowItem(
             title = FlyTxt.NetworkSettings.Section.VpnOptions,
             onClick = {
                 when (runMode) {
@@ -235,7 +235,7 @@ private fun NetworkAdvancedSection(
                 }
             },
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.NetworkSettings.Advanced.DisableOverrideTitle,
             checked = viewModel.disableAllOverride.value,
             onCheckedChange = viewModel::onDisableAllOverrideChange,
@@ -250,10 +250,10 @@ private fun NetworkProxyOptionsSection(
     showAccessControlMode: Boolean,
     onAccessControlModeChange: (AccessControlMode) -> Unit,
 ) {
-    Title(FlyTxt.NetworkSettings.Section.ProxyOptions)
-    Card {
+    BocchiSectionTitle(FlyTxt.NetworkSettings.Section.ProxyOptions)
+    BocchiCard {
         if (showAccessControlMode) {
-            PreferenceEnumItem(
+            BocchiEnumItem(
                 title = FlyTxt.NetworkSettings.ProxyOptions.AccessControlModeTitle,
                 currentValue = accessControlMode,
                 items =
@@ -271,7 +271,7 @@ private fun NetworkProxyOptionsSection(
                 onValueChange = onAccessControlModeChange,
             )
         }
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.NetworkSettings.ProxyOptions.ManageAccessControlTitle,
             onClick = { navigator.push(Route.AccessControl) },
         )
@@ -294,8 +294,8 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
     val restartRequired by viewModel.restartRequired.collectAsStateWithLifecycle()
     var kernelsExpanded by remember { mutableStateOf(false) }
 
-    Title(FlyTxt.NetworkSettings.Section.Kernel)
-    Card {
+    BocchiSectionTitle(FlyTxt.NetworkSettings.Section.Kernel)
+    BocchiCard {
         // 下拉仅展示已安装的内核（避免 index 中新 ID 和 marker 文件中旧 ID 同时出现）
         val installedIds = installedCommits.keys.sorted()
         val allKernelIds = listOf(KernelManager.BUNDLED_ALPHA_ID) + installedIds
@@ -314,14 +314,14 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
             },
         )
         // 检查更新
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.NetworkSettings.Kernel.RefreshTitle,
             summary = if (kernels.isNotEmpty()) "${kernels.size} available" else null,
             onClick = { viewModel.refreshKernels() },
         )
         // 可用内核折叠在一起
         if (kernels.isNotEmpty()) {
-            PreferenceArrowItem(
+            BocchiArrowItem(
                 title = "可用内核（${kernels.size}）",
                 summary = if (kernelsExpanded) null else kernels.joinToString("、") { kernelLabel(it.id, it.commit) },
                 onClick = { kernelsExpanded = !kernelsExpanded },
@@ -344,7 +344,7 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
                         val isInstalled = KernelManager.isInstalled(context, kernel.id)
                         val isActive = activeKernelId == kernel.id
                         val isDownloading = kernel.id in downloadingIds
-                        PreferenceArrowItem(
+                        BocchiArrowItem(
                             title = kernelLabel(kernel.id, kernel.commit),
                             summary = when {
                                 isDownloading -> FlyTxt.NetworkSettings.Kernel.DownloadingTag
@@ -375,7 +375,7 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
             }
         }
         // 自定义内核
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.NetworkSettings.Kernel.CustomTitle,
             summary = null,
             onClick = { showCustomDialog = true },
@@ -513,7 +513,7 @@ private fun ModeCard(
     enabled: Boolean,
     onSelect: () -> Unit,
 ) {
-    Card {
+    BocchiCard {
         BasicComponent(
             title = title,
             summary = summary,
@@ -553,12 +553,12 @@ internal fun CommonTunServiceOptions(
     actions: CommonTunOptionActions,
     extraOptions: @Composable () -> Unit,
 ) {
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.NetworkSettings.VpnOptions.BypassPrivateTitle,
         checked = state.bypassPrivateNetwork,
         onCheckedChange = actions.onBypassPrivateNetworkChange,
     )
-    PreferenceEnumItem(
+    BocchiEnumItem(
         title = FlyTxt.NetworkSettings.VpnOptions.TunStackTitle,
         currentValue = state.tunStack,
         items =
@@ -571,12 +571,12 @@ internal fun CommonTunServiceOptions(
         values = TunStack.entries,
         onValueChange = actions.onTunStackChange,
     )
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.NetworkSettings.VpnOptions.DnsHijackTitle,
         checked = state.dnsHijack,
         onCheckedChange = actions.onDnsHijackChange,
     )
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.NetworkSettings.VpnOptions.EnableIpv6Title,
         checked = state.enableIPv6,
         onCheckedChange = actions.onEnableIPv6Change,
@@ -619,12 +619,12 @@ internal fun TunServiceOptions(state: TunServiceOptionsUiState, actions: TunServ
         state = state.common,
         actions = actions.common,
         extraOptions = {
-            PreferenceSwitchItem(
+            BocchiSwitchItem(
                 title = FlyTxt.NetworkSettings.VpnOptions.AllowBypassTitle,
                 checked = state.allowBypass,
                 onCheckedChange = actions.onAllowBypassChange,
             )
-            PreferenceSwitchItem(
+            BocchiSwitchItem(
                 title = FlyTxt.NetworkSettings.VpnOptions.SystemProxyTitle,
                 checked = state.systemProxy,
                 onCheckedChange = actions.onSystemProxyChange,
@@ -699,12 +699,12 @@ private fun RootTunIdentityOptions(
     onEditIfName: () -> Unit,
     onEditMtu: () -> Unit,
 ) {
-    PreferenceArrowItem(
+    BocchiArrowItem(
         title = FlyTxt.NetworkSettings.RootTun.IfNameTitle,
         summary = tunIfNameDraft.ifBlank { FlyTxt.NetworkSettings.RootTun.IfNameSummary },
         onClick = onEditIfName,
     )
-    PreferenceArrowItem(
+    BocchiArrowItem(
         title = FlyTxt.NetworkSettings.RootTun.MtuTitle,
         summary = tunMtuDraft.ifBlank { FlyTxt.NetworkSettings.RootTun.MtuSummary },
         onClick = onEditMtu,
@@ -722,22 +722,22 @@ private fun RootTunRoutingOptions(
     ontunAutoRedirectChange: (Boolean) -> Unit,
     ontunDnsModeChange: (TunDnsMode) -> Unit,
 ) {
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.NetworkSettings.RootTun.AutoRouteTitle,
         checked = tunAutoRoute,
         onCheckedChange = onTunAutoRouteChange,
     )
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.NetworkSettings.RootTun.StrictRouteTitle,
         checked = tunStrictRoute,
         onCheckedChange = onTunStrictRouteChange,
     )
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.NetworkSettings.RootTun.AutoRedirectTitle,
         checked = tunAutoRedirect,
         onCheckedChange = ontunAutoRedirectChange,
     )
-    PreferenceEnumItem(
+    BocchiEnumItem(
         title = FlyTxt.NetworkSettings.RootTun.DnsModeTitle,
         currentValue = tunDnsMode,
         items =
@@ -764,7 +764,7 @@ private fun RootTunFakeIpOptions(
         exit = fadeOut() + shrinkVertically(),
     ) {
         Column {
-            PreferenceArrowItem(
+            BocchiArrowItem(
                 title = FlyTxt.NetworkSettings.RootTun.FakeIpRangeTitle,
                 summary =
                     tunFakeIpRangeDraft.ifBlank {
@@ -772,7 +772,7 @@ private fun RootTunFakeIpOptions(
                     },
                 onClick = onEditFakeIpRange,
             )
-            PreferenceArrowItem(
+            BocchiArrowItem(
                 title = FlyTxt.NetworkSettings.RootTun.FakeIpRange6Title,
                 summary =
                     tunFakeIpRange6Draft.ifBlank {

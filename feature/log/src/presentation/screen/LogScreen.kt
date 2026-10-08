@@ -59,7 +59,7 @@ import com.suanran.dreambox.core.model.LogFileInfo
 import com.suanran.dreambox.core.model.LogMessage
 import com.suanran.dreambox.feature.log.presentation.viewmodel.LogViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.misc.CenteredText
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
@@ -77,7 +77,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import androidx.compose.ui.graphics.Color
+import com.suanran.dreambox.presentation.component.misc.BocchiCircleButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -158,10 +159,11 @@ fun LogScreen(navigator: Navigator) {
         floatingActionButton = {
             Column(
                 modifier = Modifier.padding(end = 20.dp, bottom = 85.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.End,
             ) {
-                FloatingActionButton(
+                BocchiCircleButton(
+                    pink = false,
                     onClick = {
                         val ts = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
                         saveRecentLogsLauncher.launch("flycat_log_$ts.log")
@@ -170,10 +172,12 @@ fun LogScreen(navigator: Navigator) {
                     Icon(
                         imageVector = MiuixIcons.Download,
                         contentDescription = FlyTxt.Log.Action.SaveRecentLogs,
-                        tint = MiuixTheme.colorScheme.onPrimary,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-                FloatingActionButton(
+                BocchiCircleButton(
+                    pink = true,
                     onClick = {
                         if (isRecording) {
                             viewModel.stopRecording()
@@ -186,16 +190,19 @@ fun LogScreen(navigator: Navigator) {
                         imageVector = if (isRecording) FlyCat.Square else FlyCat.Play,
                         contentDescription =
                             if (isRecording) FlyTxt.Log.Action.StopRecording else FlyTxt.Log.Action.StartRecording,
-                        tint = MiuixTheme.colorScheme.onPrimary,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-                FloatingActionButton(
+                BocchiCircleButton(
+                    pink = false,
                     onClick = { viewModel.deleteAllLogs() },
                 ) {
                     Icon(
                         imageVector = MiuixIcons.Delete,
                         contentDescription = FlyTxt.Log.Action.ClearLogs,
-                        tint = MiuixTheme.colorScheme.onPrimary,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -298,28 +305,31 @@ fun LogDetailScreen(
         floatingActionButton = {
             Column(
                 modifier = Modifier.padding(end = 20.dp, bottom = 85.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.End,
             ) {
                 if (isCurrentFileRecording) {
-                    FloatingActionButton(
+                    BocchiCircleButton(
+                        pink = true,
                         onClick = { viewModel.stopRecording() },
                     ) {
                         Icon(
                             imageVector = FlyCat.Square,
                             contentDescription = FlyTxt.Log.Action.Pause,
-                            tint = MiuixTheme.colorScheme.onPrimary,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
-                FloatingActionButton(
+                BocchiCircleButton(
+                    pink = false,
                     onClick = {
                         val ts = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
                         val baseName = fileName.removeSuffix(".log")
                         exportLauncher.launch("${baseName}_$ts.log")
                     },
-                ) { Icon(imageVector = MiuixIcons.Download, contentDescription = FlyTxt.Log.Action.Save, tint = MiuixTheme.colorScheme.onPrimary) }
-                FloatingActionButton(onClick = { viewModel.deleteLogFile(fileName); navigator.navigateUp() }) { Icon(imageVector = MiuixIcons.Delete, contentDescription = FlyTxt.Log.Action.Delete, tint = MiuixTheme.colorScheme.onPrimary) }
+                ) { Icon(imageVector = MiuixIcons.Download, contentDescription = FlyTxt.Log.Action.Save, tint = Color.White, modifier = Modifier.size(20.dp)) }
+                BocchiCircleButton(pink = false, onClick = { viewModel.deleteLogFile(fileName); navigator.navigateUp() }) { Icon(imageVector = MiuixIcons.Delete, contentDescription = FlyTxt.Log.Action.Delete, tint = Color.White, modifier = Modifier.size(20.dp)) }
             }
         },
     ) { innerPadding ->
@@ -353,7 +363,7 @@ private fun LogEntryCard(entry: LogEntry, index: Int = 0, isNewEntry: Boolean = 
         }
     }
     AnimatedVisibility(visible = visible, enter = fadeIn(animationSpec = tween(AnimationSpecs.DURATION_INSTANT)) + slideInVertically(animationSpec = tween(AnimationSpecs.DURATION_INSTANT), initialOffsetY = { -it / 2 })) {
-        Card(modifier = Modifier.padding(vertical = 4.dp, horizontal = 12.dp)) {
+        BocchiCard(modifier = Modifier.padding(vertical = 4.dp, horizontal = 12.dp)) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(text = entry.time, style = MiuixTheme.textStyles.body2.copy(fontSize = 11.sp, fontFamily = FontFamily.Monospace), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
@@ -376,7 +386,7 @@ private fun LogFileItem(fileInfo: LogFileInfo, index: Int, onClick: () -> Unit) 
     val sizeText = formatFileSize(if (fileInfo.isRecording) animatedSize.toLong() else fileInfo.size)
     val summary = "${java.time.Instant.ofEpochMilli(fileInfo.createdAt).atZone(java.time.ZoneId.systemDefault()).format(dateFormat)}  ·  $sizeText"
     AnimatedVisibility(visible = visible, enter = fadeIn(animationSpec = tween(AnimationSpecs.DURATION_NORMAL)) + slideInVertically(animationSpec = tween(AnimationSpecs.DURATION_NORMAL), initialOffsetY = { -it / 2 })) {
-        Card(modifier = Modifier.padding(vertical = 4.dp).pressable(interactionSource = interactionSource, indication = SinkFeedback()).clickable(interactionSource = interactionSource, indication = null, onClick = onClick)) {
+        BocchiCard(modifier = Modifier.padding(vertical = 4.dp).pressable(interactionSource = interactionSource, indication = SinkFeedback()).clickable(interactionSource = interactionSource, indication = null, onClick = onClick)) {
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {Text(text = fileInfo.name, style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurface); Spacer(modifier = Modifier.size(4.dp)); Text(text = summary, style = MiuixTheme.textStyles.body2.copy(fontSize = 11.sp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
                 if (fileInfo.isRecording) { Text(text = FlyTxt.Log.Status.Recording, style = MiuixTheme.textStyles.body2, color = MiuixTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp)) }

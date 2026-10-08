@@ -45,8 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.suanran.dreambox.presentation.component.card.Card
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.icon.FlyCat
 import com.suanran.dreambox.presentation.icon.flycat.chevron
 import com.suanran.dreambox.presentation.theme.AppTheme
@@ -76,7 +76,7 @@ fun OverrideSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(spacing.space8),
     ) {
-        Title(title)
+        BocchiSectionTitle(title)
         content()
     }
 }
@@ -169,7 +169,7 @@ fun OverrideFieldAssistText(text: String, color: Color, modifier: Modifier = Mod
 
 @Composable
 fun OverrideSelectorCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Card(modifier = modifier, insideMargin = PaddingValues(), content = content)
+    BocchiCard(modifier = modifier, insideMargin = PaddingValues(), content = content)
 }
 
 @Composable

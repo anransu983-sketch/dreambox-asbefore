@@ -29,7 +29,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueBg
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
+import com.suanran.dreambox.presentation.component.misc.BocchiPink
+import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
+import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
+import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
 import com.suanran.dreambox.presentation.component.sortable.DraggableItem
 import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
@@ -163,25 +172,35 @@ fun LabScreen(navigator: Navigator) {
                                 .padding(horizontal = spacing.space16, vertical = spacing.space14),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            LabEntryIcon(icon = e.icon)
+                            LabEntryIcon(icon = e.icon, key = key)
                             Spacer(modifier = Modifier.width(spacing.space12))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = e.title,
-                                    style = MiuixTheme.textStyles.title4,
-                                    color = MiuixTheme.colorScheme.onSurface,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BocchiTextDark,
+                                    maxLines = 1,
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = e.summary,
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    fontSize = 11.sp,
+                                    color = BocchiTextGray,
+                                    maxLines = 1,
                                 )
                             }
+                            Text(
+                                text = "✦",
+                                fontSize = 12.sp,
+                                color = BocchiPink.copy(alpha = 0.6f),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.Filled.ChevronRight,
                                 contentDescription = null,
-                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                tint = BocchiTextGray,
+                                modifier = Modifier.size(18.dp),
                             )
                         }
                     }
@@ -198,17 +217,27 @@ fun LabScreen(navigator: Navigator) {
 }
 
 @Composable
-private fun LabEntryIcon(icon: ImageVector) {
+private fun LabEntryIcon(icon: ImageVector, key: String) {
+    val bg = when (kotlin.math.abs(key.hashCode()) % 3) {
+        0 -> BocchiPinkBg
+        1 -> BocchiBlueBg
+        else -> Color(0xFFE3F5E9)
+    }
+    val fg = when (kotlin.math.abs(key.hashCode()) % 3) {
+        0 -> BocchiStar
+        1 -> BocchiBlueFg
+        else -> Color(0xFF43A047)
+    }
     Box(
         modifier = Modifier.size(AppTheme.sizes.settingsIconContainerSize)
             .clip(RoundedCornerShape(12.dp))
-            .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            .background(bg),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MiuixTheme.colorScheme.primary,
+            tint = fg,
             modifier = Modifier.size(24.dp),
         )
     }

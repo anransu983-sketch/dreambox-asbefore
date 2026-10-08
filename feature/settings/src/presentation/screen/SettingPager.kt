@@ -50,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,9 +62,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.presentation.theme.horizontalPadding
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueBg
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
+import com.suanran.dreambox.presentation.component.misc.BocchiPink
+import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
+import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
+import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
 import com.suanran.dreambox.presentation.component.sortable.DraggableItem
 import com.suanran.dreambox.presentation.component.sortable.ModuleMenuButton
 import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
@@ -181,11 +191,16 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
     var hiddenKeys by remember { mutableStateOf(loadHiddenModules(mmkv)) }
 
     val listState = rememberLazyListState()
+    // 用 rememberUpdatedState 包一层，避免拖拽回调捕获到过期的 modules
+    val modulesState = rememberUpdatedState(modules)
     val dragState = rememberDragDropState(listState) { from, to ->
-        modules = modules.toMutableList().apply { add(to, removeAt(from)) }
-        saveModuleOrder(mmkv, modules)
+        val current = modulesState.value
+        if (from !in current.indices || to !in current.indices) return@rememberDragDropState
+        val newList = current.toMutableList().apply { add(to, removeAt(from)) }.distinctBy { it.key }
+        modules = newList
+        saveModuleOrder(mmkv, newList)
     }
-    val visibleModules = modules.filter { it.key !in hiddenKeys }
+    val visibleModules = modules.distinctBy { it.key }.filter { it.key !in hiddenKeys }
     val hiddenModules = modules.filter { it.key in hiddenKeys }
 
     Scaffold(topBar = { TopBar(title = FlyTxt.Settings.Title, scrollBehavior = scrollBehavior) }) { innerPadding ->
@@ -242,7 +257,7 @@ private val animeBackgroundBrush = Brush.verticalGradient(
 /** 动漫风玻璃卡片上的深色文字。 */
 private val animeOnGlass = Color(0xFF4A1E2C)
 
-/** 动漫风磁吸模块卡片：粉色玻璃拟态 + 大圆角，右侧只留菜单和箭头。 */
+/** 波奇酱磁吸模块卡片：白色 + 粉/蓝细描边，小字号。 */
 @Composable
 private fun AnimeModuleCard(
     module: SettingsModule,
@@ -250,44 +265,54 @@ private fun AnimeModuleCard(
     onHide: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val cardShape = RoundedCornerShape(28.dp)
+    val cardShape = RoundedCornerShape(20.dp)
     Box(
         modifier = Modifier
             .horizontalPadding()
             .then(if (isDragging) Modifier.shadow(12.dp, cardShape) else Modifier)
             .clip(cardShape)
-            .background(Color.White.copy(alpha = 0.55f))
-            .border(1.dp, Color.White.copy(alpha = 0.65f), cardShape)
+            .background(Color.White)
+            .border(1.dp, BocchiPink.copy(alpha = 0.45f), cardShape)
             .clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ModuleIcon(icon = module.icon)
+            ModuleIcon(icon = module.icon, key = module.key)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = module.title,
-                    style = MiuixTheme.textStyles.title4.copy(fontWeight = FontWeight.SemiBold),
-                    color = animeOnGlass,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BocchiTextDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = if (module.badge != null) "${module.summary} · ${module.badge}" else module.summary,
-                    style = MiuixTheme.textStyles.body2,
-                    color = animeOnGlass.copy(alpha = 0.62f),
+                    fontSize = 11.sp,
+                    color = BocchiTextGray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            Text(
+                text = "✦",
+                fontSize = 12.sp,
+                color = BocchiPink.copy(alpha = 0.6f),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
             ModuleMenuButton(onHide = onHide)
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
-                tint = animeOnGlass.copy(alpha = 0.45f),
+                tint = BocchiTextGray,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -349,20 +374,31 @@ private fun MaterialModuleCard(
 }
 
 @Composable
-private fun ModuleIcon(icon: ImageVector) {
+private fun ModuleIcon(icon: ImageVector, key: String) {
     val componentSizes = AppTheme.sizes
     val radii = AppTheme.radii
+    // 图标圆底色按粉蓝绿轮换
+    val bg = when (abs(key.hashCode()) % 3) {
+        0 -> BocchiPinkBg
+        1 -> BocchiBlueBg
+        else -> Color(0xFFE3F5E9)
+    }
+    val fg = when (abs(key.hashCode()) % 3) {
+        0 -> BocchiStar
+        1 -> BocchiBlueFg
+        else -> Color(0xFF43A047)
+    }
     Box(
         modifier = Modifier
             .size(componentSizes.settingsIconContainerSize)
             .clip(RoundedCornerShape(radii.radius16))
-            .background(MiuixTheme.colorScheme.primary),
+            .background(bg),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MiuixTheme.colorScheme.onPrimary,
+            tint = fg,
             modifier = Modifier.size(componentSizes.settingsIconGlyphSize),
         )
     }
@@ -376,11 +412,16 @@ private fun loadModuleOrder(mmkv: MMKV): List<SettingsModule> {
     val byKey = defaults.associateBy { it.key }
     val ordered = order.mapNotNull { byKey[it] }
     val missing = defaults.filter { d -> d.key !in order }
-    return (ordered + missing).distinctBy { it.key }
+    val result = (ordered + missing).distinctBy { it.key }
+    // 脏数据清理：如果存档里有重复 key，回写一份干净的
+    if (order.size != order.distinct().size) {
+        saveModuleOrder(mmkv, result)
+    }
+    return result
 }
 
 private fun saveModuleOrder(mmkv: MMKV, modules: List<SettingsModule>) {
-    mmkv.encode(MMKV_KEY_MODULE_ORDER, modules.joinToString(",") { it.key })
+    mmkv.encode(MMKV_KEY_MODULE_ORDER, modules.distinctBy { it.key }.joinToString(",") { it.key })
 }
 
 private const val MMKV_KEY_MODULE_HIDDEN = "settings_module_hidden"

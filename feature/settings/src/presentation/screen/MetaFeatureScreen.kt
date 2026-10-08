@@ -56,14 +56,14 @@ import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreSe
 import com.suanran.dreambox.feature.settings.presentation.util.MetaWebDavConfig
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MetaFeatureViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.navigation.Navigator
@@ -163,8 +163,8 @@ fun MetaFeatureScreen(navigator: Navigator) {
         }
     val sectionContent: Map<String, @Composable () -> Unit> = mapOf(
         "conn" to {
-                Title(FlyTxt.MetaFeature.Section.ConnectionAndTraffic)
-                Card {
+                BocchiSectionTitle(FlyTxt.MetaFeature.Section.ConnectionAndTraffic)
+                BocchiCard {
                     ArrowPreference(
                         title = FlyTxt.Connection.Title,
                         summary = FlyTxt.Connection.Summary,
@@ -178,8 +178,8 @@ fun MetaFeatureScreen(navigator: Navigator) {
                 }
         },
         "routing" to {
-                Title(FlyTxt.MetaFeature.Section.Routing)
-                Card {
+                BocchiSectionTitle(FlyTxt.MetaFeature.Section.Routing)
+                BocchiCard {
                     ArrowPreference(
                         title = FlyTxt.MetaFeature.RuntimeRules.Title,
                         summary = FlyTxt.MetaFeature.RuntimeRules.Summary,
@@ -198,8 +198,8 @@ fun MetaFeatureScreen(navigator: Navigator) {
                 }
         },
         "panel" to {
-                Title(FlyTxt.MetaFeature.Section.Panel)
-                Card {
+                BocchiSectionTitle(FlyTxt.MetaFeature.Section.Panel)
+                BocchiCard {
                     WindowDropdownPreference(
                         title = FlyTxt.MetaFeature.Panel.SelectPanel,
                         summary = MetaFeatureViewModel.PANEL_NAMES.getOrElse(selectedPanelType) { MetaFeatureViewModel.PANEL_NAMES[0] },
@@ -213,8 +213,8 @@ fun MetaFeatureScreen(navigator: Navigator) {
                 BackupRestoreSection()
         },
         "webdav" to {
-                Title(FlyTxt.MetaFeature.Section.BackupRestore + " — WebDAV")
-                Card {
+                BocchiSectionTitle(FlyTxt.MetaFeature.Section.BackupRestore + " — WebDAV")
+                BocchiCard {
                     ArrowPreference(
                         title = FlyTxt.MetaFeature.WebDav.ConfigTitle,
                         summary = FlyTxt.MetaFeature.WebDav.ConfigSummary,
@@ -279,8 +279,8 @@ fun MetaFeatureScreen(navigator: Navigator) {
                 }
         },
         "agekey" to {
-                Title(FlyTxt.MetaFeature.AgeKey.Section)
-                Card {
+                BocchiSectionTitle(FlyTxt.MetaFeature.AgeKey.Section)
+                BocchiCard {
                     ArrowPreference(
                         title = FlyTxt.MetaFeature.AgeKey.X25519Title,
                         onClick = {

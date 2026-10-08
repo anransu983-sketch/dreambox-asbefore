@@ -74,18 +74,18 @@ import com.suanran.dreambox.presentation.component.sortable.saveSectionOrder
 import com.suanran.dreambox.feature.settings.presentation.screen.component.ThemeColorPickerItem
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsViewModel
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog
 import com.suanran.dreambox.presentation.component.dialog.AppTextFieldDialog
 import com.suanran.dreambox.presentation.component.dialog.WarningBottomSheet
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
-import com.suanran.dreambox.presentation.component.misc.PreferenceArrowItem
-import com.suanran.dreambox.presentation.component.misc.PreferenceEnumItem
-import com.suanran.dreambox.presentation.component.misc.PreferenceSwitchItem
-import com.suanran.dreambox.presentation.component.misc.PreferenceValueItem
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiArrowItem
+import com.suanran.dreambox.presentation.component.misc.BocchiEnumItem
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
+import com.suanran.dreambox.presentation.component.misc.BocchiValueItem
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.navigation.LocalNavigator
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
@@ -172,15 +172,15 @@ private fun AppBehaviorSettingsSection(viewModel: AppSettingsViewModel) {
     val automaticRestart by viewModel.automaticRestart.state.collectAsStateWithLifecycle()
     val autoUpdateCurrentProfileOnStart by viewModel.autoUpdateCurrentProfileOnStart.state.collectAsStateWithLifecycle()
 
-    Title(FlyTxt.AppSettings.Section.Behavior)
-    Card {
-        PreferenceSwitchItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Behavior)
+    BocchiCard {
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Behavior.AutoStartTitle,
             summary = FlyTxt.AppSettings.Behavior.AutoStartSummary,
             checked = automaticRestart,
             onCheckedChange = viewModel::onAutomaticRestartChange,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Behavior.AutoUpdateOnStartTitle,
             summary = FlyTxt.AppSettings.Behavior.AutoUpdateOnStartSummary,
             checked = autoUpdateCurrentProfileOnStart,
@@ -236,9 +236,9 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             )
         }
 
-    Title(FlyTxt.AppSettings.Interface.ColorThemeTitle)
-    Card {
-        PreferenceEnumItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Interface.ColorThemeTitle)
+    BocchiCard {
+        BocchiEnumItem(
             title = FlyTxt.AppSettings.Interface.ThemeModeTitle,
             summary = FlyTxt.AppSettings.Interface.ThemeModeSummary,
             currentValue = themeMode,
@@ -251,7 +251,7 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             values = ThemeMode.entries,
             onValueChange = viewModel::onThemeModeChange,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertTitle,
             summary = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertSummary,
             checked = invertOnPrimaryColors,
@@ -262,9 +262,9 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             onThemeSeedColorChange = viewModel::onThemeSeedColorChange,
         )
     }
-    Title(FlyTxt.AppSettings.Section.Interface)
-    Card {
-        PreferenceEnumItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Interface)
+    BocchiCard {
+        BocchiEnumItem(
             title = FlyTxt.AppSettings.Interface.LanguageTitle,
             summary = FlyTxt.AppSettings.Interface.LanguageSummary,
             currentValue = appLanguage,
@@ -280,13 +280,13 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             values = AppLanguage.entries,
             onValueChange = viewModel::onAppLanguageChange,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Interface.AutoHideNavbarTitle,
             summary = FlyTxt.AppSettings.Interface.AutoHideNavbarSummary,
             checked = bottomBarAutoHide,
             onCheckedChange = viewModel::onBottomBarAutoHideChange,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Interface.TopBarBlurTitle,
             summary = FlyTxt.AppSettings.Interface.TopBarBlurSummary,
             checked = topBarBlurEnabled,
@@ -294,15 +294,15 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
         )
         PageScalePreferenceItem(pageScale = pageScale, onApply = viewModel::onPageScaleChange)
     }
-    Title(FlyTxt.AppSettings.Section.Home)
-    Card {
-        PreferenceSwitchItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Home)
+    BocchiCard {
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Interface.ClassicHomeTitle,
             checked = classicHomeEnabled,
             onCheckedChange = viewModel::onClassicHomeEnabledChange,
         )
         AnimatedVisibility(visible = classicHomeEnabled) {
-            PreferenceSwitchItem(
+            BocchiSwitchItem(
                 title = FlyTxt.AppSettings.Interface.HitokotoTitle,
                 summary = FlyTxt.AppSettings.Interface.HitokotoSummary,
                 checked = homeHitokotoEnabled,
@@ -373,9 +373,9 @@ private fun AppNavigationSettingsSection(viewModel: AppSettingsViewModel) {
     val predictiveBackEnabled by viewModel.predictiveBackEnabled.state.collectAsStateWithLifecycle()
     val predictiveBackMaxProgress by viewModel.predictiveBackMaxProgress.state.collectAsStateWithLifecycle()
 
-    Title(FlyTxt.AppSettings.Section.Navigation)
-    Card {
-        PreferenceSwitchItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Navigation)
+    BocchiCard {
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.PredictiveBack.Title,
             checked = predictiveBackEnabled,
             onCheckedChange = { enabled ->
@@ -397,7 +397,7 @@ private fun PredictiveBackProgressPreferenceItem(
 ) {
     var localProgress by remember(progress) { mutableFloatStateOf(progress) }
 
-    PreferenceArrowItem(
+    BocchiArrowItem(
         title = FlyTxt.AppSettings.PredictiveBack.ProgressTitle,
         endActions = {
             Text(
@@ -424,14 +424,14 @@ private fun AppPrivacySettingsSection(viewModel: AppSettingsViewModel) {
     val context = LocalContext.current
     val excludeFromRecents by viewModel.excludeFromRecents.state.collectAsStateWithLifecycle()
 
-    Title(FlyTxt.AppSettings.Section.Privacy)
-    Card {
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Privacy)
+    BocchiCard {
         HideAppIconPreferenceItem(
             hideAppIconFlow = viewModel.hideAppIcon.state,
             onHideAppIconChange = viewModel::onHideAppIconChange,
             context = context,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Privacy.HideFromRecentsTitle,
             summary = FlyTxt.AppSettings.Privacy.HideFromRecentsSummary,
             checked = excludeFromRecents,
@@ -484,15 +484,15 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Title(FlyTxt.AppSettings.Section.Service)
-    Card {
-        PreferenceSwitchItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Service)
+    BocchiCard {
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.ServiceSection.TrafficNotificationTitle,
             summary = FlyTxt.AppSettings.ServiceSection.TrafficNotificationSummary,
             checked = showTrafficNotification,
             onCheckedChange = viewModel::onShowTrafficNotificationChange,
         )
-        PreferenceEnumItem(
+        BocchiEnumItem(
             title = FlyTxt.AppSettings.ServiceSection.LogLevelTitle,
             summary = FlyTxt.AppSettings.ServiceSection.LogLevelSummary,
             currentValue = logLevel,
@@ -500,19 +500,19 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
             values = listOf(Log.VERBOSE, Log.DEBUG, Log.INFO, Log.WARN, Log.ERROR, Log.ASSERT),
             onValueChange = viewModel::onLogLevelChange,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.ServiceSection.ExitUiWhenBackgroundTitle,
             summary = FlyTxt.AppSettings.ServiceSection.ExitUiWhenBackgroundSummary,
             checked = exitUiWhenBackground,
             onCheckedChange = viewModel::onExitUiWhenBackgroundChange,
         )
         if (shizukuAccess.islandSupported) {
-            PreferenceSwitchItem(
+            BocchiSwitchItem(
                 title = FlyTxt.AppSettings.ServiceSection.SuperIslandTitle,
                 checked = superIslandEnabled,
                 onCheckedChange = viewModel::onSuperIslandEnabledChange,
             )
-            PreferenceArrowItem(
+            BocchiArrowItem(
                 title = FlyTxt.AppSettings.ServiceSection.ShizukuTitle,
                 endActions = {
                     Text(
@@ -523,7 +523,7 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
                 onClick = viewModel::onShizukuAccessClick,
             )
         }
-        PreferenceArrowItem(
+        BocchiArrowItem(
             title = FlyTxt.AppSettings.ServiceSection.BatteryOptimizationTitle,
             summary = batteryOptimizationSummary,
             onClick = {
@@ -545,9 +545,9 @@ private fun AppNetworkSettingsSection(viewModel: AppSettingsViewModel) {
     val autoCheckAppUpdate by viewModel.autoCheckAppUpdate.state.collectAsStateWithLifecycle()
     val customUserAgent by viewModel.customUserAgent.state.collectAsStateWithLifecycle()
 
-    Title(FlyTxt.AppSettings.Section.Network)
-    Card {
-        PreferenceEnumItem(
+    BocchiSectionTitle(FlyTxt.AppSettings.Section.Network)
+    BocchiCard {
+        BocchiEnumItem(
             title = FlyTxt.AppSettings.Network.UpdateChannelTitle,
             summary = FlyTxt.AppSettings.Network.UpdateChannelSummary,
             currentValue = updateSource,
@@ -563,7 +563,7 @@ private fun AppNetworkSettingsSection(viewModel: AppSettingsViewModel) {
             ),
             onValueChange = viewModel::onUpdateSourceChange,
         )
-        PreferenceSwitchItem(
+        BocchiSwitchItem(
             title = FlyTxt.AppSettings.Network.AutoCheckAppUpdateTitle,
             summary = FlyTxt.AppSettings.Network.AutoCheckAppUpdateSummary,
             checked = autoCheckAppUpdate,
@@ -585,7 +585,7 @@ private fun HideAppIconPreferenceItem(
     val hideAppIcon by hideAppIconFlow.collectAsStateWithLifecycle()
     val showHideIconDialogState = remember { mutableStateOf(false) }
 
-    PreferenceSwitchItem(
+    BocchiSwitchItem(
         title = FlyTxt.AppSettings.Privacy.HideIconTitle,
         summary = FlyTxt.AppSettings.Privacy.HideIconSummary,
         checked = hideAppIcon,
@@ -630,7 +630,7 @@ private fun MoeQuotePreferenceItem(
         )
     }
 
-    PreferenceValueItem(
+    BocchiValueItem(
         title = title,
         summary = summary,
         onClick = {
@@ -715,7 +715,7 @@ private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) 
     val pageScalePercentText = remember(pageScaleLocal) { "${(pageScaleLocal * 100).toInt()}%" }
     val showPageScaleDialogState = remember { mutableStateOf(false) }
 
-    PreferenceArrowItem(
+    BocchiArrowItem(
         title = FlyTxt.AppSettings.Interface.PageScaleTitle,
         endActions = {
             Text(
@@ -760,7 +760,7 @@ private fun CustomUserAgentPreferenceItem(customUserAgent: String, onConfirm: (S
         )
     }
 
-    PreferenceArrowItem(
+    BocchiArrowItem(
         title = FlyTxt.AppSettings.Network.CustomUserAgentTitle,
         summary = customUserAgentSummary,
         onClick = {
@@ -882,7 +882,7 @@ private fun AnimationSliderItem(
     onApply: (Float) -> Unit,
 ) {
     var localValue by remember(value) { mutableFloatStateOf(value) }
-    PreferenceArrowItem(
+    BocchiArrowItem(
         title = title,
         endActions = {
             Text(

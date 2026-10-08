@@ -60,11 +60,11 @@ import com.suanran.dreambox.feature.about.UpdateCandidate
 import com.suanran.dreambox.feature.about.UpdateDownloadProgress
 import com.suanran.dreambox.feature.about.UpdateManifestPackage
 import com.suanran.dreambox.locale.FlyTxt
-import com.suanran.dreambox.presentation.component.card.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.DialogButtonRow
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
@@ -183,7 +183,7 @@ fun AboutScreen(navigator: Navigator, appIconResId: Int) {
             // 可拖拽的功能卡片
             val sectionContent: Map<String, @Composable () -> Unit> = mapOf(
                 "info" to {
-Card {
+BocchiCard {
                     BasicComponent(
                         title = "梦盒",
                         summary = "基于 Mihomo 的开源安卓客户端",
@@ -197,8 +197,8 @@ Card {
                 }
                 },
                 "links" to {
-Title(FlyTxt.About.Section.ProjectLinks)
-                Card {
+BocchiSectionTitle(FlyTxt.About.Section.ProjectLinks)
+                BocchiCard {
                     AboutLinkItem(
                         title = "梦盒",
                         url = "https://github.com/anransu983-sketch/dreambox-asbefore",
@@ -214,8 +214,8 @@ Title(FlyTxt.About.Section.ProjectLinks)
                 }
                 },
                 "license" to {
-Title(FlyTxt.About.Section.License)
-                Card {
+BocchiSectionTitle(FlyTxt.About.Section.License)
+                BocchiCard {
                     ArrowPreference(
                         title = FlyTxt.About.License.Libraries,
                         summary = FlyTxt.About.License.LibrariesSummary,
