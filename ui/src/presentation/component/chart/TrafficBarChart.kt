@@ -27,6 +27,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -306,6 +307,24 @@ fun TimeSlotBarChart(
                             selectedIndex = if (selectedIndex == tappedIndex) -1 else tappedIndex
                             selectedOffsetY = offset.y
                         }
+                    }
+                    .pointerInput(items.size) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val slotWidth = size.width.toFloat() / items.size
+                                selectedIndex = (offset.x / slotWidth).toInt()
+                                    .coerceIn(0, items.size - 1)
+                                selectedOffsetY = offset.y
+                            },
+                            onDrag = { change, _ ->
+                                val slotWidth = size.width.toFloat() / items.size
+                                selectedIndex = (change.position.x / slotWidth).toInt()
+                                    .coerceIn(0, items.size - 1)
+                                selectedOffsetY = change.position.y
+                                change.consume()
+                            },
+                            onDragEnd = { /* 保持选中 */ },
+                        )
                     },
             ) {
                 val barAreaWidth = size.width
