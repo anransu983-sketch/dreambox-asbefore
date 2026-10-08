@@ -42,6 +42,8 @@ import com.suanran.dreambox.presentation.navigation.Navigator
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Card
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
 
 /**
  * Settings that are meaningful for the standalone root eBPF socket bridge.

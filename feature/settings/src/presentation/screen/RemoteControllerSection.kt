@@ -48,11 +48,14 @@ import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.theme.AppTheme
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
+import com.suanran.dreambox.presentation.component.misc.BocchiArrowItem
 
 @Composable
 fun RemoteControllerSection(

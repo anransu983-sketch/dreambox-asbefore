@@ -89,10 +89,14 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.RadioButton
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.suanran.dreambox.presentation.component.misc.BocchiArrowItem
+import com.suanran.dreambox.presentation.component.misc.BocchiEnumItem
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
 
 private enum class WifiPermissionAction { Enable, Scan }
 

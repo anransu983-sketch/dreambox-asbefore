@@ -41,6 +41,7 @@ import com.suanran.dreambox.presentation.navigation.Navigator
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Card
 
 /**
  * Root Tun "service config" sub-page. Root provisions the virtual network interface and routing.
