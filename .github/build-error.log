@@ -1,11 +1,12 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':feature:profiles:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':ui:compileDebugKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_REFERENCE
+   > Kotlin compiler: CONFLICTING_OVERLOADS
        Kotlin compiler error
-         Unresolved reference 'BocchiEnumItem'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfileLinkSettingsContent.kt:79
+         Conflicting overloads:
+         fun <T> BocchiEnumItem(title: String, currentValue: T, items: List<String>, values: List<T>, onValueChange: (T) -> Unit, summary: String? = ...): Unit
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/misc/BocchiSettings.kt:248
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,12 +20,12 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 1m 20s
-308 actionable tasks: 127 executed, 181 from cache
+BUILD FAILED in 47s
+293 actionable tasks: 110 executed, 183 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfileLinkSettingsContent.kt:79:9 Unresolved reference 'BocchiEnumItem'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfileLinkSettingsContent.kt:102:9 Unresolved reference 'BocchiEnumItem'.
-> Task :feature:profiles:compileDebugKotlin FAILED
-BUILD FAILED in 1m 20s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/misc/BocchiSettings.kt:248:1 Conflicting overloads:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/misc/BocchiSettings.kt:344:1 Conflicting overloads:
+> Task :ui:compileDebugKotlin FAILED
+BUILD FAILED in 47s
