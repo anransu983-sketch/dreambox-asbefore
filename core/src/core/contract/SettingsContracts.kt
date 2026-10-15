@@ -28,6 +28,7 @@ import com.suanran.dreambox.core.model.SettingsPageStyle
 import com.suanran.dreambox.core.model.ThemeMode
 import com.suanran.dreambox.core.model.WifiAutomationFallbackAction
 import com.suanran.dreambox.core.model.WifiAutomationRule
+import com.suanran.dreambox.core.model.proxy.DelayTestMode
 import com.suanran.dreambox.core.model.tunnel.RunMode
 import com.suanran.dreambox.core.model.tunnel.TunDnsMode
 import com.suanran.dreambox.core.model.tunnel.TunStack
@@ -60,6 +61,9 @@ interface NetworkSettingsReader {
     val wifiAutomationLocationRequested: Preference<Boolean>
     val wifiAutomationRules: Preference<List<WifiAutomationRule>>
     val ebpfBypassCn: Preference<Boolean>
+    val unifiedDelay: Preference<Boolean>
+    val tcpConcurrent: Preference<Boolean>
+    val delayTestMode: Preference<DelayTestMode>
     val wifiAutomationOtherWifiAction: Preference<WifiAutomationFallbackAction>
     val wifiAutomationNoWifiAction: Preference<WifiAutomationFallbackAction>
     // Empty string means "do not switch" when the corresponding fallback action is Start.

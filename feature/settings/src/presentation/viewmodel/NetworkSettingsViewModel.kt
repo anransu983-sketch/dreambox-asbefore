@@ -67,6 +67,8 @@ class NetworkSettingsViewModel(
     val enableIPv6: Preference<Boolean> = settings.enableIPv6
     val systemProxy: Preference<Boolean> = settings.systemProxy
     val disableAllOverride: Preference<Boolean> = settings.disableAllOverride
+    val unifiedDelay: Preference<Boolean> = settings.unifiedDelay
+    val tcpConcurrent: Preference<Boolean> = settings.tcpConcurrent
     val accessControlMode: Preference<AccessControlMode> = settings.accessControlMode
 
     val tunStack: Preference<TunStack> = settings.tunStack
@@ -342,6 +344,14 @@ class NetworkSettingsViewModel(
 
     fun onDisableAllOverrideChange(enabled: Boolean) {
         controller.setAndRestartIfNeeded(disableAllOverride, enabled)
+    }
+
+    fun onUnifiedDelayChange(enabled: Boolean) {
+        controller.setAndRestartIfNeeded(unifiedDelay, enabled)
+    }
+
+    fun onTcpConcurrentChange(enabled: Boolean) {
+        controller.setAndRestartIfNeeded(tcpConcurrent, enabled)
     }
 
     fun onTunStackChange(stack: TunStack) {

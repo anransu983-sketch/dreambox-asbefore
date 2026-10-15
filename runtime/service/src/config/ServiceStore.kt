@@ -160,6 +160,14 @@ class ServiceStore : ServiceStateReader {
     val ebpfBypassCn: Boolean
         get() = readBoolean(newKey = "ebpfBypassCn", legacyKey = "ebpf_bypass_cn", defaultValue = false)
 
+    /** mihomo unified-delay：所有代理使用统一的延迟测速。 */
+    val unifiedDelay: Boolean
+        get() = readBoolean(newKey = "unifiedDelay", legacyKey = "unifiedDelay", defaultValue = false)
+
+    /** mihomo tcp-concurrent：延迟测速使用 TCP 并发连接。 */
+    val tcpConcurrent: Boolean
+        get() = readBoolean(newKey = "tcpConcurrent", legacyKey = "tcpConcurrent", defaultValue = false)
+
     var systemProxy: Boolean
         get() = readBoolean(newKey = "systemProxy", legacyKey = "system_proxy", defaultValue = true)
         set(value) {

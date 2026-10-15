@@ -13,6 +13,11 @@ Proxy = {
         Sort = "Сортировка"
     }
 
+    DelayTestMode = {
+        Panel = "Тест панели"
+        Tcp = "TCP-рукопожатие"
+    }
+
     Node = {
         Timeout = "Таймаут"
         Pinged = "Замерен"

@@ -13,6 +13,11 @@ Proxy = {
         Sort = "排序"
     }
 
+    DelayTestMode = {
+        Panel = "面板测速"
+        Tcp = "TCP 握手"
+    }
+
     Node = {
         Timeout = "超时"
         Pinged = "已测速"

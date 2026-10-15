@@ -5,12 +5,20 @@ NetworkSettings = {
     Section = {
         VpnOptions = "服務設定"
         Advanced = "進階選項"
+        Delay = "延遲測速"
         ProxyOptions = "存取控制"
         Kernel = "核心管理"
     }
 
     Advanced = {
         DisableOverrideTitle = "停用所有覆寫"
+    }
+
+    DelayTuning = {
+        UnifiedDelayTitle = "統一延遲"
+        UnifiedDelaySummary = "所有代理使用統一的延遲測速（mihomo unified-delay），修改後自動重啟內核"
+        TcpConcurrentTitle = "TCP 並發"
+        TcpConcurrentSummary = "延遲測速改用 TCP 並發連接（mihomo tcp-concurrent），讀數更低"
     }
 
     Kernel = {

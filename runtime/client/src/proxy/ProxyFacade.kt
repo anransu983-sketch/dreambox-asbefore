@@ -1,7 +1,11 @@
 package com.suanran.dreambox.runtime.client
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.VpnService
+import android.os.SystemClock
 import com.suanran.dreambox.core.Clash
 import com.suanran.dreambox.core.appContextOrSelf
 import com.suanran.dreambox.core.contract.ConnectionRepository
@@ -10,6 +14,7 @@ import com.suanran.dreambox.core.contract.ProxyGroupRepository
 import com.suanran.dreambox.core.contract.ProxySyncPriority
 import com.suanran.dreambox.core.contract.RemoteControllerStoreReader
 import com.suanran.dreambox.core.contract.RuntimeRuleRepository
+import com.suanran.dreambox.core.importedDir
 import com.suanran.dreambox.core.model.ConnectionOverviewSnapshot
 import com.suanran.dreambox.core.model.ConnectionSnapshot
 import com.suanran.dreambox.core.model.RemoteBackend
@@ -25,6 +30,7 @@ import com.suanran.dreambox.core.model.tunnel.TunnelState
 import com.suanran.dreambox.core.util.AppForegroundState
 import com.suanran.dreambox.core.util.PollingTimerSpecs
 import com.suanran.dreambox.core.util.PollingTimers
+import com.suanran.dreambox.core.util.YamlCodec
 import com.suanran.dreambox.core.util.coroutine.safeRun
 import com.suanran.dreambox.core.util.coroutine.safeRunSilent
 import com.suanran.dreambox.core.util.throttleByScene
@@ -47,6 +53,9 @@ import com.suanran.dreambox.runtime.client.internal.TrafficStatsPoller
 import com.suanran.dreambox.runtime.client.proxy.RemoteSwitch
 import com.suanran.dreambox.runtime.client.remote.HttpClashManager
 import com.suanran.dreambox.runtime.client.remote.ServiceClient
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,12 +78,14 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 class ProxyFacade(private val context: Context, private val networkSettingsStorage: NetworkSettingsReader, private val remoteControllerStore: RemoteControllerStoreReader,) : ProxyControlContract, ProxyGroupRepository, ConnectionRepository, RuntimeRuleRepository {
     private companion object {
         const val DEFAULT_SYNC_PRIORITY_SOURCE = "default"
+        const val TCP_PING_TIMEOUT_MS = 5_000
     }
 
     private val appContext: Context = context.appContextOrSelf
@@ -463,6 +474,89 @@ class ProxyFacade(private val context: Context, private val networkSettingsStora
 
     override suspend fun healthCheckProxy(group: String, proxyName: String): Int =
         proxyGroupManager.healthCheckProxy(group, proxyName)
+
+    // ---- TCP 握手测速 ------------------------------------------------------
+    private val _tcpDelays = MutableStateFlow<Map<String, Int>>(emptyMap())
+    override val tcpDelays: StateFlow<Map<String, Int>> = _tcpDelays.asStateFlow()
+
+    private var tcpPingAddrCacheProfileId: String? = null
+    private var tcpPingAddrCache: Map<String, Pair<String, Int>> = emptyMap()
+
+    override suspend fun tcpPingProxy(proxyName: String): Int =
+        withContext(Dispatchers.IO) {
+            val address = resolveProxyAddress(proxyName)
+            if (address == null) {
+                _tcpDelays.update { it - proxyName }
+                return@withContext -1
+            }
+            val (host, port) = address
+            // 绕开自家 VPN：把 socket 绑到非 VPN 的物理网络上，否则握手会被 TUN 吃掉绕回代理。
+            val bypassNetwork = findBypassNetwork()
+            val startMs = SystemClock.elapsedRealtime()
+            val ok =
+                runCatching {
+                    // DNS 同样走物理网络，避免 VPN 的 Fake-IP 污染解析结果。
+                    val inetAddr =
+                        runCatching {
+                            if (bypassNetwork != null) bypassNetwork.getAllByName(host) else null
+                        }.getOrNull()?.firstOrNull()
+                            ?: InetAddress.getByName(host)
+                    Socket().use { socket ->
+                        bypassNetwork?.bindSocket(socket)
+                        socket.connect(InetSocketAddress(inetAddr, port), TCP_PING_TIMEOUT_MS)
+                    }
+                }.isSuccess
+            if (ok) {
+                val ms = (SystemClock.elapsedRealtime() - startMs).toInt().coerceAtLeast(1)
+                _tcpDelays.update { it + (proxyName to ms) }
+                ms
+            } else {
+                _tcpDelays.update { it - proxyName }
+                -1
+            }
+        }
+
+    /**
+     * 找到一条非 VPN、有公网能力的物理网络（Wi-Fi/蜂窝），用于 TCP 握手测速绕开 TUN。
+     * 找不到时返回 null，调用方降级为普通直连（VPN 开启时结果可能经过代理，仅供参考）。
+     */
+    private fun findBypassNetwork(): Network? =
+        runCatching {
+            val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.allNetworks.firstOrNull { network ->
+                val caps = cm.getNetworkCapabilities(network) ?: return@firstOrNull false
+                !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            }
+        }.getOrNull()
+
+    private suspend fun resolveProxyAddress(proxyName: String): Pair<String, Int>? {
+        val profile = ServiceClient.profile().queryActive() ?: return null
+        val profileId = profile.uuid.toString()
+        if (profileId != tcpPingAddrCacheProfileId) {
+            tcpPingAddrCache = loadProxyAddresses(profileId)
+            tcpPingAddrCacheProfileId = profileId
+        }
+        return tcpPingAddrCache[proxyName]
+    }
+
+    private fun loadProxyAddresses(profileId: String): Map<String, Pair<String, Int>> {
+        val configFile = appContext.importedDir.resolve(profileId).resolve("config.yaml")
+        if (!configFile.isFile) return emptyMap()
+        return runCatching {
+            val root = YamlCodec.loadMap(configFile.readText())
+            val proxies = root["proxies"] as? List<*> ?: return emptyMap()
+            proxies.mapNotNull { item ->
+                @Suppress("UNCHECKED_CAST")
+                val map = item as? Map<String, Any?> ?: return@mapNotNull null
+                val name = map["name"] as? String ?: return@mapNotNull null
+                val server = map["server"] as? String ?: return@mapNotNull null
+                val port = (map["port"] as? Number)?.toInt() ?: return@mapNotNull null
+                if (port <= 0 || port > 65535) return@mapNotNull null
+                name to (server to port)
+            }.toMap()
+        }.getOrDefault(emptyMap())
+    }
 
     suspend fun queryTunnelState(): TunnelState = traffic.queryTunnelState()
 

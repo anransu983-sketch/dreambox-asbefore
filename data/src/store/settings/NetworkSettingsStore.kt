@@ -25,6 +25,7 @@ import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.model.AccessControlMode
 import com.suanran.dreambox.core.model.WifiAutomationFallbackAction
 import com.suanran.dreambox.core.model.WifiAutomationRule
+import com.suanran.dreambox.core.model.proxy.DelayTestMode
 import com.suanran.dreambox.core.model.tunnel.RunMode
 import com.suanran.dreambox.core.model.tunnel.TunDnsMode
 import com.suanran.dreambox.core.model.tunnel.TunStack
@@ -58,6 +59,9 @@ class NetworkSettingsStore(externalMmkv: MMKV) : MMKVPreference(externalMmkv = e
     override val runMode by enumFlow(RunMode.VpnService)
     override val bypassPrivateNetwork by boolFlow(true)
     override val ebpfBypassCn by boolFlow(false)
+    override val unifiedDelay by boolFlow(false)
+    override val tcpConcurrent by boolFlow(false)
+    override val delayTestMode by enumFlow(DelayTestMode.PANEL)
     override val dnsHijack by boolFlow(true)
     override val allowBypass by boolFlow(true)
     override val enableIPv6 by boolFlow(false)

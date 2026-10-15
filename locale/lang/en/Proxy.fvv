@@ -13,6 +13,11 @@ Proxy = {
         Sort = "Sort"
     }
 
+    DelayTestMode = {
+        Panel = "Panel Test"
+        Tcp = "TCP Handshake"
+    }
+
     Node = {
         Timeout = "Timeout"
         Pinged = "Pinged"

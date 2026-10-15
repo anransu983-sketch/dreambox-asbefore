@@ -13,6 +13,11 @@ Proxy = {
         Sort = "並び替え"
     }
 
+    DelayTestMode = {
+        Panel = "パネル測定"
+        Tcp = "TCP ハンドシェイク"
+    }
+
     Node = {
         Timeout = "タイムアウト"
         Pinged = "測定済み"

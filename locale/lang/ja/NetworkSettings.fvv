@@ -5,12 +5,20 @@ NetworkSettings = {
     Section = {
         VpnOptions = "サービス設定"
         Advanced = "詳細設定"
+        Delay = "遅延測定"
         ProxyOptions = "アクセス制御"
         Kernel = "カーネル管理"
     }
 
     Advanced = {
         DisableOverrideTitle = "すべての上書きを無効化"
+    }
+
+    DelayTuning = {
+        UnifiedDelayTitle = "統一遅延"
+        UnifiedDelaySummary = "すべてのプロキシで統一遅延測定を使用（mihomo unified-delay）、変更後はカーネルを自動再起動"
+        TcpConcurrentTitle = "TCP 並行"
+        TcpConcurrentSummary = "遅延測定に TCP 並行接続を使用（mihomo tcp-concurrent）、測定値が低くなる"
     }
 
     Kernel = {

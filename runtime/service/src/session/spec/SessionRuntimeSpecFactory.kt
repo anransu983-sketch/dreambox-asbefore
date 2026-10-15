@@ -36,6 +36,7 @@ import com.suanran.dreambox.runtime.service.config.ServiceStore
 import com.suanran.dreambox.runtime.service.records.ImportedDao
 import com.suanran.dreambox.runtime.service.root.EbpfOverride
 import com.suanran.dreambox.runtime.service.root.RootTunConfigFactory
+import com.suanran.dreambox.runtime.service.session.DelayTuningOverride
 import com.suanran.dreambox.runtime.service.session.GlobalUaOverride
 import com.suanran.dreambox.runtime.service.session.transport.TunOverride
 import com.suanran.dreambox.runtime.service.util.directoryLastModified
@@ -62,7 +63,8 @@ class SessionRuntimeSpecFactory(
             } else {
                 compiledConfigPipeline.resolveOverrideSpecs(profile.uuid.toString())
             }
-        val overrideSpecs = userOverrides + GlobalUaOverride.materialize(profileDir)
+        val overrideSpecs =
+            listOf(delayTuningOverrideSpec(profileDir)) + userOverrides + GlobalUaOverride.materialize(profileDir)
         val ageSecretKey = normalizeAgeSecretKey(profile.ageSecretKey)
         return RuntimeSpec(
             owner = RuntimeOwner.LocalTun,
@@ -100,7 +102,8 @@ class SessionRuntimeSpecFactory(
             } else {
                 userOverrides
             }
-        val overrideSpecs = modeOverrides + GlobalUaOverride.materialize(profileDir)
+        val overrideSpecs =
+            listOf(delayTuningOverrideSpec(profileDir)) + modeOverrides + GlobalUaOverride.materialize(profileDir)
         val ageSecretKey = normalizeAgeSecretKey(profile.ageSecretKey)
         return RuntimeSpec(
             owner = RuntimeOwner.RootTun,
@@ -154,7 +157,7 @@ class SessionRuntimeSpecFactory(
             )
         val modeOverrides = userOverrides + ebpfOverride
         // eBPF keeps the profile authoritative — skip GlobalUaOverride.
-        val overrideSpecs = modeOverrides
+        val overrideSpecs = listOf(delayTuningOverrideSpec(profileDir)) + modeOverrides
         val ageSecretKey = normalizeAgeSecretKey(profile.ageSecretKey)
         return RuntimeSpec(
             owner = RuntimeOwner.RootTun,
@@ -258,6 +261,9 @@ class SessionRuntimeSpecFactory(
         val excludeUid: List<Int> = emptyList(),
         val includeAndroidUser: List<Int> = emptyList(),
     )
+
+    private fun delayTuningOverrideSpec(profileDir: File) =
+        DelayTuningOverride.materialize(profileDir, store.unifiedDelay, store.tcpConcurrent)
 
     private fun requireActiveProfile(): Imported {
         val profileId = store.activeProfile ?: error("No active profile selected")

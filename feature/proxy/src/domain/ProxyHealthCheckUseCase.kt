@@ -21,8 +21,10 @@
 
 package com.suanran.dreambox.feature.proxy.domain
 
+import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.ProxyGroupRepository
 import com.suanran.dreambox.core.contract.ProxySyncPriority
+import com.suanran.dreambox.core.model.proxy.DelayTestMode
 import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -39,6 +41,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class ProxyHealthCheckUseCase(
     private val proxyGroupRepository: ProxyGroupRepository,
+    private val networkSettings: NetworkSettingsReader,
 ) {
     companion object {
         const val HEALTH_CHECK_TIMEOUT_MS = 5_000L
@@ -49,6 +52,8 @@ class ProxyHealthCheckUseCase(
         private const val PROGRESS_REFRESH_INTERVAL_MS = 700L
         private const val GROUP_REFRESH_TIMEOUT_MS = 600L
     }
+
+    private fun isTcpMode(): Boolean = networkSettings.delayTestMode.value == DelayTestMode.TCP
 
     /**
      * Run health check for a single group or all groups.
@@ -63,7 +68,15 @@ class ProxyHealthCheckUseCase(
 
         proxyGroupRepository.markDelayTestActive(true)
         val result = runCatching {
-            if (groupName != null) {
+            if (isTcpMode()) {
+                // TCP 模式：直连各节点服务器做 TCP 握手，不走内核测速。
+                val targets = if (groupName != null) {
+                    currentGroups.firstOrNull { it.name == groupName }?.proxies.orEmpty().map { it.name }
+                } else {
+                    currentGroups.flatMap { group -> group.proxies.map { it.name } }
+                }
+                tcpPingAll(targets, onProgress = null)
+            } else if (groupName != null) {
                 withTimeout(HEALTH_CHECK_TIMEOUT_MS) { proxyGroupRepository.healthCheck(groupName) }
                 delay(POST_CHECK_DELAY_MS)
                 withTimeoutOrNull(2_000L) { proxyGroupRepository.refreshProxyGroup(groupName) }
@@ -84,6 +97,30 @@ class ProxyHealthCheckUseCase(
         )
     }
 
+    /** TCP 握手逐节点测速（并发），结果由 repository 写入 tcpDelays 覆盖。 */
+    private suspend fun tcpPingAll(
+        proxyNames: List<String>,
+        onProgress: ((tested: Int, total: Int) -> Unit)?,
+    ) {
+        coroutineScope {
+            val semaphore = Semaphore(NODE_TEST_CONCURRENCY)
+            var completed = 0
+            proxyNames.forEach { proxyName ->
+                launch {
+                    semaphore.withPermit {
+                        runCatching {
+                            withTimeoutOrNull(NODE_TEST_TIMEOUT_MS) {
+                                proxyGroupRepository.tcpPingProxy(proxyName)
+                            }
+                        }.onFailure { failure -> if (failure is CancellationException) throw failure }
+                        completed++
+                        onProgress?.invoke(completed, proxyNames.size)
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * 逐节点测试指定策略组的延迟，每完成一个节点通过 [onProgress] 上报 (tested, total)。
      * 测试期间周期性刷新该组以渐进呈现结果；单节点超时/失败计为已完成，返回值仅含基础设施错误。
@@ -92,6 +129,14 @@ class ProxyHealthCheckUseCase(
         proxyGroupRepository.markDelayTestActive(true)
         var error: Throwable? = null
         try {
+            if (isTcpMode()) {
+                // TCP 模式：逐节点直连握手，结果写入 tcpDelays 覆盖展示，无需刷新内核。
+                runCatching {
+                    tcpPingAll(proxyNames, onProgress)
+                }.onFailure { failure -> if (failure is CancellationException) throw failure }
+                    .exceptionOrNull()?.let { thrown -> error = thrown }
+                return error
+            }
             coroutineScope {
                 val progressRefresh = launch {
                     while (true) {
@@ -144,8 +189,14 @@ class ProxyHealthCheckUseCase(
      * Run health check for a single proxy node.
      */
     suspend fun runProxyHealthCheck(groupName: String, proxyName: String) {
-        withTimeout(HEALTH_CHECK_TIMEOUT_MS) {
-            proxyGroupRepository.healthCheckProxy(groupName, proxyName)
+        if (isTcpMode()) {
+            withTimeout(NODE_TEST_TIMEOUT_MS) {
+                proxyGroupRepository.tcpPingProxy(proxyName)
+            }
+        } else {
+            withTimeout(HEALTH_CHECK_TIMEOUT_MS) {
+                proxyGroupRepository.healthCheckProxy(groupName, proxyName)
+            }
         }
     }
 

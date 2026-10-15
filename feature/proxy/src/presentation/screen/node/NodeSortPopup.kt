@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.suanran.dreambox.core.model.proxy.DelayTestMode
 import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
 import com.suanran.dreambox.core.model.proxy.ProxySortMode
 import com.suanran.dreambox.locale.FlyTxt
@@ -17,11 +18,19 @@ import top.yukonga.miuix.kmp.window.WindowListPopup
 internal val NodeSortModes =
     listOf(ProxySortMode.DEFAULT, ProxySortMode.BY_NAME, ProxySortMode.BY_LATENCY)
 
+internal val DelayTestModes = listOf(DelayTestMode.PANEL, DelayTestMode.TCP)
+
 private val ProxySortMode.displayName: String
     get() = when (this) {
         ProxySortMode.DEFAULT -> FlyTxt.Proxy.SortMode.Default
         ProxySortMode.BY_NAME -> FlyTxt.Proxy.SortMode.ByName
         ProxySortMode.BY_LATENCY -> FlyTxt.Proxy.SortMode.ByLatency
+    }
+
+private val DelayTestMode.displayName: String
+    get() = when (this) {
+        DelayTestMode.PANEL -> FlyTxt.Proxy.DelayTestMode.Panel
+        DelayTestMode.TCP -> FlyTxt.Proxy.DelayTestMode.Tcp
     }
 
 /**
@@ -34,9 +43,11 @@ internal fun NodeSortPopup(
     onDismiss: () -> Unit,
     displayMode: ProxyDisplayMode = ProxyDisplayMode.SINGLE_DETAILED,
     sortMode: ProxySortMode,
+    delayTestMode: DelayTestMode = DelayTestMode.PANEL,
     alignment: PopupPositionProvider.Align = PopupPositionProvider.Align.Start,
     onDisplayModeSelected: (ProxyDisplayMode) -> Unit = {},
     onSortSelected: (ProxySortMode) -> Unit,
+    onDelayTestModeSelected: (DelayTestMode) -> Unit = {},
     onLocateCurrentProxy: (() -> Unit)? = null,
 ) {
     val selectedSortIndex = NodeSortModes.indexOf(sortMode).coerceAtLeast(0)
@@ -67,6 +78,19 @@ internal fun NodeSortPopup(
                     isSelected = selectedSortIndex == index,
                     onSelectedIndexChange = {
                         if (mode != sortMode) onSortSelected(mode)
+                        onDismiss()
+                    },
+                    index = index,
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            DelayTestModes.forEachIndexed { index, mode ->
+                DropdownImpl(
+                    text = mode.displayName,
+                    optionSize = DelayTestModes.size,
+                    isSelected = delayTestMode == mode,
+                    onSelectedIndexChange = {
+                        if (mode != delayTestMode) onDelayTestModeSelected(mode)
                         onDismiss()
                     },
                     index = index,

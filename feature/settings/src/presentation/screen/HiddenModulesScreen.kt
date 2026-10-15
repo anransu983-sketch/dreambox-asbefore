@@ -69,7 +69,7 @@ fun HiddenModulesScreen(navigator: Navigator) {
             "privacy" to "隐私", "service" to "服务", "network" to "网络",
         )),
         HiddenGroup("network_settings", "网络设置", mapOf(
-            "runmode" to "运行模式", "advanced" to "高级选项", "access" to "访问控制", "kernel" to "内核管理",
+            "runmode" to "运行模式", "advanced" to "高级选项", "delay" to "延迟测速", "access" to "访问控制", "kernel" to "内核管理",
         )),
         HiddenGroup("meta_feature", "Meta 功能", mapOf(
             "conn" to "连接与流量", "routing" to "分流相关", "panel" to "面板",

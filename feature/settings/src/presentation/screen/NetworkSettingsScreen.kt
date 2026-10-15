@@ -117,7 +117,7 @@ fun NetworkSettingsScreen(navigator: Navigator) {
     val accessControlMode by viewModel.accessControlMode.state.collectAsStateWithLifecycle()
     val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
 
-    val defaultKeys = listOf("runmode", "advanced", "access", "kernel")
+    val defaultKeys = listOf("runmode", "advanced", "delay", "access", "kernel")
     var order by remember { mutableStateOf(loadSectionOrder(mmkv, "network_settings", defaultKeys)) }
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "network_settings")) }
     val listState = rememberLazyListState()
@@ -127,7 +127,7 @@ fun NetworkSettingsScreen(navigator: Navigator) {
     }
     val visibleOrder = order.filter { it !in hiddenKeys }
     val sectionTitles = mapOf(
-        "runmode" to "运行模式", "advanced" to "高级选项", "access" to "访问控制", "kernel" to "内核管理",
+        "runmode" to "运行模式", "advanced" to "高级选项", "delay" to "延迟测速", "access" to "访问控制", "kernel" to "内核管理",
     )
 
     Scaffold(
@@ -160,6 +160,7 @@ fun NetworkSettingsScreen(navigator: Navigator) {
                                 viewModel = viewModel,
                                 runMode = uiState.configuredMode,
                             )
+                            "delay" -> NetworkDelaySection(viewModel = viewModel)
                             "access" -> NetworkProxyOptionsSection(
                                 navigator = navigator,
                                 accessControlMode = accessControlMode,
@@ -239,6 +240,25 @@ private fun NetworkAdvancedSection(
             title = FlyTxt.NetworkSettings.Advanced.DisableOverrideTitle,
             checked = viewModel.disableAllOverride.value,
             onCheckedChange = viewModel::onDisableAllOverrideChange,
+        )
+    }
+}
+
+@Composable
+private fun NetworkDelaySection(viewModel: NetworkSettingsViewModel) {
+    BocchiSectionTitle(FlyTxt.NetworkSettings.Section.Delay)
+    BocchiCard {
+        BocchiSwitchItem(
+            title = FlyTxt.NetworkSettings.DelayTuning.UnifiedDelayTitle,
+            summary = FlyTxt.NetworkSettings.DelayTuning.UnifiedDelaySummary,
+            checked = viewModel.unifiedDelay.value,
+            onCheckedChange = viewModel::onUnifiedDelayChange,
+        )
+        BocchiSwitchItem(
+            title = FlyTxt.NetworkSettings.DelayTuning.TcpConcurrentTitle,
+            summary = FlyTxt.NetworkSettings.DelayTuning.TcpConcurrentSummary,
+            checked = viewModel.tcpConcurrent.value,
+            onCheckedChange = viewModel::onTcpConcurrentChange,
         )
     }
 }

@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.suanran.dreambox.core.model.proxy.DelayTestMode
 import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
 import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
@@ -186,6 +187,7 @@ fun ProxyPager(
     val testingProxyNames by proxyViewModel.testingProxyNames.collectAsStateWithLifecycle()
     val delayTestProgress by proxyViewModel.delayTestProgress.collectAsStateWithLifecycle()
     val sortMode by proxyViewModel.sortMode.collectAsStateWithLifecycle()
+    val delayTestMode by proxyViewModel.delayTestMode.collectAsStateWithLifecycle()
     val displayMode by proxyViewModel.displayMode.collectAsStateWithLifecycle()
     val groupScrollBehavior = MiuixScrollBehavior(snapAnimationSpec = null)
     val pagerState = LocalPagerState.current
@@ -304,6 +306,8 @@ fun ProxyPager(
                 sortMode = sortMode,
                 onDisplayModeSelected = proxyViewModel::setDisplayMode,
                 onSortSelected = proxyViewModel::setSortMode,
+                delayTestMode = delayTestMode,
+                onDelayTestModeSelected = proxyViewModel::setDelayTestMode,
                 selectedGroupName = if (inSplitShell) null else selectedGroupName,
                 onBackToGroups = groupSelection.clearSelection,
                 searchVisible = nodeSearchVisible,
@@ -534,6 +538,8 @@ private fun PagerTopBar(
     sortMode: ProxySortMode,
     onDisplayModeSelected: (ProxyDisplayMode) -> Unit,
     onSortSelected: (ProxySortMode) -> Unit,
+    delayTestMode: DelayTestMode = DelayTestMode.PANEL,
+    onDelayTestModeSelected: (DelayTestMode) -> Unit = {},
     selectedGroupName: String?,
     onBackToGroups: () -> Unit,
     onTitleScrollTop: () -> Unit,
@@ -561,6 +567,8 @@ private fun PagerTopBar(
         sortMode = sortMode,
         onDisplayModeSelected = onDisplayModeSelected,
         onSortSelected = onSortSelected,
+        delayTestMode = delayTestMode,
+        onDelayTestModeSelected = onDelayTestModeSelected,
         searchVisible = searchVisible,
         onSearchToggle = onSearchToggle,
     )
@@ -586,6 +594,8 @@ internal fun ProxyTopBar(
     sortMode: ProxySortMode,
     onDisplayModeSelected: (ProxyDisplayMode) -> Unit,
     onSortSelected: (ProxySortMode) -> Unit,
+    delayTestMode: DelayTestMode = DelayTestMode.PANEL,
+    onDelayTestModeSelected: (DelayTestMode) -> Unit = {},
     searchVisible: Boolean = false,
     onSearchToggle: (() -> Unit)? = null,
 ) {
@@ -645,9 +655,11 @@ internal fun ProxyTopBar(
                         onDismiss = { onShowSortPopupChange(false) },
                         displayMode = displayMode,
                         sortMode = sortMode,
+                        delayTestMode = delayTestMode,
                         alignment = PopupPositionProvider.Align.BottomEnd,
                         onDisplayModeSelected = onDisplayModeSelected,
                         onSortSelected = onSortSelected,
+                        onDelayTestModeSelected = onDelayTestModeSelected,
                         onLocateCurrentProxy = onLocateCurrentProxy,
                     )
                 }

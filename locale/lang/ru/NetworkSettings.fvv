@@ -5,12 +5,20 @@ NetworkSettings = {
     Section = {
         VpnOptions = "Параметры службы"
         Advanced = "Дополнительно"
+        Delay = "Тест задержки"
         ProxyOptions = "Контроль доступа"
         Kernel = "Управление ядром"
     }
 
     Advanced = {
         DisableOverrideTitle = "Отключить все переопределения"
+    }
+
+    DelayTuning = {
+        UnifiedDelayTitle = "Унифицированная задержка"
+        UnifiedDelaySummary = "Все прокси используют унифицированный тест задержки (mihomo unified-delay); ядро перезапускается автоматически"
+        TcpConcurrentTitle = "Параллельный TCP"
+        TcpConcurrentSummary = "Тесты задержки используют параллельные TCP-соединения (mihomo tcp-concurrent); значения ниже"
     }
 
     Kernel = {

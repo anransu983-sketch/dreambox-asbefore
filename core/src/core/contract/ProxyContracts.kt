@@ -73,6 +73,16 @@ interface ProxyGroupRepository {
     suspend fun healthCheck(group: String)
     suspend fun healthCheckAll()
     suspend fun healthCheckProxy(group: String, proxyName: String): Int
+    /**
+     * TCP 握手测速结果覆盖（节点名 -> 握手毫秒数），仅 TCP 测速模式下使用。
+     * 由 [tcpPingProxy] 维护，UI 层在 TCP 模式下优先展示。
+     */
+    val tcpDelays: StateFlow<Map<String, Int>>
+    /**
+     * 直连节点服务器 IP+端口做 TCP 握手测速，不走代理。
+     * 成功返回握手毫秒数并更新 [tcpDelays]；失败返回 -1 并清除该节点的覆盖值。
+     */
+    suspend fun tcpPingProxy(proxyName: String): Int
     fun warmUpProxyGroups()
     fun setProxyGroupSyncPriority(priority: ProxySyncPriority, source: String = "default")
     /** 标记延迟测试是否正在进行——测试期间轮询刷新应跳过。 */

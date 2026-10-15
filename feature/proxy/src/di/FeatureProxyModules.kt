@@ -28,11 +28,11 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val featureProxyDomainModule = module {
-    single { ProxyHealthCheckUseCase(get()) }
+    single { ProxyHealthCheckUseCase(get(), get()) }
 }
 
 val featureProxyViewModelModule = module {
-    viewModel { ProxyViewModel(get(), get(), get(), get(), get()) }
+    viewModel { ProxyViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { ProvidersViewModel(get(), get()) }
 }
 

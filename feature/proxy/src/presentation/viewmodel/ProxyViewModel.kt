@@ -24,9 +24,11 @@ package com.suanran.dreambox.feature.proxy.presentation.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.core.contract.ConnectionRepository
+import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.ProxyDisplaySettingsReader
 import com.suanran.dreambox.core.contract.ProxyGroupRepository
 import com.suanran.dreambox.core.contract.ProxySelectTimeoutException
+import com.suanran.dreambox.core.model.proxy.DelayTestMode
 import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
 import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
 import com.suanran.dreambox.core.model.proxy.ProxySortMode
@@ -39,6 +41,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -53,6 +56,7 @@ class ProxyViewModel(
     private val proxyDisplaySettingsStore: ProxyDisplaySettingsReader,
     appSettings: AppSettingsReader,
     private val healthCheck: ProxyHealthCheckUseCase,
+    private val networkSettings: NetworkSettingsReader,
 ) :
     ContractStateViewModel<ProxyViewModel.ProxyUiState, ProxyViewModel.ProxyUiEffect>(
         ProxyUiState()
@@ -102,10 +106,38 @@ class ProxyViewModel(
         .map { it.normalized() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProxyDisplayMode.DOUBLE_DETAILED)
 
+    val delayTestMode: StateFlow<DelayTestMode> =
+        networkSettings.delayTestMode.state.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            DelayTestMode.PANEL,
+        )
+
+    fun setDelayTestMode(mode: DelayTestMode) {
+        // 纯客户端展示/测速方式切换，无需重启内核。
+        networkSettings.delayTestMode.set(mode)
+    }
+
     val proxyGroups: StateFlow<List<ProxyGroupInfo>> =
-        proxyGroupRepository.proxyGroups
-            .map { groups -> groups.filterNot(ProxyGroupInfo::hidden) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        combine(
+            proxyGroupRepository.proxyGroups,
+            proxyGroupRepository.tcpDelays,
+            delayTestMode,
+        ) { groups, tcpOverlay, mode ->
+            val visible = groups.filterNot(ProxyGroupInfo::hidden)
+            if (mode == DelayTestMode.TCP && tcpOverlay.isNotEmpty()) {
+                // TCP 模式：用直连握手测速结果覆盖展示。
+                visible.map { group ->
+                    group.copy(
+                        proxies = group.proxies.map { proxy ->
+                            tcpOverlay[proxy.name]?.let { proxy.copy(delay = it) } ?: proxy
+                        },
+                    )
+                }
+            } else {
+                visible
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val activeSyncSources = mutableSetOf<String>()
 

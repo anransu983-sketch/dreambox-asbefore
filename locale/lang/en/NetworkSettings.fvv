@@ -5,12 +5,20 @@ NetworkSettings = {
     Section = {
         VpnOptions = "Service Options"
         Advanced = "Advanced"
+        Delay = "Delay Test"
         ProxyOptions = "Access Control"
         Kernel = "Kernel Management"
     }
 
     Advanced = {
         DisableOverrideTitle = "Disable All Overrides"
+    }
+
+    DelayTuning = {
+        UnifiedDelayTitle = "Unified Delay"
+        UnifiedDelaySummary = "All proxies use unified delay testing (mihomo unified-delay); core restarts automatically"
+        TcpConcurrentTitle = "TCP Concurrent"
+        TcpConcurrentSummary = "Delay tests use concurrent TCP connections (mihomo tcp-concurrent); readings are lower"
     }
 
     Kernel = {
