@@ -1,0 +1,1 @@
+{"id":"nodeforge","permissions":[],"pluginHeaders":[{"methods":[{"name":"deploy","rtype":"promise"},{"name":"deployState","rtype":"promise"}],"name":"NodeForge"}],"version":"1"}

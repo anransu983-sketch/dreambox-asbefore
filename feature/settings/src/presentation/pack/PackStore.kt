@@ -118,9 +118,19 @@ class PackStore(context: Context) {
     companion object {
         /**
          * 注册表：新增功能包只加一条定义，本体代码不用改。
-         * 芷湘包已于 2026-11-02 按用户决定下架（包内网易云播不了，用户拍板删），
-         * 宿主与注册表机制保留，之后有新包再往这里加。
+         * 芷湘包已于 2026-11-02 按用户决定下架（包内网易云播不了，用户拍板删）；
+         * 一键节点包同日立项接棒（SSH 全自动部署 s-ui + VLESS+Reality）。
          */
-        val REGISTRY: List<PackDef> = emptyList()
+        val REGISTRY: List<PackDef> = listOf(
+            PackDef(
+                id = "nodeforge",
+                name = "一键节点",
+                summary = "填服务器 IP 与 root 密码，一键部署 s-ui + VLESS+Reality 节点：自动建入站、放行端口、面板绑回环防爆破，并按防 DNS/WebRTC 泄露模板生成梦盒配置",
+                version = "1",
+                sizeText = "约 1 MB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v1.zip",
+                entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
+            ),
+        )
     }
 }
