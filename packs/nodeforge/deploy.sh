@@ -35,7 +35,7 @@ TLS_NAME="nf-reality"
 INBOUND_TAG="nf-vless"
 
 log() { echo "== $*"; }
-fail() { echo "NF_ERROR: $*"; exit 1; }
+fail() { echo "NF_ERROR: $*" >&2; exit 1; }
 
 [ "$(id -u)" = "0" ] || fail "需要 root 执行"
 [ -n "$ADMIN_USER" ] && [ -n "$ADMIN_PASS" ] || fail "缺少管理员用户名或密码"
@@ -110,7 +110,7 @@ api_post_ok() {
     local resp
     resp="$(curl -s --max-time 25 -b "$CJ" -H "$HDR" "$@" "$API/$action")" || fail "调用 $action 网络失败"
     if ! printf '%s' "$resp" | grep -q '"success": *true'; then
-        echo "NF_ERROR: $action 返回失败：$(printf '%s' "$resp" | head -c 300)"
+        echo "NF_ERROR: $action 返回失败：$(printf '%s' "$resp" | head -c 300)" >&2
         exit 1
     fi
     printf '%s' "$resp"
@@ -311,7 +311,7 @@ else
 import json, sys
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}},
-                  "inbounds": [int(sys.argv[3])], "volume": 0, "expiry": 0}))
+                  "inbounds": [int(sys.argv[3])], "links": [], "volume": 0, "expiry": 0}))
 ' "$SUB_ID" "$UUID" "$INBOUND_ID")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
