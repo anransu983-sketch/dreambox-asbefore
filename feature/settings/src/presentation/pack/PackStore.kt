@@ -116,17 +116,11 @@ class PackStore(context: Context) {
     }
 
     companion object {
-        /** 注册表：新增功能包只加一条定义，本体代码不用改。 */
-        val REGISTRY: List<PackDef> = listOf(
-            PackDef(
-                id = "zhixiang",
-                name = "芷湘",
-                summary = "音乐播放器：本地 / 网易云 / YouTube Music 三源，独立芷湘 App 的全部功能以功能包形式在梦盒里跑",
-                version = "1",
-                sizeText = "约 2 MB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/zhixiang-pack-v1.zip",
-                entryClass = "com.suanran.pack.zhixiang.ZhixiangPackEntry",
-            ),
-        )
+        /**
+         * 注册表：新增功能包只加一条定义，本体代码不用改。
+         * 芷湘包已于 2026-11-02 按用户决定下架（包内网易云播不了，用户拍板删），
+         * 宿主与注册表机制保留，之后有新包再往这里加。
+         */
+        val REGISTRY: List<PackDef> = emptyList()
     }
 }

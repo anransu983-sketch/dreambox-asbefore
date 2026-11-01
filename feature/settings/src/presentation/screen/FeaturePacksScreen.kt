@@ -94,6 +94,16 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
             }
+            if (PackStore.REGISTRY.isEmpty()) {
+                item {
+                    Text(
+                        text = "暂无可用功能包。",
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    )
+                }
+            }
             items(PackStore.REGISTRY.size, key = { PackStore.REGISTRY[it].id }) { index ->
                 val def = PackStore.REGISTRY[index]
                 @Suppress("UNUSED_EXPRESSION") refreshTick
