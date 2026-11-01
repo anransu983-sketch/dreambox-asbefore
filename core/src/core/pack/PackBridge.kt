@@ -16,6 +16,11 @@ fun interface PackCallback {
     fun onResult(success: Boolean, dataJson: String?, error: String?)
 }
 
+/** 给包内 Java 代码用的单值回调（SAM 接口，Java 侧可直接用 lambda）。 */
+fun interface PackStringCallback {
+    fun onDone(value: String)
+}
+
 interface PackBridgeDispatcher {
     /** [emit] 供包向网页推事件（对应 Capacitor 的 notifyListeners）。 */
     fun init(context: Context, emit: (pluginId: String, eventName: String, dataJson: String) -> Unit)
@@ -47,6 +52,11 @@ object PackAuthBus {
             if (activityContext !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         activityContext.startActivity(intent)
+    }
+
+    /** Java 友好版：包内代码经此发起网页授权。 */
+    fun requestJava(activityContext: Context, url: String, title: String, done: PackStringCallback) {
+        request(activityContext, url, title) { done.onDone(it) }
     }
 
     fun complete(cookies: String) {

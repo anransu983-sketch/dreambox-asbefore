@@ -54,6 +54,7 @@ class PackHostActivity : Activity() {
         title = packName
 
         pluginHeadersJson = readPackPluginHeaders()
+        requestPackPermissions()
         dispatcher = loadDispatcher(entryClass)
 
         webView = WebView(this)
@@ -99,6 +100,22 @@ class PackHostActivity : Activity() {
             }
         }
         return DEFAULT_PLUGIN_HEADERS
+    }
+
+    /** 包在 pack.json 的 permissions 里声明需要的运行时权限，宿主在打开时统一申请。 */
+    private fun requestPackPermissions() {
+        val marker = File(packDir, "pack.json")
+        if (!marker.isFile) return
+        val wanted = runCatching {
+            val arr = JSONObject(marker.readText()).optJSONArray("permissions") ?: return
+            (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
+        }.getOrDefault(emptyList())
+        val missing = wanted.filter {
+            checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            runCatching { requestPermissions(missing.toTypedArray(), 4210) }
+        }
     }
 
     private fun loadDispatcher(entryClass: String): PackBridgeDispatcher? {
