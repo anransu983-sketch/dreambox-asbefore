@@ -247,6 +247,7 @@
       $('logCard').classList.remove('hidden');
       $('log').textContent = st.log || '';
       if (st.running) { $('deployBtn').disabled = true; startPolling(); }
+      if (st.done) { pollOnce(); }
     }
   }).catch(function () {});
 })();

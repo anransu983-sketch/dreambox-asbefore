@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # 一键节点功能包（nodeforge）打包脚本
-# 产物：nodeforge-pack-v1.zip
+# 产物：nodeforge-pack-v2.zip
 #   index.html / template.yaml（web/）+ deploy.sh + native-bridge.js
 #   + pack.json + plugins.dex（包 Java + JSch 一并 dex 化）
 # 约束沿用芷湘包 CI 实测教训：
@@ -17,7 +17,7 @@ set -euo pipefail
 PACK_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$PACK_DIR/.build"
 TOOLS_DIR="$PACK_DIR/.tools"
-ZIP_NAME="nodeforge-pack-v1.zip"
+ZIP_NAME="nodeforge-pack-v2.zip"
 JSCH_VERSION="0.2.23"
 KOTLIN_VERSION="2.0.21"
 

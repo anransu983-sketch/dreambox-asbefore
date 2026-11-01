@@ -51,7 +51,8 @@ if [ -n "$need_pkgs" ]; then
     log "安装基础工具：$need_pkgs"
     if command -v apt-get >/dev/null 2>&1; then
         # uuid-runtime 只在 Debian 系有，别的包名在 apt 里同名
-        apt-get update -qq || fail "apt-get update 失败"
+        APT_OPTS="-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=1"
+        apt-get update -qq $APT_OPTS || apt-get update -qq $APT_OPTS || fail "apt-get update 失败"
         apt-get install -y -qq $need_pkgs >/dev/null 2>&1 || \
         apt-get install -y -qq curl openssl python3 util-linux >/dev/null || fail "基础工具安装失败"
     elif command -v dnf >/dev/null 2>&1; then
@@ -73,7 +74,7 @@ if [ -x /usr/local/s-ui/sui ]; then
     log "检测到已安装 s-ui，跳过装机（将按新给的管理员账号校准）"
 else
     log "下载 s-ui $SUI_VER 安装脚本"
-    curl -fLs -o /tmp/nf-sui-install.sh \
+    curl -fLs --max-time 120 -o /tmp/nf-sui-install.sh \
         "https://raw.githubusercontent.com/alireza0/s-ui/$SUI_VER/install.sh" \
         || fail "安装脚本下载失败（机器需能访问 GitHub）"
     bash -n /tmp/nf-sui-install.sh || fail "安装脚本语法校验失败"
@@ -93,7 +94,7 @@ systemctl enable s-ui --now >/dev/null 2>&1 || true
 log "等待面板就绪"
 ok=0
 for _ in $(seq 1 30); do
-    if /usr/local/s-ui/sui healthcheck >/dev/null 2>&1; then ok=1; break; fi
+    if /usr/local/s-ui/sui healthcheck >/dev/null 2>&1 || curl -s -o /dev/null --max-time 3 "http://127.0.0.1:${PANEL_PORT}${PANEL_PATH}"; then ok=1; break; fi
     sleep 1
 done
 [ "$ok" = "1" ] || fail "面板 30 秒内未就绪"
@@ -107,7 +108,7 @@ api_post_ok() {
     # $1=action 其余为 curl 参数；回包 success 不为 true 即失败并打印 msg
     local action="$1"; shift
     local resp
-    resp="$(curl -s -b "$CJ" -H "$HDR" "$@" "$API/$action")" || fail "调用 $action 网络失败"
+    resp="$(curl -s --max-time 25 -b "$CJ" -H "$HDR" "$@" "$API/$action")" || fail "调用 $action 网络失败"
     if ! printf '%s' "$resp" | grep -q '"success": *true'; then
         echo "NF_ERROR: $action 返回失败：$(printf '%s' "$resp" | head -c 300)"
         exit 1
@@ -117,13 +118,13 @@ api_post_ok() {
 
 # ── 2. 登录 ────────────────────────────────────────────────
 log "登录面板 API"
-login_resp="$(curl -s -c "$CJ" -H "$HDR" -d "user=$ADMIN_USER" -d "pass=$ADMIN_PASS" "$API/login")"
+login_resp="$(curl -s --max-time 25 -c "$CJ" -H "$HDR" -d "user=$ADMIN_USER" -d "pass=$ADMIN_PASS" "$API/login")"
 printf '%s' "$login_resp" | grep -q '"success": *true' \
     || fail "面板登录失败（已装 s-ui 且密码与现管理员不一致时也会这样）：$(printf '%s' "$login_resp" | head -c 200)"
 
 # ── 3. Reality 密钥 + UUID + Short ID ─────────────────────
 log "生成 Reality 密钥对"
-kp="$(curl -s -b "$CJ" "$API/keypairs?k=reality")"
+kp="$(curl -s --max-time 25 -b "$CJ" "$API/keypairs?k=reality")"
 PRIV="$(printf '%s' "$kp" | grep -o 'PrivateKey: [^"]*' | head -1 | cut -d' ' -f2)"
 PUB="$(printf '%s' "$kp" | grep -o 'PublicKey: [^"]*' | head -1 | cut -d' ' -f2)"
 [ -n "$PRIV" ] && [ -n "$PUB" ] || fail "密钥对生成失败：$(printf '%s' "$kp" | head -c 200)"
@@ -160,7 +161,7 @@ PYEOF
 )" || fail "TLS 数据组装失败"
 api_post_ok save --data-urlencode object=tls --data-urlencode action=new \
     --data-urlencode "data=$tls_data" >/dev/null
-TLS_ID="$(curl -s -b "$CJ" "$API/tls" | python3 -c '
+TLS_ID="$(curl -s --max-time 25 -b "$CJ" "$API/tls" | python3 -c '
 import json, sys
 d = json.load(sys.stdin)
 for t in d.get("obj") or []:
@@ -178,7 +179,7 @@ print(json.dumps({"type": "vless", "tag": "nf-vless", "listen": "::",
 ' "$NODE_PORT" "$TLS_ID")"
 api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
     --data-urlencode "data=$inbound_data" >/dev/null
-INBOUND_ID="$(curl -s -b "$CJ" "$API/inbounds" | python3 -c '
+INBOUND_ID="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds" | python3 -c '
 import json, sys
 d = json.load(sys.stdin)
 for t in d.get("obj") or []:
@@ -199,7 +200,7 @@ api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
     --data-urlencode "data=$client_data" >/dev/null
 
 # 服务端生成的 vless 链接（拿不到也不致命，调用方按参数自组）
-VLESS_LINK="$(curl -s -b "$CJ" "$API/clients" | python3 -c '
+VLESS_LINK="$(curl -s --max-time 25 -b "$CJ" "$API/clients" | python3 -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
@@ -243,17 +244,17 @@ fi
 log "面板收回 127.0.0.1 绑定"
 api_post_ok save --data-urlencode object=settings \
     --data-urlencode data='{"webListen":"127.0.0.1"}' >/dev/null
-curl -s -b "$CJ" -H "$HDR" -X POST "$API/restartApp" >/dev/null 2>&1 || true
+curl -s --max-time 25 -b "$CJ" -H "$HDR" -X POST "$API/restartApp" >/dev/null 2>&1 || true
 sleep 2
 ok=0
 for _ in $(seq 1 30); do
-    if /usr/local/s-ui/sui healthcheck >/dev/null 2>&1; then ok=1; break; fi
+    if /usr/local/s-ui/sui healthcheck >/dev/null 2>&1 || curl -s -o /dev/null --max-time 3 "http://127.0.0.1:${PANEL_PORT}${PANEL_PATH}"; then ok=1; break; fi
     sleep 1
 done
 if [ "$ok" != "1" ]; then
     systemctl restart s-ui >/dev/null 2>&1 || true
     for _ in $(seq 1 30); do
-        if /usr/local/s-ui/sui healthcheck >/dev/null 2>&1; then ok=1; break; fi
+        if /usr/local/s-ui/sui healthcheck >/dev/null 2>&1 || curl -s -o /dev/null --max-time 3 "http://127.0.0.1:${PANEL_PORT}${PANEL_PATH}"; then ok=1; break; fi
         sleep 1
     done
 fi
