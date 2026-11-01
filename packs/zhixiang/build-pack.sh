@@ -126,6 +126,9 @@ find "$PACK_DIR/java" -name '*.java' > "$BUILD_DIR/pack-sources.txt"
 
 # ── (e) d8 出 plugins.dex（程序输入只有包类） ─────────────
 echo ">> d8 生成 plugins.dex"
+# d8 直接吃 classes 目录会报 Unsupported source file type（CI 第二跑实测，
+# 目录里混有非 class 产物时触发），先打成 jar 再喂，稳。
+(cd "$BUILD_DIR/pack-classes" && jar cf "$BUILD_DIR/pack-classes.jar" .)
 "$D8" --min-api 26 \
     --lib "$ANDROID_JAR" \
     --classpath "$BUILD_DIR/stub-classes" \
@@ -133,7 +136,7 @@ echo ">> d8 生成 plugins.dex"
     --classpath "$OKIO_JAR" \
     --classpath "$KOTLIN_JAR" \
     --output "$BUILD_DIR/dex" \
-    "$BUILD_DIR/pack-classes"
+    "$BUILD_DIR/pack-classes.jar"
 
 # 防呆：stub 类不许被打进 dex。dex 字符串池里必然有对 core 契约的「引用」
 # 描述符（入口类实现了它），所以不能靠 strings 判；在 d8 的程序输入目录里
