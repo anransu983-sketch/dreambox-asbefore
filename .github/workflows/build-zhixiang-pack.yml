@@ -1,0 +1,79 @@
+name: Build Zhixiang Pack
+
+# 手动触发：构建芷湘功能包（Web 本体 + native-bridge.js + plugins.dex），
+# 产物挂到本仓库 tag 为 packs 的 Release（与 PackStore 注册表里的下载地址对应）。
+on:
+  workflow_dispatch:
+
+jobs:
+  pack:
+    name: Build zhixiang pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout DreamBox
+        uses: actions/checkout@v7
+        with:
+          path: dreambox
+
+      - name: Checkout Zhixiang
+        uses: actions/checkout@v7
+        with:
+          repository: anransu983-sketch/zhixiang
+          path: dreambox/zhixiang-src
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0"
+
+      - name: Build Zhixiang web dist
+        shell: bash
+        working-directory: dreambox/zhixiang-src
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build pack zip
+        shell: bash
+        working-directory: dreambox
+        env:
+          ZHIXIANG_DIR: ${{ github.workspace }}/dreambox/zhixiang-src
+        run: |
+          chmod +x packs/zhixiang/build-pack.sh
+          bash packs/zhixiang/build-pack.sh
+
+      - name: Upload pack artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: zhixiang-pack
+          path: dreambox/packs/zhixiang/out/zhixiang-pack-v1.zip
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Publish pack to packs release
+        shell: bash
+        working-directory: dreambox
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          ZIP="packs/zhixiang/out/zhixiang-pack-v1.zip"
+          if ! gh release view packs >/dev/null 2>&1; then
+            gh release create packs --title "功能包" --notes "梦盒功能包仓库：包与本体分离，删包即删全部代码与数据。"
+          fi
+          gh release upload packs "$ZIP" --clobber
