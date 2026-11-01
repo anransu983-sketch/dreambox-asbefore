@@ -122,20 +122,6 @@ interface AppSettingsReader {
     /** s-ui 面板地址（用户自建，如 http://38.209.71.17:2095/app）。 */
     val suiPanelUrl: Preference<String>
     val animOpacityOverride: Preference<Float>
-    /** 音乐库：音乐服地址（Navidrome / Subsonic 协议）。 */
-    val musicServerUrl: Preference<String>
-    /** 音乐库：音乐服账号。 */
-    val musicServerUser: Preference<String>
-    /** 音乐库：音乐服密码。 */
-    val musicServerPassword: Preference<String>
-    /** 首页：在签名处显示当前播放的歌词。 */
-    val musicLyricInSignature: Preference<Boolean>
-    /** 首页：在侧边栏显示音乐播放器按钮。 */
-    val musicPlayerInSidebar: Preference<Boolean>
-    /** 播放页：歌词字号（sp）。 */
-    val musicLyricFontSize: Preference<Float>
-    /** 播放页：歌词颜色（ARGB Int）。 */
-    val musicLyricColor: Preference<Int>
 }
 
 /** Read/write contract for WebDAV backup settings. */

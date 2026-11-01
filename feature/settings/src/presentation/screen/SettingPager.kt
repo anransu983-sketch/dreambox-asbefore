@@ -42,7 +42,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.Science
@@ -147,7 +146,7 @@ private fun defaultModules(): List<SettingsModule> = listOf(
     SettingsModule(
         key = "lab",
         title = "实验室",
-        summary = "主题 · IP 测试 · 音乐库",
+        summary = "主题 · IP 测试 · 功能包",
         icon = Icons.Filled.Science,
         route = Route.Lab,
     ),

@@ -124,8 +124,6 @@ AppSettings = {
         HomeWallpaperSourceUrl = "Enter URL"
         HomeWallpaperUrlDialogTitle = "Set Remote Wallpaper"
         WallpaperScrimTitle = "Wallpaper Bottom Dimming"
-        MusicLyricInSignatureTitle = "Show lyrics at signature"
-        MusicPlayerInSidebarTitle = "Show player in sidebar"
     }
 
     Privacy = {

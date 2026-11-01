@@ -21,7 +21,6 @@
 
 package com.suanran.dreambox.feature.settings.di
 
-import com.suanran.dreambox.core.music.MusicPlayer
 import com.suanran.dreambox.feature.settings.data.ThemeRepository
 import com.suanran.dreambox.feature.settings.data.AnimationRepository
 import com.suanran.dreambox.feature.settings.data.vps.SshScriptRunner
@@ -30,7 +29,6 @@ import com.suanran.dreambox.feature.settings.data.vps.SuiTokenInjector
 import com.suanran.dreambox.feature.settings.data.vps.VpsTestRepository
 import com.suanran.dreambox.feature.settings.domain.InstalledAppsUseCase
 import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreViewModel
-import com.suanran.dreambox.feature.settings.presentation.music.MusicPlayerManager
 import com.suanran.dreambox.feature.settings.presentation.util.ChinaAppDetector
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AccessControlViewModel
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AnimationStoreViewModel
@@ -42,7 +40,6 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreVi
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.VpsTestViewModel
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.WifiAutomationViewModel
 import org.koin.android.ext.koin.androidApplication
-import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -56,8 +53,6 @@ val featureSettingsDomainModule = module {
     single { SshScriptRunner() }
     single { SuiApiClient() }
     single { SuiTokenInjector(get()) }
-    // 注意：这里用字符串 "settings" 而不是 MMKVProvider.ID_SETTINGS，避免 feature 层直接依赖 :data 模块。
-    single<MusicPlayer> { MusicPlayerManager(androidContext(), get(named("settings")), get()) }
 }
 
 val featureSettingsViewModelModule = module {

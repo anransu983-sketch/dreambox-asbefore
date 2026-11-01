@@ -124,8 +124,6 @@ AppSettings = {
         HomeWallpaperSourceUrl = "URL输入"
         HomeWallpaperUrlDialogTitle = "设置远程壁纸"
         WallpaperScrimTitle = "壁纸底部渐暗"
-        MusicLyricInSignatureTitle = "签名处显示歌词"
-        MusicPlayerInSidebarTitle = "侧边栏显示播放器"
     }
 
     Privacy = {

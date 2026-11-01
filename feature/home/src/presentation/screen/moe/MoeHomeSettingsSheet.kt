@@ -42,16 +42,12 @@ internal fun MoeHomeSettingsSheet(
     homeHitokotoEnabled: Boolean,
     sidebarExpanded: Boolean,
     wallpaperScrimEnabled: Boolean,
-    musicLyricInSignature: Boolean,
-    musicPlayerInSidebar: Boolean,
     onQuoteChange: (String) -> Unit,
     onQuoteAuthorChange: (String) -> Unit,
     onClassicHomeEnabledChange: (Boolean) -> Unit,
     onHomeHitokotoEnabledChange: (Boolean) -> Unit,
     onSidebarExpandedChange: (Boolean) -> Unit,
     onWallpaperScrimEnabledChange: (Boolean) -> Unit,
-    onMusicLyricInSignatureChange: (Boolean) -> Unit,
-    onMusicPlayerInSidebarChange: (Boolean) -> Unit,
     onLaunchGalleryPicker: () -> Unit,
     onNavigateToWallpaperCrop: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -63,8 +59,6 @@ internal fun MoeHomeSettingsSheet(
     var draftHomeHitokotoEnabled by remember(show, homeHitokotoEnabled) { mutableStateOf(homeHitokotoEnabled) }
     var draftSidebarExpanded by remember(show, sidebarExpanded) { mutableStateOf(sidebarExpanded) }
     var draftWallpaperScrimEnabled by remember(show, wallpaperScrimEnabled) { mutableStateOf(wallpaperScrimEnabled) }
-    var draftMusicLyricInSignature by remember(show, musicLyricInSignature) { mutableStateOf(musicLyricInSignature) }
-    var draftMusicPlayerInSidebar by remember(show, musicPlayerInSidebar) { mutableStateOf(musicPlayerInSidebar) }
     var showUrlInputDialog by remember { mutableStateOf(false) }
     var urlInput by remember { mutableStateOf("") }
     val saveSettings = {
@@ -74,8 +68,6 @@ internal fun MoeHomeSettingsSheet(
         onHomeHitokotoEnabledChange(draftHomeHitokotoEnabled)
         onSidebarExpandedChange(draftSidebarExpanded)
         onWallpaperScrimEnabledChange(draftWallpaperScrimEnabled)
-        onMusicLyricInSignatureChange(draftMusicLyricInSignature)
-        onMusicPlayerInSidebarChange(draftMusicPlayerInSidebar)
         onDismiss()
     }
 
@@ -95,8 +87,6 @@ internal fun MoeHomeSettingsSheet(
                         if (draftClassicHomeEnabled) { PreferenceSwitchItem(title = FlyTxt.AppSettings.Interface.HitokotoTitle, summary = FlyTxt.AppSettings.Interface.HitokotoSummary, checked = draftHomeHitokotoEnabled, onCheckedChange = { draftHomeHitokotoEnabled = it }) }
                         if (!draftClassicHomeEnabled) { PreferenceSwitchItem(title = FlyTxt.AppSettings.Interface.SidebarExpandedTitle, checked = draftSidebarExpanded, onCheckedChange = { draftSidebarExpanded = it }) }
                         if (!draftClassicHomeEnabled) { PreferenceSwitchItem(title = FlyTxt.AppSettings.Interface.WallpaperScrimTitle, checked = draftWallpaperScrimEnabled, onCheckedChange = { draftWallpaperScrimEnabled = it }) }
-                        if (!draftClassicHomeEnabled) { PreferenceSwitchItem(title = FlyTxt.AppSettings.Interface.MusicPlayerInSidebarTitle, checked = draftMusicPlayerInSidebar, onCheckedChange = { draftMusicPlayerInSidebar = it }) }
-                        if (!draftClassicHomeEnabled) { PreferenceSwitchItem(title = FlyTxt.AppSettings.Interface.MusicLyricInSignatureTitle, checked = draftMusicLyricInSignature, onCheckedChange = { draftMusicLyricInSignature = it }) }
                     }
                 }
             }

@@ -36,9 +36,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +57,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.core.model.ThemeMode
 import com.suanran.dreambox.core.model.traffic.TrafficData
-import com.suanran.dreambox.core.music.MusicPlayer
 import com.suanran.dreambox.core.util.AppForegroundState
 import com.suanran.dreambox.core.util.PollingTimers
 import com.suanran.dreambox.core.util.PollingTimerSpecs
@@ -129,12 +125,6 @@ fun MoeHomePage(
     val moeHomeQuoteAuthor by settings.moeHomeQuoteAuthor.state.collectAsStateWithLifecycle()
     val sidebarExpanded by settings.moeSidebarExpanded.state.collectAsStateWithLifecycle()
     val wallpaperScrimEnabled by settings.moeWallpaperScrimEnabled.state.collectAsStateWithLifecycle()
-    val musicLyricInSignature by settings.musicLyricInSignature.state.collectAsStateWithLifecycle()
-    val musicPlayerInSidebar by settings.musicPlayerInSidebar.state.collectAsStateWithLifecycle()
-    val musicPlayer = koinInject<MusicPlayer>()
-    val playingTrack by musicPlayer.currentTrack.collectAsStateWithLifecycle()
-    val musicIsPlaying by musicPlayer.isPlaying.collectAsStateWithLifecycle()
-    val musicLyric by musicPlayer.lyricLine.collectAsStateWithLifecycle()
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val batteryPercent = rememberMoeBatteryPercent(context)
     var showHomeSettingsSheet by remember { mutableStateOf(false) }
@@ -218,27 +208,10 @@ fun MoeHomePage(
             MoeSidebarIconItem(FlyCat.Bolt) { handlePageChange(3) },
         )
     }
-    // 音乐播放按钮：有曲目则播放/暂停，无曲目则打开音乐库。
-    val musicSidebarIcon = remember(musicPlayerInSidebar, musicIsPlaying, playingTrack) {
-        if (!musicPlayerInSidebar) null
-        else MoeSidebarIconItem(if (musicIsPlaying) Icons.Filled.Pause else Icons.Filled.MusicNote) {
-            if (playingTrack == null) navigator.push(Route.MusicLibrary)
-            else musicPlayer.toggle()
-        }
-    }
-    val allSidebarIcons = remember(sidebarIcons, musicSidebarIcon) {
-        if (musicSidebarIcon == null) sidebarIcons else sidebarIcons + musicSidebarIcon
-    }
-    // 签名区：开启开关且正在播歌时显示当前歌词（无歌词则显示歌名 — 艺术家）。
-    val quote = remember(moeHomeQuote, moeHomeQuoteAuthor, musicLyricInSignature, playingTrack, musicLyric) {
-        val lyricMode = musicLyricInSignature && playingTrack != null
-        if (lyricMode) {
-            val track = playingTrack!!
-            val line = musicLyric?.ifBlank { null } ?: "${track.title} — ${track.artist}".trimEnd(' ', '—')
-            MoeQuote(text = line.ifBlank { track.title }, author = "♪ 正在播放")
-        } else {
-            MoeQuote(text = moeHomeQuote.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteDefault }, author = moeHomeQuoteAuthor.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteAuthorDefault })
-        }
+    val allSidebarIcons = sidebarIcons
+    // 签名区：显示自定义签名。
+    val quote = remember(moeHomeQuote, moeHomeQuoteAuthor) {
+        MoeQuote(text = moeHomeQuote.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteDefault }, author = moeHomeQuoteAuthor.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteAuthorDefault })
     }
     val animatedSidebarToggleProgress by
         animateFloatAsState(
@@ -347,16 +320,12 @@ fun MoeHomePage(
         homeHitokotoEnabled = homeHitokotoEnabled,
         sidebarExpanded = sidebarExpanded,
         wallpaperScrimEnabled = wallpaperScrimEnabled,
-        musicLyricInSignature = musicLyricInSignature,
-        musicPlayerInSidebar = musicPlayerInSidebar,
         onQuoteChange = { settings.moeHomeQuote.set(it) },
         onQuoteAuthorChange = { settings.moeHomeQuoteAuthor.set(it) },
         onClassicHomeEnabledChange = { settings.classicHomeEnabled.set(it) },
         onHomeHitokotoEnabledChange = { settings.homeHitokotoEnabled.set(it) },
         onSidebarExpandedChange = { settings.moeSidebarExpanded.set(it) },
         onWallpaperScrimEnabledChange = { settings.moeWallpaperScrimEnabled.set(it) },
-        onMusicLyricInSignatureChange = { settings.musicLyricInSignature.set(it) },
-        onMusicPlayerInSidebarChange = { settings.musicPlayerInSidebar.set(it) },
         onLaunchGalleryPicker = {
             showHomeSettingsSheet = false
             launchWallpaperPicker()

@@ -80,16 +80,6 @@ class AppSettingsStore(externalMmkv: MMKV) : MMKVPreference(externalMmkv = exter
     override val probeServerUrl by strFlow("https://probe.suanran9527.com")
     // s-ui 面板地址（用户自建）
     override val suiPanelUrl by strFlow("")
-    // 音乐库：音乐服（Navidrome / Subsonic 协议），地址不设默认，由用户自己填写保存
-    override val musicServerUrl by strFlow("")
-    override val musicServerUser by strFlow("")
-    override val musicServerPassword by strFlow("")
-    // 首页音乐：签名处显示歌词 / 侧边栏显示播放器按钮
-    override val musicLyricInSignature by boolFlow(true)
-    override val musicPlayerInSidebar by boolFlow(true)
-    // 播放页歌词样式
-    override val musicLyricFontSize by floatFlow(16f)
-    override val musicLyricColor by intFlow(0xFF138A74.toInt())
 
     init { migrateLegacyHomeKeys() }
 

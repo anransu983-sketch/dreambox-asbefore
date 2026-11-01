@@ -15,7 +15,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -77,7 +78,7 @@ private data class LabEntry(
 )
 
 /**
- * 实验室：实验性/小众功能集合（主题、探针、IP 测试、音乐库、游戏）。
+ * 实验室：实验性/小众功能集合（主题、探针、IP 测试）。
  */
 @Composable
 fun LabScreen(navigator: Navigator) {
@@ -102,10 +103,16 @@ fun LabScreen(navigator: Navigator) {
             route = Route.IpTest,
         ),
         LabEntry(
-            title = FlyTxt.Settings.Experimental.MusicModule,
-            summary = FlyTxt.Settings.Experimental.MusicModuleSummary,
-            icon = Icons.Filled.LibraryMusic,
-            route = Route.MusicLibrary,
+            title = "功能包",
+            summary = "重型功能按需下载，删掉腾空间",
+            icon = Icons.Filled.Extension,
+            route = Route.FeaturePacks,
+        ),
+        LabEntry(
+            title = "模块",
+            summary = "各页面功能模块开关，关掉即隐藏",
+            icon = Icons.Filled.ViewModule,
+            route = Route.Modules,
         ),
         LabEntry(
             title = "已隐藏的模块",
@@ -115,7 +122,7 @@ fun LabScreen(navigator: Navigator) {
         ),
     )
 
-    val defaultKeys = listOf("theme", "iptest", "music", "hidden")
+    val defaultKeys = listOf("theme", "iptest", "packs", "modules", "hidden")
     var order by remember { mutableStateOf(loadSectionOrder(mmkv, "lab", defaultKeys)) }
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
     val visibleOrder = order.filter { it !in hiddenKeys }
@@ -128,7 +135,8 @@ fun LabScreen(navigator: Navigator) {
         when (it.route) {
             Route.Theme -> "theme"
             Route.IpTest -> "iptest"
-            Route.MusicLibrary -> "music"
+            Route.FeaturePacks -> "packs"
+            Route.Modules -> "modules"
             Route.HiddenModules -> "hidden"
             else -> "theme"
         }

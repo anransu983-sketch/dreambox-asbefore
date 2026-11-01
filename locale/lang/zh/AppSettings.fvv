@@ -124,8 +124,6 @@ AppSettings = {
         HomeWallpaperSourceUrl = "URL 輸入"
         HomeWallpaperUrlDialogTitle = "設定遠端桌布"
         WallpaperScrimTitle = "桌布底部漸暗"
-        MusicLyricInSignatureTitle = "簽名處顯示歌詞"
-        MusicPlayerInSidebarTitle = "側邊欄顯示播放器"
     }
 
     Privacy = {

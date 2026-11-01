@@ -58,8 +58,6 @@ dependencies {
     implementation(libs.smali.dexlib2)
     implementation(libs.sshj)
     implementation(libs.mmkv)
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.session)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.material3)

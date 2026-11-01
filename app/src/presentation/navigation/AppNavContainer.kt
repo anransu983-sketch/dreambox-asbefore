@@ -70,14 +70,10 @@ import com.suanran.dreambox.feature.settings.presentation.screen.MoeWallpaperCro
 import com.suanran.dreambox.feature.settings.presentation.screen.NetworkSettingsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.ThemeScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.IpTestScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.MusicLibraryScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.LyricStyleScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.LabScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.FeaturePacksScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.ModulesScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.HiddenModulesScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.MusicServerScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.MusicSettingsScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.MusicBrowserScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.NowPlayingScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.TunServiceOptionsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.VpnServiceOptionsScreen
 import com.suanran.dreambox.presentation.component.layout.KeyValueEditorScreen
@@ -122,14 +118,10 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.StreamUnlock -> StreamUnlockScreen(navigator)
         Route.Theme -> ThemeScreen(navigator)
         Route.IpTest -> IpTestScreen(navigator)
-        Route.MusicLibrary -> MusicLibraryScreen(navigator)
-        Route.LyricStyle -> LyricStyleScreen(navigator)
         Route.Lab -> LabScreen(navigator)
+        Route.FeaturePacks -> FeaturePacksScreen(navigator)
+        Route.Modules -> ModulesScreen(navigator)
         Route.HiddenModules -> HiddenModulesScreen(navigator)
-        Route.MusicSettings -> MusicSettingsScreen(navigator)
-        Route.MusicServer -> MusicServerScreen(navigator)
-        is Route.MusicBrowser -> MusicBrowserScreen(navigator, kind = route.kind, id = route.id, title = route.title)
-        Route.NowPlaying -> NowPlayingScreen(navigator)
         Route.StringListEditor -> StringListEditorScreen(navigator)
         Route.KeyValueEditor -> KeyValueEditorScreen(navigator)
         is Route.LogDetail -> LogDetailScreen(navigator, fileName = route.fileName)

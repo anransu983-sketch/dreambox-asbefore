@@ -107,28 +107,16 @@ sealed interface Route {
     data object IpTest : Route
 
     @Serializable
-    data object MusicLibrary : Route
-
-    @Serializable
-    data object LyricStyle : Route
-
-    @Serializable
     data object Lab : Route
 
     @Serializable
+    data object FeaturePacks : Route
+
+    @Serializable
+    data object Modules : Route
+
+    @Serializable
     data object HiddenModules : Route
-
-    @Serializable
-    data object MusicSettings : Route
-
-    @Serializable
-    data object MusicServer : Route
-
-    @Serializable
-    data class MusicBrowser(val kind: String, val id: String = "", val title: String = "") : Route
-
-    @Serializable
-    data object NowPlaying : Route
 
     @Serializable
     data object StringListEditor : Route

@@ -124,8 +124,6 @@ AppSettings = {
         HomeWallpaperSourceUrl = "Введите URL"
         HomeWallpaperUrlDialogTitle = "Установить удалённые обои"
         WallpaperScrimTitle = "Затемнение нижней части обоев"
-        MusicLyricInSignatureTitle = "Показывать текст песни в подписи"
-        MusicPlayerInSidebarTitle = "Показывать плеер в боковой панели"
     }
 
     Privacy = {
