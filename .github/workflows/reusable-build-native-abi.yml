@@ -47,9 +47,12 @@ jobs:
         # nightly + rust-src: the rust build uses -Zbuild-std and
         # -Cpanic=immediate-abort to shrink liboverride.so (~18%), see
         # RustBuilder in scripts/native-build.main.kts.
+        # 固定到日期版 nightly：浮动 nightly 的新 rustc 编 boa_engine 报
+        # E0391（async drop 依赖环，2026-11-02 CI 实测挂在 cargo test 步），
+        # 2025-10-15 是 v1.12 出包当天的 nightly、当时全绿。
         uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly
+          toolchain: nightly-2025-10-15
           targets: armv7-linux-androideabi,aarch64-linux-android,i686-linux-android,x86_64-linux-android
           components: rust-src, clippy
 
