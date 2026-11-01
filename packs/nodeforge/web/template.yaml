@@ -31,8 +31,8 @@ dns:
   - '*.local'
   fake-ip-range: 198.18.0.1/16
   fallback:
-  - https://9.9.9.9/dns-query
-  - https://149.112.112.112/dns-query
+  - https://1.1.1.1/dns-query
+  - https://8.8.8.8/dns-query
   fallback-filter:
     geoip: true
     geoip-code: CN
