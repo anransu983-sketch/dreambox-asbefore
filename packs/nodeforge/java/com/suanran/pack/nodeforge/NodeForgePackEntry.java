@@ -3,6 +3,7 @@ package com.suanran.pack.nodeforge;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -20,10 +21,13 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -31,47 +35,147 @@ import kotlin.Unit;
 import kotlin.jvm.functions.Function3;
 
 /**
- * 一键节点功能包入口（v4）：实现宿主 PackBridgeDispatcher。
+ * 一键节点功能包入口（v5）：实现宿主 PackBridgeDispatcher。
  *
  * 部署模型（v2 定案）：服务端脱离运行——deploy 把 deploy.sh/params.env/run.sh
- * 投递到服务器 /tmp/nodeforge/ 后 setsid+nohup 脱离启动，全程写 run.log、
- * 退出码写 done；deployState 每次开短连接取快照。断网不影响部署本身。
+ * 投递到服务器 /tmp/nodeforge/<runId>/ 后 setsid+nohup 脱离启动，全程写
+ * run.log、退出码写 done；deployState 每次开短连接取快照。断网不影响部署本身。
  *
- * v4 修「页面失忆」（v3 真机实测）：宿主 PackHostActivity 每次打开页面都
- * newInstance 一个新入口对象，v2/v3 把部署状态放在实例字段里，用户一切走
- * 再回来状态就没了、进度框空白。v4 起状态全放静态区 + 落盘 state.json
- * （含目标与口令，存包私有目录，App 沙箱内），页面/Activity/进程重建后
- * deployState 都能凭落盘目标重新接上服务器上的部署。
- * 另：deploy 的 SSH 投递改后台线程执行，点完立刻返回，日志不再空白等待。
+ * v5 按外部评审（2026-11-02）重构状态与 SSH 细节，修 v4 的「页面冻结」：
+ * 1) 宿主每次打开页面都新建 DexClassLoader，静态字段并不跨页面存活——
+ *    v5 起 state.json 是唯一状态源：每次桥调用都从落盘读、变更即落盘，
+ *    deploy 在投递开始前就把表单与阶段行落盘，投递每完成一步追加落盘，
+ *    页面/进程重建后按落盘状态无缝续上（launching 阶段不抢跑 SSH）。
+ * 2) 每轮部署分配 runId、远端独立子目录，旧日志不会污染新一轮；
+ *    存活探测用 pgrep '[n]odeforge/<runId>/run.sh' 防匹配到自己。
+ * 3) JSch 通道改「先 setOutputStream/setErrStream 再 connect」的标准姿势
+ *    （v4 在 connect 后才取流，开头输出与 stderr 会丢）；disconnect 改
+ *    异步执行（它内部可能无界阻塞）。
+ * 4) 主机密钥 TOFU：首次连接记录指纹进 state.json，之后每次比对，
+ *    不一致直接报错停手；部署终结后抹掉落盘的 root 密码。
+ * 5) 新增 importSubscription：把订阅链接以 ?format=clash 经宿主现成的
+ *    clash://install-config 深链导入梦盒（一键建订阅配置）。
  */
 public class NodeForgePackEntry implements PackBridgeDispatcher {
 
-    private static final String DIR = "/tmp/nodeforge";
+    private static final String BASE_DIR = "/tmp/nodeforge";
     private static final String STATE_FILE = "nodeforge-state.json";
+    /** launching 阶段超过此时长视为投递线程已随进程消亡，转远端核查。 */
+    private static final long LAUNCH_STALE_MS = 240_000;
 
     private static Context appContext;
 
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "nodeforge-io");
         t.setDaemon(true);
         return t;
     });
 
-    /** 部署状态：静态单例，跨入口实例存活。 */
-    private static final class S {
-        static volatile String host;
-        static volatile int sshPort;
-        static volatile String sshUser;
-        static volatile String sshPassword;
-        static volatile String banner = "";
-        static volatile String lastLog = "";
-        static volatile boolean started;
-        static volatile boolean launching;
-        static volatile boolean done;
-        static volatile boolean ok;
-        static volatile String error;
-        static volatile JSONObject result;
+    // ── 落盘状态：唯一状态源 ───────────────────────────────────
+
+    private static final class St {
+        String phase = "idle"; // idle | launching | running | done | failed
+        String runId = "";
+        String host = "";
+        int sshPort = 22;
+        String sshUser = "root";
+        String sshPassword = "";
+        String nodeName = "";
+        int nodePort = 443;
+        String subId = "node1";
+        String adminUser = "sui";
+        String adminPass = "";
+        String banner = "";
+        String lastLog = "";
+        String error = "";
+        String resultJson = "";
+        String hostKey = "";
+        String hostKeyFp = "";
+        long launchedAt = 0;
+
+        String dir() {
+            return BASE_DIR + "/" + runId;
+        }
     }
+
+    private St loadState() {
+        St st = new St();
+        try {
+            File f = stateFile();
+            if (f == null || !f.isFile()) {
+                return st;
+            }
+            JSONObject o = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8));
+            st.phase = o.optString("phase", "idle");
+            st.runId = o.optString("runId", "");
+            st.host = o.optString("host", "");
+            st.sshPort = o.optInt("sshPort", 22);
+            st.sshUser = o.optString("sshUser", "root");
+            st.sshPassword = o.optString("sshPassword", "");
+            st.nodeName = o.optString("nodeName", "");
+            st.nodePort = o.optInt("nodePort", 443);
+            st.subId = o.optString("subId", "node1");
+            st.adminUser = o.optString("adminUser", "sui");
+            st.adminPass = o.optString("adminPass", "");
+            st.banner = o.optString("banner", "");
+            st.lastLog = o.optString("lastLog", "");
+            st.error = o.optString("error", "");
+            st.resultJson = o.optString("resultJson", "");
+            st.hostKey = o.optString("hostKey", "");
+            st.hostKeyFp = o.optString("hostKeyFp", "");
+            st.launchedAt = o.optLong("launchedAt", 0);
+        } catch (Exception ignored) {
+        }
+        return st;
+    }
+
+    private void saveState(St st) {
+        try {
+            File f = stateFile();
+            if (f == null) {
+                return;
+            }
+            JSONObject o = new JSONObject();
+            o.put("phase", st.phase);
+            o.put("runId", st.runId);
+            o.put("host", st.host);
+            o.put("sshPort", st.sshPort);
+            o.put("sshUser", st.sshUser);
+            o.put("sshPassword", st.sshPassword);
+            o.put("nodeName", st.nodeName);
+            o.put("nodePort", st.nodePort);
+            o.put("subId", st.subId);
+            o.put("adminUser", st.adminUser);
+            o.put("adminPass", st.adminPass);
+            o.put("banner", st.banner);
+            o.put("lastLog", st.lastLog);
+            o.put("error", st.error);
+            o.put("resultJson", st.resultJson);
+            o.put("hostKey", st.hostKey);
+            o.put("hostKeyFp", st.hostKeyFp);
+            o.put("launchedAt", st.launchedAt);
+            Files.write(f.toPath(), o.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private File stateFile() {
+        if (appContext == null) {
+            return null;
+        }
+        return new File(appContext.getFilesDir(), "packs/nodeforge/" + STATE_FILE);
+    }
+
+    private static String stamp() {
+        return new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+    }
+
+    private void stage(St st, String text) {
+        st.banner += "== [" + stamp() + "] " + text + "\n";
+        saveState(st);
+    }
+
+    // ── 桥入口 ─────────────────────────────────────────────────
 
     @Override
     public void init(Context context, Function3<? super String, ? super String, ? super String, Unit> emit) {
@@ -94,12 +198,42 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 case "saveTextFile":
                     saveTextFile(new JSONObject(optionsJson == null ? "{}" : optionsJson), callback);
                     return true;
+                case "importSubscription":
+                    importSubscription(new JSONObject(optionsJson == null ? "{}" : optionsJson), callback);
+                    return true;
                 default:
                     return false;
             }
         } catch (Exception e) {
             callback.onResult(false, null, e.getMessage());
             return true;
+        }
+    }
+
+    // ── importSubscription：经 clash:// 深链把订阅导入梦盒 ──────
+    // s-ui 订阅加 ?format=clash 返回 Clash YAML（按查询参数切换、不看 UA）；
+    // 深链由宿主 MainActivity 的 install-config 处理接住。不用 location.href
+    // 跳（WebView 未处理 shouldOverrideUrlLoading 会报未知协议），包内直接发
+    // Intent 并 setPackage 锁定本应用。
+
+    private void importSubscription(JSONObject opts, PackCallback callback) {
+        try {
+            String url = opts.getString("url").trim();
+            if (url.isEmpty()) {
+                throw new IllegalArgumentException("订阅链接为空");
+            }
+            String clashUrl = url + (url.contains("?") ? "&" : "?") + "format=clash";
+            String deep = "clash://install-config?url="
+                    + URLEncoder.encode(clashUrl, "UTF-8");
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(deep));
+            intent.setPackage(appContext.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(intent);
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            callback.onResult(true, r.toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "打开导入失败：" + e.getMessage());
         }
     }
 
@@ -156,198 +290,236 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         }
     }
 
-    // ── deploy：后台线程投递脚本并脱离启动 ────────────────────
+    // ── deploy：先落盘，再后台投递 ─────────────────────────────
 
     private void startDeploy(JSONObject opts, PackCallback callback) {
         try {
-            final String host = opts.getString("host").trim();
-            final int sshPort = opts.optInt("sshPort", 22);
-            final String sshUser = opts.optString("sshUser", "root");
-            final String sshPassword = opts.getString("sshPassword");
-            final String adminUser = opts.getString("adminUser");
-            final String adminPass = opts.getString("adminPass");
-            final String subId = opts.optString("subId", "node1");
-            final int nodePort = opts.optInt("nodePort", 443);
-
-            if (S.launching) {
+            St cur = loadState();
+            if ("launching".equals(cur.phase)
+                    && System.currentTimeMillis() - cur.launchedAt < LAUNCH_STALE_MS) {
                 callback.onResult(false, null, "正在投递上一个部署，请稍等");
                 return;
             }
-            S.launching = true;
-            S.started = false;
-            S.done = false;
-            S.ok = false;
-            S.error = null;
-            S.result = null;
-            S.lastLog = "";
-            S.banner = "== 连接 " + sshUser + "@" + host + ":" + sshPort + " …\n";
+            if ("running".equals(cur.phase)) {
+                callback.onResult(false, null, "已有一轮部署在服务器上运行中，先等它跑完");
+                return;
+            }
+            final St st = new St();
+            st.phase = "launching";
+            st.runId = Long.toString(System.currentTimeMillis(), 36);
+            st.host = opts.getString("host").trim();
+            st.sshPort = opts.optInt("sshPort", 22);
+            st.sshUser = opts.optString("sshUser", "root");
+            st.sshPassword = opts.getString("sshPassword");
+            st.nodeName = opts.optString("nodeName", "");
+            st.nodePort = opts.optInt("nodePort", 443);
+            st.subId = opts.optString("subId", "node1");
+            st.adminUser = opts.optString("adminUser", "sui");
+            st.adminPass = opts.optString("adminPass", "");
+            st.launchedAt = System.currentTimeMillis();
+            // 同一台机器沿用已记录的指纹做 TOFU 比对；换机器则重新记录。
+            if (cur.host.equals(st.host) && cur.sshPort == st.sshPort) {
+                st.hostKey = cur.hostKey;
+                st.hostKeyFp = cur.hostKeyFp;
+            }
+            st.banner = "== [" + stamp() + "] 准备投递到 "
+                    + st.sshUser + "@" + st.host + ":" + st.sshPort + " …\n";
+            saveState(st);
             callback.onResult(true, "{\"started\":true}", null);
 
-            EXECUTOR.execute(() -> {
-                try {
-                    File script = new File(appContext.getFilesDir(), "packs/nodeforge/deploy.sh");
-                    if (!script.isFile()) {
-                        throw new IllegalStateException("功能包内缺少 deploy.sh，包可能损坏，请删包重装");
-                    }
-                    byte[] scriptBytes = Files.readAllBytes(script.toPath());
-
-                    JSch jsch = new JSch();
-                    Session session = openSession(host, sshPort, sshUser, sshPassword);
-                    try {
-                        if (session.getHostKey() != null) {
-                            S.banner += "== 服务器指纹 "
-                                    + session.getHostKey().getFingerPrint(jsch) + "\n";
-                        }
-                        execOrThrow(session, "mkdir -p " + DIR + " && chmod 700 " + DIR, null, 15_000);
-
-                        String params = "NF_ADMIN_USER=" + shq(adminUser) + "\n"
-                                + "NF_ADMIN_PASS=" + shq(adminPass) + "\n"
-                                + "NF_SUB_ID=" + shq(subId) + "\n"
-                                + "NF_NODE_PORT=" + nodePort + "\n"
-                                + "NF_SSH_PORT=" + sshPort + "\n";
-                        String wrapper = "#!/bin/bash\n"
-                                + "set -a\n"
-                                + ". " + DIR + "/params.env\n"
-                                + "set +a\n"
-                                + "rm -f " + DIR + "/params.env\n"
-                                + "bash " + DIR + "/deploy.sh\n"
-                                + "echo $? > " + DIR + "/done.tmp\n"
-                                + "mv " + DIR + "/done.tmp " + DIR + "/done\n";
-                        execOrThrow(session, "cat > " + DIR + "/deploy.sh && chmod 700 " + DIR + "/deploy.sh",
-                                scriptBytes, 20_000);
-                        execOrThrow(session, "cat > " + DIR + "/params.env && chmod 600 " + DIR + "/params.env",
-                                params.getBytes(StandardCharsets.UTF_8), 15_000);
-                        execOrThrow(session, "cat > " + DIR + "/run.sh && chmod 700 " + DIR + "/run.sh",
-                                wrapper.getBytes(StandardCharsets.UTF_8), 15_000);
-                        // 脱离启动：setsid + nohup + 输出全进 run.log，SSH 断开不影响部署。
-                        execOrThrow(session,
-                                "rm -f " + DIR + "/done " + DIR + "/run.log; "
-                                        + "setsid nohup bash " + DIR + "/run.sh > " + DIR + "/run.log 2>&1 < /dev/null & "
-                                        + "sleep 1; pgrep -f 'nodeforge/run.sh' > /dev/null",
-                                null, 15_000);
-                    } finally {
-                        session.disconnect();
-                    }
-
-                    S.host = host;
-                    S.sshPort = sshPort;
-                    S.sshUser = sshUser;
-                    S.sshPassword = sshPassword;
-                    S.banner += "== 部署已在服务器后台启动（断网/切后台都不会中断）\n";
-                    S.started = true;
-                    persistState();
-                } catch (Exception e) {
-                    S.done = true;
-                    S.ok = false;
-                    S.error = "投递失败：" + (e.getMessage() != null ? e.getMessage() : e.toString());
-                } finally {
-                    S.launching = false;
-                }
-            });
+            executor.execute(() -> deliver(st));
         } catch (Exception e) {
             callback.onResult(false, null,
                     e.getMessage() != null ? e.getMessage() : e.toString());
         }
     }
 
-    // ── 状态落盘/恢复（页面与进程重建后重新接上） ──────────────
-
-    private void persistState() {
+    private void deliver(St st) {
+        Session session = null;
         try {
-            JSONObject o = new JSONObject();
-            o.put("host", S.host);
-            o.put("sshPort", S.sshPort);
-            o.put("sshUser", S.sshUser);
-            o.put("sshPassword", S.sshPassword);
-            o.put("banner", S.banner);
-            File f = new File(appContext.getFilesDir(), "packs/nodeforge/" + STATE_FILE);
-            Files.write(f.toPath(), o.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (Exception ignored) {
-        }
-    }
-
-    private void restoreState() {
-        if (S.started || appContext == null) {
-            return;
-        }
-        try {
-            File f = new File(appContext.getFilesDir(), "packs/nodeforge/" + STATE_FILE);
-            if (!f.isFile()) {
-                return;
+            File script = new File(appContext.getFilesDir(), "packs/nodeforge/deploy.sh");
+            if (!script.isFile()) {
+                throw new IllegalStateException("功能包内缺少 deploy.sh，包可能损坏，请删包重装");
             }
-            JSONObject o = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8));
-            S.host = o.getString("host");
-            S.sshPort = o.optInt("sshPort", 22);
-            S.sshUser = o.optString("sshUser", "root");
-            S.sshPassword = o.getString("sshPassword");
-            S.banner = o.optString("banner", "");
-            S.started = true;
-        } catch (Exception ignored) {
+            byte[] scriptBytes = Files.readAllBytes(script.toPath());
+            String dir = st.dir();
+
+            stage(st, "连接服务器 …");
+            session = openSessionChecked(st);
+            if (!st.hostKeyFp.isEmpty()) {
+                stage(st, "服务器指纹 " + st.hostKeyFp);
+            }
+            stage(st, "创建远端目录 " + dir);
+            execOrThrow(session, "mkdir -p " + dir + " && chmod 700 " + dir, null, 15_000);
+
+            String params = "NF_ADMIN_USER=" + shq(st.adminUser) + "\n"
+                    + "NF_ADMIN_PASS=" + shq(st.adminPass) + "\n"
+                    + "NF_SUB_ID=" + shq(st.subId) + "\n"
+                    + "NF_NODE_PORT=" + st.nodePort + "\n"
+                    + "NF_SSH_PORT=" + st.sshPort + "\n";
+            String wrapper = "#!/bin/bash\n"
+                    + "set -a\n"
+                    + ". " + dir + "/params.env\n"
+                    + "set +a\n"
+                    + "rm -f " + dir + "/params.env\n"
+                    + "bash " + dir + "/deploy.sh\n"
+                    + "echo $? > " + dir + "/done.tmp\n"
+                    + "mv " + dir + "/done.tmp " + dir + "/done\n";
+            stage(st, "投递部署脚本 …");
+            execOrThrow(session, "cat > " + dir + "/deploy.sh && chmod 700 " + dir + "/deploy.sh",
+                    scriptBytes, 25_000);
+            stage(st, "投递部署参数 …");
+            execOrThrow(session, "cat > " + dir + "/params.env && chmod 600 " + dir + "/params.env",
+                    params.getBytes(StandardCharsets.UTF_8), 15_000);
+            execOrThrow(session, "cat > " + dir + "/run.sh && chmod 700 " + dir + "/run.sh",
+                    wrapper.getBytes(StandardCharsets.UTF_8), 15_000);
+            stage(st, "脱离启动（断网/切后台都不会中断）…");
+            execOrThrow(session,
+                    "rm -f " + dir + "/done " + dir + "/run.log; "
+                            + "setsid nohup bash " + dir + "/run.sh > " + dir + "/run.log 2>&1 < /dev/null & "
+                            + "sleep 1; pgrep -f '[n]odeforge/" + st.runId + "/run.sh' > /dev/null",
+                    null, 15_000);
+            st.phase = "running";
+            stage(st, "部署已在服务器后台运行");
+        } catch (Exception e) {
+            st.phase = "failed";
+            st.error = "投递失败：" + (e.getMessage() != null ? e.getMessage() : e.toString());
+            scrubPassword(st);
+            saveState(st);
+        } finally {
+            if (session != null) {
+                disconnectQuietly(session);
+            }
         }
     }
 
-    // ── deployState：短连接取快照 ──────────────────────────────
+    // ── deployState：按落盘阶段取状态 ──────────────────────────
 
     private synchronized JSONObject pollState() throws Exception {
-        restoreState();
+        St st = loadState();
         JSONObject o = new JSONObject();
-        if (!S.started && !S.launching) {
-            o.put("running", false);
-            o.put("done", S.done);
-            o.put("ok", false);
-            o.put("log", S.banner + S.lastLog);
-            if (S.error != null) {
-                o.put("error", S.error);
-            }
-            return o;
-        }
-        boolean linkDown = false;
-        if (S.started && !S.done) {
-            try {
-                JSch jsch = new JSch();
-                Session session = openSession(S.host, S.sshPort, S.sshUser, S.sshPassword);
-                String snap;
-                try {
-                    snap = execOrThrow(session,
-                            "echo ---LOG---; cat " + DIR + "/run.log 2>/dev/null; "
-                                    + "echo ---DONE---; cat " + DIR + "/done 2>/dev/null; "
-                                    + "echo ---RUN---; pgrep -f 'nodeforge/run.sh' > /dev/null && echo yes || echo no",
-                            null, 15_000);
-                } finally {
-                    session.disconnect();
+        o.put("form", formJson(st));
+        switch (st.phase) {
+            case "launching": {
+                long age = System.currentTimeMillis() - st.launchedAt;
+                if (age < LAUNCH_STALE_MS) {
+                    // 投递线程还活着（或刚随页面重建）：只报进度，不抢跑 SSH。
+                    o.put("running", true);
+                    o.put("launching", true);
+                    o.put("done", false);
+                    o.put("ok", false);
+                    o.put("log", st.banner);
+                    return o;
                 }
-                parseSnapshot(snap);
-            } catch (Exception e) {
-                // 网络抖动：保留上次状态，不判死
-                linkDown = true;
+                // 投递线程多半已随进程消亡：核查远端是否其实已启动。
+                if (!snapshotFromRemote(st)) {
+                    st.phase = "failed";
+                    st.error = "投递中断（页面或进程被关闭），服务器上没有这一轮部署，请重新部署";
+                    scrubPassword(st);
+                    saveState(st);
+                    return terminalJson(o, st);
+                }
+                return runningJson(o, st);
             }
+            case "running": {
+                boolean linkDown = false;
+                try {
+                    if (!snapshotFromRemote(st)) {
+                        linkDown = true;
+                    }
+                } catch (Exception e) {
+                    linkDown = true;
+                }
+                if (linkDown) {
+                    o.put("linkDown", true);
+                    return runningJson(o, st);
+                }
+                if ("done".equals(st.phase) || "failed".equals(st.phase)) {
+                    return terminalJson(o, st);
+                }
+                return runningJson(o, st);
+            }
+            case "done":
+            case "failed":
+                return terminalJson(o, st);
+            default: // idle
+                o.put("running", false);
+                o.put("done", false);
+                o.put("ok", false);
+                o.put("log", "");
+                return o;
         }
-        o.put("running", S.launching || (S.started && !S.done));
-        o.put("done", S.done);
-        o.put("ok", S.ok);
-        o.put("log", S.banner + S.lastLog);
-        if (linkDown && !S.done) {
-            o.put("linkDown", true);
+    }
+
+    private JSONObject runningJson(JSONObject o, St st) throws Exception {
+        o.put("running", true);
+        o.put("done", false);
+        o.put("ok", false);
+        o.put("log", st.banner + st.lastLog);
+        return o;
+    }
+
+    private JSONObject terminalJson(JSONObject o, St st) throws Exception {
+        o.put("running", false);
+        o.put("done", true);
+        o.put("ok", "done".equals(st.phase));
+        o.put("log", st.banner + st.lastLog);
+        if (!st.error.isEmpty()) {
+            o.put("error", st.error);
         }
-        if (S.error != null) {
-            o.put("error", S.error);
-        }
-        if (S.result != null) {
-            o.put("result", S.result);
+        if (!st.resultJson.isEmpty()) {
+            o.put("result", new JSONObject(st.resultJson));
         }
         return o;
     }
 
-    private void parseSnapshot(String snap) {
+    private JSONObject formJson(St st) throws Exception {
+        JSONObject f = new JSONObject();
+        f.put("host", st.host);
+        f.put("sshPort", st.sshPort);
+        f.put("sshUser", st.sshUser);
+        f.put("sshPassword", st.sshPassword);
+        f.put("nodeName", st.nodeName);
+        f.put("nodePort", st.nodePort);
+        f.put("subId", st.subId);
+        f.put("adminUser", st.adminUser);
+        f.put("adminPass", st.adminPass);
+        return f;
+    }
+
+    /** 开短连接取一轮快照并解析；成功取到（哪怕部署未完）返回 true，网络失败返回 false。 */
+    private boolean snapshotFromRemote(St st) {
+        Session session = null;
+        try {
+            session = openSessionChecked(st);
+            String dir = st.dir();
+            String snap = execOrThrow(session,
+                    "echo ---LOG---; cat " + dir + "/run.log 2>/dev/null; "
+                            + "echo ---DONE---; cat " + dir + "/done 2>/dev/null; "
+                            + "echo ---RUN---; pgrep -f '[n]odeforge/" + st.runId + "/run.sh' > /dev/null && echo yes || echo no",
+                    null, 15_000);
+            parseSnapshot(st, snap);
+            saveState(st);
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (session != null) {
+                disconnectQuietly(session);
+            }
+        }
+    }
+
+    private void parseSnapshot(St st, String snap) {
         String log = section(snap, "---LOG---", "---DONE---");
         String doneText = section(snap, "---DONE---", "---RUN---").trim();
         String runText = section(snap, "---RUN---", null).trim();
         if (log != null) {
-            S.lastLog = log;
+            st.lastLog = log;
         }
         String resultJson = null;
         String errorLine = null;
-        for (String line : S.lastLog.split("\n")) {
+        for (String line : st.lastLog.split("\n")) {
             if (line.startsWith("NF_RESULT ")) {
                 resultJson = line.substring("NF_RESULT ".length()).trim();
             } else if (line.startsWith("NF_ERROR:")) {
@@ -356,31 +528,33 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         }
         boolean alive = "yes".equals(runText);
         if (!doneText.isEmpty()) {
-            S.done = true;
             int exit = -1;
             try {
                 exit = Integer.parseInt(doneText.split("\\s+")[0]);
             } catch (Exception ignored) {
             }
             if (exit == 0 && resultJson != null) {
-                S.ok = true;
-                S.error = null;
-                try {
-                    S.result = new JSONObject(resultJson);
-                } catch (Exception ignored) {
-                }
+                st.phase = "done";
+                st.error = "";
+                st.resultJson = resultJson;
             } else {
-                S.ok = false;
-                S.error = errorLine != null ? errorLine
+                st.phase = "failed";
+                st.error = errorLine != null ? errorLine
                         : "远端脚本异常退出（exit=" + exit + "），细节看日志末尾";
             }
-        } else if (!alive) {
-            // 进程不在、又没有 done 文件：被系统清理或异常终止
-            S.done = true;
-            S.ok = false;
-            S.error = errorLine != null ? errorLine
+            scrubPassword(st);
+        } else if (!alive && "running".equals(st.phase)) {
+            st.phase = "failed";
+            st.error = errorLine != null ? errorLine
                     : "部署进程意外结束（未生成结果），细节看日志末尾";
+            scrubPassword(st);
+        } else if (alive && "launching".equals(st.phase)) {
+            st.phase = "running";
         }
+    }
+
+    private void scrubPassword(St st) {
+        st.sshPassword = "";
     }
 
     private static String section(String text, String startMark, String endMark) {
@@ -395,19 +569,49 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
 
     // ── SSH 基础 ───────────────────────────────────────────────
 
-    private Session openSession(String host, int port, String user, String password) throws Exception {
+    /** 连接并做 TOFU 指纹比对：state 里有记录且不一致则停手；首次则记录（由调用方落盘时机决定）。 */
+    private Session openSessionChecked(St st) throws Exception {
         JSch jsch = new JSch();
-        Session session = jsch.getSession(user, host, port);
-        session.setPassword(password);
+        Session session = jsch.getSession(st.sshUser, st.host, st.sshPort);
+        session.setPassword(st.sshPassword);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setTimeout(20_000);
         session.setServerAliveInterval(10_000);
         session.setServerAliveCountMax(3);
         session.connect(15_000);
+        try {
+            if (session.getHostKey() != null) {
+                String key = session.getHostKey().getKey();
+                String fp = session.getHostKey().getFingerPrint(jsch);
+                if (!st.hostKey.isEmpty() && !st.hostKey.equals(key)) {
+                    throw new IllegalStateException(
+                            "服务器主机指纹与首次记录不一致（记录 " + st.hostKeyFp
+                                    + "，当前 " + fp + "），已停手：确认服务器没被重装/替换后再重新部署");
+                }
+                if (st.hostKey.isEmpty()) {
+                    st.hostKey = key;
+                    st.hostKeyFp = fp;
+                }
+            }
+        } catch (Exception e) {
+            disconnectQuietly(session);
+            throw e;
+        }
         return session;
     }
 
-    /** 执行一条命令，可选 stdin 载荷（写完即 EOF），返回 stdout+stderr 合文，带硬超时。 */
+    /** JSch 的 disconnect 内部可能无界阻塞，丢到守护线程里不等它。 */
+    private static void disconnectQuietly(Session session) {
+        Thread t = new Thread(session::disconnect, "nodeforge-disconnect");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * 执行一条命令，可选 stdin 载荷（写完即 EOF），返回 stdout+stderr 合文，带硬超时。
+     * 流必须在 connect 之前设置（JSch 标准姿势）：connect 后再取流会丢开头输出，
+     * stderr 尤其容易整段丢失。
+     */
     private String execOrThrow(Session session, String command, byte[] stdinBytes, int timeoutMs)
             throws Exception {
         ChannelExec channel = (ChannelExec) session.openChannel("exec");
@@ -415,31 +619,19 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         channel.setInputStream(new ByteArrayInputStream(
                 stdinBytes == null ? new byte[0] : stdinBytes));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        channel.setOutputStream(out);
+        channel.setErrStream(out);
         channel.connect(10_000);
         try {
             long deadline = System.currentTimeMillis() + timeoutMs;
-            InputStream in = channel.getInputStream();
-            InputStream err = channel.getErrStream();
-            byte[] buf = new byte[4096];
-            while (true) {
-                while (in.available() > 0) {
-                    int n = in.read(buf, 0, Math.min(buf.length, in.available()));
-                    if (n < 0) break;
-                    out.write(buf, 0, n);
-                }
-                while (err.available() > 0) {
-                    int n = err.read(buf, 0, Math.min(buf.length, err.available()));
-                    if (n < 0) break;
-                    out.write(buf, 0, n);
-                }
-                if (channel.isClosed()) {
-                    if (in.available() <= 0 && err.available() <= 0) break;
-                } else if (System.currentTimeMillis() > deadline) {
+            while (!channel.isClosed()) {
+                if (System.currentTimeMillis() > deadline) {
                     throw new IllegalStateException("远端命令超时：" + command);
-                } else {
-                    Thread.sleep(120);
                 }
+                Thread.sleep(100);
             }
+            // 关闭后再等一拍，确保泵线程把尾部输出刷完。
+            Thread.sleep(60);
             int exit = channel.getExitStatus();
             String text = out.toString("UTF-8");
             if (exit != 0) {
@@ -459,6 +651,6 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
 
     @Override
     public void release() {
-        // 状态在静态区+落盘，页面销毁不清状态；执行器为进程级守护线程，不关。
+        // 状态全在落盘 state.json，页面销毁不清；执行器为守护线程，随类加载器回收。
     }
 }

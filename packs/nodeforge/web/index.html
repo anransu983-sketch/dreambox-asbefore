@@ -72,6 +72,7 @@
   <div>
     <button class="mini" id="copyVless">复制 vless 链接</button>
     <button class="mini" id="copySub">复制订阅链接</button>
+    <button class="mini" id="importSub">📥 导入到梦盒</button>
     <button class="mini" id="copyTunnel">复制面板隧道命令</button>
   </div>
   <label>梦盒配置（按 4837 v2 模板：防 DNS 泄露 / 防 WebRTC）</label>
@@ -80,7 +81,7 @@
     <button class="mini" id="copyYaml">复制配置</button>
     <button class="mini" id="dlYaml">下载 .yaml</button>
   </div>
-  <div class="warn" style="margin-top:8px">配置导入梦盒后即可用。注意：订阅链接是 base64 链接串，梦盒的「订阅链接」只吃 YAML，加不进去——请用下面这份 YAML 配置导入（自带防泄露规则，比裸订阅更好）。</div>
+  <div class="warn" style="margin-top:8px">两种用法二选一：点「导入到梦盒」把订阅（Clash 格式）直接建成本地订阅配置，省事；或用下面这份 YAML 配置导入——自带防 DNS/WebRTC 泄露规则，效果更好。</div>
 </div>
 
 <script>
@@ -142,8 +143,28 @@
   }
   function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
+  function applyForm(f) {
+    if (!f || !f.host) return;
+    lastOpts = {
+      host: f.host, sshPort: f.sshPort || 22, sshUser: f.sshUser || 'root',
+      sshPassword: f.sshPassword || '', nodeName: f.nodeName || '',
+      nodePort: f.nodePort || 443, subId: f.subId || 'node1',
+      adminUser: f.adminUser || 'sui', adminPass: f.adminPass || ''
+    };
+    $('host').value = f.host;
+    $('sshPort').value = f.sshPort || 22;
+    $('sshUser').value = f.sshUser || 'root';
+    if (f.sshPassword) $('sshPassword').value = f.sshPassword;
+    $('nodeName').value = f.nodeName || '';
+    $('nodePort').value = f.nodePort || 443;
+    $('subId').value = f.subId || 'node1';
+    $('adminUser').value = f.adminUser || 'sui';
+    if (f.adminPass) $('adminPass').value = f.adminPass;
+  }
+
   function pollOnce() {
     callNative('deployState', {}).then(function (st) {
+      if (!lastOpts && st.form) applyForm(st.form);
       $('log').textContent = st.log || '';
       $('log').scrollTop = $('log').scrollHeight;
       if (st.done) {
@@ -188,6 +209,14 @@
       '<b>隧道命令</b>：' + tunnel;
     $('copyVless').onclick = function () { copyText(vless, this); };
     $('copySub').onclick = function () { copyText(sub, this); };
+    $('importSub').onclick = function () {
+      var btn = this;
+      callNative('importSubscription', { url: sub }).then(function () {
+        btn.textContent = '已打开导入 ✓';
+      }).catch(function (e) {
+        alert('打开导入失败：' + (e && e.message ? e.message : e));
+      });
+    };
     $('copyTunnel').onclick = function () { copyText(tunnel, this); };
     fetch('template.yaml').then(function (res) { return res.text(); }).then(function (tpl) {
       var yaml = tpl
@@ -246,6 +275,7 @@
 
   // 进页面时若已有部署在跑/刚跑完（切出去又回来），接上状态
   callNative('deployState', {}).then(function (st) {
+    if (st.form) applyForm(st.form);
     if (st.running || (st.done && st.log)) {
       $('logCard').classList.remove('hidden');
       $('log').textContent = st.log || '';
