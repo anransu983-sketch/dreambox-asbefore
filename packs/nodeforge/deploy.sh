@@ -413,16 +413,78 @@ if command -v ss >/dev/null 2>&1; then
         || log "提示：面板监听地址未确认是 127.0.0.1，请人工核查 ss -tln"
 fi
 
-# ── 9. 结果 ────────────────────────────────────────────────
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" <<'PYEOF'
+# ── 9. 实测验证：重启核心后回环真连，过关才算部署成功 ────
+log "重启核心使最终配置生效"
+curl -s --max-time 25 -b "$CJ" -H "$HDR" -X POST "$API/restartSb" >/dev/null 2>&1 || true
+for _ in $(seq 1 20); do
+    ss -tln 2>/dev/null | grep -q ":$NODE_PORT " && break
+    sleep 1
+done
+VERIFY="fail"
+SB_DIR="/opt/nodeforge"; SB_BIN="$SB_DIR/sing-box"
+mkdir -p "$SB_DIR" 2>/dev/null || true
+if [ ! -x "$SB_BIN" ]; then
+    log "下载实测工具（sing-box）"
+    if curl -sL --max-time 180 -o "$SB_DIR/sb.tgz" "https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-linux-amd64.tar.gz" && tar -xzf "$SB_DIR/sb.tgz" -C "$SB_DIR"; then
+        cp "$SB_DIR/sing-box-1.14.4-linux-amd64/sing-box" "$SB_BIN" 2>/dev/null || true
+        chmod +x "$SB_BIN" 2>/dev/null || true
+    fi
+fi
+if [ -x "$SB_BIN" ]; then
+    if python3 - "$INBOUND_TAG" "$SUB_ID" "$NODE_PORT" "$SB_DIR/verify-client.json" <<'PYEOF3'
+import sqlite3, glob, json, sys
+tag, cname, dport, out = sys.argv[1:5]
+db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
+con = sqlite3.connect(db)
+row = con.execute('select tls_id, options from inbounds where tag=?', (tag,)).fetchone()
+tls_id, opts = row[0], json.loads(row[1] or '{}')
+port = int(opts.get('listen_port') or dport)
+cli = json.loads(con.execute('select client from tls where id=?', (tls_id,)).fetchone()[0])
+ucfg = json.loads(con.execute('select config from clients where name=?', (cname,)).fetchone()[0])
+cfg = {
+  "log": {"level": "error"},
+  "inbounds": [{"type": "mixed", "tag": "vin", "listen": "127.0.0.1", "listen_port": 18090}],
+  "outbounds": [{
+    "type": "vless", "tag": "vout", "server": "127.0.0.1", "server_port": port,
+    "uuid": ucfg['vless']['uuid'], "flow": "xtls-rprx-vision",
+    "tls": {"enabled": True, "server_name": cli.get('server_name', 'www.microsoft.com'),
+            "utls": {"enabled": True, "fingerprint": "chrome"},
+            "reality": {"enabled": True, "public_key": cli['reality']['public_key'], "short_id": cli['reality'].get('short_id', '')}}
+  }]
+}
+open(out, 'w').write(json.dumps(cfg))
+print('verify client ready, port', port)
+PYEOF3
+    then
+        "$SB_BIN" run -c "$SB_DIR/verify-client.json" > "$SB_DIR/verify.log" 2>&1 &
+        VPID=$!
+        sleep 2
+        VCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:18090 -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
+        kill "$VPID" 2>/dev/null || true
+        if [ "$VCODE" = "204" ]; then
+            VERIFY="ok"
+            log "实测验证通过（回环真连出网 204）"
+        else
+            log "实测验证未通过（回环返回 $VCODE），部署数据已保留待查"
+        fi
+    else
+        log "实测配置生成失败，跳过验证"
+    fi
+else
+    log "实测工具不可用，跳过验证（部署本身已完成）"
+fi
+
+# ── 10. 结果 ───────────────────────────────────────────────
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
- sub_port, sub_path, sni, vless, ver) = sys.argv[1:13]
+ sub_port, sub_path, sni, vless, ver, verify) = sys.argv[1:14]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
     "panelPath": panel_path, "subPort": int(sub_port), "subPath": sub_path,
     "sni": sni, "vlessLink": vless, "suiVersion": ver,
+    "verified": verify == "ok",
 }))
 PYEOF
 log "部署完成"
