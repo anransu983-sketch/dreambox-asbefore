@@ -108,18 +108,19 @@ echo ">> 编译 stubs"
 rm -rf "$BUILD_DIR/stub-classes" "$BUILD_DIR/pack-classes" "$BUILD_DIR/dex"
 mkdir -p "$BUILD_DIR/stub-classes" "$BUILD_DIR/pack-classes" "$BUILD_DIR/dex"
 find "$PACK_DIR/stubs" -name '*.java' > "$BUILD_DIR/stub-sources.txt"
-"$JAVAC" -source 8 -target 8 -encoding UTF-8 \
-    -bootclasspath "$ANDROID_JAR" \
-    -cp "$KOTLIN_JAR" \
+# 注意：不能用 -bootclasspath android.jar —— android.jar 里 java.lang.invoke 的
+# 桩缺少 LambdaMetafactory.metafactory，lambda 编译会直接报错（CI 首跑实测）。
+# android.jar 只放 -cp：JDK 平台类优先于 classpath，lambda 由 d8 在出 dex 时脱糖。
+"$JAVAC" -source 11 -target 11 -encoding UTF-8 \
+    -cp "$ANDROID_JAR:$KOTLIN_JAR" \
     -d "$BUILD_DIR/stub-classes" \
     @"$BUILD_DIR/stub-sources.txt"
 
 # ── (d) 编译包内 Java（兼容层 + 插件 + 入口） ─────────────
 echo ">> 编译 pack java"
 find "$PACK_DIR/java" -name '*.java' > "$BUILD_DIR/pack-sources.txt"
-"$JAVAC" -source 8 -target 8 -encoding UTF-8 \
-    -bootclasspath "$ANDROID_JAR" \
-    -cp "$BUILD_DIR/stub-classes:$DEPS_CP" \
+"$JAVAC" -source 11 -target 11 -encoding UTF-8 \
+    -cp "$ANDROID_JAR:$BUILD_DIR/stub-classes:$DEPS_CP" \
     -d "$BUILD_DIR/pack-classes" \
     @"$BUILD_DIR/pack-sources.txt"
 
@@ -134,10 +135,11 @@ echo ">> d8 生成 plugins.dex"
     --output "$BUILD_DIR/dex" \
     "$BUILD_DIR/pack-classes"
 
-# 防呆：dex 里不许出现 stub 的类（com/suanran/dreambox/core/pack/*）。
-# strings 扫不到类描述符就说明隔离对了（描述符是 dex 的字符串池内容）。
-if strings "$BUILD_DIR/dex/classes.dex" | grep -q "Lcom/suanran/dreambox/core/pack/"; then
-    echo "ERROR: plugins.dex 里混入了 stub 类，隔离失败" >&2
+# 防呆：stub 类不许被打进 dex。dex 字符串池里必然有对 core 契约的「引用」
+# 描述符（入口类实现了它），所以不能靠 strings 判；在 d8 的程序输入目录里
+# 查有没有 stub 的 .class 文件混入才是真判据（stub 只在 stub-classes 目录）。
+if find "$BUILD_DIR/pack-classes" -path "*com/suanran/dreambox*" | grep -q .; then
+    echo "ERROR: pack-classes 里混入了 stub 类，隔离失败" >&2
     exit 1
 fi
 
