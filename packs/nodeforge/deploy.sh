@@ -137,7 +137,9 @@ def norm(x):
 try: d = json.load(sys.stdin)
 except Exception: d = {}
 o = norm(d.get("obj"))
-if isinstance(o, dict): o = list(o.values())
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if t.get("name") == sys.argv[1]]
 if hits:
@@ -209,7 +211,9 @@ def norm(x):
 try: d = json.load(sys.stdin)
 except Exception: d = {}
 o = norm(d.get("obj"))
-if isinstance(o, dict): o = list(o.values())
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if t.get("name") == sys.argv[1]]
 print(hits[-1].get("id") if hits else "")
@@ -230,7 +234,9 @@ def norm(x):
 try: d = json.load(sys.stdin)
 except Exception: d = {}
 o = norm(d.get("obj"))
-if isinstance(o, dict): o = list(o.values())
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if t.get("tag") == sys.argv[1]]
 if hits:
@@ -267,7 +273,9 @@ def norm(x):
 try: d = json.load(sys.stdin)
 except Exception: d = {}
 o = norm(d.get("obj"))
-if isinstance(o, dict): o = list(o.values())
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if t.get("tag") == sys.argv[1]]
 print(hits[-1].get("id") if hits else "")
@@ -288,7 +296,9 @@ def norm(x):
 try: d = json.load(sys.stdin)
 except Exception: d = {}
 o = norm(d.get("obj"))
-if isinstance(o, dict): o = list(o.values())
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [c for c in items if c.get("name") == sys.argv[1]]
 print("yes" if hits else "")
@@ -319,7 +329,9 @@ def norm(x):
 try: d = json.load(sys.stdin)
 except Exception: d = {}
 o = norm(d.get("obj"))
-if isinstance(o, dict): o = list(o.values())
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 uuid = ""; link = ""
 for c in items:
