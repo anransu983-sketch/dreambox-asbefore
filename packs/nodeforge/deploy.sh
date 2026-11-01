@@ -354,6 +354,18 @@ if [ -n "$CLI_INFO" ]; then
 fi
 [ -n "$CLI_UUID" ] && UUID="$CLI_UUID"
 
+# 以订阅内容为准校正 UUID：clients 列表是摘要视图（config/links 不全），
+# 复用旧客户端时上面的回读会落空、UUID 会误用本次新生成值；
+# 订阅由面板按存量记录生成，是最终真相。
+SUB_RAW="$(curl -s --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}" || true)"
+SUB_TXT="$(printf '%s' "$SUB_RAW" | base64 -d 2>/dev/null || true)"
+[ -n "$SUB_TXT" ] || SUB_TXT="$SUB_RAW"
+SUB_UUID="$(printf '%s' "$SUB_TXT" | grep -o 'vless://[0-9a-fA-F-]\{36\}@' | head -1 | sed 's|^vless://||; s|@$||')"
+if [ -n "$SUB_UUID" ]; then
+    UUID="$SUB_UUID"
+    log "已按订阅内容校正 UUID"
+fi
+
 # ── 7. 防火墙：放行 节点/订阅/SSH；面板端口不放行 ────────
 log "配置防火墙"
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi 'status: active'; then
