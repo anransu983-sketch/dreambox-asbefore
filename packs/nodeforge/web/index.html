@@ -80,7 +80,7 @@
     <button class="mini" id="copyYaml">复制配置</button>
     <button class="mini" id="dlYaml">下载 .yaml</button>
   </div>
-  <div class="warn" style="margin-top:8px">配置导入梦盒后即可用；订阅链接也可以直接加进梦盒当订阅（节点参数变了会自动更新）。</div>
+  <div class="warn" style="margin-top:8px">配置导入梦盒后即可用。注意：订阅链接是 base64 链接串，梦盒的「订阅链接」只吃 YAML，加不进去——请用下面这份 YAML 配置导入（自带防泄露规则，比裸订阅更好）。</div>
 </div>
 
 <script>
@@ -200,12 +200,15 @@
       $('yaml').value = yaml;
       $('copyYaml').onclick = function () { copyText(yaml, this); };
       $('dlYaml').onclick = function () {
-        var blob = new Blob([yaml], { type: 'text/yaml' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = r.subId + '-dreambox.yaml';
-        a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+        var btn = this;
+        btn.disabled = true;
+        callNative('saveTextFile', { name: r.subId + '-dreambox.yaml', text: yaml }).then(function (res) {
+          btn.textContent = '已存到 ' + (res.path || 'Download');
+        }).catch(function (e) {
+          btn.disabled = false;
+          btn.textContent = '保存失败，改用「复制配置」';
+          alert('保存失败：' + (e && e.message ? e.message : e));
+        });
       };
     });
     $('resultCard').classList.remove('hidden');

@@ -1,6 +1,12 @@
 package com.suanran.pack.nodeforge;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
@@ -13,7 +19,9 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
@@ -83,12 +91,68 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 case "deployState":
                     callback.onResult(true, pollState().toString(), null);
                     return true;
+                case "saveTextFile":
+                    saveTextFile(new JSONObject(optionsJson == null ? "{}" : optionsJson), callback);
+                    return true;
                 default:
                     return false;
             }
         } catch (Exception e) {
             callback.onResult(false, null, e.getMessage());
             return true;
+        }
+    }
+
+    // ── saveTextFile：把文本存进系统 Download 目录 ──────────────
+    // WebView 里的 Blob+a[download] 没有宿主 DownloadListener 接管、点了没反应，
+    // 故走原生：API 29+ 用 MediaStore 写公共 Download（免权限），低版本退回应用外部目录。
+
+    private void saveTextFile(JSONObject opts, PackCallback callback) {
+        try {
+            String name = opts.optString("name", "nodeforge.yaml");
+            if (name.isBlank() || name.contains("/") || name.contains("..")) {
+                throw new IllegalArgumentException("文件名不合法");
+            }
+            byte[] bytes = opts.optString("text", "").getBytes(StandardCharsets.UTF_8);
+            String where;
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentResolver cr = appContext.getContentResolver();
+                ContentValues cv = new ContentValues();
+                cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
+                cv.put(MediaStore.Downloads.MIME_TYPE, "text/yaml");
+                cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                cv.put(MediaStore.Downloads.IS_PENDING, 1);
+                Uri uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                if (uri == null) {
+                    throw new IllegalStateException("系统拒绝创建下载文件");
+                }
+                try (OutputStream out = cr.openOutputStream(uri)) {
+                    if (out == null) {
+                        throw new IllegalStateException("无法打开下载文件");
+                    }
+                    out.write(bytes);
+                }
+                cv.clear();
+                cv.put(MediaStore.Downloads.IS_PENDING, 0);
+                cr.update(uri, cv, null, null);
+                where = "Download/" + name;
+            } else {
+                File dir = new File(appContext.getExternalFilesDir(null), "Download");
+                if (!dir.isDirectory() && !dir.mkdirs()) {
+                    throw new IllegalStateException("无法创建保存目录");
+                }
+                File f = new File(dir, name);
+                try (FileOutputStream out = new FileOutputStream(f)) {
+                    out.write(bytes);
+                }
+                where = f.getAbsolutePath();
+            }
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            r.put("path", where);
+            callback.onResult(true, r.toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "保存失败：" + e.getMessage());
         }
     }
 
