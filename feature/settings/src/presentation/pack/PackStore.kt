@@ -127,7 +127,7 @@ class PackStore(context: Context) {
                 name = "一键节点",
                 summary = "填服务器 IP 与 root 密码，一键部署 s-ui + VLESS+Reality 节点：自动建入站、放行端口、面板绑回环防爆破，并按防 DNS/WebRTC 泄露模板生成梦盒配置",
                 version = "1",
-                sizeText = "约 1 MB",
+                sizeText = "约 260 KB",
                 downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v1.zip",
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
             ),
