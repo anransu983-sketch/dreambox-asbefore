@@ -476,7 +476,7 @@ class RustBuilder(private val config: ProjectConfig) {
             command = command,
             workingDir = sourceDir,
             environment = mapOf(
-                "RUSTUP_TOOLCHAIN" to "nightly",
+                "RUSTUP_TOOLCHAIN" to "nightly-2025-10-15",
                 "RUSTFLAGS" to listOf(
                     "-Cpanic=unwind",
                     "-C", "link-arg=-Wl,--gc-sections",
@@ -535,7 +535,7 @@ class LoaderRustBuilder(private val config: ProjectConfig) {
             command = command,
             workingDir = sourceDir,
             environment = mapOf(
-                "RUSTUP_TOOLCHAIN" to "nightly",
+                "RUSTUP_TOOLCHAIN" to "nightly-2025-10-15",
                 "RUSTFLAGS" to listOf(
                     "-Cpanic=unwind",
                     "-C", "link-arg=-Wl,--gc-sections",
