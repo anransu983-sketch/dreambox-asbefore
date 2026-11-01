@@ -122,19 +122,56 @@ login_resp="$(curl -s --max-time 25 -c "$CJ" -H "$HDR" -d "user=$ADMIN_USER" -d 
 printf '%s' "$login_resp" | grep -q '"success": *true' \
     || fail "面板登录失败（已装 s-ui 且密码与现管理员不一致时也会这样）：$(printf '%s' "$login_resp" | head -c 200)"
 
-# ── 3. Reality 密钥 + UUID + Short ID ─────────────────────
-log "生成 Reality 密钥对"
-kp="$(curl -s --max-time 25 -b "$CJ" "$API/keypairs?k=reality")"
-PRIV="$(printf '%s' "$kp" | grep -o 'PrivateKey: [^"]*' | head -1 | cut -d' ' -f2)"
-PUB="$(printf '%s' "$kp" | grep -o 'PublicKey: [^"]*' | head -1 | cut -d' ' -f2)"
-[ -n "$PRIV" ] && [ -n "$PUB" ] || fail "密钥对生成失败：$(printf '%s' "$kp" | head -c 200)"
-SID="$(openssl rand -hex 4)"
+# ── 3. TLS 记录：已有同名则整套复用（含密钥），重跑幂等 ──
+# s-ui 列表接口的 obj 形态不稳（数组/对象/JSON 字符串都见过），解析统一归一化：
+# obj 与 server/client/config 子字段都可能是 JSON 字符串，先 norm 再取。
+log "检查已有 TLS 记录"
+TLS_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/tls")"
+TLS_FOUND="$(printf '%s' "$TLS_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict): o = list(o.values())
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("name") == sys.argv[1]]
+if hits:
+    t = hits[-1]
+    srv = norm(t.get("server")) or {}
+    cli = norm(t.get("client")) or {}
+    sreal = srv.get("reality") or {}
+    creal = cli.get("reality") or {}
+    sid = creal.get("short_id") or ""
+    if isinstance(sid, list): sid = sid[0] if sid else ""
+    print(t.get("id"), sreal.get("private_key", ""), creal.get("public_key", ""), sid)
+' "$TLS_NAME")"
+TLS_ID=""; PRIV=""; PUB=""; SID=""
+if [ -n "$TLS_FOUND" ]; then
+    read -r TLS_ID PRIV PUB SID <<< "$TLS_FOUND"
+fi
+if [ -n "$TLS_ID" ] && [ -n "$PRIV" ] && [ -n "$PUB" ]; then
+    log "复用已有 TLS 记录（含原密钥对）"
+else
+    TLS_ID=""
+    log "生成 Reality 密钥对"
+    kp="$(curl -s --max-time 25 -b "$CJ" "$API/keypairs?k=reality")"
+    PRIV="$(printf '%s' "$kp" | grep -o 'PrivateKey: [^"]*' | head -1 | cut -d' ' -f2)"
+    PUB="$(printf '%s' "$kp" | grep -o 'PublicKey: [^"]*' | head -1 | cut -d' ' -f2)"
+    [ -n "$PRIV" ] && [ -n "$PUB" ] || fail "密钥对生成失败：$(printf '%s' "$kp" | head -c 200)"
+    SID="$(openssl rand -hex 4)"
+fi
 UUID="$(gen_uuid)"
-log "UUID 与 Short ID 已生成"
+log "UUID 与 Short ID 已就绪"
 
-# ── 4. TLS 记录（Reality server+client） ──────────────────
-log "创建 TLS 记录"
-tls_data="$(python3 - "$SNI" "$PRIV" "$PUB" "$SID" "$TLS_NAME" <<'PYEOF'
+# ── 4. TLS 记录（新建时才写） ─────────────────────────────
+if [ -z "$TLS_ID" ]; then
+    log "创建 TLS 记录"
+    tls_data="$(python3 - "$SNI" "$PRIV" "$PUB" "$SID" "$TLS_NAME" <<'PYEOF2'
 import json, sys
 sni, priv, pub, sid, name = sys.argv[1:6]
 data = {
@@ -157,65 +194,153 @@ data = {
     },
 }
 print(json.dumps(data))
-PYEOF
+PYEOF2
 )" || fail "TLS 数据组装失败"
-api_post_ok save --data-urlencode object=tls --data-urlencode action=new \
-    --data-urlencode "data=$tls_data" >/dev/null
-TLS_ID="$(curl -s --max-time 25 -b "$CJ" "$API/tls" | python3 -c '
+    api_post_ok save --data-urlencode object=tls --data-urlencode action=new \
+        --data-urlencode "data=$tls_data" >/dev/null
+    TLS_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/tls")"
+    TLS_ID="$(printf '%s' "$TLS_LIST" | python3 -c '
 import json, sys
-d = json.load(sys.stdin)
-for t in d.get("obj") or []:
-    if t.get("name") == "nf-reality":
-        print(t.get("id")); break
-')" || fail "读取 TLS 记录失败"
-[ -n "$TLS_ID" ] || fail "TLS 记录创建后未找到"
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict): o = list(o.values())
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("name") == sys.argv[1]]
+print(hits[-1].get("id") if hits else "")
+' "$TLS_NAME")"
+    [ -n "$TLS_ID" ] || fail "TLS 记录创建后未找到"
+fi
 
-# ── 5. 入站（VLESS + Reality） ────────────────────────────
-log "创建 VLESS 入站（端口 $NODE_PORT）"
-inbound_data="$(python3 -c '
+# ── 5. 入站（VLESS + Reality）：已有同 tag 则复用 ─────────
+log "检查已有入站"
+INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+INB_FOUND="$(printf '%s' "$INB_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict): o = list(o.values())
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("tag") == sys.argv[1]]
+if hits:
+    t = hits[-1]
+    print(t.get("id"), t.get("listen_port", ""))
+' "$INBOUND_TAG")"
+INBOUND_ID=""; INB_PORT=""
+if [ -n "$INB_FOUND" ]; then
+    read -r INBOUND_ID INB_PORT <<< "$INB_FOUND"
+fi
+if [ -n "$INBOUND_ID" ]; then
+    log "复用已有入站（端口 $INB_PORT）"
+    if [ -n "$INB_PORT" ] && [ "$INB_PORT" != "$NODE_PORT" ]; then
+        log "注意：已有入站端口是 $INB_PORT，与本次填写的 $NODE_PORT 不同，沿用 $INB_PORT"
+        NODE_PORT="$INB_PORT"
+    fi
+else
+    log "创建 VLESS 入站（端口 $NODE_PORT）"
+    inbound_data="$(python3 -c '
 import json, sys
 print(json.dumps({"type": "vless", "tag": "nf-vless", "listen": "::",
                   "listen_port": int(sys.argv[1]), "tls_id": int(sys.argv[2])}))
 ' "$NODE_PORT" "$TLS_ID")"
-api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
-    --data-urlencode "data=$inbound_data" >/dev/null
-INBOUND_ID="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds" | python3 -c '
+    api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
+        --data-urlencode "data=$inbound_data" >/dev/null
+    INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+    INBOUND_ID="$(printf '%s' "$INB_LIST" | python3 -c '
 import json, sys
-d = json.load(sys.stdin)
-for t in d.get("obj") or []:
-    if t.get("tag") == "nf-vless":
-        print(t.get("id")); break
-')" || fail "读取入站失败"
-[ -n "$INBOUND_ID" ] || fail "入站创建后未找到"
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict): o = list(o.values())
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("tag") == sys.argv[1]]
+print(hits[-1].get("id") if hits else "")
+' "$INBOUND_TAG")"
+    [ -n "$INBOUND_ID" ] || fail "入站创建后未找到"
+fi
 
-# ── 6. 客户端（name = 订阅 ID） ───────────────────────────
-log "创建客户端（订阅 ID：$SUB_ID）"
-client_data="$(python3 -c '
+# ── 6. 客户端（name = 订阅 ID）：已有同名则复用 ───────────
+log "检查已有客户端"
+CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
+CLI_FOUND="$(printf '%s' "$CLI_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict): o = list(o.values())
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [c for c in items if c.get("name") == sys.argv[1]]
+print("yes" if hits else "")
+' "$SUB_ID")"
+if [ "$CLI_FOUND" = "yes" ]; then
+    log "复用已有客户端（订阅 ID：$SUB_ID）"
+else
+    log "创建客户端（订阅 ID：$SUB_ID）"
+    client_data="$(python3 -c '
 import json, sys
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}},
                   "inbounds": [int(sys.argv[3])], "volume": 0, "expiry": 0}))
 ' "$SUB_ID" "$UUID" "$INBOUND_ID")"
-api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
-    --data-urlencode "data=$client_data" >/dev/null
+    api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
+        --data-urlencode "data=$client_data" >/dev/null
+    CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
+fi
 
-# 服务端生成的 vless 链接（拿不到也不致命，调用方按参数自组）
-VLESS_LINK="$(curl -s --max-time 25 -b "$CJ" "$API/clients" | python3 -c '
+# 以服务端记录为准回读 UUID 与 vless 链接（复用旧客户端时 UUID 用旧的）
+CLI_INFO="$(printf '%s' "$CLI_LIST" | python3 -c '
 import json, sys
-try:
-    d = json.load(sys.stdin)
-except Exception:
-    print(""); sys.exit()
-for c in d.get("obj") or []:
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict): o = list(o.values())
+items = [x for x in (o or []) if isinstance(x, dict)]
+uuid = ""; link = ""
+for c in items:
     if c.get("name") == sys.argv[1]:
+        cfg = norm(c.get("config")) or {}
+        vless = cfg.get("vless") or {}
+        uuid = vless.get("uuid", "") or ""
         links = c.get("links") or ""
         if isinstance(links, list):
             links = " ".join(str(x) for x in links)
         for part in str(links).replace(",", " ").split():
             if part.startswith("vless://"):
-                print(part); break
+                link = part; break
         break
+print(uuid, link)
 ' "$SUB_ID" 2>/dev/null)"
+CLI_UUID=""; VLESS_LINK=""
+if [ -n "$CLI_INFO" ]; then
+    read -r CLI_UUID VLESS_LINK <<< "$CLI_INFO"
+fi
+[ -n "$CLI_UUID" ] && UUID="$CLI_UUID"
 
 # ── 7. 防火墙：放行 节点/订阅/SSH；面板端口不放行 ────────
 log "配置防火墙"
