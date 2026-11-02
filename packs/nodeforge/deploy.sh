@@ -29,6 +29,7 @@ SNI="www.microsoft.com"
 NODE_PORT="${NF_NODE_PORT:-443}"
 SSH_PORT="${NF_SSH_PORT:-22}"
 SUB_ID="${NF_SUB_ID:-node1}"
+PUBLIC_HOST="${NF_PUBLIC_HOST:-}"
 ADMIN_USER="${NF_ADMIN_USER:-}"
 ADMIN_PASS="${NF_ADMIN_PASS:-}"
 TLS_NAME="nf-reality"
@@ -222,6 +223,12 @@ print(hits[-1].get("id") if hits else "")
 fi
 
 # ── 5. 入站（VLESS + Reality）：已有同 tag 则复用 ─────────
+# 订阅链接里的节点地址取自入站 addrs；不写 addrs 时 s-ui 会用「保存请求的
+# 主机名」——本脚本在本机用 127.0.0.1 调 API，链接就会被写成 127.0.0.1。
+if [ -z "$PUBLIC_HOST" ]; then
+    PUBLIC_HOST="$(curl -s --max-time 8 https://api.ipify.org 2>/dev/null || true)"
+    [ -n "$PUBLIC_HOST" ] && log "公网地址自动探测为 $PUBLIC_HOST（订阅链接用）"
+fi
 log "检查已有入站"
 INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
 INB_FOUND="$(printf '%s' "$INB_LIST" | python3 -c '
@@ -253,13 +260,54 @@ if [ -n "$INBOUND_ID" ]; then
         log "注意：已有入站端口是 $INB_PORT，与本次填写的 $NODE_PORT 不同，沿用 $INB_PORT"
         NODE_PORT="$INB_PORT"
     fi
+    # 复用入站：addrs 为空/不对则整对象 edit 回写（edit 会连带重生成客户端链接）
+    if [ -n "$PUBLIC_HOST" ]; then
+        EDIT_DATA="$(printf '%s' "$INB_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("tag") == sys.argv[1]]
+host, port = sys.argv[2], int(sys.argv[3])
+if hits:
+    t = dict(hits[-1])
+    addrs = t.get("addrs") or []
+    cur = addrs[0].get("server") if addrs and isinstance(addrs[0], dict) else ""
+    if cur != host:
+        t["addrs"] = [{"server": host, "server_port": port}]
+        print(json.dumps(t))
+' "$INBOUND_TAG" "$PUBLIC_HOST" "$NODE_PORT")"
+        if [ -n "$EDIT_DATA" ]; then
+            if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
+                --data-urlencode "data=$EDIT_DATA" >/dev/null; then
+                log "已把入站地址校正为公网地址 $PUBLIC_HOST（订阅链接用）"
+            else
+                log "入站地址校正失败（订阅地址可能不对，文末校验会确认）"
+            fi
+        else
+            log "入站地址已是公网地址 $PUBLIC_HOST"
+        fi
+    fi
 else
     log "创建 VLESS 入站（端口 $NODE_PORT）"
     inbound_data="$(python3 -c '
 import json, sys
-print(json.dumps({"type": "vless", "tag": "nf-vless", "listen": "::",
-                  "listen_port": int(sys.argv[1]), "tls_id": int(sys.argv[2])}))
-' "$NODE_PORT" "$TLS_ID")"
+d = {"type": "vless", "tag": "nf-vless", "listen": "::",
+     "listen_port": int(sys.argv[1]), "tls_id": int(sys.argv[2])}
+host = sys.argv[3].strip()
+if host:
+    d["addrs"] = [{"server": host, "server_port": int(sys.argv[1])}]
+print(json.dumps(d))
+' "$NODE_PORT" "$TLS_ID" "$PUBLIC_HOST")"
     api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
         --data-urlencode "data=$inbound_data" >/dev/null
     INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
@@ -474,17 +522,30 @@ else
     log "实测工具不可用，跳过验证（部署本身已完成）"
 fi
 
+# ── 9.5 订阅地址校验：订阅里节点的 host 必须是公网地址 ────
+SUB_HOST_OK="fail"
+SUB_NOW="$(curl -s --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}" 2>/dev/null || true)"
+SUB_NOW_TXT="$(printf '%s' "$SUB_NOW" | base64 -d 2>/dev/null || true)"
+[ -n "$SUB_NOW_TXT" ] || SUB_NOW_TXT="$SUB_NOW"
+LINK_HOST="$(printf '%s' "$SUB_NOW_TXT" | grep -o 'vless://[^@]*@[^:?#]*' | head -1 | sed 's/.*@//')"
+if [ -n "$PUBLIC_HOST" ] && [ "$LINK_HOST" = "$PUBLIC_HOST" ]; then
+    SUB_HOST_OK="ok"
+    log "订阅地址校验通过（节点地址 $LINK_HOST）"
+else
+    log "订阅地址校验未通过（订阅里是 ${LINK_HOST:-空}，应为 ${PUBLIC_HOST:-未知}）——订阅导入会连不上，请用包生成的 YAML"
+fi
+
 # ── 10. 结果 ───────────────────────────────────────────────
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" <<'PYEOF'
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
- sub_port, sub_path, sni, vless, ver, verify) = sys.argv[1:14]
+ sub_port, sub_path, sni, vless, ver, verify, sub_host_ok) = sys.argv[1:15]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
     "panelPath": panel_path, "subPort": int(sub_port), "subPath": sub_path,
     "sni": sni, "vlessLink": vless, "suiVersion": ver,
-    "verified": verify == "ok",
+    "verified": verify == "ok", "subHostOk": sub_host_ok == "ok",
 }))
 PYEOF
 log "部署完成"

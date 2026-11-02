@@ -356,7 +356,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                     + "NF_ADMIN_PASS=" + shq(st.adminPass) + "\n"
                     + "NF_SUB_ID=" + shq(st.subId) + "\n"
                     + "NF_NODE_PORT=" + st.nodePort + "\n"
-                    + "NF_SSH_PORT=" + st.sshPort + "\n";
+                    + "NF_SSH_PORT=" + st.sshPort + "\n"
+                    + "NF_PUBLIC_HOST=" + shq(st.host) + "\n";
             String wrapper = "#!/bin/bash\n"
                     + "set -a\n"
                     + ". " + dir + "/params.env\n"
