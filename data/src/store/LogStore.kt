@@ -95,8 +95,11 @@ class LogStore(
     override fun listLogFiles(): List<LogFileInfo> {
         val currentlyRecording = isRecording()
         val currentFileName = logRecordGateway.currentLogFileName
+        // 0B 空日志不进列表（核心空跑一趟留下的空文件没有查看价值）；正在录制的那份除外。
         val files =
-            logDir.listFiles(::isManagedLogFile)?.sortedByDescending { it.lastModified() }
+            logDir.listFiles(::isManagedLogFile)
+                ?.filter { it.length() > 0L || (currentlyRecording && it.name == currentFileName) }
+                ?.sortedByDescending { it.lastModified() }
                 ?: emptyList()
         return files.map { file ->
             LogFileInfo(

@@ -1,5 +1,6 @@
 package com.suanran.dreambox.feature.settings.presentation.screen
 
+import com.suanran.dreambox.presentation.icon.FlyCat
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.Switch
 import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
@@ -43,6 +44,10 @@ import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueBg
+import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
+import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import com.suanran.dreambox.presentation.component.misc.BocchiPink
 import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
@@ -103,13 +108,13 @@ private fun applyAppIconVariant(context: Context, variant: AppIconVariant) {
 }
 
 private val MODULE_ICON_ROWS = listOf(
-    "app" to "应用",
-    "network" to "网络",
-    "override" to "覆写",
-    "meta" to "Meta 功能",
-    "lab" to "实验室",
-    "log" to "日志",
-    "about" to "关于",
+    Triple("app", "应用", FlyCat.Settings2),
+    Triple("network", "网络", FlyCat.WifiCog),
+    Triple("override", "覆写", FlyCat.GitMerge),
+    Triple("meta", "Meta 功能", FlyCat.Meta),
+    Triple("lab", "实验室", androidx.compose.material.icons.Icons.Filled.Science),
+    Triple("log", "日志", FlyCat.ScrollText),
+    Triple("about", "关于", FlyCat.Github),
 )
 
 @Composable
@@ -250,24 +255,35 @@ fun PersonalizeScreen(navigator: Navigator) {
                 BocchiSectionTitle("模块图标")
                 BocchiCard {
                     Column {
-                        MODULE_ICON_ROWS.forEach { (key, title) ->
+                        MODULE_ICON_ROWS.forEach { (key, title, icon) ->
                             CustomIconRow(
                                 title = title,
                                 customKey = "module_$key",
                                 onPick = { pick("module_$key") },
                             ) {
+                                // 与设置页 ModuleIcon 同款贴片（底色按 key 轮换粉/蓝/绿），不用单字占位。
+                                val bg = when (kotlin.math.abs(key.hashCode()) % 3) {
+                                    0 -> BocchiPinkBg
+                                    1 -> BocchiBlueBg
+                                    else -> androidx.compose.ui.graphics.Color(0xFFE3F5E9)
+                                }
+                                val fg = when (kotlin.math.abs(key.hashCode()) % 3) {
+                                    0 -> BocchiStar
+                                    1 -> BocchiBlueFg
+                                    else -> androidx.compose.ui.graphics.Color(0xFF43A047)
+                                }
                                 Box(
                                     modifier = Modifier
-                                        .size(26.dp)
-                                        .clip(CircleShape)
-                                        .background(BocchiPink.copy(alpha = 0.25f)),
+                                        .size(30.dp)
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .background(bg),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Text(
-                                        text = title.take(1),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = BocchiTextDark,
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = fg,
+                                        modifier = Modifier.size(18.dp),
                                     )
                                 }
                             }
