@@ -254,6 +254,16 @@ val appDataModule = module {
     single<OverrideApplier> { get<ActiveProfileOverrideApplier>() }
     single<OverrideApplyExecutor> { get<OverrideApplicator>() }
     single<OverrideConfigRepository> { get<OverrideConfigStore>() }
+    single {
+        val profilesRepository = get<ProfilesRepository>()
+        com.suanran.dreambox.data.store.QuickRulesStore(
+            configRepo = get(),
+            bindingRepository = get(),
+            applier = get(),
+            queryActiveProfile = { profilesRepository.queryActiveProfile() },
+        )
+    }
+    single<com.suanran.dreambox.core.contract.QuickRulesRepository> { get<com.suanran.dreambox.data.store.QuickRulesStore>() }
     single<ProfileBindingReader> { get<OverrideBindingRepository>() }
     single<ProvidersRepository> { get<ProvidersController>() }
     single<AppIdentityReader> { get<AppIdentityResolver>() }

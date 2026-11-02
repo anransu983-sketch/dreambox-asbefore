@@ -21,6 +21,9 @@
 
 package com.suanran.dreambox.feature.dashboard.presentation.screen
 
+import kotlinx.serialization.json.jsonPrimitive
+import com.suanran.dreambox.presentation.util.toast
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -121,6 +124,10 @@ fun ConnectionScreen(navigator: Navigator) {
         mutableStateOf<com.suanran.dreambox.core.model.ConnectionInfo?>(null)
     }
     var showDetailSheet by remember { mutableStateOf(false) }
+    // 一键加规则：长按连接卡 → 把域名设为直连/代理/拦截（写入「快速规则」覆写）。
+    val quickRulesRepo = org.koin.compose.koinInject<com.suanran.dreambox.core.contract.QuickRulesRepository>()
+    val quickRuleContext = androidx.compose.ui.platform.LocalContext.current
+    var quickRuleTarget by remember { mutableStateOf<ConnectionCardItem?>(null) }
 
     val tabs = listOf(FlyTxt.Connection.Tab.Active, FlyTxt.Connection.Tab.Closed)
     var selectedTabIndex by
@@ -328,6 +335,7 @@ fun ConnectionScreen(navigator: Navigator) {
                                 showDetailSheet = true
                             }
                         },
+                        onLongClick = { quickRuleTarget = connection },
                         onClose = {
                             scope.launch {
                                 val closed = viewModel.closeConnection(connection.connectionInfo.id)
@@ -338,6 +346,56 @@ fun ConnectionScreen(navigator: Navigator) {
                             }
                         },
                         modifier = Modifier.padding(vertical = spacing.space6),
+                    )
+                }
+            }
+        }
+
+        // 一键加规则弹窗
+        val qrTarget = quickRuleTarget
+        val qrHost = remember(qrTarget) { qrTarget?.let { quickRuleHostOf(it.connectionInfo.metadata) } }
+        com.suanran.dreambox.presentation.component.dialog.AppDialog(
+            show = qrTarget != null && qrHost != null,
+            title = qrHost ?: "",
+            onDismissRequest = { quickRuleTarget = null },
+        ) {
+            if (qrTarget != null && qrHost != null) {
+                val isIp = isIpLiteral(qrHost)
+                val proxyTarget = qrTarget.connectionInfo.chains.lastOrNull()?.takeIf { it.isNotBlank() }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    listOfNotNull(
+                        "设为直连" to "DIRECT",
+                        proxyTarget?.let { "设为代理（走 $it）" to it },
+                        "设为拦截" to "REJECT",
+                    ).forEach { (label, policy) ->
+                        Text(
+                            text = label,
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val line = quickRuleLine(qrHost, isIp, policy)
+                                    quickRuleTarget = null
+                                    scope.launch {
+                                        val added = quickRulesRepo.addQuickRule(line)
+                                        quickRuleContext.toast(
+                                            if (added) "已加入快速规则：$line" else "这条快速规则已经有了",
+                                        )
+                                    }
+                                }
+                                .padding(vertical = spacing.space12),
+                        )
+                    }
+                    Text(
+                        text = if (isIp) {
+                            "按 IP-CIDR 精确匹配这一个地址，立即对当前配置生效（写入「快速规则」覆写）。"
+                        } else {
+                            "按域名后缀匹配，包含全部子域名，立即对当前配置生效（写入「快速规则」覆写）。"
+                        },
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.padding(top = spacing.space6),
                     )
                 }
             }
@@ -361,12 +419,14 @@ fun ConnectionScreen(navigator: Navigator) {
  * 第三行：↑ 上传速度 ↓ 下载速度
  */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun StashConnectionCard(
     item: ConnectionCardItem,
     showCloseAction: Boolean,
     onClick: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val spacing = AppTheme.spacing
     val radii = AppTheme.radii
@@ -394,10 +454,11 @@ private fun StashConnectionCard(
             .clip(shape)
             .background(Color.White)
             .border(1.dp, BocchiPink.copy(alpha = 0.45f), shape)
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
             .padding(horizontal = spacing.space16, vertical = spacing.space12),
         verticalAlignment = Alignment.CenterVertically,
@@ -543,3 +604,23 @@ private fun formatStartTimeHms(start: String): String {
         ""
     }
 }
+
+
+/** 连接的目标主机：嗅探域名优先，其次 host，再次目标 IP。 */
+private fun quickRuleHostOf(metadata: kotlinx.serialization.json.JsonObject): String? {
+    fun field(key: String): String? =
+        metadata[key]?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }?.trim()?.takeIf { it.isNotBlank() }
+    val raw = field("sniffHost") ?: field("host") ?: field("destinationIP") ?: return null
+    return raw.substringBefore(':').lowercase().trimEnd('.').takeIf { it.isNotBlank() }
+}
+
+private fun isIpLiteral(host: String): Boolean =
+    host.contains(':') || (host.count { it == '.' } == 3 && host.all { it.isDigit() || it == '.' })
+
+private fun quickRuleLine(host: String, isIp: Boolean, policy: String): String =
+    if (isIp) {
+        val cidr = if (host.contains(':')) "$host/128" else "$host/32"
+        "IP-CIDR,$cidr,$policy"
+    } else {
+        "DOMAIN-SUFFIX,$host,$policy"
+    }
