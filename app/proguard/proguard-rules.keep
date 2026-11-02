@@ -141,3 +141,9 @@
 # ========================================
 -keep class com.suanran.dreambox.core.pack.** { *; }
 -keep class com.suanran.dreambox.presentation.pack.** { *; }
+
+# 桥签名里出现的类型也要 keep：-keep class 只保住类自身的名字与成员，
+# 签名引用的类型仍会被 R8 改名/repackage（1.39 实测 Function3 被改成 pz2，
+# 功能包按原名实现的 init(Context, Function3) 与宿主接口对不上 → AbstractMethodError）。
+-keep class kotlin.jvm.functions.** { *; }
+-keep class kotlin.Unit { *; }
