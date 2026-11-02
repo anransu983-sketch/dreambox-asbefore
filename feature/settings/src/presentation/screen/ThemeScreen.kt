@@ -66,6 +66,7 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreEv
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreViewModel
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog
@@ -104,6 +105,10 @@ fun ThemeScreen(navigator: Navigator) {
     val appSettingsViewModel = koinViewModel<AppSettingsViewModel>()
     val themeMode by viewModel.themeMode.state.collectAsStateWithLifecycle()
     val themeSeedColorArgb by viewModel.themeSeedColorArgb.state.collectAsStateWithLifecycle()
+    // 内置主题控制（主题模式/反转前景色/主题配色）：原在应用设置里，2026-11-03 合并到主题页，主题只留一个入口。
+    val appThemeMode by appSettingsViewModel.themeMode.state.collectAsStateWithLifecycle()
+    val appThemeSeedColorArgb by appSettingsViewModel.themeSeedColorArgb.state.collectAsStateWithLifecycle()
+    val invertOnPrimaryColors by appSettingsViewModel.invertOnPrimaryColors.state.collectAsStateWithLifecycle()
     val userThemes by viewModel.userThemes.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val marketThemes by viewModel.marketThemes.collectAsStateWithLifecycle()
@@ -158,6 +163,25 @@ fun ThemeScreen(navigator: Navigator) {
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
             verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.space12),
         ) {
+            item {
+                BocchiSectionTitle(FlyTxt.AppSettings.Interface.ColorThemeTitle)
+                BocchiCard {
+                    ThemeModeSelectorItem(
+                        themeMode = appThemeMode,
+                        onThemeModeChange = appSettingsViewModel::onThemeModeChange,
+                    )
+                    BocchiSwitchItem(
+                        title = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertTitle,
+                        summary = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertSummary,
+                        checked = invertOnPrimaryColors,
+                        onCheckedChange = appSettingsViewModel::onInvertOnPrimaryColorsChange,
+                    )
+                    ThemeColorPickerItem(
+                        themeSeedColorArgb = appThemeSeedColorArgb,
+                        onThemeSeedColorChange = appSettingsViewModel::onThemeSeedColorChange,
+                    )
+                }
+            }
             item {
                 BocchiSectionTitle(themeTxt.StoreTitle)
                 Card {

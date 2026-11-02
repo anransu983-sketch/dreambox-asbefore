@@ -60,11 +60,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.model.AppLanguage
-import com.suanran.dreambox.core.model.ThemeMode
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
-import com.suanran.dreambox.feature.settings.presentation.screen.component.ThemeColorPickerItem
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsViewModel
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
@@ -172,10 +170,7 @@ private fun AppBehaviorSettingsSection(viewModel: AppSettingsViewModel) {
 @Composable
 private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
     val context = LocalContext.current
-    val themeMode by viewModel.themeMode.state.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.state.collectAsStateWithLifecycle()
-    val themeSeedColorArgb by viewModel.themeSeedColorArgb.state.collectAsStateWithLifecycle()
-    val invertOnPrimaryColors by viewModel.invertOnPrimaryColors.state.collectAsStateWithLifecycle()
     val bottomBarAutoHide by viewModel.bottomBarAutoHide.state.collectAsStateWithLifecycle()
     val topBarBlurEnabled by viewModel.topBarBlurEnabled.state.collectAsStateWithLifecycle()
     val pageScale by viewModel.pageScale.state.collectAsStateWithLifecycle()
@@ -216,32 +211,7 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             )
         }
 
-    BocchiSectionTitle(FlyTxt.AppSettings.Interface.ColorThemeTitle)
-    BocchiCard {
-        BocchiEnumItem(
-            title = FlyTxt.AppSettings.Interface.ThemeModeTitle,
-            summary = FlyTxt.AppSettings.Interface.ThemeModeSummary,
-            currentValue = themeMode,
-            items =
-                listOf(
-                    FlyTxt.AppSettings.Interface.ThemeModeSystem,
-                    FlyTxt.AppSettings.Interface.ThemeModeLight,
-                    FlyTxt.AppSettings.Interface.ThemeModeDark,
-                ),
-            values = ThemeMode.entries,
-            onValueChange = viewModel::onThemeModeChange,
-        )
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertTitle,
-            summary = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertSummary,
-            checked = invertOnPrimaryColors,
-            onCheckedChange = viewModel::onInvertOnPrimaryColorsChange,
-        )
-        ThemeColorPickerItem(
-            themeSeedColorArgb = themeSeedColorArgb,
-            onThemeSeedColorChange = viewModel::onThemeSeedColorChange,
-        )
-    }
+    // 主题模式/配色已合并到实验室「主题」页（2026-11-03），这里不再重复放。
     BocchiSectionTitle(FlyTxt.AppSettings.Section.Interface)
     BocchiCard {
         BocchiEnumItem(
