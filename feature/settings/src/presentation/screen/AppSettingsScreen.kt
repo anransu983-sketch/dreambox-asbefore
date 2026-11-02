@@ -69,6 +69,13 @@ import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsViewModel
+import com.suanran.dreambox.feature.settings.presentation.viewmodel.MetaFeatureViewModel
+import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreSection
+import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
+import com.suanran.dreambox.feature.settings.presentation.screen.component.OneCardDivider
+import com.suanran.dreambox.feature.settings.presentation.screen.component.OneCardSectionHeader
+import com.suanran.dreambox.feature.settings.presentation.screen.component.ThemeColorPickerItem
+import com.suanran.dreambox.feature.settings.presentation.screen.component.ThemeModeSelectorItem
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog
@@ -108,41 +115,48 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun AppSettingsScreen(navigator: Navigator) {
     val scrollBehavior = MiuixScrollBehavior()
     val viewModel = koinViewModel<AppSettingsViewModel>()
-    val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
-
-    val defaultKeys = listOf("behavior", "interface", "privacy", "service")
-    var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "app_settings")) }
-    val listState = rememberLazyListState()
-    val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
-    val sectionTitles = mapOf(
-        "behavior" to "行为", "interface" to "界面",
-        "privacy" to "隐私", "service" to "服务",
-    )
 
     Scaffold(
-        topBar = { TopBar(title = FlyTxt.AppSettings.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(navigator = navigator) }) }
+        topBar = {
+            TopBar(
+                title = FlyTxt.AppSettings.Title,
+                scrollBehavior = scrollBehavior,
+                navigationIconPadding = 0.dp,
+                navigationIcon = { NavigationBackIcon(navigator = navigator) },
+                actions = { ModuleHelpAction("app") },
+            )
+        }
     ) { innerPadding ->
         val mainLikePadding = rememberStandalonePageMainPadding()
         ScreenLazyColumn(
-            lazyListState = listState,
             scrollBehavior = scrollBehavior,
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
         ) {
-            itemsIndexed(visibleOrder, key = { _, k -> k }) { index, key ->
-                SortableSectionCard(
-                        isDragging = false,
-                        onHide = {
-                            hiddenKeys = hiddenKeys + key
-                            saveHiddenSections(mmkv, "app_settings", hiddenKeys + key)
-                        },
-                    ) {
-                        when (key) {
-                            "behavior" -> AppBehaviorSettingsSection(viewModel)
-                            "interface" -> AppInterfaceSettingsSection(viewModel = viewModel)
-                            "privacy" -> AppPrivacySettingsSection(viewModel)
-                            "service" -> AppServiceSettingsSection(viewModel)
-                        }
-                    }
+            item {
+                // 一张大卡（2026-11-03 用户点单：分节标题收进卡内、细分隔线，不再一节一卡太割裂；
+                // 主题从实验室归位到第一节，备份与恢复从 Meta 归位到最后）。
+                BocchiCard {
+                    OneCardSectionHeader(FlyTxt.AppSettings.Section.Behavior, first = true)
+                    AppBehaviorSettingsSection(viewModel)
+                    OneCardDivider()
+                    OneCardSectionHeader("主题")
+                    AppThemeSettingsSection(viewModel, navigator)
+                    OneCardDivider()
+                    OneCardSectionHeader(FlyTxt.AppSettings.Section.Interface)
+                    AppInterfaceSettingsSection(viewModel)
+                    OneCardDivider()
+                    OneCardSectionHeader(FlyTxt.AppSettings.Section.Home)
+                    AppHomeSettingsSection(viewModel)
+                    OneCardDivider()
+                    OneCardSectionHeader(FlyTxt.AppSettings.Section.Privacy)
+                    AppPrivacySettingsSection(viewModel)
+                    OneCardDivider()
+                    OneCardSectionHeader(FlyTxt.AppSettings.Section.Service)
+                    AppServiceSettingsSection(viewModel)
+                    OneCardDivider()
+                    OneCardSectionHeader(FlyTxt.MetaFeature.Section.BackupRestore)
+                    BackupRestoreSection(bare = true)
+                }
             }
         }
     }
@@ -153,21 +167,46 @@ private fun AppBehaviorSettingsSection(viewModel: AppSettingsViewModel) {
     val automaticRestart by viewModel.automaticRestart.state.collectAsStateWithLifecycle()
     val autoUpdateCurrentProfileOnStart by viewModel.autoUpdateCurrentProfileOnStart.state.collectAsStateWithLifecycle()
 
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Behavior)
-    BocchiCard {
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.Behavior.AutoStartTitle,
+    BocchiSwitchItem(
+        title = FlyTxt.AppSettings.Behavior.AutoStartTitle,
             summary = FlyTxt.AppSettings.Behavior.AutoStartSummary,
             checked = automaticRestart,
             onCheckedChange = viewModel::onAutomaticRestartChange,
         )
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.Behavior.AutoUpdateOnStartTitle,
-            summary = FlyTxt.AppSettings.Behavior.AutoUpdateOnStartSummary,
-            checked = autoUpdateCurrentProfileOnStart,
-            onCheckedChange = viewModel::onAutoUpdateCurrentProfileOnStartChange,
-        )
-    }
+    BocchiSwitchItem(
+        title = FlyTxt.AppSettings.Behavior.AutoUpdateOnStartTitle,
+        summary = FlyTxt.AppSettings.Behavior.AutoUpdateOnStartSummary,
+        checked = autoUpdateCurrentProfileOnStart,
+        onCheckedChange = viewModel::onAutoUpdateCurrentProfileOnStartChange,
+    )
+}
+
+
+@Composable
+private fun AppThemeSettingsSection(viewModel: AppSettingsViewModel, navigator: Navigator) {
+    val themeMode by viewModel.themeMode.state.collectAsStateWithLifecycle()
+    val themeSeedColorArgb by viewModel.themeSeedColorArgb.state.collectAsStateWithLifecycle()
+    val invertOnPrimaryColors by viewModel.invertOnPrimaryColors.state.collectAsStateWithLifecycle()
+
+    ThemeModeSelectorItem(
+        themeMode = themeMode,
+        onThemeModeChange = viewModel::onThemeModeChange,
+    )
+    BocchiSwitchItem(
+        title = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertTitle,
+        summary = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertSummary,
+        checked = invertOnPrimaryColors,
+        onCheckedChange = viewModel::onInvertOnPrimaryColorsChange,
+    )
+    ThemeColorPickerItem(
+        themeSeedColorArgb = themeSeedColorArgb,
+        onThemeSeedColorChange = viewModel::onThemeSeedColorChange,
+    )
+    BocchiArrowItem(
+        title = "主题商店与个性化",
+        summary = "商店 / 市场 / 图标与面板编排都在主题页",
+        onClick = { navigator.push(Route.Theme) },
+    )
 }
 
 @Composable
@@ -216,10 +255,8 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             )
         }
 
-    // 主题模式/配色已合并到实验室「主题」页（2026-11-03），这里不再重复放。
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Interface)
-    BocchiCard {
-        BocchiEnumItem(
+    // 主题模式/配色在上方「主题」分节，这里不再重复放。
+    BocchiEnumItem(
             title = FlyTxt.AppSettings.Interface.LanguageTitle,
             summary = FlyTxt.AppSettings.Interface.LanguageSummary,
             currentValue = appLanguage,
@@ -261,34 +298,51 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             progress = predictiveBackMaxProgress,
             onApply = viewModel::onPredictiveBackMaxProgressChange,
         )
-    }
-    BocchiCard {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { navigator.push(Route.Personalize) }
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "个性化",
-                    style = MiuixTheme.textStyles.title4,
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = "应用图标 · 导航栏/模块/返回按钮自定义图片",
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+}
+
+@Composable
+private fun AppHomeSettingsSection(viewModel: AppSettingsViewModel) {
+    val context = LocalContext.current
+    val navigator = LocalNavigator.current
+    val classicHomeEnabled by viewModel.classicHomeEnabled.state.collectAsStateWithLifecycle()
+    val homeHitokotoEnabled by viewModel.homeHitokotoEnabled.state.collectAsStateWithLifecycle()
+    val homeQuote by viewModel.moeHomeQuote.state.collectAsStateWithLifecycle()
+    val homeQuoteAuthor by viewModel.moeHomeQuoteAuthor.state.collectAsStateWithLifecycle()
+    val homeQuoteSummary =
+        remember(homeQuote) { homeQuote.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteDefault } }
+    val homeQuoteAuthorSummary =
+        remember(homeQuoteAuthor) {
+            homeQuoteAuthor.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteAuthorDefault }
+        }
+    val wallpaperZoom by viewModel.moeWallpaperZoom.state.collectAsStateWithLifecycle()
+    val wallpaperBiasX by viewModel.moeWallpaperBiasX.state.collectAsStateWithLifecycle()
+    val wallpaperBiasY by viewModel.moeWallpaperBiasY.state.collectAsStateWithLifecycle()
+    var showUrlInputDialog by remember { mutableStateOf(false) }
+    var urlInput by remember { mutableStateOf("") }
+    val wallpaperPickerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            uri ?: return@rememberLauncherForActivityResult
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
                 )
             }
-            Text(text = "›", style = MiuixTheme.textStyles.title4, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            navigator.push(
+                Route.MoeWallpaperCrop(
+                    wallpaperUri = uri.toString(),
+                    initialZoom = wallpaperZoom,
+                    initialBiasX = wallpaperBiasX,
+                    initialBiasY = wallpaperBiasY,
+                )
+            )
         }
-    }
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Home)
-    BocchiCard {
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.Interface.ClassicHomeTitle,
+    // 面板选择（原 Meta 功能，归位到首页节）：首页打开核心面板时用哪个 Web 面板。
+    val metaViewModel = koinViewModel<MetaFeatureViewModel>()
+    val selectedPanelType by metaViewModel.panelSettings.selectedPanelType.state.collectAsStateWithLifecycle()
+
+    BocchiSwitchItem(
+        title = FlyTxt.AppSettings.Interface.ClassicHomeTitle,
             checked = classicHomeEnabled,
             onCheckedChange = viewModel::onClassicHomeEnabledChange,
         )
@@ -335,7 +389,13 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
                 },
             )
         }
-    }
+        WindowDropdownPreference(
+            title = FlyTxt.MetaFeature.Panel.SelectPanel,
+            summary = "点按切换面板",
+            items = MetaFeatureViewModel.PANEL_NAMES,
+            selectedIndex = selectedPanelType.coerceIn(MetaFeatureViewModel.PANEL_NAMES.indices),
+            onSelectedIndexChange = { index -> metaViewModel.setPanelType(index) },
+        )
 
     if (showUrlInputDialog) {
         RemoteWallpaperUrlDialog(
@@ -394,20 +454,17 @@ private fun AppPrivacySettingsSection(viewModel: AppSettingsViewModel) {
     val context = LocalContext.current
     val excludeFromRecents by viewModel.excludeFromRecents.state.collectAsStateWithLifecycle()
 
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Privacy)
-    BocchiCard {
-        HideAppIconPreferenceItem(
+    HideAppIconPreferenceItem(
             hideAppIconFlow = viewModel.hideAppIcon.state,
             onHideAppIconChange = viewModel::onHideAppIconChange,
             context = context,
         )
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.Privacy.HideFromRecentsTitle,
-            summary = FlyTxt.AppSettings.Privacy.HideFromRecentsSummary,
-            checked = excludeFromRecents,
-            onCheckedChange = viewModel::onExcludeFromRecentsChange,
-        )
-    }
+    BocchiSwitchItem(
+        title = FlyTxt.AppSettings.Privacy.HideFromRecentsTitle,
+        summary = FlyTxt.AppSettings.Privacy.HideFromRecentsSummary,
+        checked = excludeFromRecents,
+        onCheckedChange = viewModel::onExcludeFromRecentsChange,
+    )
 }
 
 @Composable
@@ -455,10 +512,8 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Service)
-    BocchiCard {
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.ServiceSection.TrafficNotificationTitle,
+    BocchiSwitchItem(
+        title = FlyTxt.AppSettings.ServiceSection.TrafficNotificationTitle,
             summary = FlyTxt.AppSettings.ServiceSection.TrafficNotificationSummary,
             checked = showTrafficNotification,
             onCheckedChange = viewModel::onShowTrafficNotificationChange,
@@ -507,12 +562,11 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
                 }
             },
         )
-        // 「网络」分节并入服务（2026-11-03 用户点单）：UA 设置同卡呈现。
-        CustomUserAgentPreferenceItem(
-            customUserAgent = customUserAgent,
-            onConfirm = viewModel::applyCustomUserAgent,
-        )
-    }
+    // 「网络」分节并入服务（2026-11-03 用户点单）：UA 设置同卡呈现。
+    CustomUserAgentPreferenceItem(
+        customUserAgent = customUserAgent,
+        onConfirm = viewModel::applyCustomUserAgent,
+    )
 }
 
 @Composable

@@ -48,6 +48,7 @@ class PackHostActivity : Activity() {
     private lateinit var packDir: File
     private var pluginHeadersJson: String = "[]"
     private var hostBackupAllowed: Boolean = false
+    private var hostKernelAllowed: Boolean = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +66,10 @@ class PackHostActivity : Activity() {
         hostBackupAllowed = runCatching {
             val marker = File(packDir, "pack.json")
             marker.isFile && JSONObject(marker.readText()).optBoolean("hostBackup", false)
+        }.getOrDefault(false)
+        hostKernelAllowed = runCatching {
+            val marker = File(packDir, "pack.json")
+            marker.isFile && JSONObject(marker.readText()).optBoolean("hostKernel", false)
         }.getOrDefault(false)
         requestPackPermissions()
         dispatcher = loadDispatcher(entryClass)
@@ -206,6 +211,10 @@ class PackHostActivity : Activity() {
                 handleHostBackup(callbackId, method, options)
                 return
             }
+            if (pluginId == "HostKernel") {
+                handleHostKernel(callbackId, method, options)
+                return
+            }
             val current = dispatcher
             if (current == null) {
                 sendResult(callbackId, success = false, dataJson = null, error = "插件原生代码不可用（$pluginId 未实现）")
@@ -269,6 +278,106 @@ class PackHostActivity : Activity() {
                 sendResult(callbackId, success = false, dataJson = null, error = e.message ?: "备份桥失败")
             }
         }
+    }
+
+    /**
+     * 宿主内核桥（内核管家包用）：只有 pack.json 声明 "hostKernel": true 的包能调。
+     * 插件只画界面，列表/下载/切换/装自定义内核全部委托本体 KernelManager 在宿主进程执行，
+     * 与原网络设置「内核管理」同一套逻辑与数据。
+     */
+    private fun handleHostKernel(callbackId: String, method: String, options: JSONObject) {
+        if (!hostKernelAllowed) {
+            sendResult(callbackId, success = false, dataJson = null, error = "该插件未声明 hostKernel 权限")
+            return
+        }
+        io.execute {
+            val result = runCatching {
+                val km = com.suanran.dreambox.core.kernel.KernelManager
+                when (method) {
+                    "state" -> kernelStateJson(forceNetwork = false)
+                    "refresh" -> kernelStateJson(forceNetwork = true)
+                    "install" -> {
+                        val id = options.optString("id")
+                        require(id.isNotBlank()) { "缺少内核 id" }
+                        val index = kotlinx.coroutines.runBlocking { km.fetchIndex(this@PackHostActivity) }
+                        val kernel = index.kernels.firstOrNull { it.id == id }
+                            ?: throw IllegalArgumentException("索引里没有内核 $id，先点检查更新")
+                        kotlinx.coroutines.runBlocking { km.install(this@PackHostActivity, kernel) }
+                        kernelStateJson(forceNetwork = false)
+                    }
+                    "activate" -> {
+                        val id = options.optString("id")
+                        require(id.isNotBlank()) { "缺少内核 id" }
+                        km.activate(this@PackHostActivity, id)
+                        kernelStateJson(forceNetwork = false)
+                    }
+                    "installCustom" -> {
+                        val url = options.optString("url").trim()
+                        require(url.startsWith("https://")) { "自定义内核链接必须以 https:// 开头" }
+                        val kernel = kotlinx.coroutines.runBlocking {
+                            km.installPluginUrl(this@PackHostActivity, url)
+                        }
+                        km.activate(this@PackHostActivity, kernel.id)
+                        kernelStateJson(forceNetwork = false)
+                    }
+                    else -> throw IllegalArgumentException("未知方法 $method")
+                }
+            }
+            result.onSuccess { data ->
+                sendResult(callbackId, success = true, dataJson = data, error = null)
+            }.onFailure { e ->
+                AppLogBuffer.forceAdd(Log.ERROR, "Pack", "HostKernel.$method 失败\n" + Log.getStackTraceString(e))
+                sendResult(callbackId, success = false, dataJson = null, error = e.message ?: "内核桥失败")
+            }
+        }
+    }
+
+    private fun kernelStateJson(forceNetwork: Boolean): String {
+        val km = com.suanran.dreambox.core.kernel.KernelManager
+        val ctx = this@PackHostActivity
+        val activeId = km.activeKernelId(ctx)
+        val index = runCatching {
+            kotlinx.coroutines.runBlocking { km.fetchIndex(ctx, forceNetwork = forceNetwork) }
+        }.getOrNull()
+        val rows = org.json.JSONArray()
+        val seen = mutableSetOf<String>()
+        fun putRow(id: String, name: String, version: String, commit: String) {
+            if (!seen.add(id)) return
+            rows.put(JSONObject().apply {
+                put("id", id)
+                put("name", name)
+                put("version", version)
+                put("commit", commit)
+                put("builtin", id == km.BUNDLED_ALPHA_ID)
+                put("installed", id == km.BUNDLED_ALPHA_ID || km.isInstalled(ctx, id))
+                put("active", id == activeId)
+            })
+        }
+        // 内置内核永远在第一位（与原内核管理列表一致）
+        putRow(
+            km.BUNDLED_ALPHA_ID,
+            "内置 Alpha",
+            "内置",
+            km.installedCommit(ctx, km.BUNDLED_ALPHA_ID) ?: "",
+        )
+        index?.kernels?.forEach { k -> putRow(k.id, k.name, k.version, k.commit) }
+        // 已装但不在索引里的（自定义内核）也要能切回去
+        km.installedKernelIds(ctx).forEach { id ->
+            putRow(id, km.installedName(ctx, id), "已安装", km.installedCommit(ctx, id) ?: "")
+        }
+        val activeName = rows.let {
+            var n = activeId
+            for (i in 0 until it.length()) {
+                val o = it.optJSONObject(i) ?: continue
+                if (o.optString("id") == activeId) { n = o.optString("name"); break }
+            }
+            n
+        }
+        return JSONObject().apply {
+            put("activeId", activeId)
+            put("activeName", activeName)
+            put("kernels", rows)
+        }.toString()
     }
 
     private fun sendResult(callbackId: String, success: Boolean, dataJson: String?, error: String? = null, save: Boolean = false) {

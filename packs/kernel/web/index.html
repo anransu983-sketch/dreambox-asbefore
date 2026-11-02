@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>内核管家</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; padding: 18px 16px 40px; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #17141f; color: #efeafd; }
+  h1 { font-size: 22px; margin: 4px 0 6px; }
+  .sub { color: #b9aed6; font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+  .card { background: #221d31; border: 1px solid #372f52; border-radius: 16px; padding: 6px 16px; margin-bottom: 16px; }
+  .rowp { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #2e2750; }
+  .rowp:last-child { border-bottom: 0; }
+  .ic { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: #2e2750; flex: 0 0 auto; }
+  .nm { flex: 1; min-width: 0; }
+  .nm .t { font-size: 15.5px; font-weight: 600; }
+  .nm .s { font-size: 12px; color: #b9aed6; margin-top: 2px; word-break: break-all; }
+  .chip { flex: 0 0 auto; font-size: 12.5px; padding: 6px 11px; border-radius: 999px; background: #2e2750; color: #b9aed6; white-space: nowrap; border: 0; font-family: inherit; }
+  button.chip { cursor: pointer; }
+  .chip.on { background: #14532d; color: #9fe8b1; }
+  .chip.act { background: linear-gradient(90deg, #f78fb3, #9a7bff); color: #fff; font-weight: 600; }
+  .chip:disabled { opacity: .45; }
+  button.act { width: 100%; border: 0; border-radius: 12px; padding: 14px; font-size: 15.5px; font-weight: 600; background: linear-gradient(90deg, #f78fb3, #9a7bff); color: #fff; margin-bottom: 16px; }
+  button.act:disabled { opacity: .45; }
+  .hint { font-size: 12px; color: #8f83b8; line-height: 1.55; }
+  input[type="text"] { width: 100%; background: #17141f; border: 1px solid #372f52; border-radius: 10px; color: #efeafd; padding: 12px; font-size: 14px; margin: 10px 0; }
+  .err { color: #ffb3c1; font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>🧠 内核管家</h1>
+  <div class="sub">切换、升级和安装自定义内核都在这里，实际操作由梦盒本体执行。切换内核后，重启代理（断开再连）生效。</div>
+
+  <div class="err" id="err" style="display:none"></div>
+  <div class="card" id="list"><div class="rowp"><div class="nm"><div class="t">加载中…</div></div></div></div>
+  <button class="act" id="btn-refresh" type="button">检查更新</button>
+
+  <div class="card">
+    <div class="rowp" style="display:block">
+      <div class="nm"><div class="t">安装自定义内核</div><div class="s">粘贴第三方内核包（zip）链接，装好后自动切换到它</div></div>
+      <input type="text" id="custom-url" placeholder="https://example.com/kernel-plugin.zip">
+      <button class="act" id="btn-custom" type="button" style="margin-bottom:4px">安装并切换</button>
+    </div>
+  </div>
+  <div class="hint">内置 Alpha 永远保留，可随时切回。自定义内核来自第三方，装前请确认来源可信。</div>
+
+<script>
+(function () {
+  var listEl = document.getElementById('list');
+  var errEl = document.getElementById('err');
+  var btnRefresh = document.getElementById('btn-refresh');
+  var btnCustom = document.getElementById('btn-custom');
+  var busy = false;
+  var state = { activeId: '', activeName: '', kernels: [] };
+
+  function showErr(msg) {
+    if (msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    else { errEl.style.display = 'none'; }
+  }
+
+  function label(k) {
+    var s = k.version || '';
+    if (k.commit) s += (s ? ' · ' : '') + String(k.commit).slice(0, 6);
+    return s;
+  }
+
+  function render() {
+    if (!state.kernels.length) {
+      listEl.innerHTML = '<div class="rowp"><div class="nm"><div class="t">暂无内核</div><div class="s">点「检查更新」拉取最新内核列表</div></div></div>';
+      return;
+    }
+    listEl.innerHTML = state.kernels.map(function (k) {
+      var chip;
+      if (k.active) chip = '<span class="chip on">使用中</span>';
+      else if (k.installed) chip = '<button class="chip act" data-act="activate" data-id="' + k.id + '">切换</button>';
+      else chip = '<button class="chip act" data-act="install" data-id="' + k.id + '">下载</button>';
+      return '<div class="rowp"><div class="ic">' + (k.builtin ? '🧠' : '📦') + '</div>' +
+        '<div class="nm"><div class="t">' + k.name + '</div><div class="s">' + label(k) + '</div></div>' +
+        chip + '</div>';
+    }).join('');
+    listEl.querySelectorAll('button[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (busy) return;
+        run(b.getAttribute('data-act'), { id: b.getAttribute('data-id') }, b);
+      });
+    });
+  }
+
+  function callNative(method, options) {
+    return new Promise(function (resolve, reject) {
+      if (!window.Capacitor || !window.Capacitor.toNative) {
+        reject(new Error('原生桥未就绪'));
+        return;
+      }
+      window.Capacitor.toNative('HostKernel', method, options || {}, {
+        callback: function (res, err) {
+          if (err) { reject(new Error(err.message || String(err))); return; }
+          if (res && res.error) { reject(new Error(res.error.message || '调用失败')); return; }
+          var data = res && ('data' in res) ? res.data : res;
+          resolve(data || {});
+        }
+      });
+    });
+  }
+
+  function applyState(s) {
+    if (s && s.kernels) state = s;
+    render();
+  }
+
+  function run(method, options, btn) {
+    busy = true;
+    if (btn) { btn.disabled = true; btn.textContent = '处理中…'; }
+    btnRefresh.disabled = true;
+    showErr(null);
+    return callNative(method, options).then(applyState).catch(function (e) {
+      showErr(e.message || '操作失败');
+    }).then(function () {
+      busy = false;
+      btnRefresh.disabled = false;
+      render();
+    });
+  }
+
+  btnRefresh.addEventListener('click', function () {
+    if (busy) return;
+    btnRefresh.textContent = '检查中…';
+    run('refresh', {}).then(function () { btnRefresh.textContent = '检查更新'; });
+  });
+  btnCustom.addEventListener('click', function () {
+    if (busy) return;
+    var url = document.getElementById('custom-url').value.trim();
+    if (!url) { showErr('先粘贴内核包链接'); return; }
+    run('installCustom', { url: url }, btnCustom).then(function () {
+      btnCustom.textContent = '安装并切换';
+    });
+  });
+
+  callNative('state', {}).then(applyState).catch(function (e) { showErr(e.message || '加载失败'); render(); });
+})();
+</script>
+</body>
+</html>

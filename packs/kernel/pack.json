@@ -1,0 +1,1 @@
+{"hostKernel":true,"id":"kernel","permissions":["android.permission.INTERNET"],"pluginHeaders":[{"methods":[{"name":"state","rtype":"promise"},{"name":"refresh","rtype":"promise"},{"name":"install","rtype":"promise"},{"name":"activate","rtype":"promise"},{"name":"installCustom","rtype":"promise"}],"name":"HostKernel"}],"version":"1"}

@@ -54,7 +54,7 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun BackupRestoreSection() {
+fun BackupRestoreSection(bare: Boolean = false) {
     val viewModel = koinViewModel<BackupRestoreViewModel>()
     val storeSynchronizer = koinInject<StoreSynchronizer>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -84,30 +84,14 @@ fun BackupRestoreSection() {
         }
     }
 
-    BocchiSectionTitle(FlyTxt.MetaFeature.Section.BackupRestore)
-    Card {
-        ArrowPreference(
-            title = FlyTxt.MetaFeature.Backup.BackupTitle,
-            summary = FlyTxt.MetaFeature.Backup.BackupSummary,
-            enabled = !uiState.isBusy,
-            onClick = {
-                runCatching { exportLauncher.launch(viewModel.defaultBackupFileName()) }
-                    .onFailure { context.toast(FlyTxt.MetaFeature.Backup.BackupFailed.format("")) }
-            },
-        )
-        ArrowPreference(
-            title = FlyTxt.MetaFeature.Backup.RestoreTitle,
-            summary = FlyTxt.MetaFeature.Backup.RestoreSummary,
-            enabled = !uiState.isBusy,
-            onClick = {
-                runCatching {
-                        restoreLauncher.launch(
-                            arrayOf("application/zip", "application/octet-stream", "*/*")
-                        )
-                    }
-                    .onFailure { context.toast(FlyTxt.MetaFeature.Backup.RestoreFailed.format("")) }
-            },
-        )
+    // bare=true：只出两行本体（给应用设置「一张大卡」内嵌用，不自带标题和卡）。
+    if (bare) {
+        BackupRestoreRows(uiState.isBusy, viewModel, exportLauncher, restoreLauncher, context)
+    } else {
+        BocchiSectionTitle(FlyTxt.MetaFeature.Section.BackupRestore)
+        Card {
+            BackupRestoreRows(uiState.isBusy, viewModel, exportLauncher, restoreLauncher, context)
+        }
     }
 
     BackupConfirmDialog(
@@ -175,4 +159,36 @@ private fun restartApplication(context: android.content.Context, storeSynchroniz
     (context as? Activity)?.finishAffinity()
     storeSynchronizer.syncAll()
     exitProcess(0)
+}
+
+@Composable
+private fun BackupRestoreRows(
+    isBusy: Boolean,
+    viewModel: BackupRestoreViewModel,
+    exportLauncher: androidx.activity.result.ActivityResultLauncher<String>,
+    restoreLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>,
+    context: android.content.Context,
+) {
+    ArrowPreference(
+        title = FlyTxt.MetaFeature.Backup.BackupTitle,
+        summary = FlyTxt.MetaFeature.Backup.BackupSummary,
+        enabled = !isBusy,
+        onClick = {
+            runCatching { exportLauncher.launch(viewModel.defaultBackupFileName()) }
+                .onFailure { context.toast(FlyTxt.MetaFeature.Backup.BackupFailed.format("")) }
+        },
+    )
+    ArrowPreference(
+        title = FlyTxt.MetaFeature.Backup.RestoreTitle,
+        summary = FlyTxt.MetaFeature.Backup.RestoreSummary,
+        enabled = !isBusy,
+        onClick = {
+            runCatching {
+                    restoreLauncher.launch(
+                        arrayOf("application/zip", "application/octet-stream", "*/*")
+                    )
+                }
+                .onFailure { context.toast(FlyTxt.MetaFeature.Backup.RestoreFailed.format("")) }
+        },
+    )
 }
