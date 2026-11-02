@@ -21,6 +21,9 @@
 
 package com.suanran.dreambox.feature.home.presentation.screen
 
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -157,9 +160,9 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(AppTheme.radii.radius12))
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(UiDp.dp12))
                             .background(Color.White)
-                            .border(1.dp, Color(0xFFFFB7C5).copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(AppTheme.radii.radius12))
+                            .border(1.dp, Color(0xFFFFB7C5).copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(UiDp.dp12))
                             .clickable { openSecondary(Route.GlobalSearch) }
                             .padding(horizontal = UiDp.dp14, vertical = UiDp.dp10),
                         verticalAlignment = Alignment.CenterVertically,

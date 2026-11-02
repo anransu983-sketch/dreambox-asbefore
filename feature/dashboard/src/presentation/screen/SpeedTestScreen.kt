@@ -28,9 +28,9 @@ import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopBar
+import com.suanran.dreambox.presentation.component.navigation.TopBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import java.net.HttpURLConnection
 import java.net.URL
 

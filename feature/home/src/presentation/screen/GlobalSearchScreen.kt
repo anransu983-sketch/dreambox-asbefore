@@ -36,9 +36,9 @@ import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TopBar
+import com.suanran.dreambox.presentation.component.navigation.TopBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 
 /** 全局搜索（Stash/Loon 式）：一个框通搜功能入口、策略组、节点、配置。 */
 private data class SearchDestination(
