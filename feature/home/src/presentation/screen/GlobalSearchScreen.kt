@@ -55,12 +55,11 @@ private val DESTINATIONS: List<SearchDestination> = listOf(
     SearchDestination("日志", "日志 log 诊断", Route.Log),
     SearchDestination("覆写", "覆写 override 快速规则", Route.Override),
     SearchDestination("自定义路由", "路由 分流 routing 预设", Route.CustomRouting),
-    SearchDestination("流媒体解锁", "解锁 流媒体 netflix disney youtube", Route.StreamUnlock),
     SearchDestination("核心功能", "核心 meta 控制器 面板 geox", Route.MetaFeature),
     SearchDestination("网络设置", "网络 dns tun 网络", Route.NetworkSettings),
     SearchDestination("应用设置", "设置 外观 行为 settings", Route.AppSettings),
     SearchDestination("个性化", "个性化 图标 面板 导航栏 模块", Route.Personalize),
-    SearchDestination("插件", "插件 功能包 packs 终端 节点部署", Route.FeaturePacks),
+    SearchDestination("插件", "插件 功能包 packs 终端 节点部署 流媒体 解锁 webdav 云备份", Route.FeaturePacks),
     SearchDestination("提供商", "提供商 providers 远程节点", Route.Providers),
     SearchDestination("关于", "关于 版本 about", Route.About),
 )

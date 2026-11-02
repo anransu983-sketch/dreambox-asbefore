@@ -144,6 +144,15 @@ class PackStore(context: Context) {
                 entryClass = "com.suanran.pack.iptest.IpTestPackEntry",
             ),
             PackDef(
+                id = "unlock",
+                name = "流媒体解锁",
+                summary = "经当前节点出口检测 Netflix / Disney+ / YouTube Premium 的解锁情况与地区；平台判定逻辑放插件里，改版漂移只更新插件不用发版",
+                version = "1",
+                sizeText = "约 60 KB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/unlock-pack-v1.zip",
+                entryClass = "com.suanran.pack.unlock.UnlockPackEntry",
+            ),
+            PackDef(
                 id = "webdav",
                 name = "WebDAV 云备份",
                 summary = "把全量备份（配置/订阅/设置）存到自己的 WebDAV 网盘：备份包由本体生成与恢复，本插件只管传输；账号密码加密保存在本机",

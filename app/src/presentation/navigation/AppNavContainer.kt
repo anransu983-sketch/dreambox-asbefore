@@ -60,7 +60,6 @@ import com.suanran.dreambox.feature.dashboard.presentation.screen.SpeedTestScree
 import com.suanran.dreambox.feature.home.presentation.screen.GlobalSearchScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.CustomRoutingRoute
 import com.suanran.dreambox.feature.dashboard.presentation.screen.RulesScreen
-import com.suanran.dreambox.feature.dashboard.presentation.screen.StreamUnlockScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.TrafficStatisticsContent
 import com.suanran.dreambox.feature.log.presentation.screen.LogDetailScreen
 import com.suanran.dreambox.feature.log.presentation.screen.LogScreen
@@ -118,7 +117,6 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.Providers -> ProvidersScreen(navigator)
         Route.ProviderFilePreview -> ProviderFilePreviewRoute(navigator)
         Route.CustomRouting -> CustomRoutingRoute(navigator)
-        Route.StreamUnlock -> StreamUnlockScreen(navigator)
         Route.Theme -> ThemeScreen(navigator)
         Route.Lab -> LabScreen(navigator)
         Route.FeaturePacks -> FeaturePacksScreen(navigator)

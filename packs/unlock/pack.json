@@ -1,0 +1,1 @@
+{"id":"unlock","permissions":["android.permission.INTERNET"],"pluginHeaders":[{"methods":[{"name":"probe","rtype":"promise"}],"name":"Unlock"}],"version":"1"}

@@ -221,7 +221,23 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
                         onOpenPanel = { onOpenDashboard?.invoke() },
                         onOpenTraffic = { openSecondary(Route.TrafficStatistics) },
                         onRefreshSubscription = { mainPagerState.animateToPage(2) },
-                        onOpenStreamUnlock = { openSecondary(Route.StreamUnlock) },
+                        onOpenStreamUnlock = {
+                            // 流媒体解锁已插件化（2026-11-03）：装了 unlock 包直接开包，没装去插件页。
+                            val packDir = java.io.File(context.filesDir, "packs/unlock")
+                            if (java.io.File(packDir, "pack.json").isFile) {
+                                val intent = android.content.Intent().apply {
+                                    setClassName(context.packageName, "com.suanran.dreambox.presentation.pack.PackHostActivity")
+                                    putExtra("pack_id", "unlock")
+                                    putExtra("pack_name", "流媒体解锁")
+                                    putExtra("pack_dir", packDir.absolutePath)
+                                    putExtra("pack_entry_class", "com.suanran.pack.unlock.UnlockPackEntry")
+                                }
+                                runCatching { context.startActivity(intent) }
+                                    .onFailure { openSecondary(Route.FeaturePacks) }
+                            } else {
+                                openSecondary(Route.FeaturePacks)
+                            }
+                        },
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(UiDp.dp16)) {
                         for (panelKey in panelOrder) {

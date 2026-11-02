@@ -30,7 +30,6 @@ import com.suanran.dreambox.feature.dashboard.domain.RuleToggleUseCase
 import com.suanran.dreambox.feature.dashboard.presentation.viewmodel.ConnectionViewModel
 import com.suanran.dreambox.feature.dashboard.presentation.viewmodel.CustomRoutingViewModel
 import com.suanran.dreambox.feature.dashboard.presentation.viewmodel.RulesViewModel
-import com.suanran.dreambox.feature.dashboard.presentation.viewmodel.StreamUnlockViewModel
 import com.suanran.dreambox.feature.dashboard.presentation.viewmodel.TrafficStatisticsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -45,7 +44,6 @@ val featureDashboardViewModelModule = module {
     viewModel { TrafficStatisticsViewModel(get()) }
     viewModel { CustomRoutingViewModel(get(), get(), get()) }
     viewModel { RulesViewModel(get()) }
-    viewModel { StreamUnlockViewModel() }
     single<CustomRoutingInitializer> { CustomRoutingBootstrapper(get<OverrideConfigRepository>()) }
 }
 

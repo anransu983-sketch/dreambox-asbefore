@@ -104,9 +104,6 @@ sealed interface Route {
     data object CustomRouting : Route
 
     @Serializable
-    data object StreamUnlock : Route
-
-    @Serializable
     data object Theme : Route
 
     @Serializable

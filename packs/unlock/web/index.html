@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>流媒体解锁</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; padding: 18px 16px 40px; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #17141f; color: #efeafd; }
+  h1 { font-size: 22px; margin: 4px 0 6px; }
+  .sub { color: #b9aed6; font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+  .card { background: #221d31; border: 1px solid #372f52; border-radius: 16px; padding: 6px 16px; margin-bottom: 16px; }
+  .rowp { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #2e2750; }
+  .rowp:last-child { border-bottom: 0; }
+  .ic { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: #2e2750; flex: 0 0 auto; }
+  .nm { flex: 1; min-width: 0; }
+  .nm .t { font-size: 15.5px; font-weight: 600; }
+  .nm .s { font-size: 12px; color: #b9aed6; margin-top: 2px; }
+  .chip { flex: 0 0 auto; font-size: 12.5px; padding: 6px 11px; border-radius: 999px; background: #2e2750; color: #b9aed6; white-space: nowrap; }
+  .chip.ok { background: #14532d; color: #9fe8b1; }
+  .chip.no { background: #5b2333; color: #ffb3c1; }
+  .chip.err { background: #4a3a12; color: #ffd9a0; }
+  button.act { width: 100%; border: 0; border-radius: 12px; padding: 14px; font-size: 15.5px; font-weight: 600; background: linear-gradient(90deg, #f78fb3, #9a7bff); color: #fff; }
+  button.act:disabled { opacity: .45; }
+  .hint { font-size: 12px; color: #8f83b8; line-height: 1.55; }
+</style>
+</head>
+<body>
+  <h1>🎬 流媒体解锁</h1>
+  <div class="sub">经当前节点出口检测各平台解锁情况（走本机代理端口，测的就是你现在这个节点）。代理没开时结果多半是失败，先连上节点再测。</div>
+
+  <div class="card" id="list"></div>
+  <button class="act" id="btn-all" type="button">全部检测</button>
+  <div class="hint" style="margin-top:12px">判定口径与原来本体版一致：Netflix 看跳转与地区码，Disney+ / YouTube Premium 看落地页内容。平台改版可能让个别判定漂移，插件可单独更新修正。</div>
+
+<script>
+(function () {
+  var PLATFORMS = [
+    { id: 'NETFLIX', name: 'Netflix', icon: '🍿', site: 'netflix.com' },
+    { id: 'DISNEY_PLUS', name: 'Disney+', icon: '🏰', site: 'disneyplus.com' },
+    { id: 'YOUTUBE_PREMIUM', name: 'YouTube Premium', icon: '▶️', site: 'youtube.com/premium' }
+  ];
+  var listEl = document.getElementById('list');
+  var state = {};
+  PLATFORMS.forEach(function (p) { state[p.id] = { status: 'idle', region: null }; });
+
+  function render() {
+    listEl.innerHTML = PLATFORMS.map(function (p) {
+      var st = state[p.id];
+      var chip = '<span class="chip">未检测</span>';
+      if (st.status === 'testing') chip = '<span class="chip">检测中…</span>';
+      else if (st.status === 'unlocked') chip = '<span class="chip ok">已解锁' + (st.region ? ' · ' + st.region : '') + '</span>';
+      else if (st.status === 'locked') chip = '<span class="chip no">未解锁</span>';
+      else if (st.status === 'failed') chip = '<span class="chip err">检测失败</span>';
+      return '<div class="rowp"><div class="ic">' + p.icon + '</div>' +
+        '<div class="nm"><div class="t">' + p.name + '</div><div class="s">' + p.site + '</div></div>' +
+        chip + '</div>';
+    }).join('');
+  }
+
+  function callNative(method, options) {
+    return new Promise(function (resolve, reject) {
+      if (!window.Capacitor || !window.Capacitor.toNative) {
+        reject(new Error('原生桥未就绪'));
+        return;
+      }
+      window.Capacitor.toNative('Unlock', method, options || {}, {
+        callback: function (res, err) {
+          if (err) { reject(new Error(err.message || String(err))); return; }
+          if (res && res.error) { reject(new Error(res.error.message || '调用失败')); return; }
+          var data = res && ('data' in res) ? res.data : res;
+          resolve(data || {});
+        }
+      });
+    });
+  }
+
+  function probeOne(p) {
+    state[p.id] = { status: 'testing', region: null };
+    render();
+    return callNative('probe', { platform: p.id }).then(function (r) {
+      state[p.id] = { status: r.status || 'failed', region: r.region || null };
+    }).catch(function () {
+      state[p.id] = { status: 'failed', region: null };
+    }).then(render);
+  }
+
+  var btnAll = document.getElementById('btn-all');
+  btnAll.addEventListener('click', function () {
+    btnAll.disabled = true;
+    btnAll.textContent = '检测中…';
+    var chain = Promise.resolve();
+    PLATFORMS.forEach(function (p) { chain = chain.then(function () { return probeOne(p); }); });
+    chain.then(function () {
+      btnAll.disabled = false;
+      btnAll.textContent = '全部检测';
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
