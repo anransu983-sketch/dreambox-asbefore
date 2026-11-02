@@ -52,9 +52,6 @@ private data class SpeedUiState(
 fun SpeedTestScreen(navigator: Navigator) {
     val spacing = AppTheme.spacing
     val scrollBehavior = MiuixScrollBehavior()
-    val proxyControl = org.koin.compose.koinInject<com.suanran.dreambox.runtime.api.contract.ProxyControlContract>()
-    val isRunning by proxyControl.isRunning.collectAsStateWithLifecycle()
-    val primaryNode by proxyControl.resolvedPrimaryNode.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(SpeedUiState()) }
     var job by remember { mutableStateOf<Job?>(null) }
@@ -78,11 +75,7 @@ fun SpeedTestScreen(navigator: Navigator) {
                         modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.space16, vertical = spacing.space12),
                     ) {
                         Text(
-                            text = if (isRunning) {
-                                "代理运行中 · 当前出口：${primaryNode?.name ?: "未知节点"}"
-                            } else {
-                                "代理未运行 · 现在测的是直连速度"
-                            },
+                            text = "经 App 当前网络路径测速：代理运行中测节点速度，未运行测直连速度。",
                             style = MiuixTheme.textStyles.body2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )

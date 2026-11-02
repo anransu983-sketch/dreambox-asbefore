@@ -168,6 +168,9 @@ class TrafficStatisticsViewModel(private val trafficStatisticsStore: TrafficStat
                 emptyList(),
             )
 
+    private val nodeHostFlow =
+        combine(nodeUsages, hostUsages) { nodes, hosts -> nodes to hosts }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<TrafficStatisticsUiState> =
         combine(
@@ -175,9 +178,8 @@ class TrafficStatisticsViewModel(private val trafficStatisticsStore: TrafficStat
             sortedAppsFlow,
             barChartFlow,
             footprintFlow,
-            nodeUsages,
-            hostUsages,
-        ) { range, sortedApps, (barItems, barLabels), footprint, nodes, hosts ->
+            nodeHostFlow,
+        ) { range, sortedApps, (barItems, barLabels), footprint, (nodes, hosts) ->
             buildUiState(range, sortedApps, barItems, barLabels, footprint, nodes, hosts)
         }
             .stateIn(
