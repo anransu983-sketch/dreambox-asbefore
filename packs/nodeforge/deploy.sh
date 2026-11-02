@@ -302,8 +302,10 @@ if [ -n "$INBOUND_ID" ]; then
         # listen_port 与 addrs 端口），不再沿用旧端口。
         log "按表单把入站端口从 $INB_PORT 改为 $NODE_PORT"
     fi
-    # 同名残留清理：别的入站若占着本次 tag（如旧版部署分叉留下的孤儿），
-    # 两个同 tag 会让核心配置冲突——把残留改成 nf-unused-<id> 退场。
+    # 同名残留清除：别的入站若占着本次 tag（如旧版部署分叉留下的孤儿），
+    # 直接删除——它没挂任何客户端，留着只会占名、占监听端口
+    # （v15 实测：残留占着 8451，正牌入站搬过去 bind 冲突部署失败）。
+    # s-ui 的 del 按 tag 删：从核心摘除＋删库行＋清客户端挂载。
     if [ -n "$NODE_NAME" ]; then
         INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
         SWEEP="$(printf '%s' "$INB_LIST" | python3 -c '
@@ -322,25 +324,16 @@ if isinstance(o, dict):
 items = [x for x in (o or []) if isinstance(x, dict)]
 for t in items:
     if t.get("tag") == sys.argv[1] and str(t.get("id")) != sys.argv[2]:
-        t = dict(t)
-        t["tag"] = "nf-unused-" + str(t.get("id"))
-        # 只改名不够：残留还占着它的监听端口（如上次分叉的 8451），
-        # 本次入站搬过去会 bind: address already in use（v15 实测）。
-        # 一并把残留挪到无人端口（按 id 错开），它没挂客户端、纯占位。
-        try:
-            oid = int(t.get("id") or 0)
-        except Exception:
-            oid = 0
-        t["listen_port"] = 61000 + (oid % 500)
-        print(json.dumps(t))
+        print(json.dumps(t.get("tag")))
 ' "$INBOUND_TAG" "$INBOUND_ID")"
         if [ -n "$SWEEP" ]; then
             printf '%s\n' "$SWEEP" | while IFS= read -r line; do
                 [ -n "$line" ] || continue
-                api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
+                api_post_ok save --data-urlencode object=inbounds --data-urlencode action=del \
                     --data-urlencode "data=$line" >/dev/null 2>&1 || true
             done
-            log "已清理同名残留入站（避免节点名冲突）"
+            log "已清除同名残留入站（避免节点名/端口冲突）"
+            INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
         fi
     fi
     # 复用入站：addrs 为空/不对则整对象 edit 回写（edit 会连带重生成客户端链接）
