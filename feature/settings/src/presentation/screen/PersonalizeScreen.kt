@@ -1,6 +1,13 @@
 package com.suanran.dreambox.feature.settings.presentation.screen
 
 import com.suanran.dreambox.presentation.icon.FlyCat
+import com.suanran.dreambox.presentation.icon.flycat.Github
+import com.suanran.dreambox.presentation.icon.flycat.GitMerge
+import com.suanran.dreambox.presentation.icon.flycat.Meta
+import com.suanran.dreambox.presentation.icon.flycat.ScrollText
+import com.suanran.dreambox.presentation.icon.flycat.Settings2
+import com.suanran.dreambox.presentation.icon.flycat.WifiCog
+import androidx.compose.material.icons.filled.Science
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.Switch
 import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
