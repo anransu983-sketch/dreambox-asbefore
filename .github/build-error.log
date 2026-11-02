@@ -1,16 +1,47 @@
 === What went wrong ===
 * What went wrong:
-A problem was found with the configuration of task ':pack:bundleReleaseAar' (type 'BundleAar').
-Input file does not exist
-  Type 'com.android.build.gradle.tasks.BundleAar' property 'aarMetadataCheck' specifies directory '/home/runner/work/dreambox-asbefore/dreambox-asbefore/pack/build/intermediates/aar_metadata_check/release/checkReleaseAarMetadata' which doesn't exist
-    An input file was expected to be present but it doesn't exist
-    For more information, please refer to https://docs.gradle.org/9.8.0/userguide/validation_problems.html#input_file_does_not_exist in the Gradle documentation.
-    Possible solutions:
-      1. Make sure the directory exists before the task is called.
-      2. Make sure that the task which produces the directory is declared as an input.
+Configuration cache problems found in this build.
+
+17 problems were found storing the configuration cache.
+- Task `:core:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:data:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:about:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:dashboard:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:editor:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:home:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:log:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:override:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:profiles:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:proxy:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:feature:settings:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:locale:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:pack:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:runtime:api:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+- Task `:runtime:client:ensureAarMetadataCheckDirs` of type `org.gradle.api.DefaultTask`: cannot serialize object of type 'org.gradle.api.internal.project.LifecycleAwareProject', a subtype of 'org.gradle.api.Project', as these are not supported with the configuration cache.
+  See https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+plus 2 more problems. Please see the report for details.
+
+See the complete report at file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/build/reports/configuration-cache/bnbsd9ohgn92la9u7j49bi24t/2ctmhtkpayivhxvdfamlm4m7v/configuration-cache-report.html
 
 * Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
 
 Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
 
@@ -18,10 +49,9 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 33s
-88 actionable tasks: 64 executed, 24 from cache
-Configuration cache entry stored.
+BUILD FAILED in 5m 55s
+633 actionable tasks: 420 executed, 213 from cache
+Configuration cache entry discarded with 17 problems.
 
 === e: / FAILED lines ===
-> Task :pack:bundleReleaseAar FAILED
-BUILD FAILED in 33s
+BUILD FAILED in 5m 55s
