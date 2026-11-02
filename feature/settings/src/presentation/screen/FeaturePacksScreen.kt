@@ -140,7 +140,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
     var progressText by remember { mutableStateOf("") }
     // 模块页关掉显示开关的包不在这里出现（去模块页或已隐藏的模块页恢复）。
     val packHidden = remember(refreshTick) { loadHiddenSections(mmkv, PACKS_VISIBILITY_SCOPE) }
-    val visiblePacks = PackStore.REGISTRY.filter { it.id !in packHidden }
+    val visiblePacks = PackStore.REGISTRY.filter { it.id !in packHidden }.distinctBy { it.id }
 
     fun openPack(def: PackDef) {
         val intent = Intent().apply {

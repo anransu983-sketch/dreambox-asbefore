@@ -21,6 +21,7 @@
 
 package com.suanran.dreambox.feature.settings.presentation.screen
 
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -210,9 +211,7 @@ fun ThemeScreen(navigator: Navigator) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
                         }
                     }
-                }
-                Spacer(modifier = Modifier.height(AppTheme.spacing.space16))
-                Card {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = AppTheme.spacing.space16))
                     Row(
                         modifier =
                             Modifier
@@ -264,18 +263,7 @@ fun ThemeScreen(navigator: Navigator) {
                 )
             }
             item {
-                BocchiSectionTitle(themeTxt.CustomTitle)
-                Card {
-                    ThemeModeSelectorItem(
-                        themeMode = themeMode,
-                        onThemeModeChange = appSettingsViewModel::onThemeModeChange,
-                    )
-                    ThemeColorPickerItem(
-                        themeSeedColorArgb = themeSeedColorArgb,
-                        onThemeSeedColorChange = appSettingsViewModel::onThemeSeedColorChange,
-                    )
-                }
-                Spacer(modifier = Modifier.height(AppTheme.spacing.space16))
+                // 主题模式/配色只保留顶部一组（原「自定义」卡与顶部重复且读的是另一份状态，已删）。
                 Text(
                     text = themeTxt.StoreHint,
                     style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
