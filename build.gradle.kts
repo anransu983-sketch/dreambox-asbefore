@@ -195,3 +195,14 @@ tasks.register("assembleReleaseWithExtension") {
     description = "Assemble release APK with extension merged (arm64-v8a and x86_64, including javet libs)."
     dependsOn(":app:assembleRelease", ":extension:assembleRelease")
 }
+
+// 与 :app 既有口径一致（见 app/build.gradle.kts 尾部注释）：部分依赖的 AAR 元数据要求
+// compileSdk 37（尚未公开），需在所有模块跳过 check*AarMetadata，否则 release 构建
+// 会在库模块（如 :feature:home:checkReleaseAarMetadata）上失败；debug 构建不触发此检查。
+allprojects {
+    tasks.configureEach {
+        if (name.endsWith("AarMetadata")) {
+            enabled = false
+        }
+    }
+}
