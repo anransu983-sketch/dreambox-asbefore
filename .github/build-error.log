@@ -1,11 +1,11 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':feature:home:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':feature:dashboard:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_IMPORT
+   > Kotlin compiler: UNRESOLVED_REFERENCE
        Kotlin compiler error
-         Unresolved reference 'TopBar'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:39
+         Unresolved reference 'runtime'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:55
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,23 +19,29 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 1m 58s
-476 actionable tasks: 261 executed, 215 from cache
+BUILD FAILED in 1m 19s
+548 actionable tasks: 307 executed, 241 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:39:36 Unresolved reference 'TopBar'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:41:36 Unresolved reference 'MiuixScrollBehavior'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:71:26 Unresolved reference 'MiuixScrollBehavior'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:102:13 Unresolved reference 'TopBar'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:105:36 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:157:21 Unresolved reference 'Row'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:160:30 Unresolved reference 'clip' on receiver of type 'Modifier'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:160:88 Unresolved reference 'AppTheme'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:162:39 Unresolved reference 'dp'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:162:134 Unresolved reference 'AppTheme'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:167:25 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:169:48 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:170:48 @Composable invocations can only happen from the context of a @Composable function
-> Task :feature:home:compileReleaseKotlin FAILED
-BUILD FAILED in 1m 58s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:55:73 Unresolved reference 'runtime'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:56:19 Property delegate must have a 'getValue(Nothing?, KProperty0<??? (Unknown type for type parameter T)>)' method. None of the following functions is applicable:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:56:22 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:56:35 Unresolved reference 'isRunning'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:56:45 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:57:21 Property delegate must have a 'getValue(Nothing?, KProperty0<??? (Unknown type for type parameter T)>)' method. None of the following functions is applicable:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:57:24 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:57:37 Unresolved reference 'resolvedPrimaryNode'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:57:57 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/screen/SpeedTestScreen.kt:82:62 Unresolved reference 'name'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:11 Argument type mismatch: actual type is 'suspend (Array<Any>, ??? (Unknown type for value parameter sortedApps), ??? (Unknown type for value parameter <destruct>), ??? (Unknown type for value parameter footprint), ??? (Unknown type for value parameter nodes), ??? (Unknown type for value parameter hosts)) -> TrafficStatisticsUiState', but 'suspend (Array<Any>) -> TrafficStatisticsUiState' was expected.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:20 Cannot infer type for value parameter 'sortedApps'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:32 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:32 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:32 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:55 Cannot infer type for value parameter 'footprint'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:66 Cannot infer type for value parameter 'nodes'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:180:73 Cannot infer type for value parameter 'hosts'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/dashboard/src/presentation/viewmodel/TrafficStatisticsViewModel.kt:181:26 Argument type mismatch: actual type is 'Array<Any>', but 'StatisticsTimeRange' was expected.
+> Task :feature:dashboard:compileReleaseKotlin FAILED
+BUILD FAILED in 1m 19s
