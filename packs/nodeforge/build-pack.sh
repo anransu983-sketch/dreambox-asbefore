@@ -17,7 +17,7 @@ set -euo pipefail
 PACK_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$PACK_DIR/.build"
 TOOLS_DIR="$PACK_DIR/.tools"
-PACK_VER="$(sed -n 's/.*"version":"\([0-9]*\)".*/\1/p' "$PACK_DIR/pack.json" | head -1)"
+PACK_VER="$(sed -n 's/.*"version": *"\([0-9]*\)".*/\1/p' "$PACK_DIR/pack.json" | head -1)"
 ZIP_NAME="nodeforge-pack-v${PACK_VER}.zip"
 JSCH_VERSION="0.2.23"
 KOTLIN_VERSION="2.0.21"
