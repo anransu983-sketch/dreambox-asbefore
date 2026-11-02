@@ -134,3 +134,10 @@
 -keepclassmembers class * {
     @org.koin.core.inject *** inject(...);
 }
+
+# ========================================
+# 功能包桥契约（DreamBox packs）：包内 plugins.dex 按全类名引用宿主接口，
+# R8 改名或裁剪都会让所有功能包（nodeforge/sshtty）在运行时链接失败。
+# ========================================
+-keep class com.suanran.dreambox.core.pack.** { *; }
+-keep class com.suanran.dreambox.presentation.pack.** { *; }

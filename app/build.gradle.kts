@@ -270,6 +270,15 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
+            // 瘦身版（1.38 起）：debug 构建开启代码/资源压缩，功能不变。
+            // 签名仍走原 debug.keystore（可覆盖安装）；release 的 Loader 占位符不涉及本构建。
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-loader.pro",
+                "proguard/proguard-rules.keep",
+            )
         }
         release {
             isMinifyEnabled = true
