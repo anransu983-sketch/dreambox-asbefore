@@ -175,7 +175,7 @@ internal fun NodeGroupCard(
                 modifier = Modifier
                     .padding(end = UiDp.dp10)
                     .size(UiDp.dp36)
-                    .clip(RoundedCornerShape(AppTheme.radii.radius10)),
+                    .clip(RoundedCornerShape(10.dp)),
             )
         }
         Column(modifier = Modifier.weight(1f)) {
