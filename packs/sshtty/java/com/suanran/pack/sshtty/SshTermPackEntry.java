@@ -487,8 +487,8 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
     }
 
     // ── 一键 TQ（TcpQuality，ibsgss）──────────────────────────
-    // 定版口径（2026-10-24 与用户定版）：三网回程＋单线程测速，不跑教育网/国际互联
-    // → CLI 即 runTcpQuality.sh --speedtest。脱离会话跑（nohup 写日志），
+    // 完整脚本口径（用户 2026-11-02 21:32 拍板）：--all 全套
+    // （IPv4/IPv6＋教育网 CERNET＋国际互联＋单线程测速）。脱离会话跑（nohup 写日志），
     // 状态/报告链接从日志里取——报告 ID 有 0/O 形近坑，必须机器原文提取、原样可复制。
 
     private JSONObject credsFor(JSONObject opts) throws Exception {
@@ -552,7 +552,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     + "cd /tmp/sshtty-tq && "
                     + "if pgrep -f 'runTcpQuality[.]sh' >/dev/null; then echo ALREADY; "
                     + "else mv -f tq.log tq-prev.log 2>/dev/null; "
-                    + "nohup env TERM=xterm-256color bash runTcpQuality.sh --speedtest "
+                    + "nohup env TERM=xterm-256color bash runTcpQuality.sh --all "
                     + "> tq.log 2>&1 < /dev/null & echo STARTED; fi";
             String r = runExec(srv, cmd, 60).trim();
             callback.onResult(true, new JSONObject()

@@ -93,7 +93,7 @@
 <!-- ═══ TQ ═══ -->
 <div id="view-tq" class="hidden">
   <h1>📶 一键 TQ</h1>
-  <p class="sub" id="tq-sub">TcpQuality：三网回程＋单线程测速（不跑教育网/国际互联）。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「TQ 结果」继续看。</p>
+  <p class="sub" id="tq-sub">TcpQuality 完整脚本（--all）：三网回程＋教育网＋国际互联＋单线程测速，全套跑完通常十几分钟。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「TQ 结果」继续看。</p>
   <div class="card">
     <div id="tq-status">准备中…</div>
     <div id="tq-link" class="linkbox hidden">
@@ -306,7 +306,7 @@
         $('tq-link').classList.remove('hidden');
         if (!r.running && tqTimer) { clearInterval(tqTimer); tqTimer = null; }
       } else {
-        $('tq-status').textContent = r.running ? '⏳ TQ 运行中…（三网回程＋单线程，通常几分钟）' : '还没有跑过 TQ，或上次的日志已被清理。回列表点「一键TQ」开始。';
+        $('tq-status').textContent = r.running ? '⏳ TQ 运行中…（完整全套，通常十几分钟）' : '还没有跑过 TQ，或上次的日志已被清理。回列表点「一键TQ」开始。';
         if (!r.running && tqTimer) { clearInterval(tqTimer); tqTimer = null; }
       }
       if (r.tail) $('tq-tail').textContent = r.tail;
