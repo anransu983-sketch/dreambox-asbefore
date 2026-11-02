@@ -324,6 +324,14 @@ for t in items:
     if t.get("tag") == sys.argv[1] and str(t.get("id")) != sys.argv[2]:
         t = dict(t)
         t["tag"] = "nf-unused-" + str(t.get("id"))
+        # 只改名不够：残留还占着它的监听端口（如上次分叉的 8451），
+        # 本次入站搬过去会 bind: address already in use（v15 实测）。
+        # 一并把残留挪到无人端口（按 id 错开），它没挂客户端、纯占位。
+        try:
+            oid = int(t.get("id") or 0)
+        except Exception:
+            oid = 0
+        t["listen_port"] = 61000 + (oid % 500)
         print(json.dumps(t))
 ' "$INBOUND_TAG" "$INBOUND_ID")"
         if [ -n "$SWEEP" ]; then
