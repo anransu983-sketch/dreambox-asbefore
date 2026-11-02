@@ -54,6 +54,7 @@ import com.suanran.dreambox.core.model.GeoFileType
 import com.suanran.dreambox.core.model.geoXItems
 import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreSection
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MetaFeatureViewModel
+import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
@@ -106,34 +107,16 @@ fun MetaFeatureScreen(navigator: Navigator) {
     val ageKeyDialogVisible = remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopBar(title = FlyTxt.MetaFeature.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(navigator = navigator) }) }
+        topBar = { TopBar(title = FlyTxt.MetaFeature.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(navigator = navigator) }, actions = { ModuleHelpAction("meta") }) }
     ) { innerPadding ->
         val mainLikePadding = rememberStandalonePageMainPadding()
         val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
-        val defaultKeys = listOf("conn", "routing", "panel", "backup", "agekey")
+        val defaultKeys = listOf("routing")
         var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "meta_feature")) }
         val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
-        val sectionTitles = mapOf(
-            "conn" to "连接与流量", "routing" to "分流相关", "panel" to "面板",
-            "backup" to "备份恢复", "agekey" to "Age 密钥",
-        )
+        val sectionTitles = mapOf("routing" to "分流相关")
         val listState = rememberLazyListState()
     val sectionContent: Map<String, @Composable () -> Unit> = mapOf(
-        "conn" to {
-                BocchiSectionTitle(FlyTxt.MetaFeature.Section.ConnectionAndTraffic)
-                BocchiCard {
-                    ArrowPreference(
-                        title = FlyTxt.Connection.Title,
-                        summary = FlyTxt.Connection.Summary,
-                        onClick = { navigator.push(Route.Connection) },
-                    )
-                    ArrowPreference(
-                        title = FlyTxt.TrafficStatistics.Title,
-                        summary = FlyTxt.TrafficStatistics.EntrySummary,
-                        onClick = { navigator.push(Route.TrafficStatistics) },
-                    )
-                }
-        },
         "routing" to {
                 BocchiSectionTitle(FlyTxt.MetaFeature.Section.Routing)
                 BocchiCard {
@@ -148,48 +131,9 @@ fun MetaFeatureScreen(navigator: Navigator) {
                         onClick = { navigator.push(Route.CustomRouting) },
                     )
                     ArrowPreference(
-                        title = "客户端测速",
-                        summary = "测当前路径（经节点）的延迟、下载与上传速度",
-                        onClick = { navigator.push(Route.SpeedTest) },
-                    )
-                    ArrowPreference(
                         title = FlyTxt.MetaFeature.GeoX.OnlineUpdateTitle,
                         summary = FlyTxt.MetaFeature.GeoX.OnlineUpdateSummary,
                         onClick = { showGeoXDownloadSheet.value = true },
-                    )
-                }
-        },
-        "panel" to {
-                BocchiSectionTitle(FlyTxt.MetaFeature.Section.Panel)
-                BocchiCard {
-                    WindowDropdownPreference(
-                        title = FlyTxt.MetaFeature.Panel.SelectPanel,
-                        summary = MetaFeatureViewModel.PANEL_NAMES.getOrElse(selectedPanelType) { MetaFeatureViewModel.PANEL_NAMES[0] },
-                        items = MetaFeatureViewModel.PANEL_NAMES,
-                        selectedIndex = selectedPanelType.coerceIn(MetaFeatureViewModel.PANEL_NAMES.indices),
-                        onSelectedIndexChange = { index -> viewModel.setPanelType(index) },
-                    )
-                }
-        },
-        "backup" to {
-                BackupRestoreSection()
-        },
-        "agekey" to {
-                BocchiSectionTitle(FlyTxt.MetaFeature.AgeKey.Section)
-                BocchiCard {
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.AgeKey.X25519Title,
-                        onClick = {
-                            ageKeyHybrid.value = false
-                            ageKeyDialogVisible.value = true
-                        },
-                    )
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.AgeKey.HybridTitle,
-                        onClick = {
-                            ageKeyHybrid.value = true
-                            ageKeyDialogVisible.value = true
-                        },
                     )
                 }
         }
@@ -219,12 +163,6 @@ fun MetaFeatureScreen(navigator: Navigator) {
             show = showGeoXDownloadSheet,
             context = context,
             viewModel = viewModel,
-        )
-        AgeKeyGeneratorDialog(
-            show = ageKeyDialogVisible.value,
-            hybrid = ageKeyHybrid.value,
-            onDismiss = { ageKeyDialogVisible.value = false },
-            onDismissFinished = {},
         )
     }
 }

@@ -57,6 +57,9 @@ import com.suanran.dreambox.presentation.navigation.Navigator
 import com.suanran.dreambox.presentation.navigation.Route
 import com.suanran.dreambox.presentation.theme.AppTheme
 import top.yukonga.miuix.kmp.basic.Icon
+import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Card
@@ -85,12 +88,6 @@ fun LabScreen(navigator: Navigator) {
 
     val entries = listOf(
         LabEntry(
-            title = FlyTxt.AppSettings.Interface.Theme.Title,
-            summary = FlyTxt.Settings.Experimental.ThemeStoreSummary,
-            icon = FlyCat.Settings2,
-            route = Route.Theme,
-        ),
-        LabEntry(
             title = "插件",
             summary = "重型功能按需下载，删掉腾空间",
             icon = Icons.Filled.Extension,
@@ -104,16 +101,18 @@ fun LabScreen(navigator: Navigator) {
         ),
     )
 
-    val defaultKeys = listOf("theme", "packs", "modules")
+    var ageKeyHybrid by remember { mutableStateOf(false) }
+    var ageKeyDialogVisible by remember { mutableStateOf(false) }
+
+    val defaultKeys = listOf("packs", "modules")
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
     val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val listState = rememberLazyListState()
     val entryByKey = entries.associateBy {
         when (it.route) {
-            Route.Theme -> "theme"
             Route.FeaturePacks -> "packs"
             Route.Modules -> "modules"
-            else -> "theme"
+            else -> "packs"
         }
     }
 
@@ -123,6 +122,7 @@ fun LabScreen(navigator: Navigator) {
                 title = "实验室",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { NavigationBackIcon(navigator = navigator) },
+                actions = { com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction("lab") },
             )
         },
     ) { innerPadding ->
@@ -189,7 +189,32 @@ fun LabScreen(navigator: Navigator) {
                         }
                     }
             }
+            item {
+                BocchiSectionTitle(FlyTxt.MetaFeature.AgeKey.Section)
+                BocchiCard {
+                    ArrowPreference(
+                        title = FlyTxt.MetaFeature.AgeKey.X25519Title,
+                        onClick = {
+                            ageKeyHybrid = false
+                            ageKeyDialogVisible = true
+                        },
+                    )
+                    ArrowPreference(
+                        title = FlyTxt.MetaFeature.AgeKey.HybridTitle,
+                        onClick = {
+                            ageKeyHybrid = true
+                            ageKeyDialogVisible = true
+                        },
+                    )
+                }
+            }
         }
+        AgeKeyGeneratorDialog(
+            show = ageKeyDialogVisible,
+            hybrid = ageKeyHybrid,
+            onDismiss = { ageKeyDialogVisible = false },
+            onDismissFinished = {},
+        )
     }
 }
 
