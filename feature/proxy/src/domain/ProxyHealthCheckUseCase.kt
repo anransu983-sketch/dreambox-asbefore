@@ -53,7 +53,9 @@ class ProxyHealthCheckUseCase(
         private const val GROUP_REFRESH_TIMEOUT_MS = 600L
     }
 
-    private fun isTcpMode(): Boolean = networkSettings.delayTestMode.value == DelayTestMode.TCP
+    // TCP 握手测速已下线（2026-11-02 用户拍板删除入口）：恒走面板测速，
+    // 即使旧偏好里存着 TCP 也忽略，避免无入口可切回。
+    private fun isTcpMode(): Boolean = false
 
     /**
      * Run health check for a single group or all groups.

@@ -106,12 +106,15 @@ class ProxyViewModel(
         .map { it.normalized() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProxyDisplayMode.DOUBLE_DETAILED)
 
+    // 测速方式恒为面板测速（TCP 握手入口已删，见 NodeSortPopup 注释）。
     val delayTestMode: StateFlow<DelayTestMode> =
-        networkSettings.delayTestMode.state.stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            DelayTestMode.PANEL,
-        )
+        networkSettings.delayTestMode.state
+            .map { DelayTestMode.PANEL }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                DelayTestMode.PANEL,
+            )
 
     fun setDelayTestMode(mode: DelayTestMode) {
         // 纯客户端展示/测速方式切换，无需重启内核。

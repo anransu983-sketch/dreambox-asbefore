@@ -18,8 +18,6 @@ import top.yukonga.miuix.kmp.window.WindowListPopup
 internal val NodeSortModes =
     listOf(ProxySortMode.DEFAULT, ProxySortMode.BY_NAME, ProxySortMode.BY_LATENCY)
 
-internal val DelayTestModes = listOf(DelayTestMode.PANEL, DelayTestMode.TCP)
-
 private val ProxySortMode.displayName: String
     get() = when (this) {
         ProxySortMode.DEFAULT -> FlyTxt.Proxy.SortMode.Default
@@ -27,15 +25,11 @@ private val ProxySortMode.displayName: String
         ProxySortMode.BY_LATENCY -> FlyTxt.Proxy.SortMode.ByLatency
     }
 
-private val DelayTestMode.displayName: String
-    get() = when (this) {
-        DelayTestMode.PANEL -> FlyTxt.Proxy.DelayTestMode.Panel
-        DelayTestMode.TCP -> FlyTxt.Proxy.DelayTestMode.Tcp
-    }
-
 /**
  * 排序菜单：定位当前节点 / 默认顺序 / 按名称排序 / 按延迟排序。
  * displayMode 参数保留兼容，不再展示。
+ * 测速方式切换已下线（2026-11-02 用户拍板删「TCP 握手」）：恒用面板测速，
+ * delayTestMode / onDelayTestModeSelected 参数仅保留签名兼容，不再渲染。
  */
 @Composable
 internal fun NodeSortPopup(
@@ -78,19 +72,6 @@ internal fun NodeSortPopup(
                     isSelected = selectedSortIndex == index,
                     onSelectedIndexChange = {
                         if (mode != sortMode) onSortSelected(mode)
-                        onDismiss()
-                    },
-                    index = index,
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            DelayTestModes.forEachIndexed { index, mode ->
-                DropdownImpl(
-                    text = mode.displayName,
-                    optionSize = DelayTestModes.size,
-                    isSelected = delayTestMode == mode,
-                    onSelectedIndexChange = {
-                        if (mode != delayTestMode) onDelayTestModeSelected(mode)
                         onDismiss()
                     },
                     index = index,
