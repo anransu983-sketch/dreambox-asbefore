@@ -459,9 +459,13 @@ if not row:
     print('NOROW')
 else:
     r = dict(zip(cols, row))
+    def b2s(v):
+        # s-ui 数据库个别列是 BLOB（bytes），不转码 json.dumps 会报
+        # "Object of type bytes is not JSON serializable"（v10 实测踩中）。
+        return v.decode('utf-8', 'replace') if isinstance(v, bytes) else v
     def jload(v, fallback):
         try:
-            x = json.loads(v) if isinstance(v, str) else v
+            x = json.loads(b2s(v)) if isinstance(b2s(v), str) else v
             while isinstance(x, str):
                 x = json.loads(x)
             return x
@@ -474,13 +478,13 @@ else:
         print('SAME')
     else:
         out = {
-            'id': r.get('id'), 'enable': bool(r.get('enable')), 'name': r.get('name'),
+            'id': r.get('id'), 'enable': bool(r.get('enable')), 'name': b2s(r.get('name')) or '',
             'config': jload(r.get('config'), {}), 'inbounds': jload(r.get('inbounds'), []),
             'links': jload(r.get('links'), []),
             'volume': new_vol, 'expiry': new_exp,
             'down': int(r.get('down') or 0), 'up': int(r.get('up') or 0),
-            'desc': r.get('desc') or '', 'group': r.get('group') or '',
-            'remark': r.get('remark') or '',
+            'desc': b2s(r.get('desc')) or '', 'group': b2s(r.get('group')) or '',
+            'remark': b2s(r.get('remark')) or '',
             'createdAt': int(r.get('created_at') or 0), 'onlineAt': int(r.get('online_at') or 0),
             'delayStart': bool(r.get('delay_start')), 'totalUp': int(r.get('total_up') or 0),
             'totalDown': int(r.get('total_down') or 0),
@@ -657,7 +661,18 @@ SUB_INFO="$(curl -s -D - -o /dev/null --max-time 25 "http://127.0.0.1:${SUB_PORT
 [ -n "$SUB_INFO" ] && log "订阅流量信息：$SUB_INFO"
 SUB_TPL_OK="fail"
 CLASH_TXT="$(curl -s --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}?format=clash" 2>/dev/null || true)"
-if printf '%s' "$CLASH_TXT" | grep -q '🎮 Steam' && printf '%s' "$CLASH_TXT" | grep -q '漏网之鱼'; then
+# s-ui 的 YAML 序列化会把部分分组名写成 "\U0001F3AE Steam" 这类转义形，
+# 直接 grep 原文会假阴性（v10 实测：订阅实际带完整模板却报未通过）。
+# 先把 \U/\u 转义解码回原文，再查模板标志分组。
+TPL_CHK="$(printf '%s' "$CLASH_TXT" | python3 -c '
+import sys, re
+t = sys.stdin.read()
+t = re.sub(r"\\U([0-9a-fA-F]{8})", lambda m: chr(int(m.group(1), 16)), t)
+t = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), t)
+groups = t.count("type: select") + t.count("type: url-test")
+print("ok" if ("🎮 Steam" in t and "漏网之鱼" in t and groups >= 6) else "fail")
+' 2>/dev/null || echo fail)"
+if [ "$TPL_CHK" = "ok" ]; then
     SUB_TPL_OK="ok"
     log "订阅模板校验通过（Clash 订阅已带完整分组/规则）"
 else
