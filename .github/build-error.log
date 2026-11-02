@@ -1,86 +1,27 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':feature:home:checkReleaseAarMetadata' (registered by plugin 'com.android.internal.library').
-> A failure occurred while executing com.android.build.gradle.internal.tasks.CheckAarMetadataWorkAction
-   > 43 issues were found when checking AAR metadata:
-     
-       1.  Dependency 'io.github.panpf.sketch4:sketch-svg-android:4.7.0' requires libraries and applications that
-           depend on it to compile against version 37 or later of the
-           Android APIs.
-     
-           :feature:home is currently compiled against android-36.1.
-     
-           Recommended action: Update this project to use a newer compileSdk
-           of at least 37, for example 37.2.
-     
-           Note that updating a library or application's compileSdk (which
-           allows newer APIs to be used) can be done separately from updating
-           targetSdk (which opts the app in to new runtime behavior) and
-           minSdk (which determines which devices the app can be installed
-           on).
-     
-       2.  Dependency 'io.github.panpf.sketch4:sketch-compose-android:4.7.0' requires libraries and applications that
-           depend on it to compile against version 37 or later of the
-           Android APIs.
-     
-           :feature:home is currently compiled against android-36.1.
-     
-           Recommended action: Update this project to use a newer compileSdk
-           of at least 37, for example 37.2.
-     
-           Note that updating a library or application's compileSdk (which
-           allows newer APIs to be used) can be done separately from updating
-           targetSdk (which opts the app in to new runtime behavior) and
-           minSdk (which determines which devices the app can be installed
-           on).
-     
-       3.  Dependency 'io.github.panpf.sketch4:sketch-compose-resources-android:4.7.0' requires libraries and applications that
-           depend on it to compile against version 37 or later of the
-           Android APIs.
-     
-           :feature:home is currently compiled against android-36.1.
-     
-           Recommended action: Update this project to use a newer compileSdk
-           of at least 37, for example 37.2.
-     
-           Note that updating a library or application's compileSdk (which
-           allows newer APIs to be used) can be done separately from updating
-           targetSdk (which opts the app in to new runtime behavior) and
-           minSdk (which determines which devices the app can be installed
-           on).
-     
-       4.  Dependency 'io.github.panpf.sketch4:sketch-compose-core-android:4.7.0' requires libraries and applications that
-           depend on it to compile against version 37 or later of the
-           Android APIs.
-     
-           :feature:home is currently compiled against android-36.1.
-     
-           Recommended action: Update this project to use a newer compileSdk
-           of at least 37, for example 37.2.
-     
-           Note that updating a library or application's compileSdk (which
-           allows newer APIs to be used) can be done separately from updating
-           targetSdk (which opts the app in to new runtime behavior) and
-           minSdk (which determines which devices the app can be installed
-           on).
-     
-       5.  Dependency 'io.github.panpf.sketch4:sketch-singleton-android:4.7.0' requires libraries and applications that
-           depend on it to compile against version 37 or later of the
-           Android APIs.
-     
-           :feature:home is currently compiled against android-36.1.
-     
-           Recommended action: Update this project to use a newer compileSdk
-           of at least 37, for example 37.2.
-     
-           Note that updating a library or application's compileSdk (which
-           allows newer APIs to be used) can be done separately from updating
-           targetSdk (which opts the app in to new runtime behavior) and
-           minSdk (which determines which devices the app can be installed
-           on).
-     
-       6.  Dependency 'io.github.panpf.sketch4:sketch-http-android:4.7.0' requires libraries and applications that
+A problem was found with the configuration of task ':pack:bundleReleaseAar' (type 'BundleAar').
+Input file does not exist
+  Type 'com.android.build.gradle.tasks.BundleAar' property 'aarMetadataCheck' specifies directory '/home/runner/work/dreambox-asbefore/dreambox-asbefore/pack/build/intermediates/aar_metadata_check/release/checkReleaseAarMetadata' which doesn't exist
+    An input file was expected to be present but it doesn't exist
+    For more information, please refer to https://docs.gradle.org/9.8.0/userguide/validation_problems.html#input_file_does_not_exist in the Gradle documentation.
+    Possible solutions:
+      1. Make sure the directory exists before the task is called.
+      2. Make sure that the task which produces the directory is declared as an input.
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 33s
+88 actionable tasks: 64 executed, 24 from cache
+Configuration cache entry stored.
 
 === e: / FAILED lines ===
-> Task :feature:home:checkReleaseAarMetadata FAILED
-BUILD FAILED in 1m 8s
+> Task :pack:bundleReleaseAar FAILED
+BUILD FAILED in 33s
