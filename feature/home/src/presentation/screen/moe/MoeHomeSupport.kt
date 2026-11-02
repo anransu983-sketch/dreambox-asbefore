@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -74,8 +73,9 @@ internal object MoeUi {
     }
 
     object Sidebar {
-        const val fraction = 0.25f
-        val minWidth = 100.dp
+        // 2026-11-02 用户拍板改窄侧边栏（参照其图二）：约 18.5% 宽、无图标气泡。
+        const val fraction = 0.185f
+        val minWidth = 70.dp
         val contentOverlap = moeSpacing.space28
         val innerHorizontalPadding = moeSpacing.space12
         val topInset = moeSizes.heroStartButtonSize - moeSpacing.space2
@@ -91,7 +91,7 @@ internal object MoeUi {
         val batteryKnobWidth = moeSpacing.space3
         val iconSpacing = moeSpacing.space14
         val iconHitSize = UiDp.dp44
-        val iconSize = UiDp.dp30
+        val iconSize = UiDp.dp25
         val digitLetterSpacing = 0.sp
         const val timeAlpha = 0.96f
         const val dividerAlpha = 0.62f
@@ -218,11 +218,10 @@ private fun MoeSidebarIconRail(icons: List<MoeSidebarIconItem>) {
 
 @Composable
 private fun MoeSidebarIconItemView(item: MoeSidebarIconItem) {
+    // 窄栏样式：图标裸放、不要圆形气泡底（用户 2026-11-02 图二口径）。
     Box(
         modifier =
             Modifier.size(MoeUi.Sidebar.iconHitSize)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.22f))
                 .clickable(
                     interactionSource =
                         remember {

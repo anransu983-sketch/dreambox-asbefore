@@ -30,6 +30,14 @@
   .warn { color: #ffc46b; font-size: 12.5px; line-height: 1.55; }
   .err { color: #ff8f8f; }
   .hidden { display: none; }
+  .flagrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .flagchip { padding: 6px 10px; border-radius: 999px; border: 1px solid #4a3d6e; background: #2a2142;
+    color: #e8defc; font-size: 13.5px; }
+  .flagchip:active { border-color: #e88bb0; background: #3a2a52; }
+  .eye-wrap { position: relative; }
+  .eye-wrap input { padding-right: 62px; }
+  .eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 5px 10px;
+    border-radius: 8px; border: 1px solid #4a3d6e; background: #2a2142; color: #e8defc; font-size: 12.5px; }
   textarea { width: 100%; height: 180px; border-radius: 10px; border: 1px solid #3a3054;
     background: #100c1a; color: #d9f2d9; font-size: 11px; padding: 10px; }
 </style>
@@ -41,22 +49,23 @@
 
 <div class="card" id="formCard">
   <label>服务器 IP / 域名</label>
-  <input id="host" placeholder="如 1.2.3.4" autocomplete="off">
+  <div class="eye-wrap"><input id="host" type="password" placeholder="如 1.2.3.4" autocomplete="off"><button type="button" class="eye" data-eye="host">显示</button></div>
   <div class="row">
     <div><label>SSH 端口</label><input id="sshPort" type="number" value="22"></div>
     <div><label>SSH 用户</label><input id="sshUser" value="root"></div>
   </div>
   <label>root 密码（SSH 登录密码）</label>
-  <input id="sshPassword" type="password" placeholder="服务器的 root 密码" autocomplete="off">
+  <div class="eye-wrap"><input id="sshPassword" type="password" placeholder="服务器的 root 密码" autocomplete="off"><button type="button" class="eye" data-eye="sshPassword">显示</button></div>
   <label>节点备注名（显示在链接和配置里）</label>
-  <input id="nodeName" placeholder="如 🇺🇸 新节点" autocomplete="off">
+  <input id="nodeName" placeholder="点下面旗帜选国家，再接名字" autocomplete="off">
+  <div class="flagrow" id="flagRow"></div>
   <div class="row">
     <div><label>节点端口</label><input id="nodePort" type="number" value="443"></div>
     <div><label>订阅 ID（英文/数字）</label><input id="subId" placeholder="node1" autocomplete="off"></div>
   </div>
   <div class="row">
     <div><label>面板管理员账号</label><input id="adminUser" value="sui" autocomplete="off"></div>
-    <div><label>面板管理员密码（记好）</label><input id="adminPass" autocomplete="off"></div>
+    <div><label>面板管理员密码（记好）</label><div class="eye-wrap"><input id="adminPass" type="password" autocomplete="off"><button type="button" class="eye" data-eye="adminPass">显示</button></div></div>
   </div>
   <div class="row">
     <div><label>总流量 GB（留空=不限）</label><input id="quotaGb" type="number" placeholder="如 800" autocomplete="off"></div>
@@ -86,7 +95,7 @@
     <button class="mini" id="copyYaml">复制配置</button>
     <button class="mini" id="dlYaml">下载 .yaml</button>
   </div>
-  <div class="warn" style="margin-top:8px">两种用法二选一：点「导入到梦盒」把订阅（Clash 格式）直接建成本地订阅配置，省事；或用下面这份 YAML 配置导入——自带防 DNS/WebRTC 泄露规则，效果更好。</div>
+  <div class="warn" style="margin-top:8px">点「导入到梦盒」即可：订阅已带完整模板（分组/规则/sniffer/防泄露）和流量/到期显示。下面这份 YAML 是同模板的本地版，效果相同，可作备份。页面上的地址与密码已打码，按钮复制的仍是原文。</div>
 </div>
 
 <script>
@@ -100,6 +109,41 @@
     return s;
   }
   $('adminPass').value = randPass(16);
+
+  // 国家旗帜点选：旗按国家码现算（区域指示符），点一下拼到备注名最前，
+  // 不走剪贴板，免得被输入法转成汉字。
+  function flagEmoji(cc) {
+    return String.fromCodePoint(0x1F1E6 + cc.charCodeAt(0) - 65, 0x1F1E6 + cc.charCodeAt(1) - 65);
+  }
+  var FLAG_LIST = [['US', '美国'], ['GB', '英国'], ['DE', '德国'], ['JP', '日本'],
+    ['SG', '新加坡'], ['HK', '香港'], ['TW', '台湾'], ['KR', '韩国'],
+    ['CN', '中国'], ['FR', '法国'], ['CA', '加拿大'], ['AU', '澳洲']];
+  FLAG_LIST.forEach(function (it) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'flagchip';
+    b.textContent = flagEmoji(it[0]) + ' ' + it[1];
+    b.addEventListener('click', function () { setNameFlag(it[0]); });
+    $('flagRow').appendChild(b);
+  });
+  var noFlag = document.createElement('button');
+  noFlag.type = 'button'; noFlag.className = 'flagchip'; noFlag.textContent = '不加旗';
+  noFlag.addEventListener('click', function () { setNameFlag(''); });
+  $('flagRow').appendChild(noFlag);
+  function setNameFlag(cc) {
+    var v = $('nodeName').value.replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/, '');
+    $('nodeName').value = cc ? (flagEmoji(cc) + ' ' + v) : v;
+  }
+
+  // 敏感字段默认打码，点「显示」才露出原文
+  document.querySelectorAll('.eye').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var inp = $(btn.getAttribute('data-eye'));
+      if (!inp) return;
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      btn.textContent = show ? '隐藏' : '显示';
+    });
+  });
 
   function callNative(method, options) {
     return new Promise(function (resolve, reject) {
@@ -192,6 +236,15 @@
     }).catch(function () { /* 轮询失败不打断 */ });
   }
 
+  function maskHost(h) {
+    var p = (h || '').split('.');
+    if (p.length === 4 && p.every(function (x) { return /^\d+$/.test(x); })) {
+      return p[0] + '.*.*.' + p[3];
+    }
+    if (p.length >= 2) return p[0] + '.***.' + p[p.length - 1];
+    return '***';
+  }
+
   function buildVless(r) {
     if (r.vlessLink) return r.vlessLink;
     var name = encodeURIComponent(lastOpts.nodeName || r.subId);
@@ -208,13 +261,21 @@
     var tunnel = 'ssh -L ' + r.panelPort + ':127.0.0.1:' + r.panelPort +
       (lastOpts.sshPort !== 22 ? ' -p ' + lastOpts.sshPort : '') +
       ' ' + lastOpts.sshUser + '@' + lastOpts.host;
+    var mh = maskHost(lastOpts.host);
     $('resultKv').innerHTML =
-      '<b>订阅链接</b><br>' + sub + '<br>' +
-      '<b>vless 链接</b><br>' + vless + '<br>' +
+      '<b>订阅链接</b><br>' + sub.split(lastOpts.host).join(mh) + '<br>' +
+      '<b>vless 链接</b><br>' + vless.split(lastOpts.host).join(mh) + '<br>' +
       '<b>面板</b>：http://127.0.0.1:' + r.panelPort + r.panelPath +
       '（先跑隧道命令再打开）<br>' +
-      '<b>面板账号</b>：' + lastOpts.adminUser + ' / ' + lastOpts.adminPass + '<br>' +
-      '<b>隧道命令</b>：' + tunnel;
+      '<b>面板账号</b>：' + lastOpts.adminUser + ' / <span id="admPassTxt">••••••••</span> ' +
+      '<button type="button" class="mini" id="admPassEye" style="margin:0">显示</button><br>' +
+      '<b>隧道命令</b>：' + tunnel.split(lastOpts.host).join(mh);
+    $('admPassEye').addEventListener('click', function () {
+      var t = $('admPassTxt');
+      var show = t.textContent.indexOf('•') === 0;
+      t.textContent = show ? lastOpts.adminPass : '••••••••';
+      this.textContent = show ? '隐藏' : '显示';
+    });
     $('copyVless').onclick = function () { copyText(vless, this); };
     $('copySub').onclick = function () { copyText(sub, this); };
     $('importSub').onclick = function () {

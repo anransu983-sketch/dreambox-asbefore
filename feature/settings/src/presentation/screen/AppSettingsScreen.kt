@@ -61,7 +61,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.model.AppLanguage
 import com.suanran.dreambox.core.model.ThemeMode
-import com.suanran.dreambox.core.model.UpdateSource
 import com.suanran.dreambox.presentation.component.sortable.DraggableItem
 import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
@@ -541,34 +540,12 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
 
 @Composable
 private fun AppNetworkSettingsSection(viewModel: AppSettingsViewModel) {
-    val updateSource by viewModel.updateSource.collectAsStateWithLifecycle()
-    val autoCheckAppUpdate by viewModel.autoCheckAppUpdate.state.collectAsStateWithLifecycle()
+    // 更新入口只保留「关于」页的检查更新（用户 2026-11-02 拍板）：
+    // 这里的更新通道/自动检查更新已删，避免两处重复。
     val customUserAgent by viewModel.customUserAgent.state.collectAsStateWithLifecycle()
 
     BocchiSectionTitle(FlyTxt.AppSettings.Section.Network)
     BocchiCard {
-        BocchiEnumItem(
-            title = FlyTxt.AppSettings.Network.UpdateChannelTitle,
-            summary = FlyTxt.AppSettings.Network.UpdateChannelSummary,
-            currentValue = updateSource,
-            items = listOf(
-                FlyTxt.AppSettings.Network.UpdateChannelStable,
-                FlyTxt.AppSettings.Network.UpdateChannelPre,
-                FlyTxt.AppSettings.Network.UpdateChannelSmart,
-            ),
-            values = listOf(
-                UpdateSource.Latest,
-                UpdateSource.Prerelease,
-                UpdateSource.Smart,
-            ),
-            onValueChange = viewModel::onUpdateSourceChange,
-        )
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.Network.AutoCheckAppUpdateTitle,
-            summary = FlyTxt.AppSettings.Network.AutoCheckAppUpdateSummary,
-            checked = autoCheckAppUpdate,
-            onCheckedChange = viewModel::onAutoCheckAppUpdateChange,
-        )
         CustomUserAgentPreferenceItem(
             customUserAgent = customUserAgent,
             onConfirm = viewModel::applyCustomUserAgent,

@@ -18,6 +18,8 @@ import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.misc.PreferenceSwitchItem
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
+import com.suanran.dreambox.feature.settings.presentation.pack.PACKS_VISIBILITY_SCOPE
+import com.suanran.dreambox.feature.settings.presentation.pack.PackStore
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
 import com.suanran.dreambox.presentation.navigation.Navigator
@@ -68,6 +70,7 @@ fun ModulesScreen(navigator: Navigator) {
     val mmkv: MMKV = koinInject(named("settings"))
     var mainHidden by remember { mutableStateOf(loadMainHidden(mmkv)) }
     var labHidden by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
+    var packHidden by remember { mutableStateOf(loadHiddenSections(mmkv, PACKS_VISIBILITY_SCOPE)) }
 
     Scaffold(
         topBar = {
@@ -136,6 +139,31 @@ fun ModulesScreen(navigator: Navigator) {
                                 onCheckedChange = { on ->
                                     labHidden = if (on) labHidden - module.key else labHidden + module.key
                                     saveHiddenSections(mmkv, "lab", labHidden)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                Text(
+                    text = "功能包模块",
+                    style = MiuixTheme.textStyles.title4,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            item {
+                BocchiCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        PackStore.REGISTRY.forEach { def ->
+                            PreferenceSwitchItem(
+                                title = def.name,
+                                summary = "功能包页里的这个包",
+                                checked = def.id !in packHidden,
+                                onCheckedChange = { on ->
+                                    packHidden = if (on) packHidden - def.id else packHidden + def.id
+                                    saveHiddenSections(mmkv, PACKS_VISIBILITY_SCOPE, packHidden)
                                 },
                             )
                         }

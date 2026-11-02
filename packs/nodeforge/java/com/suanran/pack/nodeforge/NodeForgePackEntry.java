@@ -331,7 +331,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 st.hostKeyFp = cur.hostKeyFp;
             }
             st.banner = "== [" + stamp() + "] 准备投递到 "
-                    + st.sshUser + "@" + st.host + ":" + st.sshPort + " …\n";
+                    + st.sshUser + "@" + maskHost(st.host) + ":" + st.sshPort + " …\n";
             saveState(st);
             callback.onResult(true, "{\"started\":true}", null);
 
@@ -658,6 +658,21 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         } finally {
             channel.disconnect();
         }
+    }
+
+    /** 展示打码：IPv4 只留首尾段（216.*.*.4），域名留首尾标签。 */
+    private static String maskHost(String h) {
+        if (h == null || h.isEmpty()) return "***";
+        String[] p = h.split("\\.");
+        if (p.length == 4) {
+            boolean num = true;
+            for (String s : p) {
+                if (!s.matches("\\d+")) { num = false; break; }
+            }
+            if (num) return p[0] + ".*.*." + p[3];
+        }
+        if (p.length >= 2) return p[0] + ".***." + p[p.length - 1];
+        return "***";
     }
 
     /** shell 单引号安全引用（密码可含任意字符）。 */

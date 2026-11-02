@@ -10,6 +10,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
 
+/** 功能包显示开关的作用域：模块页开关与已隐藏页恢复共用 section_hidden_packs 存储。 */
+const val PACKS_VISIBILITY_SCOPE = "packs"
+
 /** 一个可下载功能包的定义。包内容与本体完全分离：本体只认识这份元数据和通用宿主。 */
 data class PackDef(
     val id: String,
@@ -126,9 +129,9 @@ class PackStore(context: Context) {
                 id = "nodeforge",
                 name = "一键节点",
                 summary = "填服务器 IP 与 root 密码，一键部署 s-ui + VLESS+Reality 节点：自动建入站、放行端口、面板绑回环防爆破，并按防 DNS/WebRTC 泄露模板生成梦盒配置",
-                version = "9",
-                sizeText = "约 285 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v9.zip",
+                version = "10",
+                sizeText = "约 290 KB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v10.zip",
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
             ),
         )

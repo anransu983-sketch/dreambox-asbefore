@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.suanran.dreambox.feature.settings.presentation.custommodule.CustomModuleStore
+import com.suanran.dreambox.feature.settings.presentation.pack.PACKS_VISIBILITY_SCOPE
+import com.suanran.dreambox.feature.settings.presentation.pack.PackStore
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
@@ -83,6 +85,11 @@ fun HiddenModulesScreen(navigator: Navigator) {
             "iptest" to "IP 测试", "packs" to "功能包", "modules" to "模块",
             "hidden" to "已隐藏的模块",
         )),
+        HiddenGroup(
+            pageKey = PACKS_VISIBILITY_SCOPE,
+            pageTitle = "功能包",
+            titles = PackStore.REGISTRY.associate { it.id to it.name },
+        ),
     )
 
     var refreshTick by remember { mutableStateOf(0) }
