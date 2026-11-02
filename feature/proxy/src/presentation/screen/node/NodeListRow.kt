@@ -169,9 +169,22 @@ private fun NodePingChip() {
 }
 
 
-/** 延迟走势小曲线：最近 N 次测速连成的线（小火箭式），颜色跟当前延迟档一致。 */
+/** 延迟走势小曲线：最近 N 次测速的走势（小火箭式）；形状/颜色读 SparklinePrefs（主题页个性化可改）。 */
 @Composable
 private fun DelaySparkline(history: List<Int>, color: androidx.compose.ui.graphics.Color) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefVersion = com.suanran.dreambox.presentation.component.misc.SparklinePrefs.version
+    val shape = remember(prefVersion) {
+        com.suanran.dreambox.presentation.component.misc.SparklinePrefs.shape(context)
+    }
+    val colorMode = remember(prefVersion) {
+        com.suanran.dreambox.presentation.component.misc.SparklinePrefs.colorMode(context)
+    }
+    val drawColor = if (colorMode == com.suanran.dreambox.presentation.component.misc.SparklinePrefs.COLOR_THEME) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        color
+    }
     androidx.compose.foundation.Canvas(
         modifier = Modifier.size(width = 40.dp, height = 12.dp),
     ) {
@@ -180,23 +193,63 @@ private fun DelaySparkline(history: List<Int>, color: androidx.compose.ui.graphi
         val range = (maxV - minV).coerceAtLeast(20).toFloat()
         val padY = 1.5.dp.toPx()
         val stepX = if (history.size > 1) size.width / (history.size - 1) else size.width
-        val path = androidx.compose.ui.graphics.Path()
-        history.forEachIndexed { i, v ->
-            val x = stepX * i
-            val y = size.height - padY - ((v - minV).toFloat() / range) * (size.height - padY * 2)
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        fun yOf(v: Int): Float = size.height - padY - ((v - minV).toFloat() / range) * (size.height - padY * 2)
+        when (shape) {
+            com.suanran.dreambox.presentation.component.misc.SparklinePrefs.SHAPE_BARS -> {
+                val barW = (stepX * 0.55f).coerceAtLeast(1.2.dp.toPx())
+                history.forEachIndexed { i, v ->
+                    val x = stepX * i
+                    drawLine(
+                        color = drawColor.copy(alpha = 0.55f),
+                        start = androidx.compose.ui.geometry.Offset(x, size.height - padY),
+                        end = androidx.compose.ui.geometry.Offset(x, yOf(v)),
+                        strokeWidth = barW,
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                    )
+                }
+            }
+            com.suanran.dreambox.presentation.component.misc.SparklinePrefs.SHAPE_SMOOTH -> {
+                val path = androidx.compose.ui.graphics.Path()
+                history.forEachIndexed { i, v ->
+                    val x = stepX * i
+                    val y = yOf(v)
+                    if (i == 0) {
+                        path.moveTo(x, y)
+                    } else {
+                        val prevX = stepX * (i - 1)
+                        val prevY = yOf(history[i - 1])
+                        path.quadraticBezierTo(prevX, prevY, (prevX + x) / 2f, (prevY + y) / 2f)
+                        if (i == history.lastIndex) path.lineTo(x, y)
+                    }
+                }
+                drawPath(
+                    path = path,
+                    color = drawColor.copy(alpha = 0.55f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = 1.2.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                    ),
+                )
+            }
+            else -> {
+                val path = androidx.compose.ui.graphics.Path()
+                history.forEachIndexed { i, v ->
+                    val x = stepX * i
+                    val y = yOf(v)
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                drawPath(
+                    path = path,
+                    color = drawColor.copy(alpha = 0.55f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = 1.2.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                    ),
+                )
+            }
         }
-        drawPath(
-            path = path,
-            color = color.copy(alpha = 0.55f),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                width = 1.2.dp.toPx(),
-                cap = androidx.compose.ui.graphics.StrokeCap.Round,
-            ),
-        )
         val lastX = stepX * (history.size - 1)
-        val lastV = history.last()
-        val lastY = size.height - padY - ((lastV - minV).toFloat() / range) * (size.height - padY * 2)
-        drawCircle(color = color.copy(alpha = 0.7f), radius = 1.6.dp.toPx(), center = androidx.compose.ui.geometry.Offset(lastX, lastY))
+        val lastY = yOf(history.last())
+        drawCircle(color = drawColor.copy(alpha = 0.7f), radius = 1.6.dp.toPx(), center = androidx.compose.ui.geometry.Offset(lastX, lastY))
     }
 }

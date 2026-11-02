@@ -356,6 +356,51 @@ fun PersonalizeSections() {
                         )
                     }
                 }
+                BocchiSectionTitle("延迟曲线")
+                BocchiCard {
+                    Column {
+                        var sparkShape by remember {
+                            mutableStateOf(
+                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.shape(context)
+                            )
+                        }
+                        var sparkColor by remember {
+                            mutableStateOf(
+                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.colorMode(context)
+                            )
+                        }
+                        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+                            title = "曲线形状",
+                            summary = "节点行与详情抽屉里延迟走势线的形状",
+                            items = listOf("折线", "平滑曲线", "柱状"),
+                            selectedIndex = sparkShape,
+                            onSelectedIndexChange = { index ->
+                                sparkShape = index
+                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.setShape(context, index)
+                            },
+                        )
+                        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+                            title = "曲线颜色",
+                            summary = "跟随主题用主题色；按延迟用绿 / 黄 / 红表示快慢",
+                            items = listOf("跟随主题", "按延迟"),
+                            selectedIndex = sparkColor,
+                            onSelectedIndexChange = { index ->
+                                sparkColor = index
+                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.setColorMode(context, index)
+                            },
+                        )
+                        Text(
+                            text = "节点图标也能换：点开任意节点，在详情抽屉里点「换图标」。",
+                            fontSize = 11.sp,
+                            color = BocchiTextGray,
+                            modifier = Modifier.padding(
+                                start = spacing.space16,
+                                end = spacing.space16,
+                                bottom = spacing.space12,
+                            ),
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
     }
 }

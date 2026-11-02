@@ -786,6 +786,22 @@ internal fun NodeListPage(
         }
     }
     var detailProxy by remember { mutableStateOf<Proxy?>(null) }
+    // 节点自定义图标（与策略组同一套 CustomIcons 机制，key=node_<md5>）。
+    val nodeIconContext = LocalContext.current
+    var pendingNodeIconKey by remember { mutableStateOf<String?>(null) }
+    val nodeIconPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        val key = pendingNodeIconKey
+        pendingNodeIconKey = null
+        if (uri != null && key != null) {
+            if (CustomIcons.saveFromUri(nodeIconContext, key, uri)) {
+                nodeIconContext.toast("节点图标已更新")
+            } else {
+                nodeIconContext.toast("图片读取失败，换一张试试")
+            }
+        }
+    }
     fun performNodePrimaryAction(proxyName: String) {
         if (group.type == Proxy.Type.Selector) {
             onSelectProxy(group.name, proxyName)
@@ -890,6 +906,14 @@ internal fun NodeListPage(
         onDismiss = { detailProxy = null },
         onPrimaryAction = { name -> performNodePrimaryAction(name) },
         onTestSingle = { name -> onTestProxyDelay(name) },
+        onIconPick = { p ->
+            pendingNodeIconKey = CustomIcons.keyFor("node", p.name)
+            nodeIconPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        },
+        onIconReset = { p ->
+            CustomIcons.clear(nodeIconContext, CustomIcons.keyFor("node", p.name))
+            nodeIconContext.toast("已恢复默认图标")
+        },
     )
 }
 
@@ -1003,6 +1027,8 @@ private fun NodeDetailSheet(
     onDismiss: () -> Unit,
     onPrimaryAction: (String) -> Unit,
     onTestSingle: (String) -> Unit,
+    onIconPick: (Proxy) -> Unit,
+    onIconReset: (Proxy) -> Unit,
 ) {
     val spacing = LocalSpacing.current
     AppActionBottomSheet(
@@ -1106,28 +1132,76 @@ private fun NodeDetailSheet(
                     modifier = Modifier.weight(1f),
                 )
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = spacing.space8),
+                horizontalArrangement = Arrangement.spacedBy(spacing.space10),
+            ) {
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    text = "换图标",
+                    onClick = { onIconPick(proxy) },
+                    modifier = Modifier.weight(1f),
+                )
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    text = "恢复默认图标",
+                    onClick = { onIconReset(proxy) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
 
-/** 详情抽屉里的大号延迟走势（与行内小曲线同一数据源，尺寸放大、带面积填充）。 */
+/** 详情抽屉里的大号延迟走势（与行内小曲线同一数据源）；形状/颜色读 SparklinePrefs。 */
 @Composable
 private fun DelayBigSparkline(history: List<Int>, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val prefVersion = com.suanran.dreambox.presentation.component.misc.SparklinePrefs.version
+    val shape = remember(prefVersion) { com.suanran.dreambox.presentation.component.misc.SparklinePrefs.shape(context) }
+    val colorMode = remember(prefVersion) { com.suanran.dreambox.presentation.component.misc.SparklinePrefs.colorMode(context) }
+    val drawColor = if (colorMode == com.suanran.dreambox.presentation.component.misc.SparklinePrefs.COLOR_THEME) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        color
+    }
     androidx.compose.foundation.Canvas(modifier = modifier.height(UiDp.dp40)) {
         val maxV = history.maxOrNull() ?: 1
         val minV = history.minOrNull() ?: 0
         val range = (maxV - minV).coerceAtLeast(20).toFloat()
         val padY = 3.dp.toPx()
         val stepX = if (history.size > 1) size.width / (history.size - 1) else size.width
+        fun yOf(v: Int): Float = size.height - padY - ((v - minV).toFloat() / range) * (size.height - padY * 2)
+        if (shape == com.suanran.dreambox.presentation.component.misc.SparklinePrefs.SHAPE_BARS) {
+            val barW = (stepX * 0.5f).coerceAtLeast(2.dp.toPx())
+            history.forEachIndexed { i, v ->
+                val x = stepX * i
+                drawLine(
+                    color = drawColor.copy(alpha = 0.65f),
+                    start = androidx.compose.ui.geometry.Offset(x, size.height - padY),
+                    end = androidx.compose.ui.geometry.Offset(x, yOf(v)),
+                    strokeWidth = barW,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                )
+            }
+            return@Canvas
+        }
         val linePath = androidx.compose.ui.graphics.Path()
         val fillPath = androidx.compose.ui.graphics.Path()
         history.forEachIndexed { i, v ->
             val x = stepX * i
-            val y = size.height - padY - ((v - minV).toFloat() / range) * (size.height - padY * 2)
+            val y = yOf(v)
             if (i == 0) {
                 linePath.moveTo(x, y)
                 fillPath.moveTo(x, size.height)
                 fillPath.lineTo(x, y)
+            } else if (shape == com.suanran.dreambox.presentation.component.misc.SparklinePrefs.SHAPE_SMOOTH) {
+                val prevX = stepX * (i - 1)
+                val prevY = yOf(history[i - 1])
+                linePath.quadraticBezierTo(prevX, prevY, (prevX + x) / 2f, (prevY + y) / 2f)
+                fillPath.lineTo((prevX + x) / 2f, (prevY + y) / 2f)
+                if (i == history.lastIndex) {
+                    linePath.lineTo(x, y)
+                    fillPath.lineTo(x, y)
+                }
             } else {
                 linePath.lineTo(x, y)
                 fillPath.lineTo(x, y)
@@ -1135,10 +1209,10 @@ private fun DelayBigSparkline(history: List<Int>, color: androidx.compose.ui.gra
         }
         fillPath.lineTo(stepX * (history.size - 1), size.height)
         fillPath.close()
-        drawPath(fillPath, color = color.copy(alpha = 0.12f))
+        drawPath(fillPath, color = drawColor.copy(alpha = 0.12f))
         drawPath(
             linePath,
-            color = color,
+            color = drawColor,
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round),
         )
     }

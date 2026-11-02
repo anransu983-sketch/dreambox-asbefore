@@ -43,6 +43,21 @@ fun NodeFlagBadge(
     size: Dp = 44.dp,
     emojiSize: TextUnit = 24.sp,
 ) {
+    // 节点自定义图标优先（详情抽屉里「换图标」，与策略组/导航栏同一套 CustomIcons）。
+    val customIcon = com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap(
+        com.suanran.dreambox.presentation.component.misc.CustomIcons.keyFor("node", nodeName)
+    )
+    if (customIcon != null) {
+        androidx.compose.foundation.Image(
+            bitmap = customIcon,
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = modifier
+                .size(size)
+                .clip(RoundedCornerShape(12.dp)),
+        )
+        return
+    }
     val emoji = remember(nodeName) { nodeFlagEmoji(nodeName) }
     Box(
         modifier = modifier
