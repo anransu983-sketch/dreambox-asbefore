@@ -161,6 +161,7 @@ class ConnectionPollingUseCase(
                 ruleChain = ProxyChainResolver.formatProxyChain(chainParts),
                 downloadSpeedText = formatSpeed(speeds?.second ?: 0L),
                 downloadText = formatBytes(conn.download),
+                totalText = formatBytes(conn.upload + conn.download),
                 uploadSpeedText = formatSpeed(speeds?.first ?: 0L),
                 uploadText = formatBytes(conn.upload),
             )
@@ -215,6 +216,7 @@ data class ConnectionCardData(
     val downloadText: String,
     val uploadSpeedText: String,
     val uploadText: String,
+    val totalText: String = "",
 )
 
 // ── Shared formatting utilities ──────────────────────────────────────────────

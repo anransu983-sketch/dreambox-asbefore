@@ -472,23 +472,15 @@ private fun StashConnectionCard(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(spacing.space4),
         ) {
-            // 第一行：时间 + 域名:端口
+            // 第一行（Surge 式）：域名:端口做主行大字，右侧总量等宽数字
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(spacing.space8),
             ) {
-                if (startTimeText.isNotBlank()) {
-                    Text(
-                        text = startTimeText,
-                        style = MiuixTheme.textStyles.footnote1,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        maxLines = 1,
-                    )
-                }
                 Text(
                     text = hostPort,
-                    style = MiuixTheme.textStyles.body2,
+                    style = MiuixTheme.textStyles.body1.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
                     color = MiuixTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -496,8 +488,14 @@ private fun StashConnectionCard(
                         .weight(1f)
                         .basicMarquee(),
                 )
+                Text(
+                    text = item.totalText,
+                    style = MiuixTheme.textStyles.footnote1.copy(fontFeatureSettings = "tnum"),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                )
             }
-            // 第二行：代理名 + 匹配规则
+            // 第二行：出口（代理名）· 应用 · 匹配规则，全小字灰
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -509,10 +507,18 @@ private fun StashConnectionCard(
                     color = getProtocolColor(item.network),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .weight(1f)
-                        .basicMarquee(),
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee(),
                 )
+                if (item.processName.isNotBlank()) {
+                    Text(
+                        text = item.processName,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
                 if (ruleText.isNotBlank()) {
                     Text(
                         text = ruleText,
@@ -527,12 +533,20 @@ private fun StashConnectionCard(
                     )
                 }
             }
-            // 第三行：↑ 上传速度 ↓ 下载速度
+            // 第三行：时间 + 实时速度（等宽数字，扫读不跳动）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(spacing.space12),
             ) {
+                if (startTimeText.isNotBlank()) {
+                    Text(
+                        text = startTimeText,
+                        style = MiuixTheme.textStyles.footnote1.copy(fontFeatureSettings = "tnum"),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        maxLines = 1,
+                    )
+                }
                 SpeedText(
                     label = "↑",
                     speedText = item.uploadSpeedText,
@@ -583,7 +597,7 @@ private fun SpeedText(
         )
         Text(
             text = speedText,
-            style = MiuixTheme.textStyles.footnote1,
+            style = MiuixTheme.textStyles.footnote1.copy(fontFeatureSettings = "tnum"),
             color = MiuixTheme.colorScheme.onSurface,
             maxLines = 1,
         )
