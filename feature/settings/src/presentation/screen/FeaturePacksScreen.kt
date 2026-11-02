@@ -159,6 +159,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
                 title = "插件",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { NavigationBackIcon(navigator = navigator) },
+                actions = { com.suanran.dreambox.presentation.component.help.ModuleHelpAction("packs") },
             )
         },
     ) { innerPadding ->

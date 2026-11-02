@@ -59,6 +59,7 @@ import com.suanran.dreambox.feature.about.GitHubUpdateViewModel
 import com.suanran.dreambox.feature.about.UpdateCandidate
 import com.suanran.dreambox.feature.about.UpdateDownloadProgress
 import com.suanran.dreambox.feature.about.UpdateManifestPackage
+import com.suanran.dreambox.presentation.component.help.ModuleHelpAction
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.DialogButtonRow
@@ -141,7 +142,7 @@ fun AboutScreen(navigator: Navigator, appIconResId: Int) {
         wasDownloading = downloadProgress.isDownloading
     }
 
-    Scaffold(topBar = { TopBar(title = FlyTxt.About.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(navigator = navigator) }) }) {
+    Scaffold(topBar = { TopBar(title = FlyTxt.About.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(navigator = navigator) }, actions = { ModuleHelpAction("about") }) }) {
         innerPadding ->
         val mainLikePadding = rememberStandalonePageMainPadding()
         val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
@@ -176,6 +177,11 @@ BocchiCard {
                     BasicComponent(
                         title = "梦盒",
                         summary = "基于 Mihomo 的开源安卓客户端",
+                    )
+                    ArrowPreference(
+                        title = "功能说明",
+                        summary = "每个模块是干什么的，新手先看这里",
+                        onClick = { navigator.push(Route.ModuleGuide) },
                     )
                     ArrowPreference(
                         title = FlyTxt.About.License.CheckUpdate,

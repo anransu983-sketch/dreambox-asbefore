@@ -119,6 +119,16 @@ object ModuleHelp {
     )
 
     fun find(key: String): ModuleHelpEntry? = ENTRIES.firstOrNull { it.key == key }
+
+    /** 插件简表（功能说明总览用；详细说明在插件页每张卡上）。 */
+    val PACKS: List<Pair<String, String>> = listOf(
+        "一键节点" to "有自己的 VPS 时，填 IP 和 root 密码，一键部署节点并生成梦盒配置",
+        "VPS 终端" to "SSH 终端：服务器存一次，点一下进终端；带一键测速与网络调优",
+        "IP 测试" to "经当前代理出口打开常用 IP 检测站，看出口地址与纯净度",
+        "流媒体解锁" to "检测当前节点对 Netflix / Disney+ / YouTube Premium 的解锁情况",
+        "WebDAV 云备份" to "把全量备份存到自己的 WebDAV 网盘，需要时一键恢复",
+        "内核管家" to "切换、升级 mihomo 内核，或安装第三方自定义内核",
+    )
 }
 
 /** 顶栏右上角的小 ⓘ：点开本页说明。不占版面，不打扰。 */

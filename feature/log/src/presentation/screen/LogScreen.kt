@@ -154,6 +154,7 @@ fun LogScreen(navigator: Navigator) {
                 title = FlyTxt.Log.Title,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { NavigationBackIcon(navigator = navigator, extraStartPadding = 0.dp) },
+                actions = { com.suanran.dreambox.presentation.component.help.ModuleHelpAction("log") },
             )
         },
         floatingActionButton = {

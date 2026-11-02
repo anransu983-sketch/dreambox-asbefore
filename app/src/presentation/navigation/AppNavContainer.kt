@@ -54,6 +54,7 @@ import com.arkivanov.essenty.backhandler.BackHandler
 import com.suanran.dreambox.R
 import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.feature.about.presentation.screen.AboutScreen
+import com.suanran.dreambox.feature.about.presentation.screen.ModuleGuideScreen
 import com.suanran.dreambox.feature.about.presentation.screen.OpenSourceLicensesScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.ConnectionScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.SpeedTestScreen
@@ -110,6 +111,7 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.SpeedTest -> SpeedTestScreen(navigator)
         Route.GlobalSearch -> GlobalSearchScreen(navigator)
         Route.About -> AboutScreen(navigator, appIconResId = R.drawable.dreambox)
+        Route.ModuleGuide -> ModuleGuideScreen(navigator)
         Route.OpenSourceLicenses -> OpenSourceLicensesScreen(navigator, librariesResId = R.raw.aboutlibraries)
         Route.Override -> OverrideScreen(navigator)
         Route.OverrideConfigPreview -> OverrideConfigPreviewRoute(navigator)
