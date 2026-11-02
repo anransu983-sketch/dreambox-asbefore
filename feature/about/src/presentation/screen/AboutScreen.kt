@@ -74,16 +74,10 @@ import com.suanran.dreambox.presentation.theme.UiDp
 import com.suanran.dreambox.presentation.util.toast
 import com.suanran.dreambox.ui.platform.openUrl
 import kotlinx.coroutines.flow.StateFlow
-import com.suanran.dreambox.presentation.component.sortable.DraggableItem
-import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
-import com.suanran.dreambox.presentation.component.sortable.clearSectionOrder
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.hiddenSectionsRestore
-import com.suanran.dreambox.presentation.component.sortable.loadSectionOrder
-import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
-import com.suanran.dreambox.presentation.component.sortable.saveSectionOrder
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
@@ -152,15 +146,10 @@ fun AboutScreen(navigator: Navigator, appIconResId: Int) {
         val mainLikePadding = rememberStandalonePageMainPadding()
         val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
         val defaultKeys = listOf("info", "links", "license")
-        var order by remember { mutableStateOf(loadSectionOrder(mmkv, "about", defaultKeys)) }
         var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "about")) }
-        val visibleOrder = order.filter { it !in hiddenKeys }
+        val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
         val sectionTitles = mapOf("info" to "应用信息", "links" to "项目链接", "license" to "许可证")
         val listState = rememberLazyListState()
-        val dragState = rememberDragDropState(listState) { from, to ->
-            order = order.toMutableList().apply { add(to, removeAt(from)) }
-            saveSectionOrder(mmkv, "about", order)
-        }
         ScreenLazyColumn(
             lazyListState = listState,
             scrollBehavior = scrollBehavior,
@@ -229,9 +218,8 @@ BocchiSectionTitle(FlyTxt.About.Section.License)
                 },
             )
             itemsIndexed(visibleOrder, key = { _, k -> k }) { index, key ->
-                DraggableItem(state = dragState, index = index) { isDragging ->
-                    SortableSectionCard(
-                        isDragging = isDragging,
+                SortableSectionCard(
+                        isDragging = false,
                         onHide = {
                             hiddenKeys = hiddenKeys + key
                             saveHiddenSections(mmkv, "about", hiddenKeys + key)
@@ -239,35 +227,6 @@ BocchiSectionTitle(FlyTxt.About.Section.License)
                     ) {
                         sectionContent[key]?.invoke()
                     }
-                }
-            }
-            item {
-                ResetOrderButton(onClick = {
-                    clearSectionOrder(mmkv, "about")
-                    order = defaultKeys
-                })
-            }
-            item {
-                // 重置主页模块位置
-                com.suanran.dreambox.presentation.component.card.Card(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable {
-                            mmkv.remove("settings_module_order")
-                            context.toast("已重置主页模块位置")
-                        },
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            text = "重置主页模块位置",
-                            style = MiuixTheme.textStyles.body1,
-                            color = MiuixTheme.colorScheme.primary,
-                        )
-                    }
-                }
             }
             item {
                 Column(

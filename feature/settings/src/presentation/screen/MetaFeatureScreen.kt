@@ -73,16 +73,10 @@ import com.suanran.dreambox.presentation.util.toast
 import kotlin.system.exitProcess
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
-import com.suanran.dreambox.presentation.component.sortable.DraggableItem
-import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
-import com.suanran.dreambox.presentation.component.sortable.clearSectionOrder
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.hiddenSectionsRestore
-import com.suanran.dreambox.presentation.component.sortable.loadSectionOrder
-import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
-import com.suanran.dreambox.presentation.component.sortable.saveSectionOrder
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 import org.koin.androidx.compose.koinViewModel
@@ -149,18 +143,13 @@ fun MetaFeatureScreen(navigator: Navigator) {
         val mainLikePadding = rememberStandalonePageMainPadding()
         val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
         val defaultKeys = listOf("conn", "routing", "panel", "backup", "webdav", "agekey")
-        var order by remember { mutableStateOf(loadSectionOrder(mmkv, "meta_feature", defaultKeys)) }
         var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "meta_feature")) }
-        val visibleOrder = order.filter { it !in hiddenKeys }
+        val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
         val sectionTitles = mapOf(
             "conn" to "连接与流量", "routing" to "分流相关", "panel" to "面板",
             "backup" to "备份恢复", "webdav" to "WebDAV", "agekey" to "Age 密钥",
         )
         val listState = rememberLazyListState()
-        val dragState = rememberDragDropState(listState) { from, to ->
-            order = order.toMutableList().apply { add(to, removeAt(from)) }
-            saveSectionOrder(mmkv, "meta_feature", order)
-        }
     val sectionContent: Map<String, @Composable () -> Unit> = mapOf(
         "conn" to {
                 BocchiSectionTitle(FlyTxt.MetaFeature.Section.ConnectionAndTraffic)
@@ -307,9 +296,8 @@ fun MetaFeatureScreen(navigator: Navigator) {
         ) {
 
             itemsIndexed(visibleOrder, key = { _, k -> k }) { index, key ->
-                DraggableItem(state = dragState, index = index) { isDragging ->
-                    SortableSectionCard(
-                        isDragging = isDragging,
+                SortableSectionCard(
+                        isDragging = false,
                         onHide = {
                             hiddenKeys = hiddenKeys + key
                             saveHiddenSections(mmkv, "meta_feature", hiddenKeys + key)
@@ -317,13 +305,6 @@ fun MetaFeatureScreen(navigator: Navigator) {
                     ) {
                         sectionContent[key]?.invoke()
                     }
-                }
-            }
-            item {
-                ResetOrderButton(onClick = {
-                    clearSectionOrder(mmkv, "meta_feature")
-                    order = defaultKeys
-                })
             }
         }
 

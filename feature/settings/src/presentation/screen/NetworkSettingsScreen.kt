@@ -84,15 +84,9 @@ import com.suanran.dreambox.presentation.icon.flycat.PlaneTakeoff
 import com.suanran.dreambox.presentation.icon.flycat.Tun
 import com.suanran.dreambox.presentation.navigation.Navigator
 import com.suanran.dreambox.presentation.navigation.Route
-import com.suanran.dreambox.presentation.component.sortable.DraggableItem
-import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
-import com.suanran.dreambox.presentation.component.sortable.clearSectionOrder
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
-import com.suanran.dreambox.presentation.component.sortable.loadSectionOrder
-import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
-import com.suanran.dreambox.presentation.component.sortable.saveSectionOrder
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
@@ -106,8 +100,22 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun NetworkSettingsScreen(navigator: Navigator) {
@@ -119,14 +127,10 @@ fun NetworkSettingsScreen(navigator: Navigator) {
 
     // 「延迟测速」分节已删除（2026-11-02 用户拍板）：统一延迟/TCP 并发不再提供开关。
     val defaultKeys = listOf("runmode", "advanced", "access", "kernel")
-    var order by remember { mutableStateOf(loadSectionOrder(mmkv, "network_settings", defaultKeys)) }
+    // 分节固定默认顺序（拖动排序已删，2026-11-02 用户拍板）；隐藏功能保留。
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "network_settings")) }
     val listState = rememberLazyListState()
-    val dragState = rememberDragDropState(listState) { from, to ->
-        order = order.toMutableList().apply { add(to, removeAt(from)) }
-        saveSectionOrder(mmkv, "network_settings", order)
-    }
-    val visibleOrder = order.filter { it !in hiddenKeys && it != "delay" }
+    val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val sectionTitles = mapOf(
         "runmode" to "运行模式", "advanced" to "高级选项", "access" to "访问控制", "kernel" to "内核管理",
     )
@@ -140,10 +144,9 @@ fun NetworkSettingsScreen(navigator: Navigator) {
             scrollBehavior = scrollBehavior,
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
         ) {
-            itemsIndexed(visibleOrder, key = { _, k -> k }) { index, key ->
-                DraggableItem(state = dragState, index = index) { isDragging ->
+            itemsIndexed(visibleOrder, key = { _, k -> k }) { _, key ->
                     SortableSectionCard(
-                        isDragging = isDragging,
+                        isDragging = false,
                         onHide = {
                             hiddenKeys = hiddenKeys + key
                             saveHiddenSections(mmkv, "network_settings", hiddenKeys + key)
@@ -170,13 +173,6 @@ fun NetworkSettingsScreen(navigator: Navigator) {
                             "kernel" -> NetworkKernelSection(viewModel)
                         }
                     }
-                }
-            }
-            item {
-                ResetOrderButton(onClick = {
-                    clearSectionOrder(mmkv, "network_settings")
-                    order = defaultKeys
-                })
             }
         }
     }
@@ -283,6 +279,155 @@ private fun NetworkProxyOptionsSection(
  * A run-mode option: its own card with an icon on the leading side and a trailing
  * selection radio. A disabled mode greys its contents and can't be selected.
  */
+/** 内核管理新布局的小件：图标贴片行 / 状态胶囊 / 分隔线（与功能包页同一套语言）。 */
+@Composable
+private fun KernelIconRow(
+    icon: String,
+    title: String,
+    summary: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(colorScheme.primary.copy(alpha = 0.13f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            top.yukonga.miuix.kmp.basic.Text(text = icon, fontSize = 20.sp)
+        }
+        Spacer(modifier = Modifier.width(13.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = title,
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.onSurface,
+            )
+            if (summary != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = summary,
+                    fontSize = 12.5.sp,
+                    color = colorScheme.onSurfaceVariantSummary,
+                )
+            }
+        }
+        if (trailing != null) {
+            Spacer(modifier = Modifier.width(10.dp))
+            trailing()
+        }
+    }
+}
+
+@Composable
+private fun KernelChip(text: String, filled: Boolean) {
+    val shape = RoundedCornerShape(999.dp)
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .then(
+                if (filled) Modifier.background(colorScheme.primary)
+                else Modifier.border(1.dp, colorScheme.primary.copy(alpha = 0.55f), shape)
+            )
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        top.yukonga.miuix.kmp.basic.Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (filled) Color.White else colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun KernelChevron() {
+    Icon(
+        imageVector = Icons.Filled.ChevronRight,
+        contentDescription = null,
+        tint = colorScheme.onSurfaceVariantSummary,
+        modifier = Modifier.size(18.dp),
+    )
+}
+
+@Composable
+private fun KernelDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 69.dp, end = 16.dp)
+            .height(1.dp)
+            .background(colorScheme.onSurfaceVariantSummary.copy(alpha = 0.10f)),
+    )
+}
+
+@Composable
+private fun KernelListRow(
+    label: String,
+    summary: String?,
+    active: Boolean,
+    installed: Boolean,
+    downloading: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !downloading, onClick = onClick)
+            .padding(start = 69.dp, end = 16.dp, top = 11.dp, bottom = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(
+                    when {
+                        active -> colorScheme.primary
+                        installed -> Color(0xFF43A047)
+                        else -> colorScheme.onSurfaceVariantSummary.copy(alpha = 0.4f)
+                    }
+                ),
+        )
+        Spacer(modifier = Modifier.width(11.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = label,
+                fontSize = 14.5.sp,
+                color = colorScheme.onSurface,
+            )
+            if (summary != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = summary,
+                    fontSize = 12.sp,
+                    color = colorScheme.onSurfaceVariantSummary,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        when {
+            downloading -> top.yukonga.miuix.kmp.basic.Text(
+                text = FlyTxt.NetworkSettings.Kernel.DownloadingTag,
+                fontSize = 12.5.sp,
+                color = colorScheme.primary,
+            )
+            active -> KernelChip(text = FlyTxt.NetworkSettings.Kernel.ActiveTag, filled = true)
+            installed -> KernelChip(text = "切换", filled = false)
+            else -> KernelChip(text = "下载", filled = false)
+        }
+    }
+}
+
 @Composable
 private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -297,37 +442,49 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
 
     BocchiSectionTitle(FlyTxt.NetworkSettings.Section.Kernel)
     BocchiCard {
-        // 下拉仅展示已安装的内核（避免 index 中新 ID 和 marker 文件中旧 ID 同时出现）
-        val installedIds = installedCommits.keys.sorted()
-        val allKernelIds = listOf(KernelManager.BUNDLED_ALPHA_ID) + installedIds
-        val activeIndex = allKernelIds.indexOf(activeKernelId).coerceAtLeast(0)
-        WindowDropdownPreference(
-            title = FlyTxt.NetworkSettings.Kernel.ActiveTitle,
-            summary = kernelLabel(activeKernelId, installedCommits[activeKernelId]),
-            items = allKernelIds.map { id -> kernelLabel(id, installedCommits[id]) },
-            selectedIndex = activeIndex,
-            enabled = !kernelBusy,
-            onSelectedIndexChange = { idx ->
-                val selectedId = allKernelIds[idx]
-                if (selectedId != activeKernelId) {
-                    viewModel.selectKernel(selectedId)
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            // 当前内核（展示行，切换在下方可用内核列表里点）
+            KernelIconRow(
+                icon = "🧠",
+                title = FlyTxt.NetworkSettings.Kernel.ActiveTitle,
+                summary = kernelLabel(activeKernelId, installedCommits[activeKernelId]),
+                trailing = { KernelChip(text = FlyTxt.NetworkSettings.Kernel.ActiveTag, filled = true) },
+            )
+            KernelDivider()
+            // 检查更新
+            KernelIconRow(
+                icon = "🔄",
+                title = FlyTxt.NetworkSettings.Kernel.RefreshTitle,
+                summary = if (kernels.isNotEmpty()) "共 ${kernels.size} 个可用内核" else "点按获取最新内核列表",
+                onClick = { viewModel.refreshKernels() },
+                trailing = { KernelChevron() },
+            )
+            // 可用内核：内置 + 索引目录 + 已装的自定义内核（保证任何已装内核都能切回）
+            val displayKernels = remember(kernels, installedCommits) {
+                val list = mutableListOf<NetworkSettingsViewModel.KernelInfo>()
+                if (kernels.none { it.id == KernelManager.BUNDLED_ALPHA_ID }) {
+                    list += NetworkSettingsViewModel.KernelInfo(
+                        id = KernelManager.BUNDLED_ALPHA_ID, name = "", version = "内置",
+                        commit = installedCommits[KernelManager.BUNDLED_ALPHA_ID] ?: "",
+                    )
                 }
-            },
-        )
-        // 检查更新
-        BocchiArrowItem(
-            title = FlyTxt.NetworkSettings.Kernel.RefreshTitle,
-            summary = if (kernels.isNotEmpty()) "${kernels.size} available" else null,
-            onClick = { viewModel.refreshKernels() },
-        )
-        // 可用内核折叠在一起
-        if (kernels.isNotEmpty()) {
-            BocchiArrowItem(
-                title = "可用内核（${kernels.size}）",
-                summary = if (kernelsExpanded) null else kernels.joinToString("、") { kernelLabel(it.id, it.commit) },
+                list += kernels
+                val known = list.map { it.id }.toSet()
+                installedCommits.keys.filter { it !in known }.sorted().forEach { id ->
+                    list += NetworkSettingsViewModel.KernelInfo(
+                        id = id, name = "", version = "已安装", commit = installedCommits[id] ?: "",
+                    )
+                }
+                list
+            }
+            KernelDivider()
+            KernelIconRow(
+                icon = "📦",
+                title = "可用内核（${displayKernels.size}）",
+                summary = if (kernelsExpanded) "点按收起" else "点按展开，选内核切换或下载",
                 onClick = { kernelsExpanded = !kernelsExpanded },
-                endActions = {
-                    top.yukonga.miuix.kmp.basic.Icon(
+                trailing = {
+                    Icon(
                         imageVector = Icons.Filled.ExpandMore,
                         contentDescription = null,
                         tint = colorScheme.onSurfaceVariantSummary,
@@ -335,34 +492,29 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
                     )
                 },
             )
-            androidx.compose.animation.AnimatedVisibility(
+            AnimatedVisibility(
                 visible = kernelsExpanded,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 Column {
-                    for (kernel in kernels) {
-                        val isInstalled = KernelManager.isInstalled(context, kernel.id)
+                    for (kernel in displayKernels) {
+                        val isInstalled = kernel.id == KernelManager.BUNDLED_ALPHA_ID || KernelManager.isInstalled(context, kernel.id)
                         val isActive = activeKernelId == kernel.id
                         val isDownloading = kernel.id in downloadingIds
-                        BocchiArrowItem(
-                            title = kernelLabel(kernel.id, kernel.commit),
+                        KernelListRow(
+                            label = kernelLabel(kernel.id, kernel.commit),
                             summary = when {
                                 isDownloading -> FlyTxt.NetworkSettings.Kernel.DownloadingTag
-                                isInstalled && !isActive -> FlyTxt.NetworkSettings.Kernel.InstalledTag
-                                !isInstalled -> kernel.version
-                                else -> null
+                                isActive -> "当前使用中"
+                                isInstalled -> FlyTxt.NetworkSettings.Kernel.InstalledTag
+                                else -> kernel.version
                             },
-                            endActions = if (isActive) {
-                                {
-                                    top.yukonga.miuix.kmp.basic.Text(
-                                        text = FlyTxt.NetworkSettings.Kernel.ActiveTag,
-                                        color = colorScheme.primary,
-                                    )
-                                }
-                            } else null,
+                            active = isActive,
+                            installed = isInstalled,
+                            downloading = isDownloading,
                             onClick = {
-                                if (!isDownloading) {
+                                if (!kernelBusy) {
                                     if (isInstalled) {
                                         viewModel.selectKernel(kernel.id)
                                     } else {
@@ -374,13 +526,16 @@ private fun NetworkKernelSection(viewModel: NetworkSettingsViewModel) {
                     }
                 }
             }
+            KernelDivider()
+            // 自定义内核
+            KernelIconRow(
+                icon = "🧩",
+                title = FlyTxt.NetworkSettings.Kernel.CustomTitle,
+                summary = "粘贴链接安装第三方内核",
+                onClick = { showCustomDialog = true },
+                trailing = { KernelChevron() },
+            )
         }
-        // 自定义内核
-        BocchiArrowItem(
-            title = FlyTxt.NetworkSettings.Kernel.CustomTitle,
-            summary = null,
-            onClick = { showCustomDialog = true },
-        )
     }
 
     if (showCustomDialog) {

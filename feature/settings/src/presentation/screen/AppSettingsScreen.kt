@@ -61,15 +61,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.model.AppLanguage
 import com.suanran.dreambox.core.model.ThemeMode
-import com.suanran.dreambox.presentation.component.sortable.DraggableItem
-import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
-import com.suanran.dreambox.presentation.component.sortable.clearSectionOrder
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
-import com.suanran.dreambox.presentation.component.sortable.loadSectionOrder
-import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
-import com.suanran.dreambox.presentation.component.sortable.saveSectionOrder
 import com.suanran.dreambox.feature.settings.presentation.screen.component.ThemeColorPickerItem
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsViewModel
 import com.suanran.dreambox.locale.FlyTxt
@@ -114,14 +108,9 @@ fun AppSettingsScreen(navigator: Navigator) {
     val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
 
     val defaultKeys = listOf("behavior", "interface", "navigation", "privacy", "service", "network")
-    var order by remember { mutableStateOf(loadSectionOrder(mmkv, "app_settings", defaultKeys)) }
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "app_settings")) }
     val listState = rememberLazyListState()
-    val dragState = rememberDragDropState(listState) { from, to ->
-        order = order.toMutableList().apply { add(to, removeAt(from)) }
-        saveSectionOrder(mmkv, "app_settings", order)
-    }
-    val visibleOrder = order.filter { it !in hiddenKeys }
+    val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val sectionTitles = mapOf(
         "behavior" to "行为", "interface" to "界面", "navigation" to "导航",
         "privacy" to "隐私", "service" to "服务", "network" to "网络",
@@ -137,9 +126,8 @@ fun AppSettingsScreen(navigator: Navigator) {
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
         ) {
             itemsIndexed(visibleOrder, key = { _, k -> k }) { index, key ->
-                DraggableItem(state = dragState, index = index) { isDragging ->
-                    SortableSectionCard(
-                        isDragging = isDragging,
+                SortableSectionCard(
+                        isDragging = false,
                         onHide = {
                             hiddenKeys = hiddenKeys + key
                             saveHiddenSections(mmkv, "app_settings", hiddenKeys + key)
@@ -154,13 +142,6 @@ fun AppSettingsScreen(navigator: Navigator) {
                             "network" -> AppNetworkSettingsSection(viewModel)
                         }
                     }
-                }
-            }
-            item {
-                ResetOrderButton(onClick = {
-                    clearSectionOrder(mmkv, "app_settings")
-                    order = defaultKeys
-                })
             }
         }
     }

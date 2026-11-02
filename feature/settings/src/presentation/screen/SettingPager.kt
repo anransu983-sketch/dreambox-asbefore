@@ -73,9 +73,7 @@ import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
 import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
 import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
-import com.suanran.dreambox.presentation.component.sortable.DraggableItem
 import com.suanran.dreambox.presentation.component.sortable.ModuleMenuButton
-import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
@@ -184,21 +182,11 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
     val mmkv: MMKV = koinInject(named("settings"))
     val settingsReader: AppSettingsReader = koinInject()
     val isAnime = true
-    var modules by remember {
-        mutableStateOf(loadModuleOrder(mmkv))
-    }
+    // 主页模块固定默认顺序（拖动排序已删，2026-11-02 用户拍板）；隐藏照常。
+    val modules = defaultModules()
     var hiddenKeys by remember { mutableStateOf(loadHiddenModules(mmkv)) }
 
     val listState = rememberLazyListState()
-    // 用 rememberUpdatedState 包一层，避免拖拽回调捕获到过期的 modules
-    val modulesState = rememberUpdatedState(modules)
-    val dragState = rememberDragDropState(listState) { from, to ->
-        val current = modulesState.value
-        if (from !in current.indices || to !in current.indices) return@rememberDragDropState
-        val newList = current.toMutableList().apply { add(to, removeAt(from)) }.distinctBy { it.key }
-        modules = newList
-        saveModuleOrder(mmkv, newList)
-    }
     val visibleModules = modules.distinctBy { it.key }.filter { it.key !in hiddenKeys }
     val hiddenModules = modules.filter { it.key in hiddenKeys }
 
@@ -210,39 +198,28 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
             modifier = if (isAnime) Modifier.background(animeBackgroundBrush) else Modifier,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            itemsIndexed(visibleModules, key = { _, m -> m.key }) { index, module ->
-                DraggableItem(state = dragState, index = index) { isDragging ->
-                    if (isAnime) {
-                        AnimeModuleCard(
-                            module = module,
-                            isDragging = isDragging,
-                            onHide = {
-                                hiddenKeys = hiddenKeys + module.key
-                                saveHiddenModules(mmkv, hiddenKeys + module.key)
-                            },
-                            onClick = { module.route?.let { openSecondary(it) } },
-                        )
-                    } else {
-                        MaterialModuleCard(
-                            module = module,
-                            isDragging = isDragging,
-                            onHide = {
-                                hiddenKeys = hiddenKeys + module.key
-                                saveHiddenModules(mmkv, hiddenKeys + module.key)
-                            },
-                            onClick = { module.route?.let { openSecondary(it) } },
-                        )
-                    }
+            itemsIndexed(visibleModules, key = { _, m -> m.key }) { _, module ->
+                if (isAnime) {
+                    AnimeModuleCard(
+                        module = module,
+                        isDragging = false,
+                        onHide = {
+                            hiddenKeys = hiddenKeys + module.key
+                            saveHiddenModules(mmkv, hiddenKeys + module.key)
+                        },
+                        onClick = { module.route?.let { openSecondary(it) } },
+                    )
+                } else {
+                    MaterialModuleCard(
+                        module = module,
+                        isDragging = false,
+                        onHide = {
+                            hiddenKeys = hiddenKeys + module.key
+                            saveHiddenModules(mmkv, hiddenKeys + module.key)
+                        },
+                        onClick = { module.route?.let { openSecondary(it) } },
+                    )
                 }
-            }
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "长按拖动可排序",
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = if (isAnime) animeOnGlass.copy(alpha = 0.6f) else MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                )
             }
         }
     }

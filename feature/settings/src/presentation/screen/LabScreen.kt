@@ -40,16 +40,10 @@ import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
 import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
 import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
-import com.suanran.dreambox.presentation.component.sortable.DraggableItem
-import com.suanran.dreambox.presentation.component.sortable.ResetOrderButton
 import com.suanran.dreambox.presentation.component.sortable.SortableSectionCard
-import com.suanran.dreambox.presentation.component.sortable.clearSectionOrder
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
 import com.suanran.dreambox.presentation.component.sortable.hiddenSectionsRestore
-import com.suanran.dreambox.presentation.component.sortable.loadSectionOrder
-import com.suanran.dreambox.presentation.component.sortable.rememberDragDropState
-import com.suanran.dreambox.presentation.component.sortable.saveSectionOrder
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
@@ -123,14 +117,9 @@ fun LabScreen(navigator: Navigator) {
     )
 
     val defaultKeys = listOf("theme", "iptest", "packs", "modules", "hidden")
-    var order by remember { mutableStateOf(loadSectionOrder(mmkv, "lab", defaultKeys)) }
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
-    val visibleOrder = order.filter { it !in hiddenKeys }
+    val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val listState = rememberLazyListState()
-    val dragState = rememberDragDropState(listState) { from, to ->
-        order = order.toMutableList().apply { add(to, removeAt(from)) }
-        saveSectionOrder(mmkv, "lab", order)
-    }
     val entryByKey = entries.associateBy {
         when (it.route) {
             Route.Theme -> "theme"
@@ -168,9 +157,8 @@ fun LabScreen(navigator: Navigator) {
             }
             itemsIndexed(visibleOrder, key = { _, k -> k }) { index, key ->
                 val e = entryByKey[key] ?: return@itemsIndexed
-                DraggableItem(state = dragState, index = index) { isDragging ->
-                    SortableSectionCard(
-                        isDragging = isDragging,
+                SortableSectionCard(
+                        isDragging = false,
                         onHide = {
                             hiddenKeys = hiddenKeys + key
                             saveHiddenSections(mmkv, "lab", hiddenKeys + key)
@@ -214,13 +202,6 @@ fun LabScreen(navigator: Navigator) {
                             )
                         }
                     }
-                }
-            }
-            item {
-                ResetOrderButton(onClick = {
-                    clearSectionOrder(mmkv, "lab")
-                    order = defaultKeys
-                })
             }
         }
     }

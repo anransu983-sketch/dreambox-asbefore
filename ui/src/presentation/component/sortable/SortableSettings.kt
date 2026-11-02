@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.runtime.Composable
@@ -30,8 +29,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 可拖拽的设置分节卡片：包住原有分节内容，长按拖动排序。
- * 底部操作条有"..."菜单（隐藏）和拖拽把手。
+ * 设置分节卡片：包住分节内容，底部操作条只有"..."菜单（隐藏）。
+ * 拖动排序已删除（2026-11-02 用户拍板），isDragging 参数保留签名兼容、恒为 false。
  */
 @Composable
 fun SortableSectionCard(
@@ -70,11 +69,6 @@ fun SortableSectionCard(
                 )
                 Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             }
-            Icon(
-                imageVector = Icons.Filled.DragHandle,
-                contentDescription = "拖动排序",
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.5f),
-            )
         }
     }
 }
