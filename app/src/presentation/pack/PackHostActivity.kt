@@ -75,7 +75,7 @@ class PackHostActivity : Activity() {
         // 没有 WebChromeClient 时 window.confirm() 恒返回 false、alert() 无声：
         // 包内带确认弹窗的按钮会表现为「点了没反应」（sshtty v4 完整版调优实测）。
         webView.webChromeClient = object : WebChromeClient() {
-            override fun onJsConfirm(view: WebView?, message: String?, result: JsResult?): Boolean {
+            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 AlertDialog.Builder(this@PackHostActivity)
                     .setMessage(message ?: "")
                     .setPositiveButton("确定") { _, _ -> result?.confirm() }
@@ -85,7 +85,7 @@ class PackHostActivity : Activity() {
                 return true
             }
 
-            override fun onJsAlert(view: WebView?, message: String?, result: JsResult?): Boolean {
+            override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 AlertDialog.Builder(this@PackHostActivity)
                     .setMessage(message ?: "")
                     .setPositiveButton("好") { _, _ -> result?.confirm() }
