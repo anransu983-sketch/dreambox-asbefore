@@ -570,14 +570,35 @@ class GitHubUpdateManager(
         val repoUrl = releaseUrl.substring(0, markerIndex)
         return "$repoUrl/releases/download/${Uri.encode(tag)}/${Uri.encode(FALLBACK_APK_FILE_NAME)}"
     }
+    /**
+     * 本机代理口（mihomo mixed-port 7890）在不在：200ms TCP 探活。
+     * 在 → 更新下载优先走代理（GitHub 直连在国内经常卡 0%）；不在 → 直连兜底。
+     */
+    private fun localProxyOrNull(): java.net.Proxy? {
+        return runCatching {
+            java.net.Socket().use { socket ->
+                socket.connect(java.net.InetSocketAddress("127.0.0.1", 7890), 200)
+            }
+            java.net.Proxy(
+                java.net.Proxy.Type.HTTP,
+                java.net.InetSocketAddress("127.0.0.1", 7890),
+            )
+        }.getOrNull()
+    }
+
     private suspend fun downloadToFile(url: String, outputFile: File, expectedSize: Long = 0L) {
         val downloadJob = coroutineContext[Job]
         activeDownloadJob = downloadJob
         try {
-            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            val proxy = localProxyOrNull()
+            val connection = (if (proxy != null) {
+                java.net.URL(url).openConnection(proxy)
+            } else {
+                java.net.URL(url).openConnection()
+            }) as java.net.HttpURLConnection
             connection.setRequestProperty("User-Agent", updateUserAgent())
             connection.connectTimeout = 15_000
-            connection.readTimeout = 60_000
+            connection.readTimeout = 30_000
             connection.instanceFollowRedirects = true
             try {
                 val responseCode = connection.responseCode
@@ -588,12 +609,25 @@ class GitHubUpdateManager(
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                         var total = 0L
                         var lastReportedProgress = -1
+                        // 停滞熔断：20 秒内字节几乎不涨（<16KB）就放弃当前源，
+                        // 让 downloadAndInstall 换下一个 target，而不是无限卡 0%。
+                        var stallWindowStart = System.currentTimeMillis()
+                        var stallWindowBytes = 0L
                         var read: Int
                         while (input.read(buffer).also { read = it } != -1) {
                             if (downloadCancelRequested) throw UpdateDownloadCancelledException()
                             coroutineContext.ensureActive()
                             output.write(buffer, 0, read)
                             total += read
+                            stallWindowBytes += read
+                            val nowMs = System.currentTimeMillis()
+                            if (nowMs - stallWindowStart >= 20_000) {
+                                if (stallWindowBytes < 16_384) {
+                                    throw java.io.IOException("下载停滞（20 秒内不足 16KB），切换下载源")
+                                }
+                                stallWindowStart = nowMs
+                                stallWindowBytes = 0
+                            }
                             val progress = if (contentLength > 0) {
                                 ((total * 100) / contentLength).toInt().coerceIn(0, 100)
                             } else {
