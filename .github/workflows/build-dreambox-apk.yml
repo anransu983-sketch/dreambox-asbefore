@@ -3,6 +3,11 @@ name: Build DreamBox APK
 # 手动触发：Actions 页选这个 workflow 点 Run workflow
 on:
   workflow_dispatch:
+    inputs:
+      custom_icon:
+        description: "定制图标构建（用 custom-icon/icon.png 生成图标，产物发到 custom-icon 预发布）"
+        type: boolean
+        default: false
 
 jobs:
   geo:
@@ -35,6 +40,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+
+      - name: Generate custom icon (workshop)
+        if: ${{ inputs.custom_icon }}
+        shell: bash
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 scripts/gen_custom_icon.py
 
       - name: Setup Java
         uses: actions/setup-java@v6
@@ -148,3 +160,14 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           compression-level: 0
+
+      - name: Publish custom icon build
+        if: ${{ inputs.custom_icon }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view custom-icon >/dev/null 2>&1 || \
+            gh release create custom-icon --prerelease --title "梦盒定制图标版" \
+              --notes "工坊构建：自定义应用图标。与正式版同版本同签名，覆盖安装即可；想换回正式版就装正式版 Release。"
+          gh release upload custom-icon app/build/outputs/apk/release/*.apk --clobber

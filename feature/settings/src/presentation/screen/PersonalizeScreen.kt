@@ -52,9 +52,11 @@ import com.suanran.dreambox.presentation.navigation.Navigator
 import com.suanran.dreambox.presentation.theme.AppTheme
 import com.suanran.dreambox.presentation.util.toast
 import com.tencent.mmkv.MMKV
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
@@ -75,6 +77,7 @@ private val APP_ICON_VARIANTS = listOf(
     AppIconVariant("pink", "粉樱", ".DreamBoxLauncherPink", Color(0xFFFF7BAC)),
     AppIconVariant("blue", "深蓝", ".DreamBoxLauncherBlue", Color(0xFF4A90D9)),
     AppIconVariant("dark", "曜黑", ".DreamBoxLauncherDark", Color(0xFF23232B)),
+    AppIconVariant("custom", "自定义", ".DreamBoxLauncherCustom", Color(0xFFB79CFF)),
 )
 
 private const val ICON_VARIANT_KEY = "app_icon_variant"
@@ -183,12 +186,16 @@ fun PersonalizeScreen(navigator: Navigator) {
                                                 iconVariant = variant.id
                                                 mmkv.encode(ICON_VARIANT_KEY, variant.id)
                                                 runCatching { applyAppIconVariant(context, variant) }
-                                                context.toast("已切换为「${variant.name}」，桌面图标稍等片刻刷新")
+                                                if (variant.id == "custom") {
+                                                    context.toast("已切到自定义款：在下面工坊传图构建、装上定制版后生效")
+                                                } else {
+                                                    context.toast("已切换为「${variant.name}」，桌面图标稍等片刻刷新")
+                                                }
                                             },
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
-                                            text = "梦",
+                                            text = if (variant.id == "custom") "图" else "梦",
                                             fontSize = 20.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (variant.id == "default") BocchiTextDark else Color.White,
@@ -204,10 +211,11 @@ fun PersonalizeScreen(navigator: Navigator) {
                             }
                         }
                         Text(
-                            text = "预置款秒换；自定义图片款要云端打包，下一版补上工坊。",
+                            text = "预置款秒换；自定义款在下面工坊传图、云端打包后安装定制版生效。",
                             fontSize = 11.sp,
                             color = BocchiTextGray,
                         )
+                        IconWorkshopBlock(mmkv = mmkv)
                     }
                 }
             }
@@ -355,6 +363,200 @@ private fun CustomIconRow(
                 color = BocchiTextGray,
                 modifier = Modifier.clickable { CustomIcons.clear(context, customKey) },
             )
+        }
+    }
+}
+
+private const val GH_REPO = "anransu983-sketch/dreambox-asbefore"
+private const val TOKEN_KEY = "icon_build_token"
+
+@Composable
+private fun IconWorkshopBlock(mmkv: MMKV) {
+    val context = LocalContext.current
+    val spacing = AppTheme.spacing
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var token by remember { mutableStateOf(mmkv.decodeString(TOKEN_KEY, "").orEmpty()) }
+    var status by remember { mutableStateOf("") }
+
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
+            val tk = token.trim()
+            if (tk.isEmpty()) {
+                context.toast("先填构建令牌并保存")
+            } else {
+                status = "正在上传图片并触发构建…"
+                scope.launch {
+                    status = runCatching {
+                        uploadIconAndDispatch(context, uri, tk)
+                        "已开始构建：约 5–10 分钟后点「构建状态」确认，好了再开下载页安装"
+                    }.getOrElse { "失败：" + (it.message ?: it.toString()) }
+                }
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.space10)) {
+        Text(
+            text = "自定义图片工坊",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = BocchiTextDark,
+        )
+        Text(
+            text = "传一张图 → 云端打包（约 5–10 分钟）→ 装定制版，桌面图标就变成你的图。定制版与正式版同版本同签名，可互相覆盖装。令牌需要该仓库的 Contents 与 Actions 写权限，只存在本机。",
+            fontSize = 11.sp,
+            color = BocchiTextGray,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextField(
+                value = token,
+                onValueChange = { token = it },
+                label = "构建令牌",
+                useLabelAsPlaceholder = true,
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.width(spacing.space12))
+            Text(
+                text = "保存",
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.clickable {
+                    mmkv.encode(TOKEN_KEY, token.trim())
+                    context.toast("令牌已保存")
+                },
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.space16)) {
+            Text(
+                text = "上传图片并开始构建",
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.clickable {
+                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+            )
+            Text(
+                text = "构建状态",
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.clickable {
+                    val tk = token.trim()
+                    if (tk.isEmpty()) {
+                        context.toast("先填构建令牌并保存")
+                    } else {
+                        status = "查询中…"
+                        scope.launch {
+                            status = runCatching { fetchLatestRunStatus(tk) }
+                                .getOrElse { "查询失败：" + (it.message ?: it.toString()) }
+                        }
+                    }
+                },
+            )
+            Text(
+                text = "打开定制版下载",
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.clickable {
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://github.com/$GH_REPO/releases/tag/custom-icon"),
+                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                },
+            )
+        }
+        if (status.isNotEmpty()) {
+            Text(text = status, fontSize = 11.5.sp, color = BocchiTextGray)
+        }
+    }
+}
+
+private fun ghApi(
+    method: String,
+    path: String,
+    token: String,
+    body: org.json.JSONObject?,
+): Pair<Int, String> {
+    val conn = java.net.URL("https://api.github.com$path").openConnection() as java.net.HttpURLConnection
+    conn.requestMethod = method
+    conn.setRequestProperty("Authorization", "Bearer $token")
+    conn.setRequestProperty("Accept", "application/vnd.github+json")
+    conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+    conn.connectTimeout = 20000
+    conn.readTimeout = 30000
+    if (body != null) {
+        conn.doOutput = true
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+    }
+    val code = conn.responseCode
+    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+    val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+    return code to text
+}
+
+private suspend fun uploadIconAndDispatch(context: Context, uri: android.net.Uri, token: String) {
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: throw IllegalStateException("图片读取失败")
+        val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        val (getCode, getText) = ghApi("GET", "/repos/$GH_REPO/contents/custom-icon/icon.png?ref=main", token, null)
+        val sha = if (getCode == 200) {
+            runCatching { org.json.JSONObject(getText).optString("sha") }.getOrNull()
+        } else {
+            null
+        }
+        val putBody = org.json.JSONObject()
+            .put("message", "workshop: custom app icon")
+            .put("content", b64)
+            .put("branch", "main")
+        if (!sha.isNullOrEmpty()) putBody.put("sha", sha)
+        val (putCode, putText) = ghApi("PUT", "/repos/$GH_REPO/contents/custom-icon/icon.png", token, putBody)
+        if (putCode !in 200..299) {
+            throw IllegalStateException("上传失败（$putCode）：${putText.take(140)}")
+        }
+        val dispatchBody = org.json.JSONObject()
+            .put("ref", "main")
+            .put("inputs", org.json.JSONObject().put("custom_icon", "true"))
+        val (code, text) = ghApi(
+            "POST",
+            "/repos/$GH_REPO/actions/workflows/build-dreambox-apk.yml/dispatches",
+            token,
+            dispatchBody,
+        )
+        if (code !in 200..299) {
+            throw IllegalStateException("触发构建失败（$code）：${text.take(140)}")
+        }
+    }
+}
+
+private suspend fun fetchLatestRunStatus(token: String): String {
+    return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val (code, text) = ghApi(
+            "GET",
+            "/repos/$GH_REPO/actions/workflows/build-dreambox-apk.yml/runs?per_page=1",
+            token,
+            null,
+        )
+        if (code != 200) throw IllegalStateException("HTTP $code")
+        val run = org.json.JSONObject(text).optJSONArray("workflow_runs")?.optJSONObject(0)
+            ?: return@withContext "还没有构建记录"
+        val status = run.optString("status")
+        val conclusion = run.optString("conclusion")
+        val created = run.optString("created_at").take(16).replace("T", " ")
+        when {
+            status != "completed" -> "最近一次构建进行中（开始于 $created UTC）"
+            conclusion == "success" -> "最近一次构建已成功（$created UTC）：若那是你的定制构建，去下载页装定制版"
+            else -> "最近一次构建失败（$created UTC，结论 $conclusion）"
         }
     }
 }
