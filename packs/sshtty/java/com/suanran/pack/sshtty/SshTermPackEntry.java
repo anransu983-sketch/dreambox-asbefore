@@ -143,6 +143,15 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             case "tqState":
                 io.execute(() -> doTqState(opts, callback));
                 return true;
+            case "tuneStart":
+                io.execute(() -> doTuneStart(opts, callback));
+                return true;
+            case "tuneState":
+                io.execute(() -> doTuneState(opts, callback));
+                return true;
+            case "tuneRollback":
+                io.execute(() -> doTuneRollback(opts, callback));
+                return true;
             default:
                 return false;
         }
@@ -225,6 +234,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                         .put("host", s.optString("host"))
                         .put("port", s.optInt("port", 22))
                         .put("user", s.optString("user"))
+                        .put("bw", s.optInt("bw", 1000))
                         .put("hasPassword", s.optString("password").length() > 0));
             }
         }
@@ -256,6 +266,9 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         target.put("name", o.optString("name", "").trim());
         target.put("port", o.optInt("port", 22));
         target.put("user", o.optString("user", "root").trim());
+        int bw = o.optInt("bw", 0);
+        if (bw > 0) target.put("bw", bw);
+        else if (!target.has("bw")) target.put("bw", 1000);
         String pw = o.optString("password", "");
         if (pw.length() > 0) {
             target.put("password", pw);
@@ -592,6 +605,98 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     .toString(), null);
         } catch (Exception e) {
             callback.onResult(false, null, "读取 TQ 状态失败：" + msg(e));
+        }
+    }
+
+    // ── 一键调优（Tcpfit，Kylin010/tcpfit）─────────────────────
+    // 按 2026-10-23 源码审计定版口径（报告 ~/workspace/tcpfit-audit/AUDIT.md）：
+    // 固定 tag v0.5.9、下载后先验 sha256（与仓库 SHA256SUMS 一致的那枚）不过不跑；
+    // 关遥测（no-telemetry 文件＋环境变量）；只跑基础调优 CLI
+    // tune --role proxy --bw <套餐带宽>（不跑 iperf3、不做整形），约 1 分钟；
+    // 调前留底（qdisc/路由/关键 sysctl）写进日志头；回滚走 tcpfit rollback。
+
+    private static final String TCPFIT_SHA256 =
+            "8331cc40950229a3280ce32406330a85b1a3d21ba398a4db3dc7e25c39783741";
+    private static final String TCPFIT_URL =
+            "https://raw.githubusercontent.com/Kylin010/tcpfit/v0.5.9/tcpfit.sh";
+
+    private void doTuneStart(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            int bw = srv.optInt("bw", 1000);
+            if (bw < 10) bw = 1000;
+            String cmd = "mkdir -p /tmp/sshtty-tcpfit /var/lib/tcpfit && "
+                    + "touch /var/lib/tcpfit/no-telemetry && cd /tmp/sshtty-tcpfit && "
+                    + "if [ -f tune.pid ] && kill -0 $(cat tune.pid) 2>/dev/null; then echo ALREADY; else "
+                    + "if [ ! -f tcpfit.sh ]; then curl -fsSL -o tcpfit.sh " + TCPFIT_URL + "; fi; "
+                    + "if echo \"" + TCPFIT_SHA256 + "  tcpfit.sh\" | sha256sum -c - 2>/dev/null | grep -q OK; then "
+                    + "mv -f tune.log tune-prev.log 2>/dev/null; "
+                    + "{ echo '== 调前留底 =='; tc qdisc show 2>/dev/null; ip route show 2>/dev/null | head -5; "
+                    + "sysctl net.ipv4.tcp_congestion_control net.core.rmem_max net.core.wmem_max 2>/dev/null; "
+                    + "echo '== 开始调优 =='; } > tune.log; "
+                    + "nohup env TCPFIT_NO_TELEMETRY=1 TERM=xterm-256color bash tcpfit.sh "
+                    + "tune --role proxy --bw " + bw + " >> tune.log 2>&1 < /dev/null & "
+                    + "echo $! > tune.pid; echo STARTED; "
+                    + "else echo BADSHA; fi; fi";
+            String r = runExec(srv, cmd, 90).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("started", r.contains("STARTED"))
+                    .put("alreadyRunning", r.contains("ALREADY"))
+                    .put("badSha", r.contains("BADSHA"))
+                    .put("bw", bw)
+                    .put("echo", r)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "启动调优失败：" + msg(e));
+        }
+    }
+
+    private void doTuneState(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "if [ -f /tmp/sshtty-tcpfit/tune.pid ] && kill -0 $(cat /tmp/sshtty-tcpfit/tune.pid) 2>/dev/null; "
+                    + "then echo RUNNING; else echo IDLE; fi; "
+                    + "echo __SYSCTL__; sysctl net.ipv4.tcp_congestion_control net.core.rmem_max net.core.wmem_max 2>/dev/null; "
+                    + "echo __TAIL__; tail -c 1800 /tmp/sshtty-tcpfit/tune.log 2>/dev/null";
+            String r = runExec(srv, cmd, 30);
+            boolean running = r.startsWith("RUNNING");
+            String sysctl = "";
+            String tail = "";
+            int i1 = r.indexOf("__SYSCTL__");
+            int i2 = r.indexOf("__TAIL__");
+            if (i1 >= 0 && i2 > i1) sysctl = r.substring(i1 + "__SYSCTL__".length(), i2).trim();
+            if (i2 >= 0) tail = r.substring(i2 + "__TAIL__".length()).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("running", running)
+                    .put("sysctl", sysctl)
+                    .put("tail", tail)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "读取调优状态失败：" + msg(e));
+        }
+    }
+
+    private void doTuneRollback(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "cd /tmp/sshtty-tcpfit && "
+                    + "if [ -f tune.pid ] && kill -0 $(cat tune.pid) 2>/dev/null; then echo BUSY; "
+                    + "elif [ ! -f tcpfit.sh ]; then echo NOSCRIPT; "
+                    + "elif echo \"" + TCPFIT_SHA256 + "  tcpfit.sh\" | sha256sum -c - 2>/dev/null | grep -q OK; then "
+                    + "{ echo '== 回滚调优 =='; } >> tune.log; "
+                    + "nohup env TCPFIT_NO_TELEMETRY=1 TERM=xterm-256color bash tcpfit.sh rollback "
+                    + ">> tune.log 2>&1 < /dev/null & echo $! > tune.pid; echo STARTED; "
+                    + "else echo BADSHA; fi";
+            String r = runExec(srv, cmd, 60).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("started", r.contains("STARTED"))
+                    .put("busy", r.contains("BUSY"))
+                    .put("badSha", r.contains("BADSHA"))
+                    .put("noScript", r.contains("NOSCRIPT"))
+                    .put("echo", r)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "启动回滚失败：" + msg(e));
         }
     }
 
