@@ -21,6 +21,8 @@
 
 package com.suanran.dreambox.feature.proxy.presentation.screen
 
+import com.suanran.dreambox.presentation.component.misc.DelayHistory
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -762,6 +764,18 @@ internal fun NodeListPage(
     val spacing = LocalSpacing.current
     val isTesting = testingGroupNames.contains(group.name)
     val listItemKeys = remember(group.proxies) { group.proxies.map { it.name } }
+    // 延迟历史落盘：每次测速结果变化时记一笔（供节点行走势线用）。
+    val delayRecordContext = LocalContext.current
+    val lastRecordedDelays = remember { mutableStateMapOf<String, Int>() }
+    LaunchedEffect(group.proxies) {
+        group.proxies.forEach { proxy ->
+            val d = proxy.delay ?: 0
+            if (d > 0 && lastRecordedDelays[proxy.name] != d) {
+                lastRecordedDelays[proxy.name] = d
+                DelayHistory.record(delayRecordContext, proxy.name, d)
+            }
+        }
+    }
 
     val visibleProxies = remember(group.proxies, searchQuery) { group.filterNodes(searchQuery) }
     val revealCount = rememberRowReveal(itemCount = visibleProxies.size, replayKey = group.name, listState = listState)

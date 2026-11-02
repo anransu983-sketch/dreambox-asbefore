@@ -26,6 +26,8 @@ import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.feature.proxy.presentation.util.NodeFlagBadge
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.EmojiAwareText
+import androidx.compose.foundation.layout.size
+import com.suanran.dreambox.presentation.component.misc.rememberDelayHistory
 import com.suanran.dreambox.presentation.theme.RowRevealAll
 import top.yukonga.miuix.kmp.basic.Text
 import com.suanran.dreambox.presentation.theme.UiDp
@@ -115,13 +117,25 @@ internal fun NodeListRow(
                     }
                 }
             }
-            ProxyDelayIndicator(
-                delayLabel = delayLabel,
-                isDelayTesting = isTesting,
-                onDelayTestClick = remember(proxy.name, onTestClick) {
-                    onTestClick?.let { click -> { click(proxy.name) } }
-                },
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                ProxyDelayIndicator(
+                    delayLabel = delayLabel,
+                    isDelayTesting = isTesting,
+                    onDelayTestClick = remember(proxy.name, onTestClick) {
+                        onTestClick?.let { click -> { click(proxy.name) } }
+                    },
+                )
+                val delayHistory = rememberDelayHistory(proxy.name)
+                if (delayHistory.size >= 2) {
+                    DelaySparkline(
+                        history = delayHistory,
+                        color = delayLabel?.second ?: androidx.compose.ui.graphics.Color.Gray,
+                    )
+                }
+            }
         }
     }
 }
@@ -152,4 +166,37 @@ private fun NodePingChip() {
             .background(neutral.copy(alpha = 0.12f))
             .padding(horizontal = UiDp.dp8, vertical = 2.dp),
     )
+}
+
+
+/** 延迟走势小曲线：最近 N 次测速连成的线（小火箭式），颜色跟当前延迟档一致。 */
+@Composable
+private fun DelaySparkline(history: List<Int>, color: androidx.compose.ui.graphics.Color) {
+    androidx.compose.foundation.Canvas(
+        modifier = Modifier.size(width = 46.dp, height = 14.dp),
+    ) {
+        val maxV = (history.maxOrNull() ?: 1)
+        val minV = (history.minOrNull() ?: 0)
+        val range = (maxV - minV).coerceAtLeast(20).toFloat()
+        val padY = 1.5.dp.toPx()
+        val stepX = if (history.size > 1) size.width / (history.size - 1) else size.width
+        val path = androidx.compose.ui.graphics.Path()
+        history.forEachIndexed { i, v ->
+            val x = stepX * i
+            val y = size.height - padY - ((v - minV).toFloat() / range) * (size.height - padY * 2)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 1.5.dp.toPx(),
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+            ),
+        )
+        val lastX = stepX * (history.size - 1)
+        val lastV = history.last()
+        val lastY = size.height - padY - ((lastV - minV).toFloat() / range) * (size.height - padY * 2)
+        drawCircle(color = color, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(lastX, lastY))
+    }
 }
