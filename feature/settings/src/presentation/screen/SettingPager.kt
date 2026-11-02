@@ -73,7 +73,6 @@ import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
 import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
 import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
-import com.suanran.dreambox.presentation.component.sortable.ModuleMenuButton
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
@@ -184,11 +183,11 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
     val isAnime = true
     // 主页模块固定默认顺序（拖动排序已删，2026-11-02 用户拍板）；隐藏照常。
     val modules = defaultModules()
-    var hiddenKeys by remember { mutableStateOf(loadHiddenModules(mmkv)) }
+    // 隐藏集合只在「模块」页里管理（主页卡片上的 ⋮ 隐藏已删，2026-11-03 用户拍板）；这里每次组合现读现过滤。
+    val hiddenKeys = loadHiddenModules(mmkv)
 
     val listState = rememberLazyListState()
     val visibleModules = modules.distinctBy { it.key }.filter { it.key !in hiddenKeys }
-    val hiddenModules = modules.filter { it.key in hiddenKeys }
 
     Scaffold(topBar = { TopBar(title = FlyTxt.Settings.Title, scrollBehavior = scrollBehavior) }) { innerPadding ->
         ScreenLazyColumn(
@@ -203,20 +202,12 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
                     AnimeModuleCard(
                         module = module,
                         isDragging = false,
-                        onHide = {
-                            hiddenKeys = hiddenKeys + module.key
-                            saveHiddenModules(mmkv, hiddenKeys + module.key)
-                        },
                         onClick = { module.route?.let { openSecondary(it) } },
                     )
                 } else {
                     MaterialModuleCard(
                         module = module,
                         isDragging = false,
-                        onHide = {
-                            hiddenKeys = hiddenKeys + module.key
-                            saveHiddenModules(mmkv, hiddenKeys + module.key)
-                        },
                         onClick = { module.route?.let { openSecondary(it) } },
                     )
                 }
@@ -238,7 +229,6 @@ private val animeOnGlass = Color(0xFF4A1E2C)
 private fun AnimeModuleCard(
     module: SettingsModule,
     isDragging: Boolean,
-    onHide: () -> Unit,
     onClick: () -> Unit,
 ) {
     val cardShape = RoundedCornerShape(20.dp)
@@ -282,8 +272,6 @@ private fun AnimeModuleCard(
                 color = BocchiPink.copy(alpha = 0.6f),
             )
             Spacer(modifier = Modifier.width(4.dp))
-            ModuleMenuButton(onHide = onHide)
-            Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
@@ -299,7 +287,6 @@ private fun AnimeModuleCard(
 private fun MaterialModuleCard(
     module: SettingsModule,
     isDragging: Boolean,
-    onHide: () -> Unit,
     onClick: () -> Unit,
 ) {
     val cardShape = RoundedCornerShape(20.dp)
@@ -338,8 +325,6 @@ private fun MaterialModuleCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            ModuleMenuButton(onHide = onHide)
-            Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
@@ -406,9 +391,4 @@ private const val MMKV_KEY_MODULE_HIDDEN = "settings_module_hidden"
 private fun loadHiddenModules(mmkv: MMKV): Set<String> {
     return mmkv.decodeString(MMKV_KEY_MODULE_HIDDEN, "").orEmpty()
         .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-}
-
-/** 保存被隐藏的模块 key 集合。 */
-private fun saveHiddenModules(mmkv: MMKV, hidden: Set<String>) {
-    mmkv.encode(MMKV_KEY_MODULE_HIDDEN, hidden.joinToString(","))
 }

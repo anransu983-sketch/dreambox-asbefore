@@ -48,18 +48,16 @@ fun SortableSectionCard(
             ),
     ) {
         content()
-        // 底部操作条："..."菜单 + 拖拽把手
-        Row(
-            modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onHide != null) {
-                ModuleMenuButton(onHide = onHide)
-                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-            } else if (isEditing) {
+        // 底部操作条：⋮ 隐藏菜单已删（2026-11-03 用户拍板：隐藏只留「模块」页开关那种，
+        // onHide 参数保留签名兼容但不再渲染）；仅编辑态显示删除按钮。
+        if (isEditing) {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Icon(
                     imageVector = Icons.Filled.RemoveCircle,
                     contentDescription = "删除",
