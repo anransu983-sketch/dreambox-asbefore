@@ -197,12 +197,28 @@ tasks.register("assembleReleaseWithExtension") {
 }
 
 // 与 :app 既有口径一致（见 app/build.gradle.kts 尾部注释）：部分依赖的 AAR 元数据要求
-// compileSdk 37（尚未公开），需在所有模块跳过 check*AarMetadata，否则 release 构建
-// 会在库模块（如 :feature:home:checkReleaseAarMetadata）上失败；debug 构建不触发此检查。
+// compileSdk 37（尚未公开，SDK 仓库最高只有 36），需在所有模块跳过 check*AarMetadata，
+// 否则 release 构建会在库模块（如 :feature:home:checkReleaseAarMetadata）上失败。
+// 注意：库模块的 bundle*Aar 把校验任务的输出目录声明为输入，任务禁用后目录不存在会
+// 让打包任务因输入缺失失败，故另注册 ensure 任务提前把该目录建出来。
 allprojects {
     tasks.configureEach {
         if (name.endsWith("AarMetadata")) {
             enabled = false
+        }
+    }
+    tasks.register("ensureAarMetadataCheckDirs") {
+        doLast {
+            val base = layout.buildDirectory.dir("intermediates/aar_metadata_check").get().asFile
+            listOf("debug", "release").forEach { variant ->
+                val cap = variant.replaceFirstChar(Char::uppercaseChar)
+                File(base, "$variant/check${cap}AarMetadata").mkdirs()
+            }
+        }
+    }
+    tasks.configureEach {
+        if (name.startsWith("bundle") && name.endsWith("Aar")) {
+            dependsOn("ensureAarMetadataCheckDirs")
         }
     }
 }
