@@ -22,7 +22,7 @@ jobs:
     secrets: inherit
 
   apk:
-    name: Build debug APK
+    name: Build loader APK
     needs: [geo, native-arm64]
     runs-on: ubuntu-latest
     permissions:
@@ -59,6 +59,15 @@ jobs:
           path: ~/.android/debug.keystore
           key: dreambox-debug-keystore-v1
 
+      - name: Prepare loader signing (debug keystore as release keystore)
+        shell: bash
+        run: |
+          set -eu
+          cp ~/.android/debug.keystore release.keystore
+          keytool -list -keystore release.keystore -storepass android -alias androiddebugkey > /dev/null
+          printf 'keystore.password=android\nkey.alias=androiddebugkey\nkey.password=android\n' > signing.properties
+          echo "signing prepared from cached debug keystore"
+
       - name: Download native arm64 artifact
         uses: actions/download-artifact@v8
         with:
@@ -92,13 +101,13 @@ jobs:
           echo "--- geo ---"
           ls -la build/generated/assets/geo
 
-      - name: Build debug APK
+      - name: Build loader APK
         id: gradle_build
         shell: bash
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew --no-daemon :app:assembleDebug 2>&1 | tee gradle-build.log
+          ./gradlew --no-daemon :app:assembleRelease 2>&1 | tee gradle-build.log
 
       - name: Report build error log
         if: failure() && steps.gradle_build.outcome == 'failure'
@@ -133,6 +142,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dreambox-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           compression-level: 0

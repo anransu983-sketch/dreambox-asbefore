@@ -23,8 +23,8 @@
 
 import com.android.build.api.artifact.ArtifactTransformationRequest
 import com.android.build.api.artifact.SingleArtifact
-// buildSrc disabled: import dev.flycat.packer.BuildLoaderDexTask
-// buildSrc disabled: import dev.flycat.packer.PackApkTask
+import dev.flycat.packer.BuildLoaderDexTask
+import dev.flycat.packer.PackApkTask
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
@@ -48,24 +48,24 @@ plugins {
     id("com.mikepenz.aboutlibraries.plugin.android")
 }
 
-// buildSrc disabled for debug: TransformPackedApksTask requires PackApkTask
-// abstract class TransformPackedApksTask : PackApkTask() {
-//     @get:Internal
-//     abstract val transformationRequest: Property<ArtifactTransformationRequest<TransformPackedApksTask>>
-// 
-//     @TaskAction
-//     fun transform() {
-//         val outputRoot = outputApkDirectory.get().asFile
-//         outputRoot.deleteRecursively()
-//         outputRoot.mkdirs()
-//         transformationRequest.get().submit(this) { artifact ->
-//             val input = File(artifact.outputFile)
-//             val output = outputRoot.resolve(input.name)
-//             packApk(input, output)
-//             output
-//         }
-//     }
-// }
+// Loader 打包（1.39 恢复上游 flycat packer）：把 release APK 的 dex/原生库 XZ 压缩进 assets/loader，壳 dex 负责首启解压加载。
+abstract class TransformPackedApksTask : PackApkTask() {
+    @get:Internal
+    abstract val transformationRequest: Property<ArtifactTransformationRequest<TransformPackedApksTask>>
+
+    @TaskAction
+    fun transform() {
+        val outputRoot = outputApkDirectory.get().asFile
+        outputRoot.deleteRecursively()
+        outputRoot.mkdirs()
+        transformationRequest.get().submit(this) { artifact ->
+            val input = File(artifact.outputFile)
+            val output = outputRoot.resolve(input.name)
+            packApk(input, output)
+            output
+        }
+    }
+}
 
 
 val appAbiList = providers.gradleProperty("abi.app.list").get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
@@ -367,53 +367,52 @@ android {
     }
 }
 
-// buildSrc disabled for debug: packer tasks require buildSrc
-// // if (releaseSigningProperties != null) {
-// if (false) {
-//     val loaderRuntime = configurations.detachedConfiguration(
-//         dependencies.create("org.lsposed.hiddenapibypass:hiddenapibypass:6.1"),
-//     )
-//     androidComponents {
-//         onVariants(selector().withBuildType("release")) { variant ->
-//             val capitalized = variant.name.replaceFirstChar(Char::uppercaseChar)
-//             val loaderDexTask = tasks.register<BuildLoaderDexTask>("build${capitalized}LoaderDex") {
-//                 group = "build"
-//                 description = "Builds the standalone loader DEX for ${variant.name}"
-//                 loaderAar.set(
-//                     project(":pack").layout.buildDirectory.file(
-//                         "outputs/aar/pack-release.aar"
-//                     )
-//                 )
-//                 runtimeArtifacts.from(loaderRuntime)
-//                 sdkDirectory.set(sdkComponents.sdkDirectory)
-//                 minSdk.set(variant.minSdk.apiLevel)
-//                 outputDirectory.set(layout.buildDirectory.dir("intermediates/flycatPacker/${variant.name}/loaderDex"))
-//                 dependsOn(":pack:bundleReleaseAar")
-//             }
-//             val packApkTask = tasks.register<TransformPackedApksTask>("pack${capitalized}Apk") {
-//                 group = "build"
-//                 description = "Compresses DEX payloads and installs the loader in ${variant.name} APKs"
-//                 loaderDex.set(loaderDexTask.flatMap { it.outputDirectory.file("classes.dex") })
-//                 sdkDirectory.set(sdkComponents.sdkDirectory)
-//                 originalApplication.set("com.github.lmfirefly.flycat.App")
-//                 originalComponentFactory.set("androidx.core.app.CoreComponentFactory")
-//                 keyStoreFile.set(rootProject.layout.projectDirectory.file("release.keystore"))
-//                 keyStorePassword.set(releaseSigningProperties.getProperty("keystore.password"))
-//                 keyAlias.set(releaseSigningProperties.getProperty("key.alias"))
-//                 keyPassword.set(releaseSigningProperties.getProperty("key.password"))
-//             }
-//             val artifactRequest = variant.artifacts.use(packApkTask)
-//                 .wiredWithDirectories(
-//                     TransformPackedApksTask::inputApkDirectory,
-//                     TransformPackedApksTask::outputApkDirectory,
-//                 )
-//                 .toTransformMany(SingleArtifact.APK)
-//             packApkTask.configure {
-//                 transformationRequest.set(artifactRequest)
-//             }
-//         }
-//     }
-// }
+// Loader 打包注册（签名文件存在时才启用，CI 用 debug.keystore 副本充当 release.keystore）
+if (releaseSigningProperties != null) {
+    val loaderRuntime = configurations.detachedConfiguration(
+        dependencies.create("org.lsposed.hiddenapibypass:hiddenapibypass:6.1"),
+    )
+    androidComponents {
+        onVariants(selector().withBuildType("release")) { variant ->
+            val capitalized = variant.name.replaceFirstChar(Char::uppercaseChar)
+            val loaderDexTask = tasks.register<BuildLoaderDexTask>("build${capitalized}LoaderDex") {
+                group = "build"
+                description = "Builds the standalone loader DEX for ${variant.name}"
+                loaderAar.set(
+                    project(":pack").layout.buildDirectory.file(
+                        "outputs/aar/pack-release.aar"
+                    )
+                )
+                runtimeArtifacts.from(loaderRuntime)
+                sdkDirectory.set(sdkComponents.sdkDirectory)
+                minSdk.set(variant.minSdk.apiLevel)
+                outputDirectory.set(layout.buildDirectory.dir("intermediates/flycatPacker/${variant.name}/loaderDex"))
+                dependsOn(":pack:bundleReleaseAar")
+            }
+            val packApkTask = tasks.register<TransformPackedApksTask>("pack${capitalized}Apk") {
+                group = "build"
+                description = "Compresses DEX payloads and installs the loader in ${variant.name} APKs"
+                loaderDex.set(loaderDexTask.flatMap { it.outputDirectory.file("classes.dex") })
+                sdkDirectory.set(sdkComponents.sdkDirectory)
+                originalApplication.set("com.suanran.dreambox.App")
+                originalComponentFactory.set("androidx.core.app.CoreComponentFactory")
+                keyStoreFile.set(rootProject.layout.projectDirectory.file("release.keystore"))
+                keyStorePassword.set(releaseSigningProperties.getProperty("keystore.password"))
+                keyAlias.set(releaseSigningProperties.getProperty("key.alias"))
+                keyPassword.set(releaseSigningProperties.getProperty("key.password"))
+            }
+            val artifactRequest = variant.artifacts.use(packApkTask)
+                .wiredWithDirectories(
+                    TransformPackedApksTask::inputApkDirectory,
+                    TransformPackedApksTask::outputApkDirectory,
+                )
+                .toTransformMany(SingleArtifact.APK)
+            packApkTask.configure {
+                transformationRequest.set(artifactRequest)
+            }
+        }
+    }
+}
 // 
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
