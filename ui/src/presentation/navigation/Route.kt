@@ -77,6 +77,9 @@ sealed interface Route {
     data object Rules : Route
 
     @Serializable
+    data object SpeedTest : Route
+
+    @Serializable
     data object About : Route
 
     @Serializable

@@ -180,6 +180,11 @@ fun MetaFeatureScreen(navigator: Navigator) {
                         onClick = { navigator.push(Route.CustomRouting) },
                     )
                     ArrowPreference(
+                        title = "客户端测速",
+                        summary = "测当前路径（经节点）的延迟、下载与上传速度",
+                        onClick = { navigator.push(Route.SpeedTest) },
+                    )
+                    ArrowPreference(
                         title = FlyTxt.MetaFeature.GeoX.OnlineUpdateTitle,
                         summary = FlyTxt.MetaFeature.GeoX.OnlineUpdateSummary,
                         onClick = { showGeoXDownloadSheet.value = true },
