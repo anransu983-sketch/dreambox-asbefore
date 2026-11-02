@@ -45,6 +45,7 @@
   #term-state { font-size: 12px; color: #8be3b0; }
   #term-state.off { color: #ff9db4; }
   #btn-disconnect { padding: 7px 14px; border-radius: 9px; border: 1px solid #7a3049; background: #2a2142; color: #ff9db4; font-size: 13px; }
+  .term-act { padding: 7px 10px; border-radius: 9px; border: 1px solid #4a3d6e; background: #2a2142; color: #e8defc; font-size: 12.5px; }
   #terminal { flex: 1; padding: 4px 2px 0 6px; overflow: hidden; }
   #keybar { display: flex; gap: 6px; padding: 8px; background: #171226; overflow-x: auto; }
   #keybar button { flex: 0 0 auto; min-width: 44px; padding: 9px 10px; border-radius: 8px; border: 1px solid #3a3054;
@@ -139,6 +140,8 @@
   <div id="term-bar">
     <div id="term-title">终端</div>
     <div id="term-state">连接中…</div>
+    <button class="term-act" id="btn-copy-screen">复制屏</button>
+    <button class="term-act" id="btn-copy-all">复制全部</button>
     <button id="btn-disconnect">断开</button>
   </div>
   <div id="terminal"></div>
@@ -529,6 +532,28 @@
   $('btn-disconnect').onclick = function () {
     callNative('disconnect', {}).catch(function () {});
     show('view-list');
+  };
+  // 终端内容复制：直接从 xterm 缓冲区读纯文本（画布渲染长按选不中，用按钮最稳）
+  function termText(all) {
+    if (!term) return '';
+    var buf = term.buffer.active;
+    var start = all ? 0 : buf.viewportY;
+    var end = all ? buf.baseY + term.rows : buf.viewportY + term.rows;
+    var lines = [];
+    for (var i = start; i < end; i++) {
+      var line = buf.getLine(i);
+      lines.push(line ? line.translateToString(true) : '');
+    }
+    while (lines.length && lines[lines.length - 1] === '') lines.pop();
+    return lines.join('\n');
+  }
+  $('btn-copy-screen').onclick = function () {
+    var t = termText(false);
+    if (t) copyText(t, this);
+  };
+  $('btn-copy-all').onclick = function () {
+    var t = termText(true);
+    if (t) copyText(t, this);
   };
   var KEYSEQ = {
     esc: '\x1b', tab: '\t', up: '\x1b[A', down: '\x1b[B', right: '\x1b[C', left: '\x1b[D',
