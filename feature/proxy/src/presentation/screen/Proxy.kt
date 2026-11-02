@@ -21,6 +21,11 @@
 
 package com.suanran.dreambox.feature.proxy.presentation.screen
 
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.nodeLatencyLabel
+import com.suanran.dreambox.feature.proxy.presentation.screen.node.displayName
+import com.suanran.dreambox.presentation.component.misc.rememberDelayHistory
+import com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
+import androidx.compose.foundation.layout.height
 import com.suanran.dreambox.presentation.component.misc.DelayHistory
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -776,6 +781,18 @@ internal fun NodeListPage(
             }
         }
     }
+    var detailProxy by remember { mutableStateOf<Proxy?>(null) }
+    fun performNodePrimaryAction(proxyName: String) {
+        if (group.type == Proxy.Type.Selector) {
+            onSelectProxy(group.name, proxyName)
+        } else if (group.type == Proxy.Type.URLTest || group.type == Proxy.Type.Fallback) {
+            val target = if (proxyName == group.fixed) "" else proxyName
+            onForceSelectProxy(group.name, target)
+        } else {
+            onTestDelay()
+        }
+        detailProxy = null
+    }
 
     val visibleProxies = remember(group.proxies, searchQuery) { group.filterNodes(searchQuery) }
     val revealCount = rememberRowReveal(itemCount = visibleProxies.size, replayKey = group.name, listState = listState)
@@ -849,17 +866,8 @@ internal fun NodeListPage(
                     proxies = visibleProxies,
                     selectedProxyName = group.now,
                     onProxyClick = { proxyName ->
-                        if (group.type == Proxy.Type.Selector) {
-                            onSelectProxy(group.name, proxyName)
-                        } else if (
-                            group.type == Proxy.Type.URLTest ||
-                            group.type == Proxy.Type.Fallback
-                        ) {
-                            val target = if (proxyName == group.fixed) "" else proxyName
-                            onForceSelectProxy(group.name, target)
-                        } else {
-                            onTestDelay()
-                        }
+                        // 点节点先出详情抽屉（Loon 式），选择动作在抽屉里完成。
+                        detailProxy = visibleProxies.firstOrNull { it.name == proxyName }
                     },
                     isDelayTesting = isTesting,
                     testingProxyNames = testingProxyNames,
@@ -872,6 +880,13 @@ internal fun NodeListPage(
             }
         }
     }
+    NodeDetailSheet(
+        proxy = detailProxy,
+        group = group,
+        onDismiss = { detailProxy = null },
+        onPrimaryAction = { name -> performNodePrimaryAction(name) },
+        onTestSingle = { name -> onTestProxyDelay(name) },
+    )
 }
 
 /** 代理页顶部细状态条：连接圆点 + 状态文案，右侧小电源开关。波奇酱风。 */
@@ -968,6 +983,159 @@ private fun ProxyContent(
             onGroupIconReset = onGroupIconReset,
             itemVerticalPadding = UiDp.dp6,
             revealCount = revealCount,
+        )
+    }
+}
+
+
+/**
+ * 节点详情抽屉（Loon 式）：点节点先看详情——延迟大字 + 历史走势 + 统计，
+ * 选择/固定动作在抽屉主按钮完成；延迟数字的小测速入口仍在行内（点数字测速不开抽屉）。
+ */
+@Composable
+private fun NodeDetailSheet(
+    proxy: Proxy?,
+    group: ProxyGroupInfo,
+    onDismiss: () -> Unit,
+    onPrimaryAction: (String) -> Unit,
+    onTestSingle: (String) -> Unit,
+) {
+    val spacing = LocalSpacing.current
+    AppActionBottomSheet(
+        show = proxy != null,
+        title = proxy?.name ?: "",
+        onDismissRequest = onDismiss,
+    ) {
+        val history = rememberDelayHistory(proxy?.name ?: "")
+        if (proxy == null) return@AppActionBottomSheet
+        val delayLabel = nodeLatencyLabel(proxy.delay, withUnit = true)
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.space16, vertical = spacing.space8),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                com.suanran.dreambox.feature.proxy.presentation.util.NodeFlagBadge(
+                    nodeName = proxy.name,
+                    size = UiDp.dp48,
+                    emojiSize = 26.sp,
+                )
+                Column(modifier = Modifier.padding(start = spacing.space12).weight(1f)) {
+                    Text(
+                        text = displayName(proxy.type),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "所属策略组：${group.name}",
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (proxy.subtitle.isNotBlank()) {
+                        Text(
+                            text = proxy.subtitle,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                if (delayLabel != null) {
+                    Text(
+                        text = delayLabel.first,
+                        style = MiuixTheme.textStyles.title4,
+                        color = delayLabel.second,
+                    )
+                } else {
+                    Text(
+                        text = "未测速",
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
+            if (history.size >= 2) {
+                DelayBigSparkline(
+                    history = history,
+                    color = delayLabel?.second ?: MiuixTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth().padding(top = spacing.space14),
+                )
+                val minV = history.minOrNull() ?: 0
+                val maxV = history.maxOrNull() ?: 0
+                val avgV = history.average().toInt()
+                Text(
+                    text = "最近 ${history.size} 次测速 · 最低 ${minV}ms · 平均 ${avgV}ms · 最高 ${maxV}ms",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(top = spacing.space6),
+                )
+            } else {
+                Text(
+                    text = "延迟走势会在测速两次后出现在这里。",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(top = spacing.space12),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = spacing.space16, bottom = spacing.space8),
+                horizontalArrangement = Arrangement.spacedBy(spacing.space10),
+            ) {
+                val primaryLabel = when {
+                    group.type == Proxy.Type.Selector -> if (proxy.name == group.now) "当前已选" else "选择此节点"
+                    group.type == Proxy.Type.URLTest || group.type == Proxy.Type.Fallback ->
+                        if (proxy.name == group.fixed) "取消固定" else "固定到此节点"
+                    else -> "测速整组"
+                }
+                val primaryEnabled = !(group.type == Proxy.Type.Selector && proxy.name == group.now)
+                top.yukonga.miuix.kmp.basic.Button(
+                    onClick = { onPrimaryAction(proxy.name) },
+                    enabled = primaryEnabled,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(text = primaryLabel)
+                }
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    text = "单独测速",
+                    onClick = { onTestSingle(proxy.name) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** 详情抽屉里的大号延迟走势（与行内小曲线同一数据源，尺寸放大、带面积填充）。 */
+@Composable
+private fun DelayBigSparkline(history: List<Int>, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier.height(UiDp.dp40)) {
+        val maxV = history.maxOrNull() ?: 1
+        val minV = history.minOrNull() ?: 0
+        val range = (maxV - minV).coerceAtLeast(20).toFloat()
+        val padY = 3.dp.toPx()
+        val stepX = if (history.size > 1) size.width / (history.size - 1) else size.width
+        val linePath = androidx.compose.ui.graphics.Path()
+        val fillPath = androidx.compose.ui.graphics.Path()
+        history.forEachIndexed { i, v ->
+            val x = stepX * i
+            val y = size.height - padY - ((v - minV).toFloat() / range) * (size.height - padY * 2)
+            if (i == 0) {
+                linePath.moveTo(x, y)
+                fillPath.moveTo(x, size.height)
+                fillPath.lineTo(x, y)
+            } else {
+                linePath.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+        }
+        fillPath.lineTo(stepX * (history.size - 1), size.height)
+        fillPath.close()
+        drawPath(fillPath, color = color.copy(alpha = 0.12f))
+        drawPath(
+            linePath,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round),
         )
     }
 }
