@@ -1,11 +1,11 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':feature:proxy:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':feature:home:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_REFERENCE
+   > Kotlin compiler: UNRESOLVED_IMPORT
        Kotlin compiler error
-         Unresolved reference 'radius10' on receiver of type 'Radii'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/node/NodeGroups.kt:177
+         Unresolved reference 'TopBar'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:39
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,11 +19,23 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 2m 43s
-429 actionable tasks: 236 executed, 193 from cache
+BUILD FAILED in 1m 58s
+476 actionable tasks: 261 executed, 215 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/proxy/src/presentation/screen/node/NodeGroups.kt:177:61 Unresolved reference 'radius10' on receiver of type 'Radii'.
-> Task :feature:proxy:compileReleaseKotlin FAILED
-BUILD FAILED in 2m 43s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:39:36 Unresolved reference 'TopBar'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:41:36 Unresolved reference 'MiuixScrollBehavior'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:71:26 Unresolved reference 'MiuixScrollBehavior'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:102:13 Unresolved reference 'TopBar'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/GlobalSearchScreen.kt:105:36 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:157:21 Unresolved reference 'Row'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:160:30 Unresolved reference 'clip' on receiver of type 'Modifier'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:160:88 Unresolved reference 'AppTheme'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:162:39 Unresolved reference 'dp'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:162:134 Unresolved reference 'AppTheme'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:167:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:169:48 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/home/src/presentation/screen/HomePager.kt:170:48 @Composable invocations can only happen from the context of a @Composable function
+> Task :feature:home:compileReleaseKotlin FAILED
+BUILD FAILED in 1m 58s
