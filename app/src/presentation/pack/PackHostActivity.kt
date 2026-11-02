@@ -2,10 +2,13 @@ package com.suanran.dreambox.presentation.pack
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
+import android.webkit.JsResult
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -69,6 +72,28 @@ class PackHostActivity : Activity() {
         }
         webView.addJavascriptInterface(AndroidBridge(), "androidBridge")
         webView.webViewClient = PackWebViewClient()
+        // 没有 WebChromeClient 时 window.confirm() 恒返回 false、alert() 无声：
+        // 包内带确认弹窗的按钮会表现为「点了没反应」（sshtty v4 完整版调优实测）。
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onJsConfirm(view: WebView?, message: String?, result: JsResult?): Boolean {
+                AlertDialog.Builder(this@PackHostActivity)
+                    .setMessage(message ?: "")
+                    .setPositiveButton("确定") { _, _ -> result?.confirm() }
+                    .setNegativeButton("取消") { _, _ -> result?.cancel() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+
+            override fun onJsAlert(view: WebView?, message: String?, result: JsResult?): Boolean {
+                AlertDialog.Builder(this@PackHostActivity)
+                    .setMessage(message ?: "")
+                    .setPositiveButton("好") { _, _ -> result?.confirm() }
+                    .setOnCancelListener { result?.confirm() }
+                    .show()
+                return true
+            }
+        }
         webView.loadUrl("https://pack.local/index.html")
     }
 
