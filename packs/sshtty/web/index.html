@@ -57,7 +57,10 @@
 <!-- ═══ 列表 ═══ -->
 <div id="view-list">
   <h1>🖥️ VPS 终端</h1>
-  <p class="sub">服务器只输一次：IP、端口、用户名、密码保存后（系统密钥加密），下次点「连接」直接进终端。另带一键 TQ 测速，报告链接跑完自动给出、可复制。</p>
+  <p class="sub">服务器只输一次：IP、端口、用户名、密码保存后（系统密钥加密），下次点「连接」直接进终端。另带一键 TQ 测速（报告链接自动提取可复制）与一键调优（Tcpfit 审计版，可回滚）。IP 默认打码，点上面按钮可切换显示。</p>
+  <div style="margin-bottom:12px">
+    <button class="mini" id="btn-toggle-ip" style="margin:0">🙈 IP 已隐藏</button>
+  </div>
   <div id="srv-list"></div>
   <button class="main" id="btn-add">＋ 添加服务器</button>
   <div class="err" id="list-err"></div>
@@ -88,7 +91,10 @@
     </div>
     <p class="sub" style="margin-top:8px">带宽按套餐填（一键调优按它算缓冲），如 4837 填 1000。</p>
     <label>密码</label>
-    <input id="f-pass" type="password" placeholder="服务器密码" autocomplete="off">
+    <div class="row" style="align-items:center">
+      <div style="flex:1"><input id="f-pass" type="password" placeholder="服务器密码" autocomplete="off"></div>
+      <button class="mini" id="btn-pass-eye" style="margin:0">👁 显示</button>
+    </div>
     <button class="main" id="btn-save">保存</button>
     <button class="mini" id="btn-cancel">取消</button>
     <div class="err" id="form-err"></div>
@@ -215,6 +221,34 @@
   }
   function utf8Bytes(str) { return new TextEncoder().encode(str); }
 
+  // ── 敏感信息打码（默认隐藏，可切换显示；只影响显示层） ──
+  var showIp = false;
+  try { showIp = localStorage.getItem('sshtty_show_ip') === '1'; } catch (e) {}
+  function maskHost(h) {
+    if (showIp || !h) return h;
+    var parts = String(h).split('.');
+    if (parts.length === 4 && parts.every(function (p) { return /^\d+$/.test(p); })) {
+      return parts[0] + '.***.***.' + parts[3];
+    }
+    if (h.length <= 4) return '***';
+    return h.slice(0, 2) + '***' + h.slice(-4);
+  }
+  function syncIpToggle() {
+    $('btn-toggle-ip').textContent = showIp ? '👁 IP 显示中' : '🙈 IP 已隐藏';
+  }
+  $('btn-toggle-ip').onclick = function () {
+    showIp = !showIp;
+    try { localStorage.setItem('sshtty_show_ip', showIp ? '1' : '0'); } catch (e) {}
+    syncIpToggle();
+    renderList();
+  };
+  $('btn-pass-eye').onclick = function () {
+    var inp = $('f-pass');
+    var show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    this.textContent = show ? '🙈 隐藏' : '👁 显示';
+  };
+
   // ── 列表 ─────────────────────────────────────
   function renderList() {
     var box = $('srv-list');
@@ -231,7 +265,7 @@
       title.textContent = '🖥️ ' + (s.name || s.host);
       var meta = document.createElement('div');
       meta.className = 'srv-meta';
-      meta.textContent = s.user + '@' + s.host + ':' + s.port + (s.hasPassword ? ' · 密码已保存' : ' · 无密码');
+      meta.textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasPassword ? ' · 密码已保存' : ' · 无密码');
       card.appendChild(title);
       card.appendChild(meta);
       var bConn = document.createElement('button');
@@ -440,7 +474,7 @@
   function openTerminal(s) {
     currentSrv = s;
     show('view-term');
-    $('term-title').textContent = (s.name || s.host) + ' · ' + s.user + '@' + s.host + ':' + s.port;
+    $('term-title').textContent = (s.name || maskHost(s.host)) + ' · ' + s.user + '@' + maskHost(s.host) + ':' + s.port;
     $('term-state').textContent = '连接中…';
     $('term-state').className = '';
     if (term) { try { term.dispose(); } catch (e) {} term = null; }
@@ -520,6 +554,7 @@
     }
   });
 
+  syncIpToggle();
   show('view-list');
   refreshList();
 })();
