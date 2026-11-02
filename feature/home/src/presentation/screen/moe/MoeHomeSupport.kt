@@ -91,7 +91,7 @@ internal object MoeUi {
         val batteryKnobWidth = moeSpacing.space3
         val iconSpacing = moeSpacing.space14
         val iconHitSize = UiDp.dp44
-        val iconSize = UiDp.dp25
+        val iconSize = 25.dp
         val digitLetterSpacing = 0.sp
         const val timeAlpha = 0.96f
         const val dividerAlpha = 0.62f
