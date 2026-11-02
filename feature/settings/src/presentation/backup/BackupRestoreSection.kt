@@ -41,7 +41,7 @@ import com.suanran.dreambox.core.contract.StoreSynchronizer
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.card.Card
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
-import com.suanran.dreambox.presentation.component.misc.Title
+import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
 import com.suanran.dreambox.presentation.theme.UiDp
 import com.suanran.dreambox.presentation.util.toast
 import kotlin.system.exitProcess
@@ -84,7 +84,7 @@ fun BackupRestoreSection() {
         }
     }
 
-    Title(FlyTxt.MetaFeature.Section.BackupRestore)
+    BocchiSectionTitle(FlyTxt.MetaFeature.Section.BackupRestore)
     Card {
         ArrowPreference(
             title = FlyTxt.MetaFeature.Backup.BackupTitle,

@@ -47,6 +47,7 @@ class PackHostActivity : Activity() {
 
     private lateinit var packDir: File
     private var pluginHeadersJson: String = "[]"
+    private var hostBackupAllowed: Boolean = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +62,10 @@ class PackHostActivity : Activity() {
         title = packName
 
         pluginHeadersJson = readPackPluginHeaders()
+        hostBackupAllowed = runCatching {
+            val marker = File(packDir, "pack.json")
+            marker.isFile && JSONObject(marker.readText()).optBoolean("hostBackup", false)
+        }.getOrDefault(false)
         requestPackPermissions()
         dispatcher = loadDispatcher(entryClass)
 
@@ -197,6 +202,10 @@ class PackHostActivity : Activity() {
                 sendResult(callbackId, success = true, dataJson = "{}", save = false)
                 return
             }
+            if (pluginId == "HostBackup") {
+                handleHostBackup(callbackId, method, options)
+                return
+            }
             val current = dispatcher
             if (current == null) {
                 sendResult(callbackId, success = false, dataJson = null, error = "插件原生代码不可用（$pluginId 未实现）")
@@ -216,6 +225,48 @@ class PackHostActivity : Activity() {
                 if (!handled) {
                     sendResult(callbackId, success = false, dataJson = null, error = "插件未实现 $pluginId.$method")
                 }
+            }
+        }
+    }
+
+    /**
+     * 宿主备份桥（插件化 WebDAV 等包用）：只有 pack.json 声明 "hostBackup": true 的包能调。
+     * export 把全量备份 zip 写进包目录；import 从包目录读 zip 执行恢复（恢复会停核心重应用，
+     * 与本体「恢复数据」同一条路）。文件名只取 basename，防路径穿越。
+     */
+    private fun handleHostBackup(callbackId: String, method: String, options: JSONObject) {
+        if (!hostBackupAllowed) {
+            sendResult(callbackId, success = false, dataJson = null, error = "该插件未声明 hostBackup 权限")
+            return
+        }
+        io.execute {
+            val result = runCatching {
+                val repo = org.koin.core.context.GlobalContext.get().get<com.suanran.dreambox.core.contract.BackupDataSource>()
+                when (method) {
+                    "export" -> {
+                        val out = File(packDir, "host-backup.zip")
+                        kotlinx.coroutines.runBlocking {
+                            java.io.FileOutputStream(out).use { repo.exportBackup(it) }
+                        }
+                        JSONObject().put("file", out.name).put("size", out.length()).toString()
+                    }
+                    "import" -> {
+                        val name = File(options.optString("file", "host-backup.zip")).name
+                        val input = File(packDir, name)
+                        require(input.isFile) { "包目录里没有 $name" }
+                        kotlinx.coroutines.runBlocking {
+                            java.io.FileInputStream(input).use { repo.restoreBackup(it) }
+                        }
+                        JSONObject().put("file", name).toString()
+                    }
+                    else -> throw IllegalArgumentException("未知方法 $method")
+                }
+            }
+            result.onSuccess { data ->
+                sendResult(callbackId, success = true, dataJson = data, error = null)
+            }.onFailure { e ->
+                AppLogBuffer.forceAdd(Log.ERROR, "Pack", "HostBackup.$method 失败\n" + Log.getStackTraceString(e))
+                sendResult(callbackId, success = false, dataJson = null, error = e.message ?: "备份桥失败")
             }
         }
     }

@@ -53,7 +53,6 @@ import com.suanran.dreambox.core.contract.StoreSynchronizer
 import com.suanran.dreambox.core.model.GeoFileType
 import com.suanran.dreambox.core.model.geoXItems
 import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreSection
-import com.suanran.dreambox.feature.settings.presentation.util.MetaWebDavConfig
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MetaFeatureViewModel
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
@@ -102,52 +101,21 @@ fun MetaFeatureScreen(navigator: Navigator) {
     val selectedPanelType by viewModel.panelSettings.selectedPanelType.state.collectAsStateWithLifecycle()
 
     val showGeoXDownloadSheet = remember { mutableStateOf(false) }
-    var showWebDavRestoreConfirmDialog by remember { mutableStateOf(false) }
-    var showWebDavConfigDialog by remember { mutableStateOf(false) }
-    var showLoadingDialog by remember { mutableStateOf(false) }
-    var showRestartDialog by remember { mutableStateOf(false) }
-    var restartMessage by remember { mutableStateOf("") }
-    var loadingTitle by remember { mutableStateOf("") }
-    var loadingMessage by remember { mutableStateOf("") }
-    var webDavError by remember { mutableStateOf<String?>(null) }
-    var webDavUrlField by remember { mutableStateOf(TextFieldValue("")) }
-    var webDavDirField by remember { mutableStateOf(TextFieldValue("")) }
-    var webDavAccountField by remember { mutableStateOf(TextFieldValue("")) }
-    var webDavPasswordField by remember { mutableStateOf(TextFieldValue("")) }
 
     val ageKeyHybrid = remember { mutableStateOf(false) }
     val ageKeyDialogVisible = remember { mutableStateOf(false) }
-
-    fun openWebDavDialog() {
-        val config = viewModel.getWebDavConfig()
-        webDavUrlField = TextFieldValue(config.url, TextRange(config.url.length))
-        webDavDirField = TextFieldValue(config.directory, TextRange(config.directory.length))
-        webDavAccountField = TextFieldValue(config.account, TextRange(config.account.length))
-        webDavPasswordField = TextFieldValue(config.password, TextRange(config.password.length))
-        webDavError = null
-        showWebDavConfigDialog = true
-    }
-
-    fun currentDraftConfig(): MetaWebDavConfig {
-        return MetaWebDavConfig(
-            url = webDavUrlField.text.trim(),
-            directory = webDavDirField.text.trim(),
-            account = webDavAccountField.text.trim(),
-            password = webDavPasswordField.text,
-        )
-    }
 
     Scaffold(
         topBar = { TopBar(title = FlyTxt.MetaFeature.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(navigator = navigator) }) }
     ) { innerPadding ->
         val mainLikePadding = rememberStandalonePageMainPadding()
         val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
-        val defaultKeys = listOf("conn", "routing", "panel", "backup", "webdav", "agekey")
+        val defaultKeys = listOf("conn", "routing", "panel", "backup", "agekey")
         var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "meta_feature")) }
         val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
         val sectionTitles = mapOf(
             "conn" to "连接与流量", "routing" to "分流相关", "panel" to "面板",
-            "backup" to "备份恢复", "webdav" to "WebDAV", "agekey" to "Age 密钥",
+            "backup" to "备份恢复", "agekey" to "Age 密钥",
         )
         val listState = rememberLazyListState()
     val sectionContent: Map<String, @Composable () -> Unit> = mapOf(
@@ -206,72 +174,6 @@ fun MetaFeatureScreen(navigator: Navigator) {
         "backup" to {
                 BackupRestoreSection()
         },
-        "webdav" to {
-                BocchiSectionTitle(FlyTxt.MetaFeature.Section.BackupRestore + " — WebDAV")
-                BocchiCard {
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.WebDav.ConfigTitle,
-                        summary = FlyTxt.MetaFeature.WebDav.ConfigSummary,
-                        onClick = { openWebDavDialog() },
-                    )
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.WebDav.TestTitle,
-                        summary = FlyTxt.MetaFeature.WebDav.TestSummary,
-                        onClick = {
-                            val config = viewModel.getWebDavConfig()
-                            if (!config.isValid()) {
-                                context.toast(FlyTxt.MetaFeature.WebDav.ConfigRequired)
-                                return@ArrowPreference
-                            }
-                            scope.launch {
-                                showLoadingDialog = true
-                                loadingTitle = FlyTxt.MetaFeature.WebDav.TestLoadingTitle
-                                loadingMessage = FlyTxt.MetaFeature.WebDav.TestLoadingMessage
-                                try {
-                                    viewModel.testWebDavConfig(config)
-                                        .onSuccess {
-                                            context.toast(FlyTxt.MetaFeature.WebDav.TestSuccess)
-                                        }
-                                        .onFailure { error ->
-                                            context.toast(FlyTxt.MetaFeature.WebDav.TestFailed.format(error.localizedMessage ?: FlyTxt.Util.Error.UnknownError))
-                                        }
-                                } finally {
-                                    showLoadingDialog = false
-                                }
-                            }
-                        },
-                    )
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.WebDav.BackupTitle,
-                        summary = FlyTxt.MetaFeature.WebDav.BackupSummary,
-                        onClick = {
-                            scope.launch {
-                                showLoadingDialog = true
-                                loadingTitle = FlyTxt.MetaFeature.WebDav.BackupLoadingTitle
-                                loadingMessage = FlyTxt.MetaFeature.WebDav.BackupLoadingMessage
-                                try {
-                                    viewModel.backupToWebDav(context)
-                                        .onSuccess { remoteName ->
-                                            context.toast(FlyTxt.MetaFeature.WebDav.BackupSuccess.format(remoteName))
-                                        }
-                                        .onFailure { error ->
-                                            context.toast(FlyTxt.MetaFeature.WebDav.BackupFailed.format(error.localizedMessage ?: FlyTxt.Util.Error.UnknownError))
-                                        }
-                                } finally {
-                                    showLoadingDialog = false
-                                }
-                            }
-                        },
-                    )
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.WebDav.RestoreTitle,
-                        summary = FlyTxt.MetaFeature.WebDav.RestoreSummary,
-                        onClick = {
-                            showWebDavRestoreConfirmDialog = true
-                        },
-                    )
-                }
-        },
         "agekey" to {
                 BocchiSectionTitle(FlyTxt.MetaFeature.AgeKey.Section)
                 BocchiCard {
@@ -318,117 +220,6 @@ fun MetaFeatureScreen(navigator: Navigator) {
             context = context,
             viewModel = viewModel,
         )
-        AppConfirmDialog(
-            show = showWebDavRestoreConfirmDialog,
-            title = FlyTxt.MetaFeature.WebDav.RestoreConfirmTitle,
-            message = FlyTxt.MetaFeature.WebDav.RestoreConfirmMessage,
-            onDismissRequest = { showWebDavRestoreConfirmDialog = false },
-            onConfirm = {
-                showWebDavRestoreConfirmDialog = false
-                scope.launch {
-                    showLoadingDialog = true
-                    loadingTitle = FlyTxt.MetaFeature.WebDav.RestoreLoadingTitle
-                    loadingMessage = FlyTxt.MetaFeature.WebDav.RestoreLoadingMessage
-                    try {
-                        viewModel.restoreLatestFromWebDav(context)
-                            .onSuccess { remoteName ->
-                                restartMessage = FlyTxt.MetaFeature.Backup.WebDavRestoreSuccess.format(remoteName)
-                                showRestartDialog = true
-                            }
-                            .onFailure { error ->
-                                context.toast(FlyTxt.MetaFeature.WebDav.RestoreFailed.format(error.localizedMessage ?: FlyTxt.Util.Error.UnknownError))
-                            }
-                    } finally {
-                        showLoadingDialog = false
-                    }
-                }
-            },
-        )
-        AppFormDialog(
-            show = showWebDavConfigDialog,
-            title = FlyTxt.MetaFeature.WebDav.ConfigTitle,
-            summary = FlyTxt.MetaFeature.WebDav.ConfigUrlExample,
-            onDismissRequest = { showWebDavConfigDialog = false },
-            onConfirm = {
-                val config = currentDraftConfig()
-                webDavError = when {
-                    config.url.isBlank() -> FlyTxt.MetaFeature.WebDav.ValidationUrlRequired
-                    config.account.isBlank() -> FlyTxt.MetaFeature.WebDav.ValidationAccountRequired
-                    config.password.isBlank() -> FlyTxt.MetaFeature.WebDav.ValidationPasswordRequired
-                    else -> null
-                }
-                if (webDavError == null) {
-                    viewModel.updateWebDavConfig(config)
-                    showWebDavConfigDialog = false
-                    context.toast(FlyTxt.MetaFeature.WebDav.ConfigSaved)
-                }
-            },
-            error = webDavError,
-        ) {
-            TextField(
-                value = webDavUrlField,
-                onValueChange = {
-                    webDavUrlField = it
-                    webDavError = null
-                },
-                label = FlyTxt.MetaFeature.WebDav.LabelUrl,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TextField(
-                value = webDavDirField,
-                onValueChange = {
-                    webDavDirField = it
-                    webDavError = null
-                },
-                label = FlyTxt.MetaFeature.WebDav.LabelDir,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TextField(
-                value = webDavAccountField,
-                onValueChange = {
-                    webDavAccountField = it
-                    webDavError = null
-                },
-                label = FlyTxt.MetaFeature.WebDav.LabelAccount,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TextField(
-                value = webDavPasswordField,
-                onValueChange = {
-                    webDavPasswordField = it
-                    webDavError = null
-                },
-                label = FlyTxt.MetaFeature.WebDav.LabelPassword,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        AppDialog(
-            show = showLoadingDialog,
-            title = loadingTitle,
-            onDismissRequest = {},
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = loadingMessage)
-            }
-        }
-
-        AppConfirmDialog(
-            show = showRestartDialog,
-            title = FlyTxt.MetaFeature.Backup.RestoreSuccessTitle,
-            message = restartMessage,
-            onDismissRequest = { showRestartDialog = false },
-            onConfirm = {
-                showRestartDialog = false
-                restartApplication(context, storeSynchronizer)
-            },
-            confirmText = FlyTxt.MetaFeature.Backup.RestartNow,
-        )
-
         AgeKeyGeneratorDialog(
             show = ageKeyDialogVisible.value,
             hybrid = ageKeyHybrid.value,
