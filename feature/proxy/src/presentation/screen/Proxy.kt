@@ -362,6 +362,7 @@ fun ProxyPager(
                 delayTestMode = delayTestMode,
                 onDelayTestModeSelected = proxyViewModel::setDelayTestMode,
                 selectedGroupName = if (inSplitShell) null else selectedGroupName,
+                singleGroup = proxyGroups.size == 1,
                 onBackToGroups = groupSelection.clearSelection,
                 searchVisible = nodeSearchVisible,
                 // 搜索只挂在节点列表页：组列表/双栏左栏不放搜索入口。
@@ -598,18 +599,21 @@ private fun PagerTopBar(
     delayTestMode: DelayTestMode = DelayTestMode.PANEL,
     onDelayTestModeSelected: (DelayTestMode) -> Unit = {},
     selectedGroupName: String?,
+    singleGroup: Boolean = false,
     onBackToGroups: () -> Unit,
     onTitleScrollTop: () -> Unit,
     searchVisible: Boolean = false,
     onSearchToggle: (() -> Unit)? = null,
 ) {
     ProxyTopBar(
-        title = if (selectedGroupName == null) {
+        // 只有一个策略组时面包屑只剩根段（「代理 > Proxy」里的组名纯属重复，2026-11-03 用户点单）；
+        // 点标题回组列表的行为不变。
+        title = if (selectedGroupName == null || singleGroup) {
             FlyTxt.Component.BottomBar.Proxy
         } else {
             "${FlyTxt.Component.BottomBar.Proxy} > $selectedGroupName"
         },
-        groupName = selectedGroupName,
+        groupName = if (singleGroup) null else selectedGroupName,
         onTitleRootClick = { if (selectedGroupName == null) onTitleScrollTop() else onBackToGroups() },
         onTitleGroupClick = onTitleScrollTop,
         scrollBehavior = scrollBehavior,
