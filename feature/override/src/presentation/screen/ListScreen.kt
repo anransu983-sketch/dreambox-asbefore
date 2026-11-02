@@ -28,6 +28,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -48,13 +49,17 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -145,6 +150,8 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
 
     val showCreateDialog = remember { mutableStateOf(false) }
     var createDialogMode by remember { mutableStateOf(OverrideConfigInputMode.CreateNew) }
+    // 自带 / 导入 双栏页（2026-11-03 用户点单）
+    var tabIndex by remember { mutableIntStateOf(0) }
     val showDeleteDialog = remember { mutableStateOf(false) }
     val deleteTargetConfig = remember { mutableStateOf<OverrideConfig?>(null) }
     val exportTargetConfig = remember { mutableStateOf<OverrideConfig?>(null) }
@@ -205,6 +212,7 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
 
     LaunchedEffect(configItems, pendingRevealConfigId) {
         val targetId = pendingRevealConfigId ?: return@LaunchedEffect
+        tabIndex = 1
         val targetIndex = configItems.indexOfFirst { it.config.id == targetId }
         if (targetIndex < 0) return@LaunchedEffect
         listState.animateScrollToItem((targetIndex - 1).coerceAtLeast(0))
@@ -215,7 +223,7 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
         floatingActionButton = {
             OverrideAnimatedFab(
                 controller = createFabController,
-                visible = !showCreateDialog.value,
+                visible = !showCreateDialog.value && tabIndex == 1,
                 imageVector = FlyCat.BadgePlus,
                 contentDescription = FlyTxt.Override.Action.Create,
                 onClick = {
@@ -224,7 +232,7 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
                 },
             )
         },
-        topBar = { TopBar(title = FlyTxt.Override.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(onNavigateBack = onNavigateBack) }) },
+        topBar = { TopBar(title = FlyTxt.Override.Title, scrollBehavior = scrollBehavior, navigationIconPadding = 0.dp, navigationIcon = { NavigationBackIcon(onNavigateBack = onNavigateBack) }, actions = { ModuleHelpAction("override") }) },
     ) { paddingValues ->
         val mainLikePadding = rememberStandalonePageMainPadding()
         ScreenLazyColumn(
@@ -233,6 +241,9 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
             lazyListState = listState,
             onScrollDirectionChanged = createFabController::onScrollDirectionChanged,
         ) {
+            item(key = "override-tabs", contentType = "override-tabs") {
+                OverrideTabBar(selected = tabIndex, onSelect = { tabIndex = it })
+            }
             when {
                 userConfigs.isEmpty() && builtInConfigs.isEmpty() -> {
                     item(key = "override-empty", contentType = "override-empty") {
@@ -245,42 +256,43 @@ fun OverrideListScreen(onNavigateBack: () -> Unit, onOpenCodeEditor: (OverrideCo
                     }
                 }
 
+                tabIndex == 0 -> {
+                    items(
+                        items = builtInConfigs,
+                        key = { it.id },
+                        contentType = { "builtin-override-card" },
+                    ) { config ->
+                        OverrideBuiltInConfigCard(
+                            config = config,
+                            onExport = {
+                                exportTargetConfig.value = config
+                                exportConfigLauncher.launch(
+                                    Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                        addCategory(Intent.CATEGORY_OPENABLE)
+                                        type = config.contentType.exportMimeType
+                                        putExtra(
+                                            Intent.EXTRA_TITLE,
+                                            "${config.name}.${config.contentType.extension}",
+                                        )
+                                    },
+                                )
+                            },
+                            onApply = { applyTargetConfig.value = config },
+                            onEdit = { onOpenCodeEditor(config) },
+                        )
+                    }
+                }
+
                 else -> {
-                    // Built-in overrides section
-                    if (builtInConfigs.isNotEmpty()) {
-                        item(key = "builtin-section-header", contentType = "section-header") {
-                            BocchiSectionTitle(FlyTxt.Override.Section.BuiltIn)
-                        }
-                        items(
-                            items = builtInConfigs,
-                            key = { it.id },
-                            contentType = { "builtin-override-card" },
-                        ) { config ->
-                            OverrideBuiltInConfigCard(
-                                config = config,
-                                onExport = {
-                                    exportTargetConfig.value = config
-                                    exportConfigLauncher.launch(
-                                        Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                            addCategory(Intent.CATEGORY_OPENABLE)
-                                            type = config.contentType.exportMimeType
-                                            putExtra(
-                                                Intent.EXTRA_TITLE,
-                                                "${config.name}.${config.contentType.extension}",
-                                            )
-                                        },
-                                    )
-                                },
-                                onApply = { applyTargetConfig.value = config },
-                                onEdit = { onOpenCodeEditor(config) },
+                    if (configItems.isEmpty()) {
+                        item(key = "user-empty", contentType = "user-empty") {
+                            CenteredText(
+                                firstLine = "还没有导入的覆写",
+                                secondLine = "点右下角 + 新建，或从文件 / 链接 / 剪贴板导入",
+                                modifier = Modifier.fillParentMaxSize(),
                             )
                         }
-                    }
-                    // User overrides section
-                    if (userConfigs.isNotEmpty()) {
-                        item(key = "user-section-header", contentType = "section-header") {
-                            BocchiSectionTitle(FlyTxt.Override.Section.User)
-                        }
+                    } else {
                         items(
                             items = configItems,
                             key = { it.config.id },
@@ -930,3 +942,36 @@ private val OverrideConfigInputMode.label: String
             OverrideConfigInputMode.LocalFile -> FlyTxt.ProfilesPage.Type.LocalFile
             OverrideConfigInputMode.NetworkUrl -> FlyTxt.Override.Action.NetworkImport
         }
+
+
+@Composable
+private fun OverrideTabBar(selected: Int, onSelect: (Int) -> Unit) {
+    val labels = listOf("自带", "导入")
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(BocchiPinkBg)
+            .padding(4.dp),
+    ) {
+        labels.forEachIndexed { index, label ->
+            val isSel = index == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (isSel) BocchiPink else Color.Transparent)
+                    .clickable { onSelect(index) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSel) Color.White else BocchiTextDark,
+                )
+            }
+        }
+    }
+}

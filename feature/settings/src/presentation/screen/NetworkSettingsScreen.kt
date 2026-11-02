@@ -65,7 +65,7 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.NetworkSetti
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.NetworkSettingsViewModel
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.RootTunServiceOptionsUiState
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.TunServiceOptionsUiState
-import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
+import com.suanran.dreambox.presentation.component.help.ModuleHelpAction
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppFormDialog

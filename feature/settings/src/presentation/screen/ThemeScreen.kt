@@ -65,7 +65,7 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsV
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MarketState
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreEvent
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreViewModel
-import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
+import com.suanran.dreambox.presentation.component.help.ModuleHelpAction
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem

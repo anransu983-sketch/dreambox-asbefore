@@ -54,7 +54,7 @@ import com.suanran.dreambox.core.model.GeoFileType
 import com.suanran.dreambox.core.model.geoXItems
 import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreSection
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MetaFeatureViewModel
-import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
+import com.suanran.dreambox.presentation.component.help.ModuleHelpAction
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog

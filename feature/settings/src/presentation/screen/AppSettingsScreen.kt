@@ -71,7 +71,7 @@ import com.suanran.dreambox.presentation.component.sortable.saveHiddenSections
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsViewModel
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MetaFeatureViewModel
 import com.suanran.dreambox.feature.settings.presentation.backup.BackupRestoreSection
-import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
+import com.suanran.dreambox.presentation.component.help.ModuleHelpAction
 import com.suanran.dreambox.feature.settings.presentation.screen.component.OneCardDivider
 import com.suanran.dreambox.feature.settings.presentation.screen.component.OneCardSectionHeader
 import com.suanran.dreambox.feature.settings.presentation.screen.component.ThemeColorPickerItem

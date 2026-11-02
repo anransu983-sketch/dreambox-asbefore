@@ -1,4 +1,4 @@
-package com.suanran.dreambox.feature.settings.presentation.screen.component
+package com.suanran.dreambox.presentation.component.help
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding

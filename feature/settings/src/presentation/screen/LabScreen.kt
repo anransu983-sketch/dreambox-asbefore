@@ -122,7 +122,7 @@ fun LabScreen(navigator: Navigator) {
                 title = "实验室",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { NavigationBackIcon(navigator = navigator) },
-                actions = { com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction("lab") },
+                actions = { com.suanran.dreambox.presentation.component.help.ModuleHelpAction("lab") },
             )
         },
     ) { innerPadding ->
