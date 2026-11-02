@@ -22,6 +22,14 @@
 package com.suanran.dreambox.feature.proxy.presentation.screen.node
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.suanran.dreambox.presentation.component.dialog.AppDialog
+import com.suanran.dreambox.presentation.component.misc.CustomIcons
+import com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -84,6 +92,8 @@ internal fun LazyListScope.nodeGroupItems(
     testingGroupNames: Set<String> = emptySet(),
     onGroupDelayTestClick: ((ProxyGroupInfo) -> Unit)? = null,
     onGroupBoundsChanged: ((String, Rect) -> Unit)? = null,
+    onGroupIconPick: ((ProxyGroupInfo) -> Unit)? = null,
+    onGroupIconReset: ((ProxyGroupInfo) -> Unit)? = null,
     itemVerticalPadding: Dp = UiDp.dp6,
     revealCount: State<Int> = RowRevealAll,
 ) {
@@ -98,19 +108,27 @@ internal fun LazyListScope.nodeGroupItems(
             isDelayTesting = testingGroupNames.contains(group.name),
             onClick = { onGroupClick(group) },
             onTestClick = onGroupDelayTestClick,
+            onIconPick = onGroupIconPick?.let { cb -> { cb(group) } },
+            onIconReset = onGroupIconReset?.let { cb -> { cb(group) } },
             modifier = Modifier.rowReveal(rememberRowShown(index, revealCount)).fillMaxWidth().padding(vertical = itemVerticalPadding),
         )
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun NodeGroupCard(
     group: ProxyGroupInfo,
     isDelayTesting: Boolean,
     onClick: (ProxyGroupInfo) -> Unit,
     onTestClick: ((ProxyGroupInfo) -> Unit)? = null,
+    onIconPick: (() -> Unit)? = null,
+    onIconReset: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val groupIconKey = remember(group.name) { CustomIcons.keyFor("group", group.name) }
+    val customGroupIcon = rememberCustomIconBitmap(groupIconKey)
+    var iconMenuOpen by remember { mutableStateOf(false) }
     val cardShape = RoundedCornerShape(AppTheme.radii.radius12)
     val interactionSource = remember { MutableInteractionSource() }
     val testInteractionSource = remember { MutableInteractionSource() }
@@ -135,15 +153,30 @@ internal fun NodeGroupCard(
                 shape = cardShape,
             )
             .pressable(interactionSource = interactionSource, indication = SinkFeedback())
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = { onClick(group) },
+                onLongClick = if (onIconPick != null) {
+                    { iconMenuOpen = true }
+                } else {
+                    null
+                },
             )
             .padding(horizontal = UiDp.dp12, vertical = UiDp.dp8)
             .heightIn(min = UiDp.dp48),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (customGroupIcon != null) {
+            Image(
+                bitmap = customGroupIcon,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(end = UiDp.dp10)
+                    .size(UiDp.dp36)
+                    .clip(RoundedCornerShape(AppTheme.radii.radius10)),
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 EmojiAwareText(
@@ -216,5 +249,47 @@ internal fun NodeGroupCard(
             modifier = Modifier.size(UiDp.dp18).padding(start = UiDp.dp4),
             tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
+    }
+    if (onIconPick != null) {
+        AppDialog(
+            show = iconMenuOpen,
+            title = group.name,
+            onDismissRequest = { iconMenuOpen = false },
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "换一张图标",
+                    style = MiuixTheme.textStyles.body1,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            iconMenuOpen = false
+                            onIconPick()
+                        }
+                        .padding(vertical = UiDp.dp10),
+                )
+                if (customGroupIcon != null && onIconReset != null) {
+                    Text(
+                        text = "恢复默认（去掉自定义图）",
+                        style = MiuixTheme.textStyles.body1,
+                        color = MiuixTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                iconMenuOpen = false
+                                onIconReset()
+                            }
+                            .padding(vertical = UiDp.dp10),
+                    )
+                }
+                Text(
+                    text = "自定义图会显示在组名左侧；所有配置里的同名组共用这张图。",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(top = UiDp.dp6),
+                )
+            }
+        }
     }
 }

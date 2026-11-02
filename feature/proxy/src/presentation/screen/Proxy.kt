@@ -21,6 +21,12 @@
 
 package com.suanran.dreambox.feature.proxy.presentation.screen
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.suanran.dreambox.presentation.component.misc.CustomIcons
+import com.suanran.dreambox.presentation.util.toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -203,6 +209,29 @@ fun ProxyPager(
         onControlledSelectedGroupNameChange = if (inSplitShell) proxyViewModel::selectUiGroup else null,
     )
     val selectedGroupName = groupSelection.selectedGroupName
+    // 策略组自定义图标：长按组卡片换图（CustomIcons 机制，与导航栏/模块图标同一套）。
+    val groupIconContext = LocalContext.current
+    var pendingGroupIconKey by remember { mutableStateOf<String?>(null) }
+    val groupIconPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        val key = pendingGroupIconKey
+        pendingGroupIconKey = null
+        if (uri != null && key != null) {
+            if (CustomIcons.saveFromUri(groupIconContext, key, uri)) {
+                groupIconContext.toast("策略组图标已更新")
+            } else {
+                groupIconContext.toast("图片读取失败，换一张试试")
+            }
+        }
+    }
+    val onGroupIconPick: (ProxyGroupInfo) -> Unit = { group ->
+        pendingGroupIconKey = CustomIcons.keyFor("group", group.name)
+        groupIconPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+    val onGroupIconReset: (ProxyGroupInfo) -> Unit = { group ->
+        CustomIcons.clear(groupIconContext, CustomIcons.keyFor("group", group.name))
+    }
     val displayGroup = groupSelection.displayGroup
     val coroutineScope = rememberCoroutineScope()
     val onToggleProxyRunning: (Boolean) -> Unit = remember(coroutineScope, proxyControl, networkSettings) {
@@ -372,6 +401,8 @@ fun ProxyPager(
                         onGroupClick = groupSelection.selectGroup,
                         onGroupDelayTestClick = { group -> proxyViewModel.testDelay(group.name) },
                         onGroupBoundsChanged = { _, _ -> },
+                        onGroupIconPick = onGroupIconPick,
+                        onGroupIconReset = onGroupIconReset,
                         statusBar = statusBarContent,
                     )
                 }
@@ -420,6 +451,8 @@ fun ProxyPager(
                                 onGroupClick = groupSelection.selectGroup,
                                 onGroupDelayTestClick = { group -> proxyViewModel.testDelay(group.name) },
                                 onGroupBoundsChanged = { _, _ -> },
+                                onGroupIconPick = onGroupIconPick,
+                                onGroupIconReset = onGroupIconReset,
                                 statusBar = statusBarContent,
                             )
                         }
@@ -884,6 +917,8 @@ private fun ProxyContent(
     onGroupDelayTestClick: (ProxyGroupInfo) -> Unit,
     testingGroupNames: Set<String>,
     onGroupBoundsChanged: ((String, Rect) -> Unit)? = null,
+    onGroupIconPick: ((ProxyGroupInfo) -> Unit)? = null,
+    onGroupIconReset: ((ProxyGroupInfo) -> Unit)? = null,
     statusBar: (@Composable () -> Unit)? = null,
 ) {
     val spacing = LocalSpacing.current
@@ -915,6 +950,8 @@ private fun ProxyContent(
             testingGroupNames = testingGroupNames,
             onGroupDelayTestClick = onGroupDelayTestClick,
             onGroupBoundsChanged = onGroupBoundsChanged,
+            onGroupIconPick = onGroupIconPick,
+            onGroupIconReset = onGroupIconReset,
             itemVerticalPadding = UiDp.dp6,
             revealCount = revealCount,
         )

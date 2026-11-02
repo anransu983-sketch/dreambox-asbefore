@@ -34,6 +34,14 @@ object CustomIcons {
 
     fun exists(context: Context, key: String): Boolean = file(context, key).exists()
 
+    /** 任意原始名（策略组名含 emoji/空格）→ 文件名安全的稳定 key。 */
+    fun keyFor(prefix: String, raw: String): String {
+        val digest = java.security.MessageDigest.getInstance("MD5")
+            .digest(raw.toByteArray(Charsets.UTF_8))
+        val hex = digest.joinToString("") { "%02x".format(it) }
+        return prefix + "_" + hex.take(16)
+    }
+
     fun saveFromUri(context: Context, key: String, uri: Uri): Boolean {
         return runCatching {
             val raw = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
