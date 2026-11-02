@@ -280,6 +280,23 @@ fun ProxyPager(
         }
     }
 
+    // 自建单节点配置（全配置只有一个真实节点）：代理页直接落到主策略组的节点列表，
+    // 只显示节点；策略组列表点返回/面包屑才进。用户手动返回后本次不再强拉回去，
+    // 换配置（叶子节点名变化）后重新生效。多节点配置不受影响，仍落在策略组列表。
+    val singleLeafNodeName = remember(proxyGroups) {
+        proxyGroups.flatMap { it.proxies }.filter { !it.isGroup }.map { it.name }.distinct().singleOrNull()
+    }
+    var autoEnteredLeaf by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(singleLeafNodeName, inSplitShell, selectedGroupName) {
+        if (inSplitShell || selectedGroupName != null) return@LaunchedEffect
+        val leaf = singleLeafNodeName ?: return@LaunchedEffect
+        if (autoEnteredLeaf == leaf) return@LaunchedEffect
+        val mainGroup = proxyGroups.firstOrNull { it.type in Proxy.Type.manuallySelectable }
+            ?: proxyGroups.firstOrNull() ?: return@LaunchedEffect
+        autoEnteredLeaf = leaf
+        groupSelection.selectGroup(mainGroup)
+    }
+
     LaunchedEffect(isActive) { proxyViewModel.ensureCoreLoaded(isActive, source = "proxy_page") }
     LaunchedEffect(isActive, inSplitShell) { if (!isActive && !inSplitShell) nodeSearchQuery = "" }
 
