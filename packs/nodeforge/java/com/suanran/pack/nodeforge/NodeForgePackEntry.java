@@ -379,6 +379,11 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             stage(st, "投递部署脚本 …");
             execOrThrow(session, "cat > " + dir + "/deploy.sh && chmod 700 " + dir + "/deploy.sh",
                     scriptBytes, 25_000);
+            File extFile = new File(appContext.getFilesDir(), "packs/nodeforge/sub-ext.yaml");
+            if (extFile.isFile()) {
+                execOrThrow(session, "cat > " + dir + "/sub-ext.yaml && chmod 600 " + dir + "/sub-ext.yaml",
+                        Files.readAllBytes(extFile.toPath()), 15_000);
+            }
             stage(st, "投递部署参数 …");
             execOrThrow(session, "cat > " + dir + "/params.env && chmod 600 " + dir + "/params.env",
                     params.getBytes(StandardCharsets.UTF_8), 15_000);

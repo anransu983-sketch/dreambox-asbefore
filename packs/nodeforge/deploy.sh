@@ -534,6 +534,28 @@ else
     log "iptables 已补放行与面板拦截（尽力而为，以面板绑回环为主要防线）"
 fi
 
+# ── 7.5 订阅模板：模板（去节点段）写进 s-ui 的 Clash 订阅扩展 ──
+# subClashExt 是订阅输出的底稿：s-ui 把实时生成的节点追加进去，其余
+# 键（dns/sniffer/分组/规则/tun）原样带出；分组里的 all 由 s-ui 展开为
+# 该订阅自己的节点（subClashSprtAll），NoDefGrp 关掉自带简版分组。
+EXT_FILE="$(cd "$(dirname "$0")" && pwd)/sub-ext.yaml"
+if [ -f "$EXT_FILE" ]; then
+    EXT_JSON="$(python3 -c '
+import json, sys
+ext = open(sys.argv[1], encoding="utf-8").read()
+print(json.dumps({"subClashExt": ext, "subClashNoDefGrp": "true",
+                  "subClashSprtAll": "true"}))
+' "$EXT_FILE")"
+    if api_post_ok save --data-urlencode object=settings \
+        --data-urlencode "data=$EXT_JSON" >/dev/null; then
+        log "已写入订阅模板（订阅导入将带完整分组/规则）"
+    else
+        log "订阅模板写入失败（订阅仍是 s-ui 简版，不影响节点）"
+    fi
+else
+    log "包内缺少订阅模板文件，跳过（订阅仍是 s-ui 简版）"
+fi
+
 # ── 8. 面板绑回环（公网不可达，管理走 SSH 隧道） ─────────
 log "面板收回 127.0.0.1 绑定"
 api_post_ok save --data-urlencode object=settings \
@@ -633,19 +655,28 @@ else
 fi
 SUB_INFO="$(curl -s -D - -o /dev/null --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}" 2>/dev/null | grep -i '^subscription-userinfo:' | head -1 | tr -d '\r' | sed 's/^[^:]*: *//')"
 [ -n "$SUB_INFO" ] && log "订阅流量信息：$SUB_INFO"
+SUB_TPL_OK="fail"
+CLASH_TXT="$(curl -s --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}?format=clash" 2>/dev/null || true)"
+if printf '%s' "$CLASH_TXT" | grep -q '🎮 Steam' && printf '%s' "$CLASH_TXT" | grep -q '漏网之鱼'; then
+    SUB_TPL_OK="ok"
+    log "订阅模板校验通过（Clash 订阅已带完整分组/规则）"
+else
+    log "订阅模板校验未通过（Clash 订阅可能仍是简版）"
+fi
 
 # ── 10. 结果 ───────────────────────────────────────────────
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" <<'PYEOF'
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
- sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info) = sys.argv[1:16]
+ sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info,
+ sub_tpl_ok) = sys.argv[1:17]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
     "panelPath": panel_path, "subPort": int(sub_port), "subPath": sub_path,
     "sni": sni, "vlessLink": vless, "suiVersion": ver,
     "verified": verify == "ok", "subHostOk": sub_host_ok == "ok",
-    "subInfo": sub_info,
+    "subInfo": sub_info, "subTplOk": sub_tpl_ok == "ok",
 }))
 PYEOF
 log "部署完成"
