@@ -101,7 +101,8 @@
       <button class="mini primary" id="btn-copy-url">复制链接</button>
       <button class="mini" id="btn-open-url">打开报告</button>
     </div>
-    <pre class="log" id="tq-tail"></pre>
+    <pre class="log hidden" id="tq-tail"></pre>
+    <button class="mini primary" id="btn-tq-start">开始跑 TQ</button>
     <button class="mini" id="btn-tq-back">返回列表</button>
     <button class="mini" id="btn-tq-refresh">刷新</button>
   </div>
@@ -287,16 +288,27 @@
     $('tq-tail').textContent = '';
     show('view-tq');
     if (tqTimer) { clearInterval(tqTimer); tqTimer = null; }
-    var begin = start
-      ? callNative('tqStart', { id: s.id })
-      : Promise.resolve({});
+    var begin = start ? startTq() : Promise.resolve();
     begin.then(function () {
       pollTq();
       tqTimer = setInterval(pollTq, 5000);
+    });
+  }
+  function startTq() {
+    if (!tqSrv) return Promise.resolve();
+    return callNative('tqStart', { id: tqSrv.id }).then(function (r) {
+      if (r && r.started) {
+        $('tq-status').textContent = '已启动，⏳ TQ 运行中…';
+      } else if (r && r.alreadyRunning) {
+        $('tq-status').textContent = '⏳ TQ 已经在跑了，看下面进度';
+      } else {
+        $('tq-status').textContent = '启动命令没有生效（服务器回话：' + ((r && r.echo) || '空') + '）。可以再点一次「开始跑 TQ」。';
+      }
     }).catch(function (e) {
       $('tq-status').textContent = '启动失败：' + e.message;
     });
   }
+  $('btn-tq-start').onclick = function () { startTq().then(pollTq); };
   function pollTq() {
     if (!tqSrv) return;
     callNative('tqState', { id: tqSrv.id }).then(function (r) {
@@ -309,7 +321,12 @@
         $('tq-status').textContent = r.running ? '⏳ TQ 运行中…（完整全套，通常十几分钟）' : '还没有跑过 TQ，或上次的日志已被清理。回列表点「一键TQ」开始。';
         if (!r.running && tqTimer) { clearInterval(tqTimer); tqTimer = null; }
       }
-      if (r.tail) $('tq-tail').textContent = r.tail;
+      if (r.tail) {
+        $('tq-tail').textContent = r.tail;
+        $('tq-tail').classList.remove('hidden');
+      } else {
+        $('tq-tail').classList.add('hidden');
+      }
     }).catch(function (e) {
       $('tq-status').textContent = '读取失败：' + e.message;
     });

@@ -546,18 +546,21 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
     private void doTqStart(JSONObject opts, PackCallback callback) {
         try {
             JSONObject srv = credsFor(opts);
-            String cmd = "mkdir -p /tmp/sshtty-tq && "
-                    + "curl -fsSL -o /tmp/sshtty-tq/runTcpQuality.sh "
-                    + "https://raw.githubusercontent.com/ibsgss/TcpQuality/main/runTcpQuality.sh && "
-                    + "cd /tmp/sshtty-tq && "
-                    + "if pgrep -f 'runTcpQuality[.]sh' >/dev/null; then echo ALREADY; "
-                    + "else mv -f tq.log tq-prev.log 2>/dev/null; "
+            // 存活判定用 pidfile（v1 踩坑：pgrep -f 模式会匹配到 exec 自身的命令行
+            // ——命令文本里就含 runTcpQuality.sh 字样，误报 ALREADY 永不启动）。
+            String cmd = "mkdir -p /tmp/sshtty-tq && cd /tmp/sshtty-tq && "
+                    + "if [ -f tq.pid ] && kill -0 $(cat tq.pid) 2>/dev/null; then echo ALREADY; "
+                    + "else (curl -fsSL -o runTcpQuality.sh "
+                    + "https://raw.githubusercontent.com/ibsgss/TcpQuality/main/runTcpQuality.sh "
+                    + "|| curl -fsSL -o runTcpQuality.sh https://tcpquality.ibsgss.uk/run) && "
+                    + "mv -f tq.log tq-prev.log 2>/dev/null; "
                     + "nohup env TERM=xterm-256color bash runTcpQuality.sh --all "
-                    + "> tq.log 2>&1 < /dev/null & echo STARTED; fi";
-            String r = runExec(srv, cmd, 60).trim();
+                    + "> tq.log 2>&1 < /dev/null & echo $! > tq.pid; echo STARTED; fi";
+            String r = runExec(srv, cmd, 90).trim();
             callback.onResult(true, new JSONObject()
                     .put("started", r.contains("STARTED"))
                     .put("alreadyRunning", r.contains("ALREADY"))
+                    .put("echo", r)
                     .toString(), null);
         } catch (Exception e) {
             callback.onResult(false, null, "启动 TQ 失败：" + msg(e));
@@ -567,7 +570,8 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
     private void doTqState(JSONObject opts, PackCallback callback) {
         try {
             JSONObject srv = credsFor(opts);
-            String cmd = "if pgrep -f 'runTcpQuality[.]sh' >/dev/null; then echo RUNNING; else echo IDLE; fi; "
+            String cmd = "if [ -f /tmp/sshtty-tq/tq.pid ] && kill -0 $(cat /tmp/sshtty-tq/tq.pid) 2>/dev/null; "
+                    + "then echo RUNNING; else echo IDLE; fi; "
                     + "grep -aoE 'https://tcpquality[.]ibsgss[.]uk/r/[A-Za-z0-9_-]+' "
                     + "/tmp/sshtty-tq/tq.log 2>/dev/null | tail -1; "
                     + "echo __TAIL__; tail -c 1500 /tmp/sshtty-tq/tq.log 2>/dev/null";
