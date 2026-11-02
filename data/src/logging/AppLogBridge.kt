@@ -134,6 +134,10 @@ object AppLogBuffer : AppLogSettings {
         if (AppLogBridge.runtimeLogRecordingEnabled) {
             AppLogBridge.runtimeLogWriter?.invoke(logLine)
         }
+        // 持久化：应用侧 INFO+ 日志落盘（mihomo 实时流不落，避免刷屏占空间），重启不丢。
+        if (tag != "mihomo" && priority >= Log.INFO) {
+            AppPersistentLog.append(logLine)
+        }
     }
 
     fun getSnapshot(): List<String> {

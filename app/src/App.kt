@@ -48,6 +48,7 @@ import com.suanran.dreambox.core.util.path.runtimeHomeDir
 import com.suanran.dreambox.data.collector.AppTrafficStatisticsCollector
 import com.suanran.dreambox.data.logging.AppLogBridge
 import com.suanran.dreambox.data.logging.AppLogBuffer
+import com.suanran.dreambox.data.logging.AppPersistentLog
 import com.suanran.dreambox.data.logging.AppLogTree
 import com.suanran.dreambox.data.logging.CrashHandler
 import com.suanran.dreambox.data.store.AppSettingsStore
@@ -96,6 +97,8 @@ class App : Application() {
         super.onCreate()
 
         instance = this
+        // 持久化日志先行：后续所有初始化错误都能落盘（filesDir/logs/app-diagnostic.log）。
+        AppPersistentLog.init(this)
         if (BuildConfig.DEBUG && Timber.forest().isEmpty()) {
             Timber.plant(Timber.DebugTree())
         }

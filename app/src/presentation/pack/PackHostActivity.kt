@@ -14,6 +14,8 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import android.util.Log
+import com.suanran.dreambox.data.logging.AppLogBuffer
 import com.suanran.dreambox.core.pack.PackBridgeDispatcher
 import com.suanran.dreambox.core.pack.PackCallback
 import dalvik.system.DexClassLoader
@@ -156,8 +158,13 @@ class PackHostActivity : Activity() {
             val instance = clazz.getDeclaredConstructor().newInstance()
             (instance as? PackBridgeDispatcher)?.also {
                 it.init(applicationContext) { pluginId, eventName, dataJson -> emitEvent(pluginId, eventName, dataJson) }
+                AppLogBuffer.forceAdd(Log.INFO, "Pack", "原生代码加载成功 entry=$entryClass dir=${packDir.name}")
             }
         }.getOrElse {
+            AppLogBuffer.forceAdd(
+                Log.ERROR, "Pack",
+                "原生代码加载失败 entry=$entryClass dir=${packDir.name}\n" + Log.getStackTraceString(it),
+            )
             Toast.makeText(this, "功能包原生代码加载失败：${it.message}", Toast.LENGTH_LONG).show()
             null
         }
@@ -198,6 +205,11 @@ class PackHostActivity : Activity() {
                     current.dispatch(pluginId, method, options.toString(), PackCallback { success, dataJson, error ->
                         sendResult(callbackId, success, dataJson, error)
                     })
+                }.onFailure {
+                    AppLogBuffer.forceAdd(
+                        Log.ERROR, "Pack",
+                        "dispatch 异常 $pluginId.$method dir=${packDir.name}\n" + Log.getStackTraceString(it),
+                    )
                 }.getOrDefault(false)
                 if (!handled) {
                     sendResult(callbackId, success = false, dataJson = null, error = "功能包未实现 $pluginId.$method")
