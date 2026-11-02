@@ -102,15 +102,9 @@ fun LabScreen(navigator: Navigator) {
             icon = Icons.Filled.ViewModule,
             route = Route.Modules,
         ),
-        LabEntry(
-            title = "已隐藏的模块",
-            summary = "管理所有隐藏的功能模块，点击恢复",
-            icon = Icons.Filled.VisibilityOff,
-            route = Route.HiddenModules,
-        ),
     )
 
-    val defaultKeys = listOf("theme", "packs", "modules", "hidden")
+    val defaultKeys = listOf("theme", "packs", "modules")
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
     val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val listState = rememberLazyListState()
@@ -119,7 +113,6 @@ fun LabScreen(navigator: Navigator) {
             Route.Theme -> "theme"
             Route.FeaturePacks -> "packs"
             Route.Modules -> "modules"
-            Route.HiddenModules -> "hidden"
             else -> "theme"
         }
     }
