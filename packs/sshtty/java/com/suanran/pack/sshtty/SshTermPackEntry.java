@@ -353,10 +353,16 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     String hkKey = host + ":" + port;
                     String known = keys.optString(hkKey, "");
                     if (known.length() > 0 && !known.equals(fp)) {
-                        ss.disconnect();
-                        callback.onResult(false, null,
-                                "主机指纹与上次记录不一致，已断开防冒充。\n记录：" + known + "\n现在：" + fp);
-                        return;
+                        if (opts.optBoolean("acceptNewHostKey", false)) {
+                            // 用户已在页面确认信任新指纹：更新记录，继续本次连接。
+                            keys.put(hkKey, fp);
+                            saveStore(store);
+                        } else {
+                            ss.disconnect();
+                            callback.onResult(false, null,
+                                    "主机指纹与上次记录不一致，已断开防冒充。\n记录：" + known + "\n现在：" + fp);
+                            return;
+                        }
                     }
                     if (known.length() == 0) {
                         keys.put(hkKey, fp);

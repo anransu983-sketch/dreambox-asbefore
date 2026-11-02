@@ -526,13 +526,19 @@
     term.onResize(function (size) {
       callNative('termResize', { cols: size.cols, rows: size.rows }).catch(function () {});
     });
-    callNative('connect', { id: s.id, cols: term.cols, rows: term.rows }).then(function () {
-      $('term-state').textContent = '已连接';
-    }).catch(function (e) {
-      $('term-state').textContent = '连接失败';
-      $('term-state').className = 'off';
-      term.write('\r\n\x1b[31m' + e.message + '\x1b[0m\r\n');
-    });
+    function doConnect(acceptNew) {
+      callNative('connect', { id: s.id, cols: term.cols, rows: term.rows, acceptNewHostKey: !!acceptNew }).then(function () {
+        $('term-state').textContent = '已连接';
+      }).catch(function (e) {
+        if (!acceptNew && e.message && e.message.indexOf('主机指纹与上次记录不一致') >= 0) {
+          if (confirm(e.message + '\n\n若服务器确实换过密钥，点「确定」信任新指纹并重新连接。')) { doConnect(true); return; }
+        }
+        $('term-state').textContent = '连接失败';
+        $('term-state').className = 'off';
+        term.write('\r\n\x1b[31m' + e.message + '\x1b[0m\r\n');
+      });
+    }
+    doConnect(false);
     setTimeout(function () { try { fitAddon.fit(); } catch (e) {} }, 350);
   }
   if (window.Capacitor && window.Capacitor.addListener) {
