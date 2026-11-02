@@ -34,6 +34,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -380,9 +382,7 @@ private fun PredictiveBackProgressPreferenceItem(
                 text = "${localProgress.toInt()}%",
                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
-        },
-        onClick = {},
-        bottomAction = {
+            Spacer(modifier = Modifier.width(8.dp))
             Slider(
                 value = localProgress,
                 onValueChange = { localProgress = it },
@@ -390,8 +390,10 @@ private fun PredictiveBackProgressPreferenceItem(
                 valueRange = 1f..100f,
                 magnetThreshold = 0.01f,
                 hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                modifier = Modifier.width(110.dp),
             )
         },
+        onClick = {},
     )
 }
 
@@ -669,6 +671,7 @@ private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) 
     val pageScalePercentText = remember(pageScaleLocal) { "${(pageScaleLocal * 100).toInt()}%" }
     val showPageScaleDialogState = remember { mutableStateOf(false) }
 
+    // 滑杆收进行内右侧（带数值），不再整宽横贯卡片——之前那种最显拼搭。
     BocchiArrowItem(
         title = FlyTxt.AppSettings.Interface.PageScaleTitle,
         endActions = {
@@ -676,10 +679,7 @@ private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) 
                 text = pageScalePercentText,
                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
-        },
-        onClick = { showPageScaleDialogState.value = true },
-        holdDownState = showPageScaleDialogState.value,
-        bottomAction = {
+            Spacer(modifier = Modifier.width(8.dp))
             Slider(
                 value = pageScaleLocal,
                 onValueChange = { pageScaleLocal = it },
@@ -687,8 +687,11 @@ private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) 
                 valueRange = 0.8f..1.2f,
                 magnetThreshold = 0.01f,
                 hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                modifier = Modifier.width(110.dp),
             )
         },
+        onClick = { showPageScaleDialogState.value = true },
+        holdDownState = showPageScaleDialogState.value,
     )
 
     PageScaleDialog(
