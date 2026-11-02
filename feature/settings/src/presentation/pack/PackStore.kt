@@ -134,6 +134,15 @@ class PackStore(context: Context) {
                 downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v17.zip",
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
             ),
+            PackDef(
+                id = "sshtty",
+                name = "VPS 终端",
+                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；另带一键 TQ 测速，报告链接跑完自动给出可复制",
+                version = "1",
+                sizeText = "约 1.2 MB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v1.zip",
+                entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
+            ),
         )
     }
 }

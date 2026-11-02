@@ -1,0 +1,45 @@
+name: Build SshTty pack
+
+# VPS 终端功能包：静态 web（xterm）+ Java/JSch 编 dex。
+on:
+  workflow_dispatch:
+
+jobs:
+  build-pack:
+    name: Build sshtty pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout DreamBox
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0"
+
+      - name: Build pack zip
+        run: bash packs/sshtty/build-pack.sh
+
+      - name: Upload pack artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sshtty-pack
+          path: packs/sshtty/sshtty-pack-v1.zip
+
+      - name: Publish pack to packs release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view packs >/dev/null 2>&1 || \
+            gh release create packs --title "功能包" --notes "梦盒功能包下载（App 内功能包页使用）"
+          gh release upload packs packs/sshtty/sshtty-pack-v1.zip --clobber

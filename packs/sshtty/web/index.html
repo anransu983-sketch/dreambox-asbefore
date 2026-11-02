@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>VPS 终端</title>
+<link rel="stylesheet" href="vendor/xterm.css">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; padding: 16px; font-family: sans-serif; background: #14101c; color: #f2eef8; }
+  h1 { font-size: 19px; margin: 4px 0 2px; }
+  .sub { color: #b9aed0; font-size: 12.5px; line-height: 1.55; margin-bottom: 14px; }
+  .card { background: #1f1930; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  label { display: block; font-size: 12.5px; color: #b9aed0; margin: 10px 0 5px; }
+  label:first-child { margin-top: 0; }
+  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #3a3054;
+          background: #171226; color: #fff; font-size: 15px; outline: none; }
+  input:focus { border-color: #e88bb0; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  button.main { width: 100%; padding: 13px; border: 0; border-radius: 12px; margin-top: 14px;
+    background: linear-gradient(90deg, #e88bb0, #a678e8); color: #fff; font-size: 16px; font-weight: 600; }
+  button.main:disabled { opacity: .45; }
+  button.mini { padding: 8px 13px; border-radius: 9px; border: 1px solid #4a3d6e; background: #2a2142;
+    color: #e8defc; font-size: 13px; margin: 8px 8px 0 0; }
+  button.mini.primary { background: linear-gradient(90deg, #e88bb0, #a678e8); border: 0; color: #fff; font-weight: 600; }
+  button.mini.danger { border-color: #7a3049; color: #ff9db4; }
+  .srv-name { font-size: 16px; font-weight: 600; }
+  .srv-meta { color: #b9aed0; font-size: 12.5px; margin-top: 3px; word-break: break-all; }
+  .empty { color: #b9aed0; font-size: 13.5px; text-align: center; padding: 26px 0 8px; line-height: 1.7; }
+  .err { color: #ff9db4; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #8be3b0; font-size: 13px; margin-top: 10px; }
+  pre.log { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; line-height: 1.5;
+    background: #100c1a; border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; margin: 10px 0 0; }
+  .linkbox { background: #100c1a; border: 1px solid #4a3d6e; border-radius: 10px; padding: 12px; margin-top: 12px; }
+  .linkbox .url { color: #8be3b0; font-size: 14px; word-break: break-all; line-height: 1.6; }
+  .hidden { display: none !important; }
+
+  /* ── 终端视图 ─────────────────────────── */
+  #view-term { position: fixed; inset: 0; background: #0b0910; display: flex; flex-direction: column; }
+  #term-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #1f1930; }
+  #term-title { flex: 1; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #term-state { font-size: 12px; color: #8be3b0; }
+  #term-state.off { color: #ff9db4; }
+  #btn-disconnect { padding: 7px 14px; border-radius: 9px; border: 1px solid #7a3049; background: #2a2142; color: #ff9db4; font-size: 13px; }
+  #terminal { flex: 1; padding: 4px 2px 0 6px; overflow: hidden; }
+  #keybar { display: flex; gap: 6px; padding: 8px; background: #171226; overflow-x: auto; }
+  #keybar button { flex: 0 0 auto; min-width: 44px; padding: 9px 10px; border-radius: 8px; border: 1px solid #3a3054;
+    background: #241b3d; color: #e8defc; font-size: 13px; font-family: monospace; }
+  #keybar button.on { background: #e88bb0; color: #14101c; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ═══ 列表 ═══ -->
+<div id="view-list">
+  <h1>🖥️ VPS 终端</h1>
+  <p class="sub">服务器只输一次：IP、端口、用户名、密码保存后（系统密钥加密），下次点「连接」直接进终端。另带一键 TQ 测速，报告链接跑完自动给出、可复制。</p>
+  <div id="srv-list"></div>
+  <button class="main" id="btn-add">＋ 添加服务器</button>
+  <div class="err" id="list-err"></div>
+</div>
+
+<!-- ═══ 表单 ═══ -->
+<div id="view-form" class="hidden">
+  <h1 id="form-title">添加服务器</h1>
+  <p class="sub">密码保存在手机里（加密），只在本机用。编辑时密码留空表示不改。</p>
+  <div class="card">
+    <label>名称（可空，如：美西4837）</label>
+    <input id="f-name" placeholder="美西4837" autocomplete="off">
+    <label>IP / 域名 *</label>
+    <input id="f-host" placeholder="216.167.106.4" autocomplete="off">
+    <div class="row">
+      <div>
+        <label>端口</label>
+        <input id="f-port" type="number" value="22">
+      </div>
+      <div>
+        <label>用户名</label>
+        <input id="f-user" value="root" autocomplete="off">
+      </div>
+    </div>
+    <label>密码</label>
+    <input id="f-pass" type="password" placeholder="服务器密码" autocomplete="off">
+    <button class="main" id="btn-save">保存</button>
+    <button class="mini" id="btn-cancel">取消</button>
+    <div class="err" id="form-err"></div>
+  </div>
+</div>
+
+<!-- ═══ TQ ═══ -->
+<div id="view-tq" class="hidden">
+  <h1>📶 一键 TQ</h1>
+  <p class="sub" id="tq-sub">TcpQuality：三网回程＋单线程测速（不跑教育网/国际互联）。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「TQ 结果」继续看。</p>
+  <div class="card">
+    <div id="tq-status">准备中…</div>
+    <div id="tq-link" class="linkbox hidden">
+      <div class="url" id="tq-url"></div>
+      <button class="mini primary" id="btn-copy-url">复制链接</button>
+      <button class="mini" id="btn-open-url">打开报告</button>
+    </div>
+    <pre class="log" id="tq-tail"></pre>
+    <button class="mini" id="btn-tq-back">返回列表</button>
+    <button class="mini" id="btn-tq-refresh">刷新</button>
+  </div>
+</div>
+
+<!-- ═══ 终端 ═══ -->
+<div id="view-term" class="hidden">
+  <div id="term-bar">
+    <div id="term-title">终端</div>
+    <div id="term-state">连接中…</div>
+    <button id="btn-disconnect">断开</button>
+  </div>
+  <div id="terminal"></div>
+  <div id="keybar">
+    <button data-k="esc">ESC</button>
+    <button data-k="tab">TAB</button>
+    <button data-k="ctrl" id="key-ctrl">CTRL</button>
+    <button data-k="up">↑</button>
+    <button data-k="down">↓</button>
+    <button data-k="left">←</button>
+    <button data-k="right">→</button>
+    <button data-k="home">HOME</button>
+    <button data-k="end">END</button>
+    <button data-k="pgup">PGUP</button>
+    <button data-k="pgdn">PGDN</button>
+    <button data-k="char" data-v="/">/</button>
+    <button data-k="char" data-v="|">|</button>
+    <button data-k="char" data-v="~">~</button>
+    <button data-k="char" data-v="-">-</button>
+  </div>
+</div>
+
+<script src="vendor/xterm.js"></script>
+<script src="vendor/addon-fit.js"></script>
+<script>
+(function () {
+  'use strict';
+  var PLUGIN = 'SshTerm';
+  var servers = [];
+  var editingId = '';
+  var term = null, fitAddon = null, ctrlSticky = false;
+  var currentSrv = null, tqSrv = null, tqTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function show(id) {
+    ['view-list', 'view-form', 'view-tq', 'view-term'].forEach(function (v) {
+      $(v).classList.toggle('hidden', v !== id);
+    });
+  }
+  function callNative(method, options) {
+    return new Promise(function (resolve, reject) {
+      if (!window.Capacitor || !window.Capacitor.toNative) {
+        reject(new Error('原生桥未就绪（请在梦盒功能包里打开）'));
+        return;
+      }
+      window.Capacitor.toNative(PLUGIN, method, options || {}, {
+        callback: function (res, err) {
+          if (err) { reject(new Error(err.message || String(err))); return; }
+          if (res && res.error) { reject(new Error(res.error.message || '调用失败')); return; }
+          var data = res && ('data' in res) ? res.data : res;
+          if (data && data.error) { reject(new Error(data.error)); return; }
+          resolve(data || {});
+        }
+      });
+    });
+  }
+  function copyText(t, btn) {
+    function done() { var o = btn.textContent; btn.textContent = '已复制'; setTimeout(function () { btn.textContent = o; }, 1200); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+  function b64encode(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+  }
+  function b64decodeToBytes(b64) {
+    var s = atob(b64);
+    var out = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return out;
+  }
+  function utf8Bytes(str) { return new TextEncoder().encode(str); }
+
+  // ── 列表 ─────────────────────────────────────
+  function renderList() {
+    var box = $('srv-list');
+    box.innerHTML = '';
+    if (!servers.length) {
+      box.innerHTML = '<div class="empty">还没有保存的服务器<br>点下面「＋ 添加服务器」加第一台</div>';
+      return;
+    }
+    servers.forEach(function (s) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      var title = document.createElement('div');
+      title.className = 'srv-name';
+      title.textContent = '🖥️ ' + (s.name || s.host);
+      var meta = document.createElement('div');
+      meta.className = 'srv-meta';
+      meta.textContent = s.user + '@' + s.host + ':' + s.port + (s.hasPassword ? ' · 密码已保存' : ' · 无密码');
+      card.appendChild(title);
+      card.appendChild(meta);
+      var bConn = document.createElement('button');
+      bConn.className = 'mini primary'; bConn.textContent = '连接';
+      bConn.onclick = function () { openTerminal(s); };
+      var bTq = document.createElement('button');
+      bTq.className = 'mini'; bTq.textContent = '一键TQ';
+      bTq.onclick = function () { openTq(s, true); };
+      var bTqView = document.createElement('button');
+      bTqView.className = 'mini'; bTqView.textContent = 'TQ结果';
+      bTqView.onclick = function () { openTq(s, false); };
+      var bEdit = document.createElement('button');
+      bEdit.className = 'mini'; bEdit.textContent = '编辑';
+      bEdit.onclick = function () { openForm(s); };
+      var bDel = document.createElement('button');
+      bDel.className = 'mini danger'; bDel.textContent = '删除';
+      bDel.onclick = function () {
+        if (!confirm('删除这台服务器的保存记录？')) return;
+        callNative('deleteServer', { id: s.id }).then(function (r) {
+          servers = r.servers || []; renderList();
+        }).catch(function (e) { $('list-err').textContent = e.message; });
+      };
+      card.appendChild(bConn); card.appendChild(bTq); card.appendChild(bTqView);
+      card.appendChild(bEdit); card.appendChild(bDel);
+      box.appendChild(card);
+    });
+  }
+  function refreshList() {
+    callNative('listServers', {}).then(function (r) {
+      servers = r.servers || []; renderList();
+    }).catch(function (e) { $('list-err').textContent = e.message; });
+  }
+
+  // ── 表单 ─────────────────────────────────────
+  function openForm(s) {
+    editingId = s ? s.id : '';
+    $('form-title').textContent = s ? '编辑服务器' : '添加服务器';
+    $('f-name').value = s ? (s.name || '') : '';
+    $('f-host').value = s ? s.host : '';
+    $('f-port').value = s ? s.port : 22;
+    $('f-user').value = s ? s.user : 'root';
+    $('f-pass').value = '';
+    $('f-pass').placeholder = s && s.hasPassword ? '已保存，留空不改' : '服务器密码';
+    $('form-err').textContent = '';
+    show('view-form');
+  }
+  $('btn-add').onclick = function () { openForm(null); };
+  $('btn-cancel').onclick = function () { show('view-list'); };
+  $('btn-save').onclick = function () {
+    var payload = {
+      id: editingId,
+      name: $('f-name').value.trim(),
+      host: $('f-host').value.trim(),
+      port: parseInt($('f-port').value, 10) || 22,
+      user: $('f-user').value.trim() || 'root',
+      password: $('f-pass').value
+    };
+    if (!payload.host) { $('form-err').textContent = 'IP/域名不能为空'; return; }
+    $('btn-save').disabled = true;
+    callNative('saveServer', payload).then(function (r) {
+      $('btn-save').disabled = false;
+      servers = r.servers || []; renderList(); show('view-list');
+    }).catch(function (e) {
+      $('btn-save').disabled = false;
+      $('form-err').textContent = e.message;
+    });
+  };
+
+  // ── TQ ───────────────────────────────────────
+  function openTq(s, start) {
+    tqSrv = s;
+    $('tq-status').textContent = start ? '正在启动 TQ…' : '正在读取 TQ 状态…';
+    $('tq-link').classList.add('hidden');
+    $('tq-tail').textContent = '';
+    show('view-tq');
+    if (tqTimer) { clearInterval(tqTimer); tqTimer = null; }
+    var begin = start
+      ? callNative('tqStart', { id: s.id })
+      : Promise.resolve({});
+    begin.then(function () {
+      pollTq();
+      tqTimer = setInterval(pollTq, 5000);
+    }).catch(function (e) {
+      $('tq-status').textContent = '启动失败：' + e.message;
+    });
+  }
+  function pollTq() {
+    if (!tqSrv) return;
+    callNative('tqState', { id: tqSrv.id }).then(function (r) {
+      if (r.url) {
+        $('tq-status').textContent = r.running ? '还在跑，但报告链接已生成：' : '✅ TQ 已完成，报告链接：';
+        $('tq-url').textContent = r.url;
+        $('tq-link').classList.remove('hidden');
+        if (!r.running && tqTimer) { clearInterval(tqTimer); tqTimer = null; }
+      } else {
+        $('tq-status').textContent = r.running ? '⏳ TQ 运行中…（三网回程＋单线程，通常几分钟）' : '还没有跑过 TQ，或上次的日志已被清理。回列表点「一键TQ」开始。';
+        if (!r.running && tqTimer) { clearInterval(tqTimer); tqTimer = null; }
+      }
+      if (r.tail) $('tq-tail').textContent = r.tail;
+    }).catch(function (e) {
+      $('tq-status').textContent = '读取失败：' + e.message;
+    });
+  }
+  $('btn-tq-back').onclick = function () {
+    if (tqTimer) { clearInterval(tqTimer); tqTimer = null; }
+    show('view-list');
+  };
+  $('btn-tq-refresh').onclick = pollTq;
+  $('btn-copy-url').onclick = function () { copyText($('tq-url').textContent, this); };
+  $('btn-open-url').onclick = function () { window.open($('tq-url').textContent, '_blank'); };
+
+  // ── 终端 ─────────────────────────────────────
+  function sendInput(str) {
+    callNative('termInput', { d: b64encode(utf8Bytes(str)) }).catch(function () {});
+  }
+  function openTerminal(s) {
+    currentSrv = s;
+    show('view-term');
+    $('term-title').textContent = (s.name || s.host) + ' · ' + s.user + '@' + s.host + ':' + s.port;
+    $('term-state').textContent = '连接中…';
+    $('term-state').className = '';
+    if (term) { try { term.dispose(); } catch (e) {} term = null; }
+    $('terminal').innerHTML = '';
+    term = new Terminal({
+      fontSize: 13,
+      fontFamily: 'Menlo, Consolas, monospace',
+      theme: { background: '#0b0910', foreground: '#e8e3f5', cursor: '#e88bb0' },
+      cursorBlink: true,
+      scrollback: 4000
+    });
+    fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open($('terminal'));
+    fitAddon.fit();
+    term.focus();
+    term.onData(function (data) {
+      if (ctrlSticky) {
+        ctrlSticky = false;
+        $('key-ctrl').classList.remove('on');
+        if (data.length === 1) {
+          var code = data.toUpperCase().charCodeAt(0);
+          if (code >= 64 && code <= 95) { sendInput(String.fromCharCode(code - 64)); return; }
+        }
+      }
+      sendInput(data);
+    });
+    term.onResize(function (size) {
+      callNative('termResize', { cols: size.cols, rows: size.rows }).catch(function () {});
+    });
+    callNative('connect', { id: s.id, cols: term.cols, rows: term.rows }).then(function () {
+      $('term-state').textContent = '已连接';
+    }).catch(function (e) {
+      $('term-state').textContent = '连接失败';
+      $('term-state').className = 'off';
+      term.write('\r\n\x1b[31m' + e.message + '\x1b[0m\r\n');
+    });
+    setTimeout(function () { try { fitAddon.fit(); } catch (e) {} }, 350);
+  }
+  if (window.Capacitor && window.Capacitor.addListener) {
+    window.Capacitor.addListener(PLUGIN, 'termData', function (ev) {
+      if (term && ev && ev.d) {
+        try { term.write(b64decodeToBytes(ev.d)); } catch (e) {}
+      }
+    });
+    window.Capacitor.addListener(PLUGIN, 'termClosed', function () {
+      if (term) term.write('\r\n\x1b[33m—— 连接已断开 ——\x1b[0m\r\n');
+      $('term-state').textContent = '已断开';
+      $('term-state').className = 'off';
+    });
+  }
+  $('btn-disconnect').onclick = function () {
+    callNative('disconnect', {}).catch(function () {});
+    show('view-list');
+  };
+  var KEYSEQ = {
+    esc: '\x1b', tab: '\t', up: '\x1b[A', down: '\x1b[B', right: '\x1b[C', left: '\x1b[D',
+    home: '\x1b[H', end: '\x1b[F', pgup: '\x1b[5~', pgdn: '\x1b[6~'
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#keybar button'), function (btn) {
+    btn.addEventListener('click', function () {
+      var k = btn.getAttribute('data-k');
+      if (k === 'ctrl') {
+        ctrlSticky = !ctrlSticky;
+        btn.classList.toggle('on', ctrlSticky);
+      } else if (k === 'char') {
+        sendInput(btn.getAttribute('data-v'));
+      } else if (KEYSEQ[k]) {
+        sendInput(KEYSEQ[k]);
+      }
+      if (term) term.focus();
+    });
+  });
+  window.addEventListener('resize', function () {
+    if (term && fitAddon && !$('view-term').classList.contains('hidden')) {
+      try { fitAddon.fit(); } catch (e) {}
+    }
+  });
+
+  show('view-list');
+  refreshList();
+})();
+</script>
+</body>
+</html>
