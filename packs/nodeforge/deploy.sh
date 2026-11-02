@@ -36,7 +36,10 @@ NODE_NAME="${NF_NODE_NAME:-}"
 ADMIN_USER="${NF_ADMIN_USER:-}"
 ADMIN_PASS="${NF_ADMIN_PASS:-}"
 TLS_NAME="nf-reality"
-INBOUND_TAG="nf-vless"
+# 节点名（含旗帜）直接做入站 tag：s-ui 订阅按 outbound tag 给节点命名，
+# 显示名就等于她填的名字、不带任何后缀（备注 remark 必须留空，
+# 否则 JoinRemark 会再拼一段前缀）。未填名时用默认 tag。
+if [ -n "$NODE_NAME" ]; then INBOUND_TAG="$NODE_NAME"; else INBOUND_TAG="nf-vless"; fi
 
 log() { echo "== $*"; }
 fail() { echo "NF_ERROR: $*" >&2; exit 1; }
@@ -249,10 +252,13 @@ if isinstance(o, dict):
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if t.get("tag") == sys.argv[1]]
+if not hits:
+    # 改名/从默认 tag 迁移：按端口认领本包管理的入站
+    hits = [t for t in items if str(t.get("listen_port", "")) == sys.argv[2]]
 if hits:
     t = hits[-1]
     print(t.get("id"), t.get("listen_port", ""))
-' "$INBOUND_TAG")"
+' "$INBOUND_TAG" "$NODE_PORT")"
 INBOUND_ID=""; INB_PORT=""
 if [ -n "$INB_FOUND" ]; then
     read -r INBOUND_ID INB_PORT <<< "$INB_FOUND"
@@ -280,19 +286,27 @@ if isinstance(o, dict):
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if t.get("tag") == sys.argv[1]]
+if not hits:
+    hits = [t for t in items if str(t.get("listen_port", "")) == sys.argv[3]]
 host, port = sys.argv[2], int(sys.argv[3])
 if hits:
     t = dict(hits[-1])
+    changed = False
+    if t.get("tag") != sys.argv[1]:
+        t["tag"] = sys.argv[1]
+        changed = True
     addrs = t.get("addrs") or []
     cur = addrs[0].get("server") if addrs and isinstance(addrs[0], dict) else ""
     if cur != host:
         t["addrs"] = [{"server": host, "server_port": port}]
+        changed = True
+    if changed:
         print(json.dumps(t))
 ' "$INBOUND_TAG" "$PUBLIC_HOST" "$NODE_PORT")"
         if [ -n "$EDIT_DATA" ]; then
             if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
                 --data-urlencode "data=$EDIT_DATA" >/dev/null; then
-                log "已把入站地址校正为公网地址 $PUBLIC_HOST（订阅链接用）"
+                log "已校正入站（公网地址 $PUBLIC_HOST／节点名）"
             else
                 log "入站地址校正失败（订阅地址可能不对，文末校验会确认）"
             fi
@@ -304,13 +318,13 @@ else
     log "创建 VLESS 入站（端口 $NODE_PORT）"
     inbound_data="$(python3 -c '
 import json, sys
-d = {"type": "vless", "tag": "nf-vless", "listen": "::",
+d = {"type": "vless", "tag": sys.argv[4], "listen": "::",
      "listen_port": int(sys.argv[1]), "tls_id": int(sys.argv[2])}
 host = sys.argv[3].strip()
 if host:
     d["addrs"] = [{"server": host, "server_port": int(sys.argv[1])}]
 print(json.dumps(d))
-' "$NODE_PORT" "$TLS_ID" "$PUBLIC_HOST")"
+' "$NODE_PORT" "$TLS_ID" "$PUBLIC_HOST" "$INBOUND_TAG")"
     api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
         --data-urlencode "data=$inbound_data" >/dev/null
     INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
@@ -384,7 +398,7 @@ vol, exp, nxt = int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6])
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}},
                   "inbounds": [int(sys.argv[3])], "links": [],
-                  "volume": vol, "expiry": exp, "remark": sys.argv[7],
+                  "volume": vol, "expiry": exp, "remark": "",
                   "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
                   "nextReset": nxt if vol > 0 else 0}))
 ' "$SUB_ID" "$UUID" "$INBOUND_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME")"
@@ -475,9 +489,9 @@ else:
             return fallback
     new_vol = vol if vol > 0 else int(r.get('volume') or 0)
     new_exp = exp if exp > 0 else int(r.get('expiry') or 0)
-    # 备注名（含旗帜）写进客户端 remark：s-ui 订阅按
-    # JoinRemark(remark, 入站tag) 给节点命名，空备注时才是光秃秃的 nf-vless。
-    new_remark = nm if nm else (b2s(r.get('remark')) or '')
+    # 客户端备注必须留空：节点名由入站 tag 承担，remark 非空时
+    # s-ui 会按 JoinRemark(remark, tag) 再拼一段前缀，显示名就不纯了。
+    new_remark = ''
     if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
             and new_remark == (b2s(r.get('remark')) or '') \
             and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
@@ -684,13 +698,34 @@ if [ "$TPL_CHK" = "ok" ]; then
 else
     log "订阅模板校验未通过（Clash 订阅可能仍是简版）"
 fi
+NAME_OK="ok"
+if [ -n "$NODE_NAME" ]; then
+    NAME_CHK="$(printf '%s' "$CLASH_TXT" | python3 -c '
+import sys, re
+t = sys.stdin.read()
+t = re.sub(r"\\U([0-9a-fA-F]{8})", lambda m: chr(int(m.group(1), 16)), t)
+t = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), t)
+name = sys.argv[1]
+tns = re.sub(r"\s+", "", t)
+nns = re.sub(r"\s+", "", name)
+hit = ("name:" + nns) in tns or ("name:\"" + nns + "\"") in tns
+print("ok" if hit else "fail")
+' "$NODE_NAME" 2>/dev/null || echo fail)"
+    if [ "$NAME_CHK" = "ok" ]; then
+        NAME_OK="ok"
+        log "节点名校验通过（订阅里就叫 $NODE_NAME）"
+    else
+        NAME_OK="fail"
+        log "节点名校验未通过（订阅里未见 $NODE_NAME）"
+    fi
+fi
 
 # ── 10. 结果 ───────────────────────────────────────────────
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" <<'PYEOF'
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
  sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info,
- sub_tpl_ok) = sys.argv[1:17]
+ sub_tpl_ok, name_ok) = sys.argv[1:18]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
@@ -698,6 +733,7 @@ print("NF_RESULT " + json.dumps({
     "sni": sni, "vlessLink": vless, "suiVersion": ver,
     "verified": verify == "ok", "subHostOk": sub_host_ok == "ok",
     "subInfo": sub_info, "subTplOk": sub_tpl_ok == "ok",
+    "nameOk": name_ok == "ok",
 }))
 PYEOF
 log "部署完成"
