@@ -144,6 +144,15 @@ class PackStore(context: Context) {
                 entryClass = "com.suanran.pack.iptest.IpTestPackEntry",
             ),
             PackDef(
+                id = "webdav",
+                name = "WebDAV 云备份",
+                summary = "把全量备份（配置/订阅/设置）存到自己的 WebDAV 网盘：备份包由本体生成与恢复，本插件只管传输；账号密码加密保存在本机",
+                version = "1",
+                sizeText = "约 120 KB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/webdav-pack-v1.zip",
+                entryClass = "com.suanran.pack.webdav.WebDavPackEntry",
+            ),
+            PackDef(
                 id = "sshtty",
                 name = "VPS 终端",
                 summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；另带一键 TQ 测速（报告链接自动提取可复制）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）",

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WebDAV 云备份</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; padding: 18px 16px 40px; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #17141f; color: #efeafd; }
+  h1 { font-size: 22px; margin: 4px 0 6px; }
+  .sub { color: #b9aed6; font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+  .card { background: #221d31; border: 1px solid #372f52; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; color: #d9ccff; }
+  label { display: block; font-size: 12.5px; color: #b9aed6; margin: 12px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  .field { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; background: #17141f; border: 1px solid #453a6b; border-radius: 10px; color: #fff; padding: 11px 12px; font-size: 15px; outline: none; }
+  input:focus { border-color: #9a7bff; }
+  .mini { flex: 0 0 auto; background: #2e2750; color: #d9ccff; border: 1px solid #453a6b; border-radius: 10px; padding: 0 14px; font-size: 13px; }
+  .row { display: flex; gap: 10px; margin-top: 16px; }
+  button.act { flex: 1; border: 0; border-radius: 12px; padding: 13px 10px; font-size: 15px; font-weight: 600; background: linear-gradient(90deg, #f78fb3, #9a7bff); color: #fff; }
+  button.act:disabled { opacity: .45; }
+  button.ghost { flex: 1; border: 1px solid #453a6b; border-radius: 12px; padding: 13px 10px; font-size: 15px; background: #2a2442; color: #efeafd; }
+  button.ghost:disabled { opacity: .45; }
+  .status { min-height: 20px; font-size: 13.5px; line-height: 1.5; color: #ffd9a0; margin-top: 12px; word-break: break-all; }
+  .status.ok { color: #9fe8b1; }
+  .status.err { color: #ff9d9d; }
+  .item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 2px; border-bottom: 1px solid #2e2750; font-size: 13.5px; }
+  .item:last-child { border-bottom: 0; }
+  .item .t { color: #b9aed6; font-size: 12px; white-space: nowrap; }
+  .hint { font-size: 12px; color: #8f83b8; line-height: 1.55; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>☁️ WebDAV 云备份</h1>
+  <div class="sub">把梦盒的全量备份（配置、订阅、设置）存到自己的 WebDAV 网盘。备份包的生成与恢复由梦盒本体完成，本插件只负责 WebDAV 传输；账号密码加密保存在本机，不经过任何第三方。</div>
+
+  <div class="card">
+    <h2>服务器配置</h2>
+    <label>WebDAV 地址</label>
+    <input id="f-url" type="text" placeholder="如 https://dav.example.com/dav" autocomplete="off">
+    <label>子目录（可留空）</label>
+    <input id="f-dir" type="text" placeholder="如 dreambox" autocomplete="off">
+    <label>账号</label>
+    <input id="f-account" type="text" placeholder="WebDAV 用户名" autocomplete="off">
+    <label>密码</label>
+    <div class="field">
+      <input id="f-password" type="password" placeholder="不改密码就留空" autocomplete="off">
+      <button class="mini" id="btn-toggle-pw" type="button">显示</button>
+    </div>
+    <div class="hint" id="pw-hint"></div>
+    <div class="row">
+      <button class="ghost" id="btn-save" type="button">保存配置</button>
+      <button class="ghost" id="btn-test" type="button">测试连接</button>
+    </div>
+    <div class="status" id="status-config"></div>
+  </div>
+
+  <div class="card">
+    <h2>云端备份</h2>
+    <div class="row" style="margin-top:0">
+      <button class="act" id="btn-backup" type="button">备份到云端</button>
+      <button class="ghost" id="btn-restore" type="button">恢复最新备份</button>
+    </div>
+    <div class="status" id="status-backup"></div>
+    <div class="hint">恢复会覆盖当前全部数据并需要重启 App，执行前会再次确认。</div>
+  </div>
+
+  <div class="card">
+    <h2>云端文件</h2>
+    <div id="file-list"><div class="hint">点「刷新列表」查看云端已有的备份。</div></div>
+    <div class="row">
+      <button class="ghost" id="btn-list" type="button">刷新列表</button>
+    </div>
+    <div class="status" id="status-list"></div>
+  </div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function callNative(plugin, method, options) {
+    return new Promise(function (resolve, reject) {
+      if (!window.Capacitor || !window.Capacitor.toNative) {
+        reject(new Error('原生桥未就绪（请在梦盒插件里打开）'));
+        return;
+      }
+      window.Capacitor.toNative(plugin, method, options || {}, {
+        callback: function (res, err) {
+          if (err) { reject(new Error(err.message || String(err))); return; }
+          if (res && res.error) { reject(new Error(res.error.message || '调用失败')); return; }
+          var data = res && ('data' in res) ? res.data : res;
+          if (data && data.error) { reject(new Error(data.error)); return; }
+          resolve(data || {});
+        }
+      });
+    });
+  }
+  function setStatus(id, text, kind) {
+    var el = $(id);
+    el.textContent = text || '';
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+  function setBusy(busy) {
+    ['btn-save', 'btn-test', 'btn-backup', 'btn-restore', 'btn-list'].forEach(function (id) { $(id).disabled = busy; });
+  }
+  function fmtTime(ms) {
+    if (!ms) return '';
+    var d = new Date(ms);
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  $('btn-toggle-pw').addEventListener('click', function () {
+    var f = $('f-password');
+    var show = f.type === 'password';
+    f.type = show ? 'text' : 'password';
+    this.textContent = show ? '隐藏' : '显示';
+  });
+
+  function loadConfig() {
+    callNative('WebDav', 'getConfig').then(function (cfg) {
+      $('f-url').value = cfg.url || '';
+      $('f-dir').value = cfg.directory || '';
+      $('f-account').value = cfg.account || '';
+      $('pw-hint').textContent = cfg.hasPassword ? '密码已保存（不回显明文；不改就留空）。' : '尚未保存密码。';
+    }).catch(function (e) { setStatus('status-config', '读取配置失败：' + e.message, 'err'); });
+  }
+
+  function currentForm() {
+    return {
+      url: $('f-url').value.trim(),
+      directory: $('f-dir').value.trim(),
+      account: $('f-account').value.trim(),
+      password: $('f-password').value
+    };
+  }
+
+  $('btn-save').addEventListener('click', function () {
+    var form = currentForm();
+    if (!form.url || !form.account) { setStatus('status-config', '地址和账号不能为空。', 'err'); return; }
+    setBusy(true);
+    callNative('WebDav', 'saveConfig', form).then(function () {
+      $('f-password').value = '';
+      setStatus('status-config', '已保存。', 'ok');
+      loadConfig();
+    }).catch(function (e) { setStatus('status-config', '保存失败：' + e.message, 'err'); })
+      .finally(function () { setBusy(false); });
+  });
+
+  $('btn-test').addEventListener('click', function () {
+    setBusy(true);
+    setStatus('status-config', '测试中…');
+    callNative('WebDav', 'saveConfig', currentForm()).then(function () {
+      return callNative('WebDav', 'test');
+    }).then(function () {
+      setStatus('status-config', '连接成功，目录可访问。', 'ok');
+    }).catch(function (e) { setStatus('status-config', '测试失败：' + e.message, 'err'); })
+      .finally(function () { setBusy(false); });
+  });
+
+  $('btn-backup').addEventListener('click', function () {
+    setBusy(true);
+    setStatus('status-backup', '正在生成备份包…');
+    callNative('HostBackup', 'export').then(function () {
+      setStatus('status-backup', '正在上传到 WebDAV…');
+      return callNative('WebDav', 'backupUpload');
+    }).then(function (r) {
+      setStatus('status-backup', '备份完成：' + (r.name || ''), 'ok');
+      refreshList();
+    }).catch(function (e) { setStatus('status-backup', '备份失败：' + e.message, 'err'); })
+      .finally(function () { setBusy(false); });
+  });
+
+  $('btn-restore').addEventListener('click', function () {
+    if (!window.confirm('恢复最新云端备份将覆盖当前全部数据，确定继续？')) return;
+    setBusy(true);
+    setStatus('status-backup', '正在下载最新备份…');
+    callNative('WebDav', 'restorePrepare').then(function (r) {
+      setStatus('status-backup', '正在恢复：' + (r.name || '') + ' …');
+      return callNative('HostBackup', 'import', { file: 'host-backup.zip' });
+    }).then(function () {
+      setStatus('status-backup', '恢复完成，请重启梦盒使全部设置生效。', 'ok');
+    }).catch(function (e) { setStatus('status-backup', '恢复失败：' + e.message, 'err'); })
+      .finally(function () { setBusy(false); });
+  });
+
+  function refreshList() {
+    setStatus('status-list', '读取中…');
+    callNative('WebDav', 'listBackups').then(function (r) {
+      var files = (r.files || []).slice().sort(function (a, b) { return (b.lastModified || 0) - (a.lastModified || 0); });
+      if (!files.length) {
+        $('file-list').innerHTML = '<div class="hint">云端还没有备份文件。</div>';
+      } else {
+        $('file-list').innerHTML = files.map(function (f) {
+          return '<div class="item"><span>' + f.name + '</span><span class="t">' + fmtTime(f.lastModified) + '</span></div>';
+        }).join('');
+      }
+      setStatus('status-list', '', '');
+    }).catch(function (e) { setStatus('status-list', '读取失败：' + e.message, 'err'); });
+  }
+  $('btn-list').addEventListener('click', refreshList);
+
+  loadConfig();
+})();
+</script>
+</body>
+</html>
