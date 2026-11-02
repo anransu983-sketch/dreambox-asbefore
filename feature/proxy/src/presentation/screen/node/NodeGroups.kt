@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
 import com.suanran.dreambox.presentation.component.misc.CustomIcons
 import com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap
+import com.suanran.dreambox.feature.proxy.presentation.util.nodeFlagEmoji
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -204,14 +205,39 @@ internal fun NodeGroupCard(
                         .padding(horizontal = UiDp.dp8, vertical = UiDp.dp2),
                 )
             }
-            EmojiAwareText(
-                text = currentNodeName,
-                style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = UiDp.dp2),
-            )
+            ) {
+                val flagEmoji = remember(currentNodeName) { nodeFlagEmoji(currentNodeName) }
+                if (flagEmoji != null) {
+                    Text(
+                        text = flagEmoji,
+                        style = MiuixTheme.textStyles.footnote1.copy(fontSize = 11.sp),
+                        modifier = Modifier.padding(end = UiDp.dp4),
+                    )
+                }
+                EmojiAwareText(
+                    text = currentNodeName,
+                    style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                // 组内最快：已测速节点里最小的正延迟，一眼看出这个组还有没有救。
+                val fastestDelay = remember(group.proxies) {
+                    group.proxies.mapNotNull { it.delay }.filter { it > 0 }.minOrNull()
+                }
+                if (fastestDelay != null && group.proxies.size > 1) {
+                    Text(
+                        text = "最快 ${fastestDelay}ms",
+                        style = MiuixTheme.textStyles.footnote1.copy(fontSize = 10.sp),
+                        color = badgeFg,
+                        modifier = Modifier.padding(start = UiDp.dp6),
+                    )
+                }
+            }
         }
         if (onTestClick != null) {
             Box(
