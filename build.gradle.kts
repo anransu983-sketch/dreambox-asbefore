@@ -207,12 +207,13 @@ allprojects {
             enabled = false
         }
     }
+    // 目录在配置期先算成 File 再让 doLast 捕获，避免闭包捕获 Project 导致配置缓存无法序列化。
+    val aarCheckBase = layout.buildDirectory.dir("intermediates/aar_metadata_check").get().asFile
     tasks.register("ensureAarMetadataCheckDirs") {
         doLast {
-            val base = layout.buildDirectory.dir("intermediates/aar_metadata_check").get().asFile
             listOf("debug", "release").forEach { variant ->
                 val cap = variant.replaceFirstChar(Char::uppercaseChar)
-                File(base, "$variant/check${cap}AarMetadata").mkdirs()
+                File(aarCheckBase, "$variant/check${cap}AarMetadata").mkdirs()
             }
         }
     }
