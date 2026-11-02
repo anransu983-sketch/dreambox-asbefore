@@ -104,7 +104,6 @@ sealed interface Route {
     data object Theme : Route
 
     @Serializable
-    data object IpTest : Route
 
     @Serializable
     data object Lab : Route

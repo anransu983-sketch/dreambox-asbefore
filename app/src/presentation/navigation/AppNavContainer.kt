@@ -69,7 +69,6 @@ import com.suanran.dreambox.feature.settings.presentation.screen.MetaFeatureScre
 import com.suanran.dreambox.feature.settings.presentation.screen.MoeWallpaperCropScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.NetworkSettingsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.ThemeScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.IpTestScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.LabScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.FeaturePacksScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.ModulesScreen
@@ -117,7 +116,6 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.CustomRouting -> CustomRoutingRoute(navigator)
         Route.StreamUnlock -> StreamUnlockScreen(navigator)
         Route.Theme -> ThemeScreen(navigator)
-        Route.IpTest -> IpTestScreen(navigator)
         Route.Lab -> LabScreen(navigator)
         Route.FeaturePacks -> FeaturePacksScreen(navigator)
         Route.Modules -> ModulesScreen(navigator)

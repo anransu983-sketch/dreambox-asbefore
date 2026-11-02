@@ -1,0 +1,45 @@
+name: Build IpTest pack
+
+# IP 测试插件：静态 web（检测站清单）+ 极小 Java 入口编 dex。
+on:
+  workflow_dispatch:
+
+jobs:
+  build-pack:
+    name: Build iptest pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout DreamBox
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0"
+
+      - name: Build pack zip
+        run: bash packs/iptest/build-pack.sh
+
+      - name: Upload pack artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iptest-pack
+          path: packs/iptest/iptest-pack-v*.zip
+
+      - name: Publish pack to packs release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view packs >/dev/null 2>&1 || \
+            gh release create packs --title "插件" --notes "梦盒插件下载（App 内插件页使用）"
+          gh release upload packs packs/iptest/iptest-pack-v*.zip --clobber

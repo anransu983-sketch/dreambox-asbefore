@@ -91,13 +91,7 @@ fun LabScreen(navigator: Navigator) {
             route = Route.Theme,
         ),
         LabEntry(
-            title = FlyTxt.Settings.Experimental.IpTestModule,
-            summary = FlyTxt.Settings.Experimental.IpTestModuleSummary,
-            icon = FlyCat.Search,
-            route = Route.IpTest,
-        ),
-        LabEntry(
-            title = "功能包",
+            title = "插件",
             summary = "重型功能按需下载，删掉腾空间",
             icon = Icons.Filled.Extension,
             route = Route.FeaturePacks,
@@ -116,14 +110,13 @@ fun LabScreen(navigator: Navigator) {
         ),
     )
 
-    val defaultKeys = listOf("theme", "iptest", "packs", "modules", "hidden")
+    val defaultKeys = listOf("theme", "packs", "modules", "hidden")
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
     val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val listState = rememberLazyListState()
     val entryByKey = entries.associateBy {
         when (it.route) {
             Route.Theme -> "theme"
-            Route.IpTest -> "iptest"
             Route.FeaturePacks -> "packs"
             Route.Modules -> "modules"
             Route.HiddenModules -> "hidden"

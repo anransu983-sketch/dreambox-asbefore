@@ -156,7 +156,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
     Scaffold(
         topBar = {
             TopBar(
-                title = "功能包",
+                title = "插件",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { NavigationBackIcon(navigator = navigator) },
             )
@@ -179,7 +179,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
             if (PackStore.REGISTRY.isEmpty()) {
                 item {
                     Text(
-                        text = "暂无可用功能包。",
+                        text = "暂无可用插件。",
                         style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -189,7 +189,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
             if (visiblePacks.isEmpty() && PackStore.REGISTRY.isNotEmpty()) {
                 item {
                     Text(
-                        text = "功能包都已隐藏，去「模块」页把开关打开就能恢复。",
+                        text = "插件都已隐藏，去「模块」页把开关打开就能恢复。",
                         style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),

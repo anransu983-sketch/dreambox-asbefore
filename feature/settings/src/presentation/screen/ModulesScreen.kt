@@ -38,15 +38,14 @@ private val MAIN_MODULES = listOf(
     ModuleToggle("network", "网络", "网络设置入口"),
     ModuleToggle("override", "覆写", "覆写配置入口"),
     ModuleToggle("meta", "Meta 功能", "Meta 功能入口"),
-    ModuleToggle("lab", "实验室", "主题 · IP 测试 · 功能包"),
+    ModuleToggle("lab", "实验室", "主题 · 插件"),
     ModuleToggle("log", "日志", "日志入口"),
     ModuleToggle("about", "关于", "关于入口"),
 )
 
 private val LAB_MODULES = listOf(
     ModuleToggle("theme", "主题", "浏览、安装和管理主题"),
-    ModuleToggle("iptest", "IP 测试", "IP 查询与纯净度检测"),
-    ModuleToggle("packs", "功能包", "重型功能按需下载，删掉腾空间"),
+    ModuleToggle("packs", "插件", "重型功能按需下载，删掉腾空间"),
     ModuleToggle("hidden", "已隐藏的模块", "管理所有隐藏的功能模块"),
 )
 
@@ -147,7 +146,7 @@ fun ModulesScreen(navigator: Navigator) {
             }
             item {
                 Text(
-                    text = "功能包模块",
+                    text = "插件模块",
                     style = MiuixTheme.textStyles.title4,
                     color = MiuixTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -159,7 +158,7 @@ fun ModulesScreen(navigator: Navigator) {
                         PackStore.REGISTRY.forEach { def ->
                             PreferenceSwitchItem(
                                 title = def.name,
-                                summary = "功能包页里的这个包",
+                                summary = "插件页里的这个包",
                                 checked = def.id !in packHidden,
                                 onCheckedChange = { on ->
                                     packHidden = if (on) packHidden - def.id else packHidden + def.id

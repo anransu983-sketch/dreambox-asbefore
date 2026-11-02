@@ -82,9 +82,9 @@ class PackStore(context: Context) {
         try {
             unzipSafely(zipFile, staging)
             val marker = File(staging, "pack.json")
-            if (!marker.isFile) throw IllegalStateException("功能包缺少 pack.json")
+            if (!marker.isFile) throw IllegalStateException("插件缺少 pack.json")
             target.deleteRecursively()
-            if (!staging.renameTo(target)) throw IllegalStateException("功能包装入失败")
+            if (!staging.renameTo(target)) throw IllegalStateException("插件装入失败")
         } catch (t: Throwable) {
             staging.deleteRecursively()
             throw t
@@ -105,7 +105,7 @@ class PackStore(context: Context) {
                 val outFile = File(destDir, entry.name)
                 val outCanonical = outFile.canonicalPath
                 if (outCanonical != destCanonical && !outCanonical.startsWith(destCanonical + File.separator)) {
-                    throw IllegalStateException("功能包包含非法路径：${entry.name}")
+                    throw IllegalStateException("插件包含非法路径：${entry.name}")
                 }
                 if (entry.isDirectory) {
                     outFile.mkdirs()
@@ -133,6 +133,15 @@ class PackStore(context: Context) {
                 sizeText = "约 290 KB",
                 downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v17.zip",
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
+            ),
+            PackDef(
+                id = "iptest",
+                name = "IP 测试",
+                summary = "IP 查询与纯净度检测：13 个常用检测站经当前代理出口一键打开",
+                version = "1",
+                sizeText = "约 30 KB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/iptest-pack-v1.zip",
+                entryClass = "com.suanran.pack.iptest.IpTestPackEntry",
             ),
             PackDef(
                 id = "sshtty",

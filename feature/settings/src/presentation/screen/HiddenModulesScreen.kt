@@ -82,12 +82,12 @@ fun HiddenModulesScreen(navigator: Navigator) {
         )),
         HiddenGroup("lab", "实验室", mapOf(
             "theme" to "主题",
-            "iptest" to "IP 测试", "packs" to "功能包", "modules" to "模块",
+            "packs" to "插件", "modules" to "模块",
             "hidden" to "已隐藏的模块",
         )),
         HiddenGroup(
             pageKey = PACKS_VISIBILITY_SCOPE,
-            pageTitle = "功能包",
+            pageTitle = "插件",
             titles = PackStore.REGISTRY.associate { it.id to it.name },
         ),
     )

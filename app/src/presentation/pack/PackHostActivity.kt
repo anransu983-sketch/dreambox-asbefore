@@ -165,7 +165,7 @@ class PackHostActivity : Activity() {
                 Log.ERROR, "Pack",
                 "原生代码加载失败 entry=$entryClass dir=${packDir.name}\n" + Log.getStackTraceString(it),
             )
-            Toast.makeText(this, "功能包原生代码加载失败：${it.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "插件原生代码加载失败：${it.message}", Toast.LENGTH_LONG).show()
             null
         }
     }
@@ -197,7 +197,7 @@ class PackHostActivity : Activity() {
             }
             val current = dispatcher
             if (current == null) {
-                sendResult(callbackId, success = false, dataJson = null, error = "功能包原生代码不可用（$pluginId 未实现）")
+                sendResult(callbackId, success = false, dataJson = null, error = "插件原生代码不可用（$pluginId 未实现）")
                 return
             }
             io.execute {
@@ -212,7 +212,7 @@ class PackHostActivity : Activity() {
                     )
                 }.getOrDefault(false)
                 if (!handled) {
-                    sendResult(callbackId, success = false, dataJson = null, error = "功能包未实现 $pluginId.$method")
+                    sendResult(callbackId, success = false, dataJson = null, error = "插件未实现 $pluginId.$method")
                 }
             }
         }

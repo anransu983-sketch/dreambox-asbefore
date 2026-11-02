@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>IP 测试</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #14101d; color: #efeaf6; font-family: -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 18px 16px 32px; }
+  h1 { font-size: 21px; font-weight: 700; margin-bottom: 6px; }
+  .sub { color: #a99fc4; font-size: 13px; line-height: 1.55; margin-bottom: 18px; }
+  .card { background: #1f1930; border: 1px solid #2e2750; border-radius: 16px; overflow: hidden; }
+  a.site { display: flex; align-items: center; padding: 15px 16px; color: inherit; text-decoration: none; border-bottom: 1px solid #292242; }
+  a.site:last-child { border-bottom: none; }
+  a.site:active { background: #282040; }
+  .ic { width: 38px; height: 38px; border-radius: 11px; background: #2b2145; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 13px; flex: none; }
+  .nm { font-size: 15.5px; font-weight: 600; }
+  .dm { color: #a99fc4; font-size: 12.5px; margin-top: 2px; }
+  .go { margin-left: auto; color: #6f6395; font-size: 18px; flex: none; padding-left: 8px; }
+  .foot { color: #6f6395; font-size: 12px; line-height: 1.6; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>IP 测试</h1>
+<div class="sub">IP 查询与纯净度检测。以下站点经<b>当前代理出口</b>打开，测的就是当前节点的 IP。</div>
+<div class="card" id="list"></div>
+<div class="foot">小提示：不同站点数据库与评分口径不同，同一 IP 分数有出入很正常，交叉看两三个更靠谱。</div>
+<script>
+  var SITES = [
+    ['🔍', 'ipip.la', 'IP 查询', 'https://ipip.la'],
+    ['🛡️', 'cleanip.io', 'IP 纯净度', 'https://cleanip.io'],
+    ['👁️', 'ippure.com', 'IP 纯净度', 'https://ippure.com'],
+    ['📟', 'ping0.cc', '风险检测', 'https://ping0.cc'],
+    ['🕵️', 'whoer.net', '匿名检测', 'https://whoer.net'],
+    ['🔍', 'ip.sb', 'IP 查询', 'https://ip.sb'],
+    ['👁️', 'browserleaks.com', '浏览器指纹与 IP', 'https://browserleaks.com/ip'],
+    ['🛡️', 'scamalytics.com', '欺诈风险评分', 'https://scamalytics.com'],
+    ['👁️', 'iplark.com', 'IP 画像', 'https://iplark.com'],
+    ['🛡️', 'ipcheck.ing', '综合检测', 'https://ipcheck.ing'],
+    ['📟', 'ipscore.xyz', 'IP 评分', 'https://ipscore.xyz'],
+    ['🔍', 'v6test.ipgg.cn', 'IPv6 测试', 'https://v6test.ipgg.cn'],
+    ['👁️', 'ip.net.coffee', 'IP 查询', 'https://ip.net.coffee']
+  ];
+  var html = '';
+  SITES.forEach(function (s) {
+    html += '<a class="site" href="' + s[3] + '"><span class="ic">' + s[0] + '</span>' +
+      '<span><span class="nm">' + s[1] + '</span><div class="dm">' + s[2] + ' · ' + s[3].replace('https://', '') + '</div></span>' +
+      '<span class="go">›</span></a>';
+  });
+  document.getElementById('list').innerHTML = html;
+</script>
+</body>
+</html>
