@@ -58,6 +58,11 @@
     <div><label>面板管理员账号</label><input id="adminUser" value="sui" autocomplete="off"></div>
     <div><label>面板管理员密码（记好）</label><input id="adminPass" autocomplete="off"></div>
   </div>
+  <div class="row">
+    <div><label>总流量 GB（留空=不限）</label><input id="quotaGb" type="number" placeholder="如 800" autocomplete="off"></div>
+    <div><label>到期日期（留空=不限）</label><input id="expireDate" type="date"></div>
+  </div>
+  <div class="warn">流量/到期填了才会显示在订阅卡上；到期是真到期、流量按 30 天自动重置一轮，按你买的机器套餐填。</div>
   <button class="main" id="deployBtn">一键部署</button>
   <div class="warn" style="margin-top:10px">云厂商控制台的安全组记得放行节点端口与订阅端口（2096），机内防火墙脚本会自动处理。</div>
 </div>
@@ -149,7 +154,8 @@
       host: f.host, sshPort: f.sshPort || 22, sshUser: f.sshUser || 'root',
       sshPassword: f.sshPassword || '', nodeName: f.nodeName || '',
       nodePort: f.nodePort || 443, subId: f.subId || 'node1',
-      adminUser: f.adminUser || 'sui', adminPass: f.adminPass || ''
+      adminUser: f.adminUser || 'sui', adminPass: f.adminPass || '',
+      quotaGb: f.quotaGb || '', expireDate: f.expireDate || ''
     };
     $('host').value = f.host;
     $('sshPort').value = f.sshPort || 22;
@@ -160,6 +166,8 @@
     $('subId').value = f.subId || 'node1';
     $('adminUser').value = f.adminUser || 'sui';
     if (f.adminPass) $('adminPass').value = f.adminPass;
+    $('quotaGb').value = f.quotaGb || '';
+    $('expireDate').value = f.expireDate || '';
   }
 
   function pollOnce() {
@@ -254,7 +262,9 @@
       nodePort: parseInt($('nodePort').value, 10) || 443,
       subId: sanitizeSubId($('subId').value),
       adminUser: $('adminUser').value.trim() || 'sui',
-      adminPass: $('adminPass').value
+      adminPass: $('adminPass').value,
+      quotaGb: $('quotaGb').value.trim(),
+      expireDate: $('expireDate').value
     };
     if (!opts.host) { alert('先填服务器 IP'); return; }
     if (!opts.sshPassword) { alert('先填 root 密码'); return; }

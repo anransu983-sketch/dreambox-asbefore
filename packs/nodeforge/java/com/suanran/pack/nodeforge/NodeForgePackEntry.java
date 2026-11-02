@@ -85,6 +85,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         String subId = "node1";
         String adminUser = "sui";
         String adminPass = "";
+        String quotaGb = "";
+        String expireDate = "";
         String banner = "";
         String lastLog = "";
         String error = "";
@@ -117,6 +119,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.subId = o.optString("subId", "node1");
             st.adminUser = o.optString("adminUser", "sui");
             st.adminPass = o.optString("adminPass", "");
+            st.quotaGb = o.optString("quotaGb", "");
+            st.expireDate = o.optString("expireDate", "");
             st.banner = o.optString("banner", "");
             st.lastLog = o.optString("lastLog", "");
             st.error = o.optString("error", "");
@@ -147,6 +151,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             o.put("subId", st.subId);
             o.put("adminUser", st.adminUser);
             o.put("adminPass", st.adminPass);
+            o.put("quotaGb", st.quotaGb);
+            o.put("expireDate", st.expireDate);
             o.put("banner", st.banner);
             o.put("lastLog", st.lastLog);
             o.put("error", st.error);
@@ -316,6 +322,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.subId = opts.optString("subId", "node1");
             st.adminUser = opts.optString("adminUser", "sui");
             st.adminPass = opts.optString("adminPass", "");
+            st.quotaGb = opts.optString("quotaGb", "");
+            st.expireDate = opts.optString("expireDate", "");
             st.launchedAt = System.currentTimeMillis();
             // 同一台机器沿用已记录的指纹做 TOFU 比对；换机器则重新记录。
             if (cur.host.equals(st.host) && cur.sshPort == st.sshPort) {
@@ -357,7 +365,9 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                     + "NF_SUB_ID=" + shq(st.subId) + "\n"
                     + "NF_NODE_PORT=" + st.nodePort + "\n"
                     + "NF_SSH_PORT=" + st.sshPort + "\n"
-                    + "NF_PUBLIC_HOST=" + shq(st.host) + "\n";
+                    + "NF_PUBLIC_HOST=" + shq(st.host) + "\n"
+                    + "NF_QUOTA_GB=" + shq(st.quotaGb) + "\n"
+                    + "NF_EXPIRE_DATE=" + shq(st.expireDate) + "\n";
             String wrapper = "#!/bin/bash\n"
                     + "set -a\n"
                     + ". " + dir + "/params.env\n"

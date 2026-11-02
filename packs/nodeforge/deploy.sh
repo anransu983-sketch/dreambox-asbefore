@@ -30,6 +30,8 @@ NODE_PORT="${NF_NODE_PORT:-443}"
 SSH_PORT="${NF_SSH_PORT:-22}"
 SUB_ID="${NF_SUB_ID:-node1}"
 PUBLIC_HOST="${NF_PUBLIC_HOST:-}"
+QUOTA_GB="${NF_QUOTA_GB:-}"
+EXPIRE_DATE="${NF_EXPIRE_DATE:-}"
 ADMIN_USER="${NF_ADMIN_USER:-}"
 ADMIN_PASS="${NF_ADMIN_PASS:-}"
 TLS_NAME="nf-reality"
@@ -331,6 +333,26 @@ print(hits[-1].get("id") if hits else "")
     [ -n "$INBOUND_ID" ] || fail "入站创建后未找到"
 fi
 
+# ── 5.9 流量/到期换算（订阅卡显示用，写进客户端 volume/expiry）──
+VOL_BYTES=0
+if [ -n "$QUOTA_GB" ]; then
+    VOL_BYTES="$(python3 -c '
+import sys
+try: gb = float(sys.argv[1])
+except Exception: gb = 0
+print(int(gb * 1024**3) if gb > 0 else 0)
+' "$QUOTA_GB")"
+fi
+EXP_EPOCH=0
+if [ -n "$EXPIRE_DATE" ]; then
+    EXP_EPOCH="$(date -d "$EXPIRE_DATE 23:59:59" +%s 2>/dev/null || echo 0)"
+fi
+NOW_EPOCH="$(date +%s)"
+NEXT_RESET=$(( NOW_EPOCH + 30 * 86400 ))
+if [ "$VOL_BYTES" -gt 0 ] || [ "$EXP_EPOCH" -gt 0 ]; then
+    log "订阅将显示：总流量 ${QUOTA_GB:-不限} GB｜到期 ${EXPIRE_DATE:-不限}（流量按 30 天一轮自动重置）"
+fi
+
 # ── 6. 客户端（name = 订阅 ID）：已有同名则复用 ───────────
 log "检查已有客户端"
 CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
@@ -357,10 +379,14 @@ else
     log "创建客户端（订阅 ID：$SUB_ID）"
     client_data="$(python3 -c '
 import json, sys
+vol, exp, nxt = int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6])
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}},
-                  "inbounds": [int(sys.argv[3])], "links": [], "volume": 0, "expiry": 0}))
-' "$SUB_ID" "$UUID" "$INBOUND_ID")"
+                  "inbounds": [int(sys.argv[3])], "links": [],
+                  "volume": vol, "expiry": exp,
+                  "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
+                  "nextReset": nxt if vol > 0 else 0}))
+' "$SUB_ID" "$UUID" "$INBOUND_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
     CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
@@ -412,6 +438,77 @@ SUB_UUID="$(printf '%s' "$SUB_TXT" | grep -o 'vless://[0-9a-fA-F-]\{36\}@' | hea
 if [ -n "$SUB_UUID" ]; then
     UUID="$SUB_UUID"
     log "已按订阅内容校正 UUID"
+fi
+
+# 复用客户端补写流量/到期：全量数据从 s-ui 数据库原样读出（列表是摘要视图，
+# 不能拿来回写），只改 volume/expiry/autoReset/resetDays/nextReset 五项，
+# 其余字段（config/计数/时间戳）逐字保留，经 API edit 落盘。
+if [ "$VOL_BYTES" -gt 0 ] || [ "$EXP_EPOCH" -gt 0 ]; then
+    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" <<'PYEOF2'
+import sqlite3, glob, json, sys
+name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+try:
+    db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
+    con = sqlite3.connect(db)
+    cur = con.execute('select * from clients where name=?', (name,))
+    cols = [d[0] for d in cur.description]
+    row = cur.fetchone()
+except Exception:
+    row = None
+if not row:
+    print('NOROW')
+else:
+    r = dict(zip(cols, row))
+    def jload(v, fallback):
+        try:
+            x = json.loads(v) if isinstance(v, str) else v
+            while isinstance(x, str):
+                x = json.loads(x)
+            return x
+        except Exception:
+            return fallback
+    new_vol = vol if vol > 0 else int(r.get('volume') or 0)
+    new_exp = exp if exp > 0 else int(r.get('expiry') or 0)
+    if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
+            and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
+        print('SAME')
+    else:
+        out = {
+            'id': r.get('id'), 'enable': bool(r.get('enable')), 'name': r.get('name'),
+            'config': jload(r.get('config'), {}), 'inbounds': jload(r.get('inbounds'), []),
+            'links': jload(r.get('links'), []),
+            'volume': new_vol, 'expiry': new_exp,
+            'down': int(r.get('down') or 0), 'up': int(r.get('up') or 0),
+            'desc': r.get('desc') or '', 'group': r.get('group') or '',
+            'remark': r.get('remark') or '',
+            'createdAt': int(r.get('created_at') or 0), 'onlineAt': int(r.get('online_at') or 0),
+            'delayStart': bool(r.get('delay_start')), 'totalUp': int(r.get('total_up') or 0),
+            'totalDown': int(r.get('total_down') or 0),
+        }
+        if vol > 0:
+            out['autoReset'] = True
+            out['resetDays'] = 30
+            out['nextReset'] = nxt
+        else:
+            out['autoReset'] = bool(r.get('auto_reset'))
+            out['resetDays'] = int(r.get('reset_days') or 0)
+            out['nextReset'] = int(r.get('next_reset') or 0)
+        print(json.dumps(out))
+PYEOF2
+)"
+    case "$CLI_EDIT" in
+        SAME) log "客户端流量/到期已是本次填写的值" ;;
+        NOROW) log "未找到客户端记录，流量/到期未写入（订阅卡暂不显示）" ;;
+        "" ) log "客户端流量/到期写入准备失败，已跳过（节点本身不受影响）" ;;
+        * )
+            if api_post_ok save --data-urlencode object=clients --data-urlencode action=edit \
+                --data-urlencode "data=$CLI_EDIT" >/dev/null; then
+                log "已把流量/到期写入已有客户端（订阅卡更新后可见）"
+            else
+                log "客户端流量/到期写入失败（节点本身不受影响）"
+            fi
+            ;;
+    esac
 fi
 
 # ── 7. 防火墙：放行 节点/订阅/SSH；面板端口不放行 ────────
@@ -534,18 +631,21 @@ if [ -n "$PUBLIC_HOST" ] && [ "$LINK_HOST" = "$PUBLIC_HOST" ]; then
 else
     log "订阅地址校验未通过（订阅里是 ${LINK_HOST:-空}，应为 ${PUBLIC_HOST:-未知}）——订阅导入会连不上，请用包生成的 YAML"
 fi
+SUB_INFO="$(curl -s -D - -o /dev/null --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}" 2>/dev/null | grep -i '^subscription-userinfo:' | head -1 | tr -d '\r' | sed 's/^[^:]*: *//')"
+[ -n "$SUB_INFO" ] && log "订阅流量信息：$SUB_INFO"
 
 # ── 10. 结果 ───────────────────────────────────────────────
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" <<'PYEOF'
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
- sub_port, sub_path, sni, vless, ver, verify, sub_host_ok) = sys.argv[1:15]
+ sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info) = sys.argv[1:16]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
     "panelPath": panel_path, "subPort": int(sub_port), "subPath": sub_path,
     "sni": sni, "vlessLink": vless, "suiVersion": ver,
     "verified": verify == "ok", "subHostOk": sub_host_ok == "ok",
+    "subInfo": sub_info,
 }))
 PYEOF
 log "部署完成"
