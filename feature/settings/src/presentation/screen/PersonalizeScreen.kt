@@ -1,5 +1,9 @@
 package com.suanran.dreambox.feature.settings.presentation.screen
 
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.Switch
+import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
+import com.suanran.dreambox.presentation.component.misc.HomePanels
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -290,6 +294,60 @@ fun PersonalizeScreen(navigator: Navigator) {
                         }
                         Text(
                             text = "所有页面的返回按钮统一用这个图；系统全面屏手势返回照常有效。",
+                            fontSize = 11.sp,
+                            color = BocchiTextGray,
+                            modifier = Modifier.padding(
+                                start = spacing.space16,
+                                end = spacing.space16,
+                                bottom = spacing.space12,
+                            ),
+                        )
+                    }
+                }
+            }
+
+            item {
+                BocchiSectionTitle("首页面板")
+                BocchiCard {
+                    Column {
+                        val panelContext = LocalContext.current
+                        val (panelOrder, panelHidden) = rememberHomePanels()
+                        panelOrder.forEachIndexed { index, key ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = spacing.space16, vertical = spacing.space8),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = HomePanels.LABELS[key] ?: key,
+                                    fontSize = 13.sp,
+                                    color = BocchiTextDark,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TextButton(
+                                    text = "↑",
+                                    onClick = { HomePanels.move(panelContext, key, -1) },
+                                    enabled = index > 0,
+                                )
+                                TextButton(
+                                    text = "↓",
+                                    onClick = { HomePanels.move(panelContext, key, 1) },
+                                    enabled = index < panelOrder.lastIndex,
+                                )
+                                Switch(
+                                    checked = key !in panelHidden,
+                                    onCheckedChange = { show ->
+                                        HomePanels.setHidden(
+                                            panelContext,
+                                            if (show) panelHidden - key else panelHidden + key,
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                        Text(
+                            text = "首页顶部的流量与开关区固定，其余卡片可在这里调顺序、关掉不要的。",
                             fontSize = 11.sp,
                             color = BocchiTextGray,
                             modifier = Modifier.padding(

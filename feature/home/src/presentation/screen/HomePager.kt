@@ -21,6 +21,8 @@
 
 package com.suanran.dreambox.feature.home.presentation.screen
 
+import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
+import com.suanran.dreambox.presentation.component.misc.HomePanels
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -181,36 +183,47 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
                         onOpenDashboard = onOpenDashboard,
                     )
 
+                    // 首页面板（Surge 式可编排）：顺序与显隐由个性化页管理，这里按序渲染。
+                    val (panelOrder, panelHidden) = rememberHomePanels()
+                    // remember 钩子必须无条件调用，先在循环外算好快捷方式列表。
+                    val homeShortcuts = rememberHomeShortcuts(
+                        nodeCountText = FlyTxt.Home.Shortcut.Nodes,
+                        onOpenNodes = { mainPagerState.animateToPage(1) },
+                        onOpenConnection = { openSecondary(Route.Connection) },
+                        onOpenDns = { openSecondary(Route.NetworkSettings) },
+                        onOpenRules = { openSecondary(Route.Rules) },
+                        onOpenLog = { openSecondary(Route.Log) },
+                        onOpenPanel = { onOpenDashboard?.invoke() },
+                        onOpenTraffic = { openSecondary(Route.TrafficStatistics) },
+                        onRefreshSubscription = { mainPagerState.animateToPage(2) },
+                        onOpenStreamUnlock = { openSecondary(Route.StreamUnlock) },
+                    )
                     Column(verticalArrangement = Arrangement.spacedBy(UiDp.dp16)) {
-                        HomeNodeInfoSection(homeViewModel = homeViewModel, isRunning = isRunning)
-                        homeProfileState.currentProfile?.takeIf { it.showSubscriptionCard() }?.let { profile ->
-                            SubscriptionCard(profile = profile)
-                        }
-                        HomeShortcutGrid(
-                            shortcuts = rememberHomeShortcuts(
-                                nodeCountText = FlyTxt.Home.Shortcut.Nodes,
-                                onOpenNodes = { mainPagerState.animateToPage(1) },
-                                onOpenConnection = { openSecondary(Route.Connection) },
-                                onOpenDns = { openSecondary(Route.NetworkSettings) },
-                                onOpenRules = { openSecondary(Route.Rules) },
-                                onOpenLog = { openSecondary(Route.Log) },
-                                onOpenPanel = { onOpenDashboard?.invoke() },
-                                onOpenTraffic = { openSecondary(Route.TrafficStatistics) },
-                                onRefreshSubscription = { mainPagerState.animateToPage(2) },
-                                onOpenStreamUnlock = { openSecondary(Route.StreamUnlock) },
-                            ),
-                        )
-                        IpInfoDisplay(
-                            state =
-                                if (isRunning) {
-                                    ipMonitoringState
-                                } else {
-                                    com.suanran.dreambox.core.model.IpMonitoringState
-                                        .Loading
+                        for (panelKey in panelOrder) {
+                            if (panelKey in panelHidden) continue
+                            when (panelKey) {
+                                HomePanels.NODE -> HomeNodeInfoSection(homeViewModel = homeViewModel, isRunning = isRunning)
+                                HomePanels.SUBSCRIPTION -> {
+                                    homeProfileState.currentProfile?.takeIf { it.showSubscriptionCard() }?.let { profile ->
+                                        SubscriptionCard(profile = profile)
+                                    }
                                 }
-                        )
-                        HomeSpeedChartSection(homeViewModel = homeViewModel, isRunning = isRunning, onClick = { openSecondary(Route.TrafficStatistics) }, isActive = isActive)
-                        if (isRunning) { HomeTopologyChartSection(homeViewModel = homeViewModel, onClick = { openSecondary(Route.Connection) }) }
+                                HomePanels.SHORTCUTS -> HomeShortcutGrid(shortcuts = homeShortcuts)
+                                HomePanels.IP -> IpInfoDisplay(
+                                    state =
+                                        if (isRunning) {
+                                            ipMonitoringState
+                                        } else {
+                                            com.suanran.dreambox.core.model.IpMonitoringState
+                                                .Loading
+                                        }
+                                )
+                                HomePanels.SPEED -> HomeSpeedChartSection(homeViewModel = homeViewModel, isRunning = isRunning, onClick = { openSecondary(Route.TrafficStatistics) }, isActive = isActive)
+                                HomePanels.TOPOLOGY -> {
+                                    if (isRunning) { HomeTopologyChartSection(homeViewModel = homeViewModel, onClick = { openSecondary(Route.Connection) }) }
+                                }
+                            }
+                        }
                     }
                 }
             }
