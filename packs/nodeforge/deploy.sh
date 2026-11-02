@@ -41,6 +41,18 @@ TLS_NAME="nf-reality"
 # 否则 JoinRemark 会再拼一段前缀）。未填名时用默认 tag。
 if [ -n "$NODE_NAME" ]; then INBOUND_TAG="$NODE_NAME"; else INBOUND_TAG="nf-vless"; fi
 
+PROTOCOLS="${NF_PROTOCOLS:-reality}"
+has_proto() { case ",$PROTOCOLS," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
+HY2_PORT=$((NODE_PORT + 1))
+SS_PORT=$((NODE_PORT + 3))
+HY2_OK="fail"
+HY2_LINK=""
+SS_VERIFY="fail"
+if [ "$NODE_PORT" -lt 1 ] || [ $((NODE_PORT + 3)) -gt 65535 ]; then
+    echo "NF_ERROR: 节点端口不合法（多协议顺延需要主端口+3 不超过 65535）" >&2
+    exit 1
+fi
+
 log() { echo "== $*"; }
 fail() { echo "NF_ERROR: $*" >&2; exit 1; }
 
@@ -176,6 +188,20 @@ else
 fi
 UUID="$(gen_uuid)"
 log "UUID 与 Short ID 已就绪"
+# ── 3.5 多协议密钥（SS/Hy2）：一次生成、落盘复用，重跑不换 ──
+SECRETS_FILE="/usr/local/s-ui/nf-secrets.env"
+SS_PSK=""; SS_USER_PSK=""; HY2_PASS=""
+if [ -f "$SECRETS_FILE" ]; then . "$SECRETS_FILE" || true; fi
+if has_proto ss && [ -z "$SS_PSK" ]; then SS_PSK="$(openssl rand -base64 16 | tr -d '\n')"; fi
+if has_proto ss && [ -z "$SS_USER_PSK" ]; then SS_USER_PSK="$(openssl rand -base64 16 | tr -d '\n')"; fi
+if has_proto hy2 && [ -z "$HY2_PASS" ]; then HY2_PASS="$(openssl rand -hex 12)"; fi
+if has_proto ss || has_proto hy2; then
+    umask 077
+    { echo "SS_PSK=$SS_PSK"; echo "SS_USER_PSK=$SS_USER_PSK"; echo "HY2_PASS=$HY2_PASS"; } > "$SECRETS_FILE"
+    chmod 600 "$SECRETS_FILE" 2>/dev/null || true
+    log "多协议密钥已就绪（重跑复用同一套）"
+fi
+
 
 # ── 4. TLS 记录（新建时才写） ─────────────────────────────
 if [ -z "$TLS_ID" ]; then
@@ -419,6 +445,117 @@ print(hits[-1].get("id") if hits else "")
     [ -n "$INBOUND_ID" ] || fail "入站创建后未找到"
 fi
 
+# ── 5.5 Shadowsocks 2022 入站（可选，多协议） ─────────────
+SS_INBOUND_ID=""
+SS_TAG="nf-ss"
+if [ -n "$NODE_NAME" ]; then SS_TAG="$NODE_NAME SS"; fi
+if has_proto ss; then
+    log "处理 Shadowsocks 2022 入站（端口 $SS_PORT）"
+    SS_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+    SS_ID_FOUND="$(printf '%s' "$SS_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("tag") == sys.argv[1]]
+print(hits[-1].get("id") if hits else "")
+' "$SS_TAG")"
+    if [ -n "$SS_ID_FOUND" ]; then
+        SS_INBOUND_ID="$SS_ID_FOUND"
+        SS_EDIT="$(printf '%s' "$SS_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if str(t.get("id")) == sys.argv[1]]
+port, psk, host = int(sys.argv[2]), sys.argv[3], sys.argv[4]
+if hits:
+    t = dict(hits[-1])
+    changed = False
+    if str(t.get("listen_port", "")) != str(port):
+        t["listen_port"] = port; changed = True
+    opts = t.get("options") or {}
+    if isinstance(opts, str):
+        try: opts = json.loads(opts)
+        except Exception: opts = {}
+    if not isinstance(opts, dict): opts = {}
+    cur_method = t.get("method") or opts.get("method")
+    cur_psk = t.get("password") or opts.get("password")
+    if cur_psk != psk or cur_method != "2022-blake3-aes-128-gcm":
+        t["method"] = "2022-blake3-aes-128-gcm"; t["password"] = psk
+        opts["method"] = "2022-blake3-aes-128-gcm"; opts["password"] = psk
+        t["options"] = opts; changed = True
+    addrs = t.get("addrs") or []
+    cur = addrs[0].get("server") if addrs and isinstance(addrs[0], dict) else ""
+    curp = addrs[0].get("server_port") if addrs and isinstance(addrs[0], dict) else None
+    if host and (cur != host or str(curp) != str(port)):
+        t["addrs"] = [{"server": host, "server_port": port}]; changed = True
+    if changed: print(json.dumps(t))
+' "$SS_INBOUND_ID" "$SS_PORT" "$SS_PSK" "$PUBLIC_HOST")"
+        if [ -n "$SS_EDIT" ]; then
+            if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
+                --data-urlencode "data=$SS_EDIT" >/dev/null; then
+                log "已校正 SS 入站（端口 $SS_PORT）"
+            else
+                log "SS 入站校正失败（继续，文末校验会确认）"
+            fi
+        else
+            log "复用已有 SS 入站（端口 $SS_PORT）"
+        fi
+    else
+        ss_data="$(python3 -c '
+import json, sys
+d = {"type": "shadowsocks", "tag": sys.argv[1], "listen": "::",
+     "listen_port": int(sys.argv[2]), "method": "2022-blake3-aes-128-gcm",
+     "password": sys.argv[3]}
+host = sys.argv[4].strip()
+if host:
+    d["addrs"] = [{"server": host, "server_port": int(sys.argv[2])}]
+print(json.dumps(d))
+' "$SS_TAG" "$SS_PORT" "$SS_PSK" "$PUBLIC_HOST")"
+        api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
+            --data-urlencode "data=$ss_data" >/dev/null
+        SS_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+        SS_INBOUND_ID="$(printf '%s' "$SS_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("tag") == sys.argv[1]]
+print(hits[-1].get("id") if hits else "")
+' "$SS_TAG")"
+        [ -n "$SS_INBOUND_ID" ] || fail "SS 入站创建后未找到"
+        log "SS 入站已创建（端口 $SS_PORT）"
+    fi
+fi
+
 # ── 5.9 流量/到期换算（订阅卡显示用，写进客户端 volume/expiry）──
 VOL_BYTES=0
 if [ -n "$QUOTA_GB" ]; then
@@ -465,14 +602,20 @@ else
     log "创建客户端（订阅 ID：$SUB_ID）"
     client_data="$(python3 -c '
 import json, sys
-vol, exp, nxt = int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6])
+vol, exp, nxt = int(sys.argv[6]), int(sys.argv[7]), int(sys.argv[8])
+cfg = {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}}
+inbs = [int(sys.argv[3])]
+ss_id, ss_psk = sys.argv[4], sys.argv[5]
+if ss_id.isdigit() and ss_psk:
+    cfg["shadowsocks"] = {"password": ss_psk}
+    inbs.append(int(ss_id))
 print(json.dumps({"enable": True, "name": sys.argv[1],
-                  "config": {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}},
-                  "inbounds": [int(sys.argv[3])], "links": [],
+                  "config": cfg,
+                  "inbounds": inbs, "links": [],
                   "volume": vol, "expiry": exp, "remark": "",
                   "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
                   "nextReset": nxt if vol > 0 else 0}))
-' "$SUB_ID" "$UUID" "$INBOUND_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME")"
+' "$SUB_ID" "$UUID" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
     CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
@@ -536,11 +679,15 @@ fi
 # 不能拿来回写），只改 volume/expiry/autoReset/resetDays/nextReset 五项，
 # 其余字段（config/计数/时间戳）逐字保留，经 API edit 落盘。
 if [ -n "$INBOUND_ID" ]; then
-    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" <<'PYEOF2'
+    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" <<'PYEOF2'
 import sqlite3, glob, json, sys
 name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 nm = sys.argv[5] if len(sys.argv) > 5 else ''
-want_inb = int(sys.argv[6]) if len(sys.argv) > 6 and sys.argv[6].isdigit() else None
+want_ids = []
+for a in sys.argv[6:8]:
+    if a and a.isdigit():
+        want_ids.append(int(a))
+ss_psk = sys.argv[8] if len(sys.argv) > 8 else '' 
 try:
     db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
     con = sqlite3.connect(db)
@@ -572,15 +719,21 @@ else:
     new_remark = ''
     # 挂载校正：客户端必须挂在本次认领的入站上，否则订阅出的还是旧节点。
     cur_inb = jload(r.get('inbounds'), [])
-    new_inb = [want_inb] if want_inb else cur_inb
+    new_inb = want_ids if want_ids else cur_inb
+    cur_cfg = jload(r.get('config'), {})
+    new_cfg = dict(cur_cfg) if isinstance(cur_cfg, dict) else {}
+    if ss_psk:
+        ss_cfg = dict(new_cfg.get('shadowsocks') or {})
+        ss_cfg['password'] = ss_psk
+        new_cfg['shadowsocks'] = ss_cfg
     if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
-            and new_remark == (b2s(r.get('remark')) or '') and new_inb == cur_inb \
+            and new_remark == (b2s(r.get('remark')) or '') and new_inb == cur_inb and new_cfg == cur_cfg \
             and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
         print('SAME')
     else:
         out = {
             'id': r.get('id'), 'enable': bool(r.get('enable')), 'name': b2s(r.get('name')) or '',
-            'config': jload(r.get('config'), {}), 'inbounds': new_inb,
+            'config': new_cfg, 'inbounds': new_inb,
             'links': jload(r.get('links'), []),
             'volume': new_vol, 'expiry': new_exp,
             'down': int(r.get('down') or 0), 'up': int(r.get('up') or 0),
@@ -622,10 +775,14 @@ if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi 'status: 
     ufw allow "$SSH_PORT"/tcp >/dev/null 2>&1 || true
     ufw allow "$NODE_PORT"/tcp >/dev/null 2>&1 || true
     ufw allow "$SUB_PORT"/tcp >/dev/null 2>&1 || true
+    if has_proto ss; then ufw allow "$SS_PORT"/tcp >/dev/null 2>&1 || true; ufw allow "$SS_PORT"/udp >/dev/null 2>&1 || true; fi
+    if has_proto hy2; then ufw allow "$HY2_PORT"/udp >/dev/null 2>&1 || true; fi
     log "ufw 已放行 $SSH_PORT/$NODE_PORT/$SUB_PORT，面板 $PANEL_PORT 未放行"
 elif command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
     firewall-cmd --permanent --add-port="$NODE_PORT"/tcp >/dev/null 2>&1 || true
     firewall-cmd --permanent --add-port="$SUB_PORT"/tcp >/dev/null 2>&1 || true
+    if has_proto ss; then firewall-cmd --permanent --add-port="$SS_PORT"/tcp >/dev/null 2>&1 || true; firewall-cmd --permanent --add-port="$SS_PORT"/udp >/dev/null 2>&1 || true; fi
+    if has_proto hy2; then firewall-cmd --permanent --add-port="$HY2_PORT"/udp >/dev/null 2>&1 || true; fi
     firewall-cmd --reload >/dev/null 2>&1 || true
     log "firewalld 已放行 $NODE_PORT/$SUB_PORT"
 else
@@ -634,6 +791,16 @@ else
         iptables -I INPUT -p tcp --dport "$NODE_PORT" -j ACCEPT 2>/dev/null || true
     iptables -C INPUT -p tcp --dport "$SUB_PORT" -j ACCEPT 2>/dev/null || \
         iptables -I INPUT -p tcp --dport "$SUB_PORT" -j ACCEPT 2>/dev/null || true
+    if has_proto ss; then
+        iptables -C INPUT -p tcp --dport "$SS_PORT" -j ACCEPT 2>/dev/null || \
+            iptables -I INPUT -p tcp --dport "$SS_PORT" -j ACCEPT 2>/dev/null || true
+        iptables -C INPUT -p udp --dport "$SS_PORT" -j ACCEPT 2>/dev/null || \
+            iptables -I INPUT -p udp --dport "$SS_PORT" -j ACCEPT 2>/dev/null || true
+    fi
+    if has_proto hy2; then
+        iptables -C INPUT -p udp --dport "$HY2_PORT" -j ACCEPT 2>/dev/null || \
+            iptables -I INPUT -p udp --dport "$HY2_PORT" -j ACCEPT 2>/dev/null || true
+    fi
     iptables -C INPUT -p tcp --dport "$PANEL_PORT" ! -i lo -j DROP 2>/dev/null || \
         iptables -I INPUT -p tcp --dport "$PANEL_PORT" ! -i lo -j DROP 2>/dev/null || true
     log "iptables 已补放行与面板拦截（尽力而为，以面板绑回环为主要防线）"
@@ -659,6 +826,80 @@ print(json.dumps({"subClashExt": ext, "subClashNoDefGrp": "true",
     fi
 else
     log "包内缺少订阅模板文件，跳过（订阅仍是 s-ui 简版）"
+fi
+
+# ── 7.8 Hysteria2 独立服务（可选协议，不经 s-ui，坏了不影响主节点） ──
+if has_proto hy2; then
+    log "部署 Hysteria2（端口 $HY2_PORT/udp）"
+    HY2_BIN=/usr/local/bin/hysteria
+    if [ ! -x "$HY2_BIN" ]; then
+        curl -fLs --max-time 180 -o /tmp/hy2.bin \
+            "https://github.com/apernet/hysteria/releases/download/app/v2.6.4/hysteria-linux-amd64" \
+            || curl -fLs --max-time 180 -o /tmp/hy2.bin \
+            "https://download.hysteria.network/app/latest/hysteria-linux-amd64" || true
+        if [ -s /tmp/hy2.bin ]; then install -m 755 /tmp/hy2.bin "$HY2_BIN" || true; fi
+        rm -f /tmp/hy2.bin
+    fi
+    if [ -x "$HY2_BIN" ]; then
+        mkdir -p /etc/hysteria
+        if [ ! -f /etc/hysteria/cert.pem ]; then
+            openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -days 3650 -nodes \
+                -keyout /etc/hysteria/key.pem -out /etc/hysteria/cert.pem \
+                -subj "/CN=www.microsoft.com" -addext "subjectAltName=DNS:www.microsoft.com" \
+                >/dev/null 2>&1 \
+            || openssl req -x509 -newkey rsa:2048 -days 3650 -nodes \
+                -keyout /etc/hysteria/key.pem -out /etc/hysteria/cert.pem \
+                -subj "/CN=www.microsoft.com" >/dev/null 2>&1 || true
+        fi
+        cat > /etc/hysteria/config.yaml <<EOF2
+listen: :$HY2_PORT
+tls:
+  cert: /etc/hysteria/cert.pem
+  key: /etc/hysteria/key.pem
+auth:
+  type: password
+  password: $HY2_PASS
+masquerade:
+  type: proxy
+  proxy:
+    url: https://www.microsoft.com
+    rewriteHost: true
+EOF2
+        cat > /etc/systemd/system/hysteria-server.service <<'EOF3'
+[Unit]
+Description=Hysteria2 Server (NodeForge)
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/hysteria server -c /etc/hysteria/config.yaml
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+EOF3
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        systemctl enable hysteria-server --now >/dev/null 2>&1 || true
+        systemctl restart hysteria-server >/dev/null 2>&1 || true
+        sleep 1
+        if systemctl is-active --quiet hysteria-server 2>/dev/null; then
+            HY2_OK="ok"
+            log "Hysteria2 已启动（:$HY2_PORT/udp）"
+        else
+            log "Hysteria2 未能启动（主节点不受影响，可 journalctl -u hysteria-server 查）"
+        fi
+        if [ -n "$PUBLIC_HOST" ]; then
+            HY2_NAME_ENC="$(python3 -c 'import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))' "$NODE_NAME")"
+            if [ -n "$HY2_NAME_ENC" ]; then
+                HY2_LINK="hysteria2://${HY2_PASS}@${PUBLIC_HOST}:${HY2_PORT}/?insecure=1&sni=www.microsoft.com#${HY2_NAME_ENC}%20Hy2"
+            else
+                HY2_LINK="hysteria2://${HY2_PASS}@${PUBLIC_HOST}:${HY2_PORT}/?insecure=1&sni=www.microsoft.com#Hy2"
+            fi
+        fi
+    else
+        log "Hysteria2 二进制下载失败，跳过（主节点不受影响）"
+    fi
 fi
 
 # ── 8. 面板绑回环（公网不可达，管理走 SSH 隧道） ─────────
@@ -746,6 +987,37 @@ else
     log "实测工具不可用，跳过验证（部署本身已完成）"
 fi
 
+# SS 实测（按服务端密钥组装客户端，与订阅链接同构）
+SS_VERIFY="fail"
+if has_proto ss && [ -x "$SB_BIN" ]; then
+    SS_COMBINED="$(python3 -c '
+import base64, sys
+print(base64.b64encode((sys.argv[1] + ":" + sys.argv[2]).encode()).decode())
+' "$SS_PSK" "$SS_USER_PSK")"
+    if python3 - "$SS_PORT" "$SS_COMBINED" "$SB_DIR/verify-ss.json" <<'PYEOF4'
+import json, sys
+cfg = {"log": {"level": "error"},
+  "inbounds": [{"type": "mixed", "tag": "sin", "listen": "127.0.0.1", "listen_port": 18091}],
+  "outbounds": [{"type": "shadowsocks", "tag": "sout", "server": "127.0.0.1",
+                 "server_port": int(sys.argv[1]), "method": "2022-blake3-aes-128-gcm",
+                 "password": sys.argv[2]}]}
+open(sys.argv[3], "w").write(json.dumps(cfg))
+PYEOF4
+    then
+        "$SB_BIN" run -c "$SB_DIR/verify-ss.json" > "$SB_DIR/verify-ss.log" 2>&1 &
+        SPID=$!
+        sleep 2
+        SCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:18091 -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
+        kill "$SPID" 2>/dev/null || true
+        if [ "$SCODE" = "204" ]; then
+            SS_VERIFY="ok"
+            log "SS 实测验证通过（回环真连出网 204）"
+        else
+            log "SS 实测验证未通过（回环返回 $SCODE）"
+        fi
+    fi
+fi
+
 # ── 9.5 订阅地址校验：订阅里节点的 host 必须是公网地址 ────
 SUB_HOST_OK="fail"
 SUB_NOW="$(curl -s --max-time 25 "http://127.0.0.1:${SUB_PORT}${SUB_PATH}${SUB_ID}" 2>/dev/null || true)"
@@ -802,11 +1074,16 @@ print("ok" if hit else "fail")
 fi
 
 # ── 10. 结果 ───────────────────────────────────────────────
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" <<'PYEOF'
+SS_LINK=""
+if has_proto ss; then
+    SS_LINK="$(printf '%s' "$SUB_NOW_TXT" | grep -o 'ss://[^[:space:]]*' | head -1 || true)"
+fi
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
  sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info,
- sub_tpl_ok, name_ok) = sys.argv[1:18]
+ sub_tpl_ok, name_ok, protocols, ss_link, ss_port, ss_verify,
+ hy2_link, hy2_port, hy2_ok) = sys.argv[1:25]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
@@ -815,6 +1092,9 @@ print("NF_RESULT " + json.dumps({
     "verified": verify == "ok", "subHostOk": sub_host_ok == "ok",
     "subInfo": sub_info, "subTplOk": sub_tpl_ok == "ok",
     "nameOk": name_ok == "ok",
+    "protocols": protocols, "ssLink": ss_link, "ssPort": int(ss_port),
+    "ssVerified": ss_verify == "ok", "hy2Link": hy2_link,
+    "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
 }))
 PYEOF
 log "部署完成"

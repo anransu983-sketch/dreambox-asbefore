@@ -44,7 +44,7 @@
 </head>
 <body>
 <h1>🚀 一键节点</h1>
-<div class="sub">填服务器信息，一键装好 s-ui + VLESS+Reality（全自动，约 1–3 分钟）。<br>
+<div class="sub">填服务器信息，一键装好 s-ui + 多协议节点（全自动，约 1–3 分钟）。<br>
 面板默认只绑本机回环、公网打不开，管理走 SSH 隧道；root 密码只在内存里用，不保存。</div>
 
 <div class="card" id="formCard">
@@ -72,6 +72,13 @@
     <div><label>到期日期（留空=不限）</label><input id="expireDate" type="date"></div>
   </div>
   <div class="warn">流量/到期填了才会显示在订阅卡上；到期是真到期、流量按 30 天自动重置一轮，按你买的机器套餐填。</div>
+  <label>协议（可多选，端口自动顺延）</label>
+  <div class="row">
+    <label style="margin:0"><input type="checkbox" id="protoReality" checked disabled style="width:auto"> VLESS Reality（主）</label>
+    <label style="margin:0"><input type="checkbox" id="protoHy2" checked style="width:auto"> Hysteria2</label>
+    <label style="margin:0"><input type="checkbox" id="protoSs" checked style="width:auto"> SS 2022</label>
+  </div>
+  <div class="warn">端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。</div>
   <button class="main" id="deployBtn">一键部署</button>
   <div class="warn" style="margin-top:10px">云厂商控制台的安全组记得放行节点端口与订阅端口（2096），机内防火墙脚本会自动处理。</div>
 </div>
@@ -85,6 +92,8 @@
   <div class="kv" id="resultKv"></div>
   <div>
     <button class="mini" id="copyVless">复制 vless 链接</button>
+    <button class="mini hidden" id="copySs">复制 SS 链接</button>
+    <button class="mini hidden" id="copyHy2">复制 Hy2 链接</button>
     <button class="mini" id="copySub">复制订阅链接</button>
     <button class="mini" id="importSub">📥 导入到梦盒</button>
     <button class="mini" id="copyTunnel">复制面板隧道命令</button>
@@ -199,8 +208,12 @@
       sshPassword: f.sshPassword || '', nodeName: f.nodeName || '',
       nodePort: f.nodePort || 443, subId: f.subId || 'node1',
       adminUser: f.adminUser || 'sui', adminPass: f.adminPass || '',
-      quotaGb: f.quotaGb || '', expireDate: f.expireDate || ''
+      quotaGb: f.quotaGb || '', expireDate: f.expireDate || '',
+      protocols: f.protocols || 'reality'
     };
+    var protos = (f.protocols || 'reality').split(',');
+    $('protoHy2').checked = protos.indexOf('hy2') >= 0;
+    $('protoSs').checked = protos.indexOf('ss') >= 0;
     $('host').value = f.host;
     $('sshPort').value = f.sshPort || 22;
     $('sshUser').value = f.sshUser || 'root';
@@ -276,6 +289,23 @@
       t.textContent = show ? lastOpts.adminPass : '••••••••';
       this.textContent = show ? '隐藏' : '显示';
     });
+    if (r.protocols) {
+      var pl = document.createElement('span');
+      pl.innerHTML = '<b>协议</b>：' + r.protocols +
+        (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh) : '') +
+        (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh) +
+          '<br><span class="warn">Hy2 是独立服务、不在 s-ui 订阅里：在梦盒「配置」页从剪贴板导入这条链接即可。</span>' : '');
+      $('resultKv').appendChild(document.createElement('br'));
+      $('resultKv').appendChild(pl);
+    }
+    if (r.ssLink) {
+      $('copySs').classList.remove('hidden');
+      $('copySs').onclick = function () { copyText(r.ssLink, this); };
+    }
+    if (r.hy2Link) {
+      $('copyHy2').classList.remove('hidden');
+      $('copyHy2').onclick = function () { copyText(r.hy2Link, this); };
+    }
     $('copyVless').onclick = function () { copyText(vless, this); };
     $('copySub').onclick = function () { copyText(sub, this); };
     $('importSub').onclick = function () {
@@ -325,8 +355,11 @@
       adminUser: $('adminUser').value.trim() || 'sui',
       adminPass: $('adminPass').value,
       quotaGb: $('quotaGb').value.trim(),
-      expireDate: $('expireDate').value
+      expireDate: $('expireDate').value,
+      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoSs').checked ? ',ss' : '')
     };
+    if ($('protoSs').checked && opts.nodePort + 3 > 65535) { alert('节点端口太大：SS 要用节点端口+3，不能超过 65535'); return; }
+    if ($('protoHy2').checked && opts.nodePort + 1 > 65535) { alert('节点端口太大：Hy2 要用节点端口+1'); return; }
     if (!opts.host) { alert('先填服务器 IP'); return; }
     if (!opts.sshPassword) { alert('先填 root 密码'); return; }
     if (!opts.adminPass) { alert('面板管理员密码不能为空'); return; }

@@ -66,6 +66,8 @@ import kotlin.math.abs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.presentation.theme.horizontalPadding
+import androidx.compose.foundation.Image
+import com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap
 import com.suanran.dreambox.presentation.component.misc.BocchiBlueBg
 import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
 import com.suanran.dreambox.presentation.component.misc.BocchiPink
@@ -356,12 +358,21 @@ private fun ModuleIcon(icon: ImageVector, key: String) {
             .background(bg),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = fg,
-            modifier = Modifier.size(componentSizes.settingsIconGlyphSize),
-        )
+        val customModuleIcon = rememberCustomIconBitmap("module_$key")
+        if (customModuleIcon != null) {
+            Image(
+                bitmap = customModuleIcon,
+                contentDescription = null,
+                modifier = Modifier.size(componentSizes.settingsIconContainerSize),
+            )
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = fg,
+                modifier = Modifier.size(componentSizes.settingsIconGlyphSize),
+            )
+        }
     }
 }
 

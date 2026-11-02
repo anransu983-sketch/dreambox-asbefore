@@ -32,6 +32,9 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -243,6 +246,29 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             onCheckedChange = viewModel::onTopBarBlurEnabledChange,
         )
         PageScalePreferenceItem(pageScale = pageScale, onApply = viewModel::onPageScaleChange)
+    }
+    BocchiCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { navigator.push(Route.Personalize) }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "个性化",
+                    style = MiuixTheme.textStyles.title4,
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "应用图标 · 导航栏/模块/返回按钮自定义图片",
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
+            Text(text = "›", style = MiuixTheme.textStyles.title4, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        }
     }
     BocchiSectionTitle(FlyTxt.AppSettings.Section.Home)
     BocchiCard {

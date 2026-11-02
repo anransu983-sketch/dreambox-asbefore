@@ -43,6 +43,10 @@ import com.suanran.dreambox.presentation.theme.AnimationSpecs
 import com.suanran.dreambox.presentation.theme.AppTheme.spacing
 import com.suanran.dreambox.presentation.theme.UiDp
 import top.yukonga.miuix.kmp.basic.Icon
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
@@ -94,10 +98,20 @@ fun NavigationBackIcon(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = MiuixIcons.Back,
-            contentDescription = contentDescription,
-            tint = colorScheme.onBackground,
-        )
+        val customBackIcon = rememberCustomIconBitmap("back_button")
+        if (customBackIcon != null) {
+            Image(
+                bitmap = customBackIcon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(UiDp.dp24)
+                    .clip(androidx.compose.foundation.shape.CircleShape),
+            )
+        } else {
+            Icon(
+                imageVector = MiuixIcons.Back,
+                contentDescription = contentDescription,
+                tint = colorScheme.onBackground,
+            )
+        }
     }
 }

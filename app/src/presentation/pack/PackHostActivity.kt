@@ -51,6 +51,8 @@ class PackHostActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 全面屏手势：内容延伸到系统栏之下，手势返回区域不被遮挡
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val packId = intent.getStringExtra("pack_id") ?: run { finish(); return }
         val packName = intent.getStringExtra("pack_name") ?: packId
         val dirPath = intent.getStringExtra("pack_dir") ?: run { finish(); return }

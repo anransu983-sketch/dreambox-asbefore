@@ -87,6 +87,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         String adminPass = "";
         String quotaGb = "";
         String expireDate = "";
+        String protocols = "reality";
         String banner = "";
         String lastLog = "";
         String error = "";
@@ -121,6 +122,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.adminPass = o.optString("adminPass", "");
             st.quotaGb = o.optString("quotaGb", "");
             st.expireDate = o.optString("expireDate", "");
+            st.protocols = o.optString("protocols", "reality");
             st.banner = o.optString("banner", "");
             st.lastLog = o.optString("lastLog", "");
             st.error = o.optString("error", "");
@@ -153,6 +155,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             o.put("adminPass", st.adminPass);
             o.put("quotaGb", st.quotaGb);
             o.put("expireDate", st.expireDate);
+            o.put("protocols", st.protocols);
             o.put("banner", st.banner);
             o.put("lastLog", st.lastLog);
             o.put("error", st.error);
@@ -324,6 +327,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.adminPass = opts.optString("adminPass", "");
             st.quotaGb = opts.optString("quotaGb", "");
             st.expireDate = opts.optString("expireDate", "");
+            st.protocols = opts.optString("protocols", "reality");
             st.launchedAt = System.currentTimeMillis();
             // 同一台机器沿用已记录的指纹做 TOFU 比对；换机器则重新记录。
             if (cur.host.equals(st.host) && cur.sshPort == st.sshPort) {
@@ -368,7 +372,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                     + "NF_PUBLIC_HOST=" + shq(st.host) + "\n"
                     + "NF_NODE_NAME=" + shq(st.nodeName) + "\n"
                     + "NF_QUOTA_GB=" + shq(st.quotaGb) + "\n"
-                    + "NF_EXPIRE_DATE=" + shq(st.expireDate) + "\n";
+                    + "NF_EXPIRE_DATE=" + shq(st.expireDate) + "\n"
+                    + "NF_PROTOCOLS=" + shq(st.protocols) + "\n";
             String wrapper = "#!/bin/bash\n"
                     + "set -a\n"
                     + ". " + dir + "/params.env\n"
@@ -501,6 +506,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         f.put("subId", st.subId);
         f.put("adminUser", st.adminUser);
         f.put("adminPass", st.adminPass);
+        f.put("protocols", st.protocols);
         return f;
     }
 

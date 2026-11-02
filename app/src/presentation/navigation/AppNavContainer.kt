@@ -72,6 +72,7 @@ import com.suanran.dreambox.feature.settings.presentation.screen.ThemeScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.LabScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.FeaturePacksScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.ModulesScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.PersonalizeScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.TunServiceOptionsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.VpnServiceOptionsScreen
 import com.suanran.dreambox.presentation.component.layout.KeyValueEditorScreen
@@ -118,6 +119,7 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.Lab -> LabScreen(navigator)
         Route.FeaturePacks -> FeaturePacksScreen(navigator)
         Route.Modules -> ModulesScreen(navigator)
+        Route.Personalize -> PersonalizeScreen(navigator)
         Route.StringListEditor -> StringListEditorScreen(navigator)
         Route.KeyValueEditor -> KeyValueEditorScreen(navigator)
         is Route.LogDetail -> LogDetailScreen(navigator, fileName = route.fileName)

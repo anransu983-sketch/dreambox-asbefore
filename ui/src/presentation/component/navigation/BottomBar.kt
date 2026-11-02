@@ -54,6 +54,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
+import com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -375,11 +377,21 @@ private fun FloatingBottomBarContent(isVisible: Boolean = true) {
                 onClick = { onItemClick(index) },
             ) {
                 Box(modifier = Modifier.size(UiDp.dp20), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = destination.icon,
-                        contentDescription = destination.label,
-                        tint = itemColor,
-                    )
+                    val customTabIcon = rememberCustomIconBitmap("tab_" + destination.name.lowercase())
+                    if (customTabIcon != null) {
+                        Image(
+                            bitmap = customTabIcon,
+                            contentDescription = destination.label,
+                            modifier = Modifier.size(UiDp.dp20)
+                                .clip(androidx.compose.foundation.shape.CircleShape),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = destination.icon,
+                            contentDescription = destination.label,
+                            tint = itemColor,
+                        )
+                    }
                 }
                 BasicText(
                     text = destination.label,

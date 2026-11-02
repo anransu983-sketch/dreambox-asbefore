@@ -109,7 +109,54 @@
 
         <activity-alias
                 android:name=".DreamBoxLauncher"
+                android:enabled="true"
                 android:exported="true"
+                android:icon="@mipmap/ic_launcher"
+                android:targetActivity=".MainActivity">
+            <meta-data
+                    android:name="android.app.shortcuts"
+                    android:resource="@xml/shortcuts"/>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+                android:name=".DreamBoxLauncherPink"
+                android:enabled="false"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher_pink"
+                android:targetActivity=".MainActivity">
+            <meta-data
+                    android:name="android.app.shortcuts"
+                    android:resource="@xml/shortcuts"/>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+                android:name=".DreamBoxLauncherBlue"
+                android:enabled="false"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher_blue"
+                android:targetActivity=".MainActivity">
+            <meta-data
+                    android:name="android.app.shortcuts"
+                    android:resource="@xml/shortcuts"/>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+                android:name=".DreamBoxLauncherDark"
+                android:enabled="false"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher_dark"
                 android:targetActivity=".MainActivity">
             <meta-data
                     android:name="android.app.shortcuts"
