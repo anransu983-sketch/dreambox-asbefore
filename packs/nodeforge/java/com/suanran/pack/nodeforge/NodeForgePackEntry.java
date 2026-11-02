@@ -366,6 +366,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                     + "NF_NODE_PORT=" + st.nodePort + "\n"
                     + "NF_SSH_PORT=" + st.sshPort + "\n"
                     + "NF_PUBLIC_HOST=" + shq(st.host) + "\n"
+                    + "NF_NODE_NAME=" + shq(st.nodeName) + "\n"
                     + "NF_QUOTA_GB=" + shq(st.quotaGb) + "\n"
                     + "NF_EXPIRE_DATE=" + shq(st.expireDate) + "\n";
             String wrapper = "#!/bin/bash\n"

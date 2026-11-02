@@ -32,6 +32,7 @@ SUB_ID="${NF_SUB_ID:-node1}"
 PUBLIC_HOST="${NF_PUBLIC_HOST:-}"
 QUOTA_GB="${NF_QUOTA_GB:-}"
 EXPIRE_DATE="${NF_EXPIRE_DATE:-}"
+NODE_NAME="${NF_NODE_NAME:-}"
 ADMIN_USER="${NF_ADMIN_USER:-}"
 ADMIN_PASS="${NF_ADMIN_PASS:-}"
 TLS_NAME="nf-reality"
@@ -383,10 +384,10 @@ vol, exp, nxt = int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6])
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}},
                   "inbounds": [int(sys.argv[3])], "links": [],
-                  "volume": vol, "expiry": exp,
+                  "volume": vol, "expiry": exp, "remark": sys.argv[7],
                   "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
                   "nextReset": nxt if vol > 0 else 0}))
-' "$SUB_ID" "$UUID" "$INBOUND_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET")"
+' "$SUB_ID" "$UUID" "$INBOUND_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
     CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
@@ -440,13 +441,14 @@ if [ -n "$SUB_UUID" ]; then
     log "已按订阅内容校正 UUID"
 fi
 
-# 复用客户端补写流量/到期：全量数据从 s-ui 数据库原样读出（列表是摘要视图，
+# 复用客户端补写流量/到期/名称：全量数据从 s-ui 数据库原样读出（列表是摘要视图，
 # 不能拿来回写），只改 volume/expiry/autoReset/resetDays/nextReset 五项，
 # 其余字段（config/计数/时间戳）逐字保留，经 API edit 落盘。
-if [ "$VOL_BYTES" -gt 0 ] || [ "$EXP_EPOCH" -gt 0 ]; then
-    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" <<'PYEOF2'
+if [ "$VOL_BYTES" -gt 0 ] || [ "$EXP_EPOCH" -gt 0 ] || [ -n "$NODE_NAME" ]; then
+    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" <<'PYEOF2'
 import sqlite3, glob, json, sys
 name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+nm = sys.argv[5] if len(sys.argv) > 5 else ''
 try:
     db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
     con = sqlite3.connect(db)
@@ -473,7 +475,11 @@ else:
             return fallback
     new_vol = vol if vol > 0 else int(r.get('volume') or 0)
     new_exp = exp if exp > 0 else int(r.get('expiry') or 0)
+    # 备注名（含旗帜）写进客户端 remark：s-ui 订阅按
+    # JoinRemark(remark, 入站tag) 给节点命名，空备注时才是光秃秃的 nf-vless。
+    new_remark = nm if nm else (b2s(r.get('remark')) or '')
     if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
+            and new_remark == (b2s(r.get('remark')) or '') \
             and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
         print('SAME')
     else:
@@ -484,7 +490,7 @@ else:
             'volume': new_vol, 'expiry': new_exp,
             'down': int(r.get('down') or 0), 'up': int(r.get('up') or 0),
             'desc': b2s(r.get('desc')) or '', 'group': b2s(r.get('group')) or '',
-            'remark': b2s(r.get('remark')) or '',
+            'remark': new_remark,
             'createdAt': int(r.get('created_at') or 0), 'onlineAt': int(r.get('online_at') or 0),
             'delayStart': bool(r.get('delay_start')), 'totalUp': int(r.get('total_up') or 0),
             'totalDown': int(r.get('total_down') or 0),
@@ -501,13 +507,13 @@ else:
 PYEOF2
 )"
     case "$CLI_EDIT" in
-        SAME) log "客户端流量/到期已是本次填写的值" ;;
+        SAME) log "客户端流量/到期/名称已是本次填写的值" ;;
         NOROW) log "未找到客户端记录，流量/到期未写入（订阅卡暂不显示）" ;;
         "" ) log "客户端流量/到期写入准备失败，已跳过（节点本身不受影响）" ;;
         * )
             if api_post_ok save --data-urlencode object=clients --data-urlencode action=edit \
                 --data-urlencode "data=$CLI_EDIT" >/dev/null; then
-                log "已把流量/到期写入已有客户端（订阅卡更新后可见）"
+                log "已把流量/到期/名称写入已有客户端（订阅更新后可见）"
             else
                 log "客户端流量/到期写入失败（节点本身不受影响）"
             fi
