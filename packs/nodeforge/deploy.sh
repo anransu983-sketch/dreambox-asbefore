@@ -298,8 +298,9 @@ fi
 if [ -n "$INBOUND_ID" ]; then
     log "复用已有入站（端口 $INB_PORT）"
     if [ -n "$INB_PORT" ] && [ "$INB_PORT" != "$NODE_PORT" ]; then
-        log "注意：已有入站端口是 $INB_PORT，与本次填写的 $NODE_PORT 不同，沿用 $INB_PORT"
-        NODE_PORT="$INB_PORT"
+        # 端口以表单为准：把已有入站搬到本次填写的端口（下方 edit 一并改
+        # listen_port 与 addrs 端口），不再沿用旧端口。
+        log "按表单把入站端口从 $INB_PORT 改为 $NODE_PORT"
     fi
     # 同名残留清理：别的入站若占着本次 tag（如旧版部署分叉留下的孤儿），
     # 两个同 tag 会让核心配置冲突——把残留改成 nf-unused-<id> 退场。
@@ -360,9 +361,13 @@ if hits:
     if t.get("tag") != sys.argv[1]:
         t["tag"] = sys.argv[1]
         changed = True
+    if str(t.get("listen_port", "")) != str(port):
+        t["listen_port"] = port
+        changed = True
     addrs = t.get("addrs") or []
     cur = addrs[0].get("server") if addrs and isinstance(addrs[0], dict) else ""
-    if cur != host:
+    cur_port = addrs[0].get("server_port") if addrs and isinstance(addrs[0], dict) else None
+    if cur != host or str(cur_port) != str(port):
         t["addrs"] = [{"server": host, "server_port": port}]
         changed = True
     if changed:
