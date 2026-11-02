@@ -116,9 +116,6 @@ sealed interface Route {
     data object Modules : Route
 
     @Serializable
-    data object Personalize : Route
-
-    @Serializable
     data object StringListEditor : Route
 
     @Serializable

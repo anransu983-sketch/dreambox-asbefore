@@ -65,6 +65,7 @@ import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsV
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.MarketState
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreEvent
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.ThemeStoreViewModel
+import com.suanran.dreambox.feature.settings.presentation.screen.component.ModuleHelpAction
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
 import com.suanran.dreambox.presentation.component.misc.BocchiSwitchItem
@@ -155,6 +156,7 @@ fun ThemeScreen(navigator: Navigator) {
                 title = themeTxt.Title,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { NavigationBackIcon(navigator = navigator) },
+                actions = { ModuleHelpAction("theme") },
             )
         },
     ) { innerPadding ->
@@ -164,25 +166,6 @@ fun ThemeScreen(navigator: Navigator) {
             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
             verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.space12),
         ) {
-            item {
-                BocchiSectionTitle(FlyTxt.AppSettings.Interface.ColorThemeTitle)
-                BocchiCard {
-                    ThemeModeSelectorItem(
-                        themeMode = appThemeMode,
-                        onThemeModeChange = appSettingsViewModel::onThemeModeChange,
-                    )
-                    BocchiSwitchItem(
-                        title = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertTitle,
-                        summary = FlyTxt.AppSettings.Interface.ThemeColorPolarityInvertSummary,
-                        checked = invertOnPrimaryColors,
-                        onCheckedChange = appSettingsViewModel::onInvertOnPrimaryColorsChange,
-                    )
-                    ThemeColorPickerItem(
-                        themeSeedColorArgb = appThemeSeedColorArgb,
-                        onThemeSeedColorChange = appSettingsViewModel::onThemeSeedColorChange,
-                    )
-                }
-            }
             item {
                 BocchiSectionTitle(themeTxt.StoreTitle)
                 Card {
@@ -270,6 +253,13 @@ fun ThemeScreen(navigator: Navigator) {
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = AppTheme.spacing.space16),
                 )
+            }
+
+            item {
+                BocchiSectionTitle("个性化")
+            }
+            item {
+                PersonalizeSections()
             }
         }
 

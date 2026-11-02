@@ -125,8 +125,7 @@ private val MODULE_ICON_ROWS = listOf(
 )
 
 @Composable
-fun PersonalizeScreen(navigator: Navigator) {
-    val scrollBehavior = MiuixScrollBehavior()
+fun PersonalizeSections() {
     val context = LocalContext.current
     val spacing = AppTheme.spacing
     val mmkv: MMKV = koinInject(named("settings"))
@@ -153,22 +152,7 @@ fun PersonalizeScreen(navigator: Navigator) {
         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
-    Scaffold(
-        topBar = {
-            TopBar(
-                title = "个性化",
-                scrollBehavior = scrollBehavior,
-                navigationIcon = { NavigationBackIcon(navigator = navigator) },
-            )
-        },
-    ) { innerPadding ->
-        val mainLikePadding = rememberStandalonePageMainPadding()
-        ScreenLazyColumn(
-            scrollBehavior = scrollBehavior,
-            innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BocchiSectionTitle("应用图标")
                 BocchiCard {
                     Column(
@@ -256,9 +240,6 @@ fun PersonalizeScreen(navigator: Navigator) {
                         }
                     }
                 }
-            }
-
-            item {
                 BocchiSectionTitle("模块图标")
                 BocchiCard {
                     Column {
@@ -297,9 +278,6 @@ fun PersonalizeScreen(navigator: Navigator) {
                         }
                     }
                 }
-            }
-
-            item {
                 BocchiSectionTitle("返回按钮")
                 BocchiCard {
                     Column {
@@ -327,9 +305,6 @@ fun PersonalizeScreen(navigator: Navigator) {
                         )
                     }
                 }
-            }
-
-            item {
                 BocchiSectionTitle("首页面板")
                 BocchiCard {
                     Column {
@@ -381,12 +356,7 @@ fun PersonalizeScreen(navigator: Navigator) {
                         )
                     }
                 }
-            }
-
-            item {
                 Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
     }
 }
 
