@@ -21,6 +21,10 @@
 
 package com.suanran.dreambox.feature.home.presentation.screen
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
 import com.suanran.dreambox.presentation.component.misc.HomePanels
 import android.widget.Toast
@@ -149,6 +153,24 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
                     verticalArrangement =
                         Arrangement.spacedBy(UiDp.dp24),
                 ) {
+                    // 全局搜索入口（Stash 式搜索条）：点开搜节点/配置/功能。
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(AppTheme.radii.radius12))
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFFFB7C5).copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(AppTheme.radii.radius12))
+                            .clickable { openSecondary(Route.GlobalSearch) }
+                            .padding(horizontal = UiDp.dp14, vertical = UiDp.dp10),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "🔍 搜节点、配置、功能…",
+                            style = MiuixTheme.textStyles.body2,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+
                     HomeTrafficSection(
                         homeViewModel = homeViewModel,
                         isRunning = isRunning,

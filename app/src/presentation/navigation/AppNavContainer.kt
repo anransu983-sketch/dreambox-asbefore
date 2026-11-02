@@ -57,6 +57,7 @@ import com.suanran.dreambox.feature.about.presentation.screen.AboutScreen
 import com.suanran.dreambox.feature.about.presentation.screen.OpenSourceLicensesScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.ConnectionScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.SpeedTestScreen
+import com.suanran.dreambox.feature.home.presentation.screen.GlobalSearchScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.CustomRoutingRoute
 import com.suanran.dreambox.feature.dashboard.presentation.screen.RulesScreen
 import com.suanran.dreambox.feature.dashboard.presentation.screen.StreamUnlockScreen
@@ -109,6 +110,7 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.Log -> LogScreen(navigator)
         Route.Rules -> RulesScreen(navigator)
         Route.SpeedTest -> SpeedTestScreen(navigator)
+        Route.GlobalSearch -> GlobalSearchScreen(navigator)
         Route.About -> AboutScreen(navigator, appIconResId = R.drawable.dreambox)
         Route.OpenSourceLicenses -> OpenSourceLicensesScreen(navigator, librariesResId = R.raw.aboutlibraries)
         Route.Override -> OverrideScreen(navigator)

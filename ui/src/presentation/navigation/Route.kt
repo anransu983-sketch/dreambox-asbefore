@@ -80,6 +80,9 @@ sealed interface Route {
     data object SpeedTest : Route
 
     @Serializable
+    data object GlobalSearch : Route
+
+    @Serializable
     data object About : Route
 
     @Serializable
