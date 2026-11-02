@@ -237,6 +237,30 @@ if [ -z "$PUBLIC_HOST" ]; then
 fi
 log "检查已有入站"
 INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+# 认领优先级（v13 实测教训：表单端口填错时按 tag/端口都认不到，
+# 部署另起新入站、客户端还挂在旧入站上，节点名/验证全线分叉）：
+# ① 客户端实际挂着的入站（数据库为准）② 本次 tag ③ 旧默认 tag ④ 表单端口。
+CLI_INB_IDS="$(python3 - "$SUB_ID" <<'PYEOF5'
+import sqlite3, glob, json, sys
+ids = ""
+try:
+    db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
+    con = sqlite3.connect(db)
+    row = con.execute('select inbounds from clients where name=?', (sys.argv[1],)).fetchone()
+    if row:
+        v = row[0]
+        if isinstance(v, bytes):
+            v = v.decode('utf-8', 'replace')
+        x = json.loads(v) if isinstance(v, str) else v
+        while isinstance(x, str):
+            x = json.loads(x)
+        if isinstance(x, list):
+            ids = ",".join(str(int(i)) for i in x)
+except Exception:
+    ids = ""
+print(ids)
+PYEOF5
+)"
 INB_FOUND="$(printf '%s' "$INB_LIST" | python3 -c '
 import json, sys
 def norm(x):
@@ -251,14 +275,22 @@ if isinstance(o, dict):
     cand = [x for x in o.values() if isinstance(x, list)]
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
-hits = [t for t in items if t.get("tag") == sys.argv[1]]
+want_tag, want_port, cli_ids = sys.argv[1], sys.argv[2], sys.argv[3]
+idset = set()
+for p in cli_ids.split(","):
+    p = p.strip()
+    if p.isdigit(): idset.add(int(p))
+hits = [t for t in items if t.get("id") in idset]
 if not hits:
-    # 改名/从默认 tag 迁移：按端口认领本包管理的入站
-    hits = [t for t in items if str(t.get("listen_port", "")) == sys.argv[2]]
+    hits = [t for t in items if t.get("tag") == want_tag]
+if not hits:
+    hits = [t for t in items if t.get("tag") == "nf-vless"]
+if not hits:
+    hits = [t for t in items if str(t.get("listen_port", "")) == want_port]
 if hits:
     t = hits[-1]
     print(t.get("id"), t.get("listen_port", ""))
-' "$INBOUND_TAG" "$NODE_PORT")"
+' "$INBOUND_TAG" "$NODE_PORT" "$CLI_INB_IDS")"
 INBOUND_ID=""; INB_PORT=""
 if [ -n "$INB_FOUND" ]; then
     read -r INBOUND_ID INB_PORT <<< "$INB_FOUND"
@@ -268,6 +300,39 @@ if [ -n "$INBOUND_ID" ]; then
     if [ -n "$INB_PORT" ] && [ "$INB_PORT" != "$NODE_PORT" ]; then
         log "注意：已有入站端口是 $INB_PORT，与本次填写的 $NODE_PORT 不同，沿用 $INB_PORT"
         NODE_PORT="$INB_PORT"
+    fi
+    # 同名残留清理：别的入站若占着本次 tag（如旧版部署分叉留下的孤儿），
+    # 两个同 tag 会让核心配置冲突——把残留改成 nf-unused-<id> 退场。
+    if [ -n "$NODE_NAME" ]; then
+        INB_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+        SWEEP="$(printf '%s' "$INB_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+for t in items:
+    if t.get("tag") == sys.argv[1] and str(t.get("id")) != sys.argv[2]:
+        t = dict(t)
+        t["tag"] = "nf-unused-" + str(t.get("id"))
+        print(json.dumps(t))
+' "$INBOUND_TAG" "$INBOUND_ID")"
+        if [ -n "$SWEEP" ]; then
+            printf '%s\n' "$SWEEP" | while IFS= read -r line; do
+                [ -n "$line" ] || continue
+                api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
+                    --data-urlencode "data=$line" >/dev/null 2>&1 || true
+            done
+            log "已清理同名残留入站（避免节点名冲突）"
+        fi
     fi
     # 复用入站：addrs 为空/不对则整对象 edit 回写（edit 会连带重生成客户端链接）
     if [ -n "$PUBLIC_HOST" ]; then
@@ -285,9 +350,9 @@ if isinstance(o, dict):
     cand = [x for x in o.values() if isinstance(x, list)]
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
-hits = [t for t in items if t.get("tag") == sys.argv[1]]
+hits = [t for t in items if str(t.get("id")) == sys.argv[4]]
 if not hits:
-    hits = [t for t in items if str(t.get("listen_port", "")) == sys.argv[3]]
+    hits = [t for t in items if t.get("tag") == sys.argv[1]]
 host, port = sys.argv[2], int(sys.argv[3])
 if hits:
     t = dict(hits[-1])
@@ -302,7 +367,7 @@ if hits:
         changed = True
     if changed:
         print(json.dumps(t))
-' "$INBOUND_TAG" "$PUBLIC_HOST" "$NODE_PORT")"
+' "$INBOUND_TAG" "$PUBLIC_HOST" "$NODE_PORT" "$INBOUND_ID")"
         if [ -n "$EDIT_DATA" ]; then
             if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
                 --data-urlencode "data=$EDIT_DATA" >/dev/null; then
@@ -454,15 +519,22 @@ if [ -n "$SUB_UUID" ]; then
     UUID="$SUB_UUID"
     log "已按订阅内容校正 UUID"
 fi
+# vless 链接同样以订阅为准：列表摘要的 links 可能为空（v13 实测结果页链接为空），
+# 订阅正文里的完整链接才是最终真相。
+SUB_LINK="$(printf '%s' "$SUB_TXT" | grep -o 'vless://[^[:space:]]*' | head -1 || true)"
+if [ -n "$SUB_LINK" ]; then
+    VLESS_LINK="$SUB_LINK"
+fi
 
 # 复用客户端补写流量/到期/名称：全量数据从 s-ui 数据库原样读出（列表是摘要视图，
 # 不能拿来回写），只改 volume/expiry/autoReset/resetDays/nextReset 五项，
 # 其余字段（config/计数/时间戳）逐字保留，经 API edit 落盘。
-if [ "$VOL_BYTES" -gt 0 ] || [ "$EXP_EPOCH" -gt 0 ] || [ -n "$NODE_NAME" ]; then
-    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" <<'PYEOF2'
+if [ -n "$INBOUND_ID" ]; then
+    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" <<'PYEOF2'
 import sqlite3, glob, json, sys
 name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 nm = sys.argv[5] if len(sys.argv) > 5 else ''
+want_inb = int(sys.argv[6]) if len(sys.argv) > 6 and sys.argv[6].isdigit() else None
 try:
     db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
     con = sqlite3.connect(db)
@@ -492,14 +564,17 @@ else:
     # 客户端备注必须留空：节点名由入站 tag 承担，remark 非空时
     # s-ui 会按 JoinRemark(remark, tag) 再拼一段前缀，显示名就不纯了。
     new_remark = ''
+    # 挂载校正：客户端必须挂在本次认领的入站上，否则订阅出的还是旧节点。
+    cur_inb = jload(r.get('inbounds'), [])
+    new_inb = [want_inb] if want_inb else cur_inb
     if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
-            and new_remark == (b2s(r.get('remark')) or '') \
+            and new_remark == (b2s(r.get('remark')) or '') and new_inb == cur_inb \
             and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
         print('SAME')
     else:
         out = {
             'id': r.get('id'), 'enable': bool(r.get('enable')), 'name': b2s(r.get('name')) or '',
-            'config': jload(r.get('config'), {}), 'inbounds': jload(r.get('inbounds'), []),
+            'config': jload(r.get('config'), {}), 'inbounds': new_inb,
             'links': jload(r.get('links'), []),
             'volume': new_vol, 'expiry': new_exp,
             'down': int(r.get('down') or 0), 'up': int(r.get('up') or 0),
@@ -521,13 +596,13 @@ else:
 PYEOF2
 )"
     case "$CLI_EDIT" in
-        SAME) log "客户端流量/到期/名称已是本次填写的值" ;;
+        SAME) log "客户端流量/到期/名称/挂载已是本次设置" ;;
         NOROW) log "未找到客户端记录，流量/到期未写入（订阅卡暂不显示）" ;;
         "" ) log "客户端流量/到期写入准备失败，已跳过（节点本身不受影响）" ;;
         * )
             if api_post_ok save --data-urlencode object=clients --data-urlencode action=edit \
                 --data-urlencode "data=$CLI_EDIT" >/dev/null; then
-                log "已把流量/到期/名称写入已有客户端（订阅更新后可见）"
+                log "已把流量/到期/名称/挂载写入已有客户端（订阅更新后可见）"
             else
                 log "客户端流量/到期写入失败（节点本身不受影响）"
             fi

@@ -554,6 +554,15 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 st.phase = "done";
                 st.error = "";
                 st.resultJson = resultJson;
+                // 表单端口自校正：服务端沿用已有入站端口时，把结果端口回填表单，
+                // 免得历史误填的端口（如 8451）被存下来反复带进下次部署。
+                try {
+                    int np = new JSONObject(resultJson).optInt("nodePort", 0);
+                    if (np > 0) {
+                        st.nodePort = np;
+                    }
+                } catch (Exception ignored) {
+                }
             } else {
                 st.phase = "failed";
                 st.error = errorLine != null ? errorLine
