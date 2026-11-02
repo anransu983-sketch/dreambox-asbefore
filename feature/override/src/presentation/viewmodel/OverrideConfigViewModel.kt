@@ -81,8 +81,8 @@ class OverrideConfigViewModel(
             _isLoading.value = true
             try {
                 val (builtIns, users) = overrideCrud.loadConfigs()
-                _builtInConfigs.value = builtIns
-                _userConfigs.value = users
+                _builtInConfigs.value = builtIns.distinctBy { it.id }
+                _userConfigs.value = users.distinctBy { it.id }
                 loadUsageCounts()
             } catch (error: Exception) { // fault barrier: top-level ViewModel load handler, log and reset loading
                 Timber.tag(TAG).e(error, "Failed to load overrides")

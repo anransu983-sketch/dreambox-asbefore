@@ -110,13 +110,13 @@ fun AppSettingsScreen(navigator: Navigator) {
     val viewModel = koinViewModel<AppSettingsViewModel>()
     val mmkv: com.tencent.mmkv.MMKV = koinInject(named("settings"))
 
-    val defaultKeys = listOf("behavior", "interface", "navigation", "privacy", "service", "network")
+    val defaultKeys = listOf("behavior", "interface", "privacy", "service")
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "app_settings")) }
     val listState = rememberLazyListState()
     val visibleOrder = defaultKeys.filter { it !in hiddenKeys }
     val sectionTitles = mapOf(
-        "behavior" to "行为", "interface" to "界面", "navigation" to "导航",
-        "privacy" to "隐私", "service" to "服务", "network" to "网络",
+        "behavior" to "行为", "interface" to "界面",
+        "privacy" to "隐私", "service" to "服务",
     )
 
     Scaffold(
@@ -139,10 +139,8 @@ fun AppSettingsScreen(navigator: Navigator) {
                         when (key) {
                             "behavior" -> AppBehaviorSettingsSection(viewModel)
                             "interface" -> AppInterfaceSettingsSection(viewModel = viewModel)
-                            "navigation" -> AppNavigationSettingsSection(viewModel)
                             "privacy" -> AppPrivacySettingsSection(viewModel)
                             "service" -> AppServiceSettingsSection(viewModel)
-                            "network" -> AppNetworkSettingsSection(viewModel)
                         }
                     }
             }
@@ -179,6 +177,8 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
     val bottomBarAutoHide by viewModel.bottomBarAutoHide.state.collectAsStateWithLifecycle()
     val topBarBlurEnabled by viewModel.topBarBlurEnabled.state.collectAsStateWithLifecycle()
     val pageScale by viewModel.pageScale.state.collectAsStateWithLifecycle()
+    val predictiveBackEnabled by viewModel.predictiveBackEnabled.state.collectAsStateWithLifecycle()
+    val predictiveBackMaxProgress by viewModel.predictiveBackMaxProgress.state.collectAsStateWithLifecycle()
     val classicHomeEnabled by viewModel.classicHomeEnabled.state.collectAsStateWithLifecycle()
     val homeHitokotoEnabled by viewModel.homeHitokotoEnabled.state.collectAsStateWithLifecycle()
     val homeQuote by viewModel.moeHomeQuote.state.collectAsStateWithLifecycle()
@@ -248,6 +248,19 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
             onCheckedChange = viewModel::onTopBarBlurEnabledChange,
         )
         PageScalePreferenceItem(pageScale = pageScale, onApply = viewModel::onPageScaleChange)
+        // 「导航」分节并入界面（2026-11-03 用户点单）：预测返回两项同卡呈现，分节 6→4。
+        BocchiSwitchItem(
+            title = FlyTxt.AppSettings.PredictiveBack.Title,
+            checked = predictiveBackEnabled,
+            onCheckedChange = { enabled ->
+                viewModel.onPredictiveBackEnabledChange(enabled)
+                context.toast(FlyTxt.AppSettings.PredictiveBack.RestartSummary)
+            },
+        )
+        PredictiveBackProgressPreferenceItem(
+            progress = predictiveBackMaxProgress,
+            onApply = viewModel::onPredictiveBackMaxProgressChange,
+        )
     }
     BocchiCard {
         Row(
@@ -346,29 +359,6 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
 }
 
 @Composable
-private fun AppNavigationSettingsSection(viewModel: AppSettingsViewModel) {
-    val context = LocalContext.current
-    val predictiveBackEnabled by viewModel.predictiveBackEnabled.state.collectAsStateWithLifecycle()
-    val predictiveBackMaxProgress by viewModel.predictiveBackMaxProgress.state.collectAsStateWithLifecycle()
-
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Navigation)
-    BocchiCard {
-        BocchiSwitchItem(
-            title = FlyTxt.AppSettings.PredictiveBack.Title,
-            checked = predictiveBackEnabled,
-            onCheckedChange = { enabled ->
-                viewModel.onPredictiveBackEnabledChange(enabled)
-                context.toast(FlyTxt.AppSettings.PredictiveBack.RestartSummary)
-            },
-        )
-        PredictiveBackProgressPreferenceItem(
-            progress = predictiveBackMaxProgress,
-            onApply = viewModel::onPredictiveBackMaxProgressChange,
-        )
-    }
-}
-
-@Composable
 private fun PredictiveBackProgressPreferenceItem(
     progress: Float,
     onApply: (Float) -> Unit,
@@ -383,6 +373,7 @@ private fun PredictiveBackProgressPreferenceItem(
                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
             Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "1%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             Slider(
                 value = localProgress,
                 onValueChange = { localProgress = it },
@@ -390,8 +381,9 @@ private fun PredictiveBackProgressPreferenceItem(
                 valueRange = 1f..100f,
                 magnetThreshold = 0.01f,
                 hapticEffect = SliderDefaults.SliderHapticEffect.Step,
-                modifier = Modifier.width(110.dp),
+                modifier = Modifier.width(96.dp),
             )
+            Text(text = "100%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         },
         onClick = {},
     )
@@ -427,6 +419,7 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
     val shizukuAccess by viewModel.shizukuAccess.collectAsStateWithLifecycle()
     val exitUiWhenBackground by viewModel.exitUiWhenBackground.state.collectAsStateWithLifecycle()
     val logLevel by viewModel.logLevel.state.collectAsStateWithLifecycle()
+    val customUserAgent by viewModel.customUserAgent.state.collectAsStateWithLifecycle()
     var batteryOptimizationIgnored by remember {
         mutableStateOf(isBatteryOptimizationIgnored(context))
     }
@@ -514,17 +507,7 @@ private fun AppServiceSettingsSection(viewModel: AppSettingsViewModel) {
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun AppNetworkSettingsSection(viewModel: AppSettingsViewModel) {
-    // 更新入口只保留「关于」页的检查更新（用户 2026-11-02 拍板）：
-    // 这里的更新通道/自动检查更新已删，避免两处重复。
-    val customUserAgent by viewModel.customUserAgent.state.collectAsStateWithLifecycle()
-
-    BocchiSectionTitle(FlyTxt.AppSettings.Section.Network)
-    BocchiCard {
+        // 「网络」分节并入服务（2026-11-03 用户点单）：UA 设置同卡呈现。
         CustomUserAgentPreferenceItem(
             customUserAgent = customUserAgent,
             onConfirm = viewModel::applyCustomUserAgent,
@@ -680,6 +663,7 @@ private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) 
                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
             Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "80%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             Slider(
                 value = pageScaleLocal,
                 onValueChange = { pageScaleLocal = it },
@@ -687,8 +671,9 @@ private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) 
                 valueRange = 0.8f..1.2f,
                 magnetThreshold = 0.01f,
                 hapticEffect = SliderDefaults.SliderHapticEffect.Step,
-                modifier = Modifier.width(110.dp),
+                modifier = Modifier.width(96.dp),
             )
+            Text(text = "120%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         },
         onClick = { showPageScaleDialogState.value = true },
         holdDownState = showPageScaleDialogState.value,
