@@ -1,5 +1,6 @@
 package com.suanran.dreambox.feature.dashboard.presentation.screen
 
+import com.suanran.dreambox.core.model.traffic.HostTrafficUsage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
@@ -301,6 +302,50 @@ fun TrafficStatisticsContent(onBack: () -> Unit) {
                                 ),
                             ) {
                                 NodeTrafficRow(
+                                    usage = usage,
+                                    total = activeSummary.total,
+                                )
+                            }
+                        }
+                    }
+
+                    // 按域名/IP 流量 Top（数据来自已关闭连接的元数据）
+                    item {
+                        BocchiSectionTitle(FlyTxt.TrafficStatistics.Section.PerHostTraffic)
+                    }
+                    if (uiState.hostUsages.isEmpty()) {
+                        item {
+                            BocchiCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = spacing.space16),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = spacing.space14, vertical = spacing.space18),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = FlyTxt.TrafficStatistics.Section.EmptyHosts,
+                                        style = MiuixTheme.textStyles.body2,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        items(
+                            items = uiState.hostUsages.take(15),
+                            key = HostTrafficUsage::hostKey,
+                        ) { usage ->
+                            Box(
+                                modifier = Modifier.padding(
+                                    horizontal = spacing.space16,
+                                    vertical = componentSizes.listItemVerticalMinimal,
+                                ),
+                            ) {
+                                HostTrafficRow(
                                     usage = usage,
                                     total = activeSummary.total,
                                 )
@@ -958,6 +1003,66 @@ private fun NodeTrafficRow(
             ) {
                 Text(
                     text = usage.nodeName,
+                    fontSize = 13.sp,
+                    color = BocchiTextDark,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                )
+                Text(
+                    text = FlyTxt.TrafficStatistics.Metric.UsageLine.format(
+                        formatBytes(usage.totalDownload),
+                        formatBytes(usage.totalUpload),
+                    ),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(componentSizes.textLineCompactSpacing),
+            ) {
+                Text(
+                    text = formatBytes(usage.totalBytes),
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "%.1f%%".format(share * 100),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostTrafficRow(
+    usage: HostTrafficUsage,
+    total: Long,
+) {
+    val spacing = AppTheme.spacing
+    val componentSizes = AppTheme.sizes
+
+    val share = if (total > 0L) usage.totalBytes.toDouble() / total.toDouble() else 0.0
+    BocchiCard(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = spacing.space14, vertical = spacing.space12),
+            horizontalArrangement = Arrangement.spacedBy(spacing.space12),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NodeIconBadge(nodeName = usage.hostKey)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(componentSizes.textLineCompactSpacing),
+            ) {
+                Text(
+                    text = usage.hostKey,
                     fontSize = 13.sp,
                     color = BocchiTextDark,
                     fontWeight = FontWeight.Medium,

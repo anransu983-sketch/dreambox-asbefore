@@ -39,6 +39,8 @@ TrafficStatistics = {
         EmptyApps = "Нет статистики по приложениям"
         PerNodeTraffic = "Трафик по узлам"
         EmptyNodes = "Нет статистики по узлам"
+        PerHostTraffic = "Трафик по хостам"
+        EmptyHosts = "Статистика по хостам пока пуста"
         Footprint = "След трафика"
         EmptyFootprint = "Пока нет записей"
     }

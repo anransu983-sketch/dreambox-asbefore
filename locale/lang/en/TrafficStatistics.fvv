@@ -39,6 +39,8 @@ TrafficStatistics = {
         EmptyApps = "No app traffic statistics"
         PerNodeTraffic = "Per-Node Traffic"
         EmptyNodes = "No node traffic statistics"
+        PerHostTraffic = "Per-Host Traffic"
+        EmptyHosts = "No host traffic yet (collected from closed connections)"
         Footprint = "Traffic Footprint"
         EmptyFootprint = "No footprint records yet"
     }

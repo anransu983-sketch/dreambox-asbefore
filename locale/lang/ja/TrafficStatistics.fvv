@@ -39,6 +39,8 @@ TrafficStatistics = {
         EmptyApps = "アプリの通信量統計はありません"
         PerNodeTraffic = "ノード別通信量"
         EmptyNodes = "ノードの通信量統計はありません"
+        PerHostTraffic = "ホスト別通信量"
+        EmptyHosts = "ホストの通信量統計はまだありません"
         Footprint = "トラフィックフットプリント"
         EmptyFootprint = "フットプリント記録なし"
     }

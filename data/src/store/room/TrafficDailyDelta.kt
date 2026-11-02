@@ -45,3 +45,12 @@ data class RouteTrafficDelta(
     val downloadDelta: Long,
     val lastActiveAt: Long,
 )
+
+data class HostTrafficDelta(
+    val dateMillis: Long,
+    val hostKey: String,
+    val slotIndex: Int,
+    val uploadDelta: Long,
+    val downloadDelta: Long,
+    val lastActiveAt: Long,
+)

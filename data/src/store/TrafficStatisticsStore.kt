@@ -21,6 +21,9 @@
 
 package com.suanran.dreambox.data.store
 
+import com.suanran.dreambox.data.store.room.HostTrafficDelta
+import com.suanran.dreambox.core.model.traffic.HostTrafficUsage
+import com.suanran.dreambox.core.model.traffic.HostTrafficDeltaRecord
 import com.suanran.dreambox.core.contract.TrafficStatisticsRepository
 import com.suanran.dreambox.core.model.traffic.AppRouteTrafficUsage
 import com.suanran.dreambox.core.model.traffic.AppTrafficDeltaRecord
@@ -116,6 +119,50 @@ class TrafficStatisticsStore(
             }.onFailure { Timber.e(it, "Failed to persist traffic to Room") }
         }
     }
+
+    /** 域名维度落盘：与 recordAppTrafficBatch 同一冲刷点调用，独立批次互不影响。 */
+    fun recordHostTrafficBatch(timestamp: Long, records: List<HostTrafficDeltaRecord>) {
+        if (records.isEmpty()) return
+        val dayKey = getDayKey(timestamp)
+        val slotIndex = getSlotIndex(timestamp)
+        storeScope.launch {
+            runCatching {
+                val merged = LinkedHashMap<String, HostTrafficDeltaRecord>()
+                for (record in records) {
+                    if (record.uploadDelta <= 0L && record.downloadDelta <= 0L) continue
+                    val host = record.hostKey.trim().lowercase().trimEnd('.')
+                    if (host.isBlank() || host.length > 253) continue
+                    val existing = merged[host]
+                    merged[host] =
+                        if (existing == null) {
+                            record.copy(hostKey = host)
+                        } else {
+                            existing.copy(
+                                uploadDelta = existing.uploadDelta + record.uploadDelta,
+                                downloadDelta = existing.downloadDelta + record.downloadDelta,
+                            )
+                        }
+                }
+                if (merged.isEmpty()) return@runCatching
+                // 单日域名种类封顶，防长尾把表撑爆：只保留本批 Top 200。
+                val capped = merged.values.sortedByDescending { it.uploadDelta + it.downloadDelta }.take(200)
+                dao.recordHostBatch(
+                    capped.map {
+                        HostTrafficDelta(
+                            dateMillis = dayKey,
+                            hostKey = it.hostKey,
+                            slotIndex = slotIndex,
+                            uploadDelta = it.uploadDelta,
+                            downloadDelta = it.downloadDelta,
+                            lastActiveAt = timestamp,
+                        )
+                    },
+                )
+            }.onFailure { Timber.e(it, "Failed to persist host traffic to Room") }
+        }
+    }
+
+    override fun getHostUsagesFlow(range: StatisticsTimeRange): Flow<List<HostTrafficUsage>> = dao.getHostUsagesFlow(rangeCutoff(range))
 
     override fun getAppUsagesFlow(range: StatisticsTimeRange): Flow<List<AppTrafficUsage>> = dao.getAppUsagesFlow(rangeCutoff(range))
 

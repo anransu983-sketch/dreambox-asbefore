@@ -28,8 +28,9 @@ import androidx.room3.RoomDatabase
     entities = [
         AppTrafficDailyEntity::class,
         RouteTrafficDailyEntity::class,
+        HostTrafficDailyEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class TrafficDatabase : RoomDatabase() {

@@ -28,6 +28,7 @@ import com.suanran.dreambox.core.model.traffic.AppRouteTrafficUsage
 import com.suanran.dreambox.core.model.traffic.AppTrafficUsage
 import com.suanran.dreambox.core.model.traffic.DailyAppBreakdown
 import com.suanran.dreambox.core.model.traffic.DailyTraffic
+import com.suanran.dreambox.core.model.traffic.HostTrafficUsage
 import com.suanran.dreambox.core.model.traffic.NodeTrafficUsage
 import com.suanran.dreambox.core.model.traffic.TimeSlotTraffic
 import kotlinx.coroutines.flow.Flow
@@ -176,6 +177,60 @@ abstract class TrafficStatisticsDao {
         }
     }
 
+    /** 记录一批域名增量（独立于 app/route 批次，由收集器在同一冲刷点调用）。 */
+    @Transaction
+    open suspend fun recordHostBatch(hostDeltas: List<HostTrafficDelta>) {
+        val merged = LinkedHashMap<HostKey, HostTrafficDailyEntity>()
+        for (delta in hostDeltas) {
+            if (delta.uploadDelta <= 0L && delta.downloadDelta <= 0L) continue
+            val key = HostKey(delta.dateMillis, delta.hostKey, delta.slotIndex)
+            val existing = merged[key]
+            if (existing == null) {
+                merged[key] =
+                    HostTrafficDailyEntity(
+                        dateMillis = delta.dateMillis,
+                        hostKey = delta.hostKey,
+                        slotIndex = delta.slotIndex,
+                        totalUpload = delta.uploadDelta,
+                        totalDownload = delta.downloadDelta,
+                        lastActiveAt = delta.lastActiveAt,
+                    )
+            } else {
+                merged[key] =
+                    existing.copy(
+                        totalUpload = existing.totalUpload + delta.uploadDelta,
+                        totalDownload = existing.totalDownload + delta.downloadDelta,
+                        lastActiveAt = maxOf(existing.lastActiveAt, delta.lastActiveAt),
+                    )
+            }
+        }
+        for (e in merged.values) {
+            upsertOneHost(e.dateMillis, e.hostKey, e.slotIndex, e.totalUpload, e.totalDownload, e.lastActiveAt)
+        }
+    }
+
+    @Query(
+        """
+        INSERT INTO host_traffic_daily (date_millis, host_key, slot_index, total_upload, total_download, last_active_at)
+        VALUES (:dateMillis, :hostKey, :slotIndex, :totalUpload, :totalDownload, :lastActiveAt)
+        ON CONFLICT (date_millis, host_key, slot_index)
+        DO UPDATE SET
+            total_upload = total_upload + excluded.total_upload,
+            total_download = total_download + excluded.total_download,
+            last_active_at = MAX(last_active_at, excluded.last_active_at)
+        """
+    )
+    protected abstract suspend fun upsertOneHost(
+        dateMillis: Long,
+        hostKey: String,
+        slotIndex: Int,
+        totalUpload: Long,
+        totalDownload: Long,
+        lastActiveAt: Long,
+    )
+
+    private data class HostKey(val dateMillis: Long, val hostKey: String, val slotIndex: Int)
+
     /** 复合键，用于预合并应用差异。 */
     private data class AppKey(val dateMillis: Long, val appKey: String, val slotIndex: Int)
 
@@ -316,6 +371,21 @@ abstract class TrafficStatisticsDao {
     )
     abstract fun getRouteUsagesFlow(cutoffMillis: Long): Flow<List<NodeTrafficUsage>>
 
+    /** 区间内按域名/IP 聚合，按总字节数降序（分域名排行）。 */
+    @Query(
+        """
+        SELECT host_key AS hostKey,
+               SUM(total_upload) AS totalUpload,
+               SUM(total_download) AS totalDownload,
+               MAX(last_active_at) AS lastActiveAt
+        FROM host_traffic_daily
+        WHERE date_millis >= :cutoffMillis
+        GROUP BY host_key
+        ORDER BY (SUM(total_upload) + SUM(total_download)) DESC
+        """
+    )
+    abstract fun getHostUsagesFlow(cutoffMillis: Long): Flow<List<HostTrafficUsage>>
+
     // 结束区域
 
     // 区域保留与清除
@@ -324,6 +394,7 @@ abstract class TrafficStatisticsDao {
     open suspend fun deleteOlderThan(cutoffMillis: Long) {
         deleteAppOlderThan(cutoffMillis)
         deleteRouteOlderThan(cutoffMillis)
+        deleteHostOlderThan(cutoffMillis)
     }
 
     @Query("DELETE FROM app_traffic_daily WHERE date_millis < :cutoffMillis")
@@ -332,10 +403,14 @@ abstract class TrafficStatisticsDao {
     @Query("DELETE FROM route_traffic_daily WHERE date_millis < :cutoffMillis")
     protected abstract suspend fun deleteRouteOlderThan(cutoffMillis: Long): Int
 
+    @Query("DELETE FROM host_traffic_daily WHERE date_millis < :cutoffMillis")
+    protected abstract suspend fun deleteHostOlderThan(cutoffMillis: Long): Int
+
     @Transaction
     open suspend fun clearAll() {
         clearAllApp()
         clearAllRoute()
+        clearAllHost()
     }
 
     @Query("DELETE FROM app_traffic_daily")
@@ -343,6 +418,9 @@ abstract class TrafficStatisticsDao {
 
     @Query("DELETE FROM route_traffic_daily")
     protected abstract suspend fun clearAllRoute()
+
+    @Query("DELETE FROM host_traffic_daily")
+    protected abstract suspend fun clearAllHost()
 
     // 结束区域
 }

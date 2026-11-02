@@ -39,6 +39,8 @@ TrafficStatistics = {
         EmptyApps = "暫無應用流量統計"
         PerNodeTraffic = "按節點流量"
         EmptyNodes = "暫無節點流量統計"
+        PerHostTraffic = "按域名流量"
+        EmptyHosts = "暫無域名流量統計"
         Footprint = "流量足跡"
         EmptyFootprint = "暫無足跡記錄"
     }

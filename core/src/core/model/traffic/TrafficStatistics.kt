@@ -95,6 +95,23 @@ data class AppRouteTrafficUsage(
 }
 
 @Serializable
+data class HostTrafficUsage(
+    val hostKey: String,
+    val totalUpload: Long = 0L,
+    val totalDownload: Long = 0L,
+    val lastActiveAt: Long = 0L,
+) {
+    val totalBytes: Long
+        get() = totalUpload + totalDownload
+}
+
+data class HostTrafficDeltaRecord(
+    val hostKey: String,
+    val uploadDelta: Long,
+    val downloadDelta: Long,
+)
+
+@Serializable
 data class NodeTrafficUsage(
     val routeKey: String,
     val routeLabel: String,

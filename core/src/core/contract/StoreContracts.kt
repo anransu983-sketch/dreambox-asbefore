@@ -33,6 +33,7 @@ import com.suanran.dreambox.core.model.profile.LinkOpenMode
 import com.suanran.dreambox.core.model.traffic.AppTrafficUsage
 import com.suanran.dreambox.core.model.traffic.DailyAppBreakdown
 import com.suanran.dreambox.core.model.traffic.DailyTraffic
+import com.suanran.dreambox.core.model.traffic.HostTrafficUsage
 import com.suanran.dreambox.core.model.traffic.NodeTrafficUsage
 import com.suanran.dreambox.core.model.traffic.StatisticsTimeRange
 import com.suanran.dreambox.core.model.traffic.TimeSlotTraffic
@@ -78,6 +79,8 @@ interface TrafficStatisticsRepository {
     fun getDailyAppBreakdownFlow(range: StatisticsTimeRange): Flow<List<DailyAppBreakdown>>
     /** 按节点（出口）聚合的流量，不分应用，按总字节数降序。 */
     fun getRouteUsagesFlow(range: StatisticsTimeRange): Flow<List<NodeTrafficUsage>>
+    /** 按目标域名/IP 聚合的流量（来自已关闭连接的元数据），按总字节数降序。 */
+    fun getHostUsagesFlow(range: StatisticsTimeRange): Flow<List<HostTrafficUsage>>
     suspend fun getAppUsagesSorted(range: StatisticsTimeRange): List<AppTrafficUsage>
     fun clearAll()
 }

@@ -24,6 +24,7 @@ package com.suanran.dreambox.data.collector
 import com.suanran.dreambox.core.contract.TrafficCollectorContract
 import com.suanran.dreambox.core.model.ConnectionInfo
 import com.suanran.dreambox.core.model.traffic.AppTrafficDeltaRecord
+import com.suanran.dreambox.core.model.traffic.HostTrafficDeltaRecord
 import com.suanran.dreambox.core.model.traffic.Traffic
 import com.suanran.dreambox.core.model.traffic.TrafficData
 import com.suanran.dreambox.core.model.traffic.TrafficStatisticsBuckets
@@ -68,6 +69,9 @@ class AppTrafficStatisticsCollector(
     private var lastProfileId: String? = null
     private var lastPersistTimestamp = 0L
     private val pendingBuckets = linkedMapOf<String, PendingTrafficBucket>()
+    // 域名维度聚合（自有锁，与 app 桶分开冲刷但在同一冲刷点排空）。
+    private val hostLock = Any()
+    private val pendingHosts = linkedMapOf<String, LongArray>()
 
     init {
         startCollection()
@@ -172,6 +176,13 @@ class AppTrafficStatisticsCollector(
             val downloadDelta = closed.downloadDelta.coerceAtLeast(0L)
             if (uploadDelta <= 0L && downloadDelta <= 0L) return
             val hint = AppIdentityHint.from(closed.metadata)
+            resolveHost(closed.metadata)?.let { host ->
+                synchronized(hostLock) {
+                    val arr = pendingHosts.getOrPut(host) { longArrayOf(0L, 0L) }
+                    arr[0] += uploadDelta
+                    arr[1] += downloadDelta
+                }
+            }
             val routeKey = resolveRouteKey(closed)
             val bucketKey = buildTrafficBucketKey(hint, routeKey)
             val existing = pendingBuckets[bucketKey]
@@ -244,8 +255,28 @@ class AppTrafficStatisticsCollector(
                 )
             }
         }
+        val hostRecords = synchronized(hostLock) {
+            val drained = pendingHosts.map { (host, arr) ->
+                HostTrafficDeltaRecord(hostKey = host, uploadDelta = arr[0], downloadDelta = arr[1])
+            }
+            pendingHosts.clear()
+            drained
+        }
+        if (hostRecords.isNotEmpty()) {
+            trafficStatisticsStore.recordHostTrafficBatch(timestamp = timestamp, records = hostRecords)
+        }
         if (batch.isEmpty()) return
         trafficStatisticsStore.recordAppTrafficBatch(timestamp = timestamp, records = batch)
+    }
+
+    /** 目标域名：优先嗅探主机名，其次连接主机，再次目标 IP。 */
+    private fun resolveHost(metadata: JsonObject): String? {
+        val raw = metadata["sniffHost"]?.jsonPrimitive?.contentOrNull?.trim()
+            ?: metadata["host"]?.jsonPrimitive?.contentOrNull?.trim()
+            ?: metadata["destinationIP"]?.jsonPrimitive?.contentOrNull?.trim()
+            ?: return null
+        val host = raw.substringBefore(':').lowercase().trimEnd('.')
+        return host.takeIf { it.isNotBlank() && it.length <= 253 }
     }
 
     private fun buildTrafficBucketKey(identityHint: AppIdentityHint, routeKey: String?): String {

@@ -28,6 +28,7 @@ import com.suanran.dreambox.core.model.traffic.AppTrafficUsage
 import com.suanran.dreambox.core.model.traffic.DailyTraffic
 import com.suanran.dreambox.core.model.traffic.DailyTrafficSummary
 import com.suanran.dreambox.core.model.traffic.FootprintDay
+import com.suanran.dreambox.core.model.traffic.HostTrafficUsage
 import com.suanran.dreambox.core.model.traffic.NodeTrafficUsage
 import com.suanran.dreambox.core.model.traffic.StatisticsTimeRange
 import com.suanran.dreambox.core.model.traffic.TimeSlotTraffic
@@ -154,6 +155,19 @@ class TrafficStatisticsViewModel(private val trafficStatisticsStore: TrafficStat
                 emptyList(),
             )
 
+    /** 按目标域名/IP 聚合的流量：跟随所选时间范围，总量倒序（分域名排行）。 */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val hostUsages: StateFlow<List<HostTrafficUsage>> =
+        selectedTimeRange.flatMapLatest { range ->
+            trafficStatisticsStore.getHostUsagesFlow(range)
+        }
+            .distinctUntilChanged()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList(),
+            )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<TrafficStatisticsUiState> =
         combine(
@@ -162,8 +176,9 @@ class TrafficStatisticsViewModel(private val trafficStatisticsStore: TrafficStat
             barChartFlow,
             footprintFlow,
             nodeUsages,
-        ) { range, sortedApps, (barItems, barLabels), footprint, nodes ->
-            buildUiState(range, sortedApps, barItems, barLabels, footprint, nodes)
+            hostUsages,
+        ) { range, sortedApps, (barItems, barLabels), footprint, nodes, hosts ->
+            buildUiState(range, sortedApps, barItems, barLabels, footprint, nodes, hosts)
         }
             .stateIn(
                 viewModelScope,
@@ -200,6 +215,7 @@ class TrafficStatisticsViewModel(private val trafficStatisticsStore: TrafficStat
         barLabels: List<String>,
         footprint: List<FootprintDay>,
         nodes: List<NodeTrafficUsage>,
+        hosts: List<HostTrafficUsage>,
     ): TrafficStatisticsUiState {
         val totalUpload = sortedApps.sumOf(AppTrafficUsage::totalUpload)
         val totalDownload = sortedApps.sumOf(AppTrafficUsage::totalDownload)
@@ -217,6 +233,7 @@ class TrafficStatisticsViewModel(private val trafficStatisticsStore: TrafficStat
             barChartLabels = barLabels,
             footprintDays = footprint,
             nodeUsages = nodes,
+            hostUsages = hosts,
             appSortMode = appSortMode.value,
             appSortAscending = appSortAscending.value,
         )
@@ -246,6 +263,7 @@ data class TrafficStatisticsUiState(
     val barChartLabels: List<String> = emptyList(),
     val footprintDays: List<FootprintDay> = emptyList(),
     val nodeUsages: List<NodeTrafficUsage> = emptyList(),
+    val hostUsages: List<HostTrafficUsage> = emptyList(),
     val appSortMode: AppSortMode = AppSortMode.NAME,
     val appSortAscending: Boolean = true,
 )
