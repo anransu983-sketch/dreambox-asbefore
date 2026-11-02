@@ -34,7 +34,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sshtty-pack
-          path: packs/sshtty/sshtty-pack-v4.zip
+          path: packs/sshtty/sshtty-pack-v*.zip
 
       - name: Publish pack to packs release
         env:
@@ -42,4 +42,4 @@ jobs:
         run: |
           gh release view packs >/dev/null 2>&1 || \
             gh release create packs --title "功能包" --notes "梦盒功能包下载（App 内功能包页使用）"
-          gh release upload packs packs/sshtty/sshtty-pack-v4.zip --clobber
+          gh release upload packs packs/sshtty/sshtty-pack-v*.zip --clobber
