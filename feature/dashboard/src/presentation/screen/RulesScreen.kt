@@ -212,6 +212,9 @@ fun RulesScreen(navigator: Navigator) {
                             innerPadding = combinePaddingValues(innerPadding, mainLikePadding),
                             lazyListState = mainListState,
                         ) {
+                            item(key = "rule_test_card", contentType = "ruleTest") {
+                                RuleTestCard(rules = state.rules)
+                            }
                             items(items = filteredRules, key = { it.index }, contentType = { "rule" }) { rule ->
                                 RuleCard(
                                     rule = rule,
@@ -367,3 +370,142 @@ private fun RuleCard(
         }
     }
 }
+
+
+// ── 规则测试（Surge 式）：离线按顺序算某个域名/IP 会命中哪条规则 ──────────────
+
+@Composable
+private fun RuleTestCard(rules: List<RuntimeRule>) {
+    val spacing = AppTheme.spacing
+    var input by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf<String?>(null) }
+    Card(modifier = Modifier.padding(vertical = spacing.space4)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.space16, vertical = spacing.space12),
+        ) {
+            Text(
+                text = "规则测试",
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "输入域名或 IP，按当前生效规则从上到下算它会走哪条。",
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(top = spacing.space2),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = spacing.space10),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.space10),
+            ) {
+                top.yukonga.miuix.kmp.basic.TextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    label = "如 example.com 或 1.2.3.4",
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                top.yukonga.miuix.kmp.basic.Button(
+                    onClick = { result = evaluateRuleTest(input, rules) },
+                ) {
+                    Text(text = "测试", color = MiuixTheme.colorScheme.onPrimary)
+                }
+            }
+            result?.let {
+                Text(
+                    text = it,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = spacing.space10),
+                )
+            }
+        }
+    }
+}
+
+private fun evaluateRuleTest(rawInput: String, rules: List<RuntimeRule>): String {
+    val host = normalizeTestTarget(rawInput)
+    if (host.isBlank()) return "先输入一个域名或 IP。"
+    if (rules.isEmpty()) return "当前没有生效中的规则（核心未运行或配置无规则）。"
+    val isIp = isIpLiteralText(host)
+    var deferredNote: String? = null
+    for (rule in rules.sortedBy { it.index }) {
+        if (rule.disabled) continue
+        val type = rule.type.uppercase()
+        val payload = rule.payload.trim().lowercase()
+        val hit: Boolean? = when (type) {
+            "DOMAIN" -> if (!isIp) host == payload else false
+            "DOMAIN-SUFFIX" -> if (!isIp) (host == payload || host.endsWith(".$payload")) else false
+            "DOMAIN-KEYWORD" -> if (!isIp) payload.isNotBlank() && host.contains(payload) else false
+            "DOMAIN-WILDCARD" -> if (!isIp) wildcardMatch(payload, host) else false
+            "DOMAIN-REGEX" -> if (!isIp) runCatching { Regex(rule.payload.trim()).containsMatchIn(host) }.getOrDefault(false) else false
+            "IP-CIDR", "IP-CIDR6" -> if (isIp) cidrContains(rule.payload.trim(), host) else null
+            "MATCH" -> true
+            "GEOIP", "GEOSITE", "RULE-SET", "AND", "OR", "NOT", "SUB-RULE" -> null
+            else -> false
+        }
+        when {
+            hit == true -> {
+                val base = "命中第 ${rule.index + 1} 条：${rule.type} ${rule.payload} → ${rule.proxy.ifBlank { "-" }}"
+                return if (deferredNote != null) "$base（注意：$deferredNote，实际结果可能不同）" else base
+            }
+            hit == null && deferredNote == null -> {
+                deferredNote = "它前面的第 ${rule.index + 1} 条 ${rule.type} 需要核心在线判定（解析/规则集）"
+            }
+        }
+    }
+    return if (deferredNote != null) {
+        "没有离线命中的规则；但$deferredNote，实际可能先被它截走。"
+    } else {
+        "没有命中任何规则——检查一下配置末尾的 MATCH 兜底，或这个目标走了默认直连。"
+    }
+}
+
+private fun normalizeTestTarget(raw: String): String {
+    var v = raw.trim().lowercase()
+    if (v.isBlank()) return ""
+    v = v.substringAfter("://", v)
+    v = v.substringBefore("/").substringBefore("?").substringBefore("#")
+    // 去端口（域名:443 / [ipv6]:443）
+    if (v.startsWith("[")) {
+        v = v.substringBefore("]").removePrefix("[")
+    } else if (v.count { it == ':' } == 1) {
+        v = v.substringBefore(":")
+    }
+    return v.trimEnd('.')
+}
+
+private fun isIpLiteralText(host: String): Boolean =
+    host.contains(':') || (host.count { it == '.' } == 3 && host.all { it.isDigit() || it == '.' })
+
+private fun wildcardMatch(pattern: String, host: String): Boolean {
+    val regex = StringBuilder("^")
+    for (c in pattern) {
+        when (c) {
+            '*' -> regex.append(".*")
+            '?' -> regex.append(".")
+            else -> regex.append(java.util.regex.Pattern.quote(c.toString()))
+        }
+    }
+    regex.append("$")
+    return runCatching { Regex(regex.toString()).matches(host) }.getOrDefault(false)
+}
+
+private fun cidrContains(cidr: String, ip: String): Boolean = runCatching {
+    val parts = cidr.split("/")
+    val network = java.net.InetAddress.getByName(parts[0].trim()).address
+    val target = java.net.InetAddress.getByName(ip).address
+    if (network.size != target.size) return@runCatching false
+    val prefix = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: (network.size * 8)
+    val fullBytes = prefix / 8
+    val restBits = prefix % 8
+    for (i in 0 until fullBytes) {
+        if (network[i] != target[i]) return@runCatching false
+    }
+    if (restBits > 0) {
+        val mask = (0xFF shl (8 - restBits)) and 0xFF
+        if ((network[fullBytes].toInt() and mask) != (target[fullBytes].toInt() and mask)) return@runCatching false
+    }
+    true
+}.getOrDefault(false)
