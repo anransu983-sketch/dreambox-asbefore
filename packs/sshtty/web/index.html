@@ -123,12 +123,13 @@
 <!-- ═══ 调优 ═══ -->
 <div id="view-tune" class="hidden">
   <h1>🚀 一键调优</h1>
-  <p class="sub">Tcpfit 基础调优（已审计版 v0.5.9，下载先验哈希、关遥测）：只写 sysctl＋initcwnd 按套餐带宽算缓冲，不测速、不整形，约 1 分钟。调前留底在日志开头；效果不好可一键回滚到调优前。</p>
+  <p class="sub">Tcpfit 调优（已审计版 v0.5.9，下载先验哈希、关遥测）。<b>基础</b>：只写 sysctl＋initcwnd 按套餐带宽算缓冲，约 1 分钟。<b>完整版</b>：基础＋sweep 实测限速器拐点＋按拐点给整张网卡整形（帖子同款流程），约十几分钟，1000M 档约烧 16GB 流量；对端自动挑美西公共节点。调前留底在日志开头；效果不好可一键回滚到调优前。</p>
   <div class="card">
     <div id="tune-status">准备中…</div>
     <div id="tune-sysctl" class="ok" style="white-space:pre-wrap"></div>
     <pre class="log hidden" id="tune-tail"></pre>
-    <button class="mini primary" id="btn-tune-start">开始调优</button>
+    <button class="mini primary" id="btn-tune-full">完整版调优</button>
+    <button class="mini" id="btn-tune-start">基础调优</button>
     <button class="mini danger" id="btn-tune-rollback">回滚调优</button>
     <button class="mini" id="btn-tune-back">返回列表</button>
     <button class="mini" id="btn-tune-refresh">刷新</button>
@@ -444,6 +445,23 @@
       }
       $('tune-status').textContent = r.alreadyRunning ? '⏳ 已经在执行中…' :
         ('已按 ' + (r.bw || 1000) + 'Mbps 启动调优，约 1 分钟…');
+      if (!tuneTimer) tuneTimer = setInterval(pollTune, 5000);
+      pollTune();
+    }).catch(function (e) {
+      $('tune-status').textContent = '启动失败：' + e.message;
+    });
+  };
+  $('btn-tune-full').onclick = function () {
+    if (!tuneSrv) return;
+    if (!confirm('完整版 = 基础调优＋sweep 找限速器拐点＋按拐点整形（整张网卡）。约十几分钟，1000M 档约烧 16GB 流量。继续？')) return;
+    $('tune-status').textContent = '正在启动完整版调优（先验脚本哈希）…';
+    callNative('tuneStart', { id: tuneSrv.id, mode: 'full' }).then(function (r) {
+      if (r.badSha) {
+        $('tune-status').textContent = '⛔ 脚本哈希对不上，已停手不跑（下载可能被劫持/损坏）。';
+        return;
+      }
+      $('tune-status').textContent = r.alreadyRunning ? '⏳ 已经在执行中…' :
+        ('已启动完整版调优（' + (r.bw || 1000) + 'Mbps 档）：基础→sweep→整形，约十几分钟，页面会自动刷新进度…');
       if (!tuneTimer) tuneTimer = setInterval(pollTune, 5000);
       pollTune();
     }).catch(function (e) {

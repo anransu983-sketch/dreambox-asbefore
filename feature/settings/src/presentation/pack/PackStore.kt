@@ -138,9 +138,9 @@ class PackStore(context: Context) {
                 id = "sshtty",
                 name = "VPS 终端",
                 summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；另带一键 TQ 测速（报告链接自动提取可复制）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）",
-                version = "3",
+                version = "4",
                 sizeText = "约 330 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v3.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v4.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
             ),
         )

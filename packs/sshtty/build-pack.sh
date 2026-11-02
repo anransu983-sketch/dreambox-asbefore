@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # VPS 终端功能包（sshtty）打包脚本
-# 产物：sshtty-pack-v3.zip
+# 产物：sshtty-pack-v4.zip
 #   web/（index.html + vendor/xterm）+ native-bridge.js
 #   + pack.json + plugins.dex（包 Java + JSch 一并 dex 化）
 # 约束沿用 nodeforge/芷湘包 CI 实测教训：
@@ -16,7 +16,7 @@ set -euo pipefail
 PACK_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$PACK_DIR/.build"
 TOOLS_DIR="$PACK_DIR/.tools"
-ZIP_NAME="sshtty-pack-v3.zip"
+ZIP_NAME="sshtty-pack-v4.zip"
 JSCH_VERSION="0.2.23"
 KOTLIN_VERSION="2.0.21"
 

@@ -625,6 +625,29 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             JSONObject srv = credsFor(opts);
             int bw = srv.optInt("bw", 1000);
             if (bw < 10) bw = 1000;
+            boolean full = "full".equals(opts.optString("mode", ""));
+            String launch;
+            if (full) {
+                // Full pipeline in one detached bash -c (pidfile watches it):
+                // ensure iperf3 -> basic tune -> pick first usable US-West Leaseweb peer ->
+                // sweep --yes (knee hunt) -> shape at RECOMMEND rate if a knee was found.
+                String inner = "command -v iperf3 >/dev/null 2>&1 || { apt-get update -qq; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iperf3; }; "
+                        + "bash tcpfit.sh tune --role proxy --bw " + bw + "; "
+                        + "peer=; for p in speedtest.lax12.us.leaseweb.net speedtest.sfo12.us.leaseweb.net speedtest.sea11.us.leaseweb.net speedtest.dal13.us.leaseweb.net; do "
+                        + "if timeout 25 iperf3 -c $p -t 2 >/dev/null 2>&1; then peer=$p; break; fi; done; "
+                        + "if [ -z \"$peer\" ]; then echo NOPEER-all-public-peers-unavailable; else echo sweep-peer=$peer; "
+                        + "bash tcpfit.sh sweep --peer $peer --nominal " + bw + " --yes; "
+                        + "rate=$(grep ^RECOMMEND= /var/lib/tcpfit/sweep.result 2>/dev/null | cut -d= -f2); "
+                        + "if [ -n \"$rate\" ]; then echo apply-shape=${rate}Mbit; bash tcpfit.sh shape --rate $rate; "
+                        + "else echo no-knee-found-skip-shape; fi; fi; echo FULLDONE";
+                launch = "nohup env TCPFIT_NO_TELEMETRY=1 TERM=xterm-256color bash -c '" + inner + "' "
+                        + ">> tune.log 2>&1 < /dev/null & "
+                        + "echo $! > tune.pid; echo STARTED; ";
+            } else {
+                launch = "nohup env TCPFIT_NO_TELEMETRY=1 TERM=xterm-256color bash tcpfit.sh "
+                        + "tune --role proxy --bw " + bw + " >> tune.log 2>&1 < /dev/null & "
+                        + "echo $! > tune.pid; echo STARTED; ";
+            }
             String cmd = "mkdir -p /tmp/sshtty-tcpfit /var/lib/tcpfit && "
                     + "touch /var/lib/tcpfit/no-telemetry && cd /tmp/sshtty-tcpfit && "
                     + "if [ -f tune.pid ] && kill -0 $(cat tune.pid) 2>/dev/null; then echo ALREADY; else "
@@ -634,9 +657,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     + "{ echo '== 调前留底 =='; tc qdisc show 2>/dev/null; ip route show 2>/dev/null | head -5; "
                     + "sysctl net.ipv4.tcp_congestion_control net.core.rmem_max net.core.wmem_max 2>/dev/null; "
                     + "echo '== 开始调优 =='; } > tune.log; "
-                    + "nohup env TCPFIT_NO_TELEMETRY=1 TERM=xterm-256color bash tcpfit.sh "
-                    + "tune --role proxy --bw " + bw + " >> tune.log 2>&1 < /dev/null & "
-                    + "echo $! > tune.pid; echo STARTED; "
+                    + launch
                     + "else echo BADSHA; fi; fi";
             String r = runExec(srv, cmd, 90).trim();
             callback.onResult(true, new JSONObject()
@@ -644,6 +665,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     .put("alreadyRunning", r.contains("ALREADY"))
                     .put("badSha", r.contains("BADSHA"))
                     .put("bw", bw)
+                    .put("mode", full ? "full" : "basic")
                     .put("echo", r)
                     .toString(), null);
         } catch (Exception e) {
@@ -657,6 +679,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             String cmd = "if [ -f /tmp/sshtty-tcpfit/tune.pid ] && kill -0 $(cat /tmp/sshtty-tcpfit/tune.pid) 2>/dev/null; "
                     + "then echo RUNNING; else echo IDLE; fi; "
                     + "echo __SYSCTL__; sysctl net.ipv4.tcp_congestion_control net.core.rmem_max net.core.wmem_max 2>/dev/null; "
+                    + "tc qdisc show 2>/dev/null | head -4; grep ^RECOMMEND= /var/lib/tcpfit/sweep.result 2>/dev/null; "
                     + "echo __TAIL__; tail -c 1800 /tmp/sshtty-tcpfit/tune.log 2>/dev/null";
             String r = runExec(srv, cmd, 30);
             boolean running = r.startsWith("RUNNING");
