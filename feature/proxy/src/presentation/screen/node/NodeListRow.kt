@@ -173,7 +173,7 @@ private fun NodePingChip() {
 @Composable
 private fun DelaySparkline(history: List<Int>, color: androidx.compose.ui.graphics.Color) {
     androidx.compose.foundation.Canvas(
-        modifier = Modifier.size(width = 46.dp, height = 14.dp),
+        modifier = Modifier.size(width = 40.dp, height = 12.dp),
     ) {
         val maxV = (history.maxOrNull() ?: 1)
         val minV = (history.minOrNull() ?: 0)
@@ -188,15 +188,15 @@ private fun DelaySparkline(history: List<Int>, color: androidx.compose.ui.graphi
         }
         drawPath(
             path = path,
-            color = color,
+            color = color.copy(alpha = 0.55f),
             style = androidx.compose.ui.graphics.drawscope.Stroke(
-                width = 1.5.dp.toPx(),
+                width = 1.2.dp.toPx(),
                 cap = androidx.compose.ui.graphics.StrokeCap.Round,
             ),
         )
         val lastX = stepX * (history.size - 1)
         val lastV = history.last()
         val lastY = size.height - padY - ((lastV - minV).toFloat() / range) * (size.height - padY * 2)
-        drawCircle(color = color, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(lastX, lastY))
+        drawCircle(color = color.copy(alpha = 0.7f), radius = 1.6.dp.toPx(), center = androidx.compose.ui.geometry.Offset(lastX, lastY))
     }
 }
