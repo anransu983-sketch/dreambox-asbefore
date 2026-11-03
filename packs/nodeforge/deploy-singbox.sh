@@ -1,9 +1,11 @@
 #!/bin/bash
 # ============================================================
-# NodeForge 一键部署 · sing-box 引擎（无面板、无订阅）
+# NodeForge 一键部署 · sing-box 引擎（无面板）
 # 目标：全新机器 → sing-box + VLESS+Reality（主）/ Hysteria2 /
 #       Shadowsocks 2022 入站，systemd 托管；客户端链接与配置
-#       直接打印在部署终端里，复制即用，不生成任何网址。
+#       直接打印在部署终端里，复制即用。
+# v20 起另起一个极简订阅服务（sub-service.sh）：只认 128 位随机
+#       令牌路径、其余 404、不记日志，供梦盒远程导入/更新。
 # 输入（环境变量）：NF_NODE_PORT / NF_SSH_PORT / NF_PUBLIC_HOST /
 #       NF_NODE_NAME / NF_PROTOCOLS / NF_SUB_ID
 # 输出：进度行 "== ..."；成功最后打印 "NF_RESULT {json}"；
@@ -191,7 +193,7 @@ if ! systemctl is-active --quiet sing-box; then
 fi
 log "sing-box 服务已运行"
 
-# ── 6. 防火墙放行（面板无、订阅无，只放节点端口） ──────────
+# ── 6. 防火墙放行（只放节点端口；订阅端口在第 9 节单独放行） ──
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi 'status: active'; then
     ufw allow "$SSH_PORT"/tcp >/dev/null 2>&1 || true
     ufw allow "$NODE_PORT"/tcp >/dev/null 2>&1 || true
@@ -254,13 +256,23 @@ if has_proto ss; then SS_LINK="$(printf '%s' "$LINKS" | grep '^ss://' || true)";
 log "客户端配置（sing-box 无面板无订阅，下面就是全部配置，复制保存）"
 printf '%s\n' "$LINKS"
 
-# ── 9. 结果 ────────────────────────────────────────────────
+# ── 9. 订阅服务（令牌路径，供梦盒远程导入） ────────────────
+NF_SUB_URL=""; NF_SUB_PORT=0; NF_SUB_OK="fail"
+RUN_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$RUN_DIR/sub-service.sh" ]; then
+    . "$RUN_DIR/sub-service.sh"
+    nfsub_setup full "$RUN_DIR/template.yaml" "$UUID" "$REALITY_PUB" "$SHORT_ID" || true
+fi
+
+# ── 10. 结果 ───────────────────────────────────────────────
 python3 - "$UUID" "$REALITY_PUB" "$SHORT_ID" "$NODE_PORT" "$SNI" "$VLESS_LINK" \
     "$VERIFY" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" \
-    "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$SB_VER" <<'PYEOF'
+    "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$SB_VER" \
+    "$NF_SUB_URL" "$NF_SUB_PORT" "$NF_SUB_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, node_port, sni, vless, verify, protocols,
- ss_link, ss_port, ss_verify, hy2_link, hy2_port, hy2_ok, sb_ver) = sys.argv[1:16]
+ ss_link, ss_port, ss_verify, hy2_link, hy2_port, hy2_ok, sb_ver,
+ sub_url, sub_port, sub_ok) = sys.argv[1:19]
 print("NF_RESULT " + json.dumps({
     "engine": "singbox", "sbVersion": sb_ver,
     "uuid": uuid, "publicKey": pub, "shortId": sid,
@@ -269,6 +281,7 @@ print("NF_RESULT " + json.dumps({
     "protocols": protocols, "ssLink": ss_link, "ssPort": int(ss_port),
     "ssVerified": ss_verify == "ok", "hy2Link": hy2_link,
     "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
+    "subUrl": sub_url, "subPort": int(sub_port), "subOk": sub_ok == "ok",
 }))
 PYEOF
 log "部署完成"

@@ -46,7 +46,7 @@
 <body>
 <h1>🚀 一键节点</h1>
 <div class="sub">填服务器信息，一键装好多协议节点（全自动，约 1–3 分钟）。<br>
-两种引擎：s-ui 带面板和订阅链接；sing-box 无面板、无网址，配置直接在部署终端里打印。root 密码只在内存里用，不保存。</div>
+两种引擎：s-ui 带面板和订阅链接；sing-box 无面板，配置直接在部署终端里打印，并附随机令牌订阅供梦盒远程导入。root 密码只在内存里用，不保存。</div>
 
 <div class="card" id="formCard">
   <label style="margin-top:0">部署引擎</label>
@@ -263,7 +263,7 @@
     });
     $('engineHint').textContent = e === 'sui'
       ? '带网页面板和订阅链接；面板只绑本机回环、公网打不开，管理走 SSH 隧道。两个引擎的表单分开保存，各记各的。'
-      : '没有面板、没有订阅网址：sing-box 一个进程跑全部协议，配置和链接直接打印在部署终端里；这个模式没有流量/到期统计。两个引擎的表单分开保存，各记各的。';
+      : '没有面板：sing-box 一个进程跑全部协议，配置和链接直接打印在部署终端里，并附随机令牌订阅（错路径 404）供梦盒远程导入；这个模式没有流量/到期统计。两个引擎的表单分开保存，各记各的。';
     $('protoWarn').textContent = e === 'sui'
       ? '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。'
       : '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP），SS 用 +3（TCP/UDP），都由 sing-box 托管；安全组记得连同放行。';
@@ -451,14 +451,37 @@
     ['copySub', 'importSub', 'copyTunnel'].forEach(function (id) { $(id).classList.remove('hidden'); });
     if (r.engine === 'singbox') {
       var mh0 = maskHost(lastOpts.host);
+      var subRow = '';
+      if (r.subUrl) {
+        var tok = r.subUrl.split('/').pop();
+        var subDisp = r.subUrl.split(lastOpts.host).join(mh0).split(tok).join(tok.slice(0, 6) + '…');
+        subRow = '<b>订阅链接</b><br>' + subDisp + '<br>' +
+          '<span class="warn">订阅靠随机令牌路径保密（错路径一律 404），链接等于节点钥匙，别外发。</span><br>';
+      }
       $('resultKv').innerHTML =
-        '<b>引擎</b>：sing-box' + (r.sbVersion ? ' v' + r.sbVersion : '') + '（无面板、无订阅网址）<br>' +
+        '<b>引擎</b>：sing-box' + (r.sbVersion ? ' v' + r.sbVersion : '') + '（无面板）<br>' +
+        subRow +
         '<b>vless 链接</b><br>' + vless.split(lastOpts.host).join(mh0) +
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh0) : '') +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh0) : '') +
         '<br><span class="warn">完整配置已在上方部署终端里打印；下面这份 YAML 也可直接导入梦盒当配置用。</span>';
-      ['copySub', 'copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
-      $('yamlWarn').textContent = 'sing-box 模式没有订阅网址：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，Reality、Hy2、SS 勾了哪个都在里面，不用再去配置页手动选文件。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
+      ['copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
+      if (r.subUrl) {
+        $('copySub').classList.remove('hidden');
+        $('copySub').onclick = function () { copyText(r.subUrl, this); };
+        $('importSub').onclick = function () {
+          var btn = this;
+          callNative('importSubscription', { url: r.subUrl }).then(function () {
+            btn.textContent = '已打开导入 ✓';
+          }).catch(function (e) {
+            alert('打开导入失败：' + (e && e.message ? e.message : e));
+          });
+        };
+        $('yamlWarn').textContent = '点「导入到梦盒」走远程订阅导入（以后节点有变动，在梦盒里点更新即可）；下面这份 YAML 是同内容的本地备份，Reality、Hy2、SS 勾了哪个都在里面。页面上的地址已打码，按钮复制的仍是原文。';
+      } else {
+        $('copySub').classList.add('hidden');
+        $('yamlWarn').textContent = '订阅服务这次没起来，已退回本地导入：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，Reality、Hy2、SS 勾了哪个都在里面。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
+      }
       if (r.ssLink) { $('copySs').classList.remove('hidden'); $('copySs').onclick = function () { copyText(r.ssLink, this); }; }
       if (r.hy2Link) { $('copyHy2').classList.remove('hidden'); $('copyHy2').onclick = function () { copyText(r.hy2Link, this); }; }
       $('copyVless').onclick = function () { copyText(vless, this); };
@@ -475,24 +498,26 @@
             return res;
           });
         };
-        saveSbYaml().catch(function () {});
+        if (!r.subUrl) { saveSbYaml().catch(function () {}); }
         $('dlYaml').onclick = function () {
           var btn = this; btn.disabled = true;
           sbUri = '';
           saveSbYaml().then(function () { btn.disabled = false; }).catch(function () { btn.disabled = false; btn.textContent = '保存失败，改用「复制配置」'; });
         };
-        $('importSub').onclick = function () {
-          var btn = this;
-          var go = function () {
-            if (!sbUri) { alert('配置文件还没保存好，请稍等一下再点导入'); return; }
-            callNative('importLocalConfig', { uri: sbUri, name: lastOpts.nodeName || lastOpts.subId || 'node' }).then(function () {
-              btn.textContent = '已打开导入 ✓';
-            }).catch(function (e) {
-              alert('打开导入失败：' + (e && e.message ? e.message : e));
-            });
+        if (!r.subUrl) {
+          $('importSub').onclick = function () {
+            var btn = this;
+            var go = function () {
+              if (!sbUri) { alert('配置文件还没保存好，请稍等一下再点导入'); return; }
+              callNative('importLocalConfig', { uri: sbUri, name: lastOpts.nodeName || lastOpts.subId || 'node' }).then(function () {
+                btn.textContent = '已打开导入 ✓';
+              }).catch(function (e) {
+                alert('打开导入失败：' + (e && e.message ? e.message : e));
+              });
+            };
+            if (sbUri) { go(); } else { saveSbYaml().then(go).catch(function () { alert('配置文件保存失败，无法导入'); }); }
           };
-          if (sbUri) { go(); } else { saveSbYaml().then(go).catch(function () { alert('配置文件保存失败，无法导入'); }); }
-        };
+        }
       });
       $('resultCard').classList.remove('hidden');
       $('resultCard').scrollIntoView({ behavior: 'smooth' });
@@ -544,7 +569,18 @@
         alert('打开导入失败：' + (e && e.message ? e.message : e));
       });
     };
-    if (r.hy2Link) {
+    if (r.hy2SubUrl) {
+      $('importHy2').classList.remove('hidden');
+      $('importHy2').textContent = '📥 远程导入 Hy2 到梦盒';
+      $('importHy2').onclick = function () {
+        var btn = this;
+        callNative('importSubscription', { url: r.hy2SubUrl }).then(function () {
+          btn.textContent = '已打开导入 ✓';
+        }).catch(function (e) {
+          alert('打开导入失败：' + (e && e.message ? e.message : e));
+        });
+      };
+    } else if (r.hy2Link) {
       $('importHy2').classList.remove('hidden');
       $('importHy2').onclick = function () {
         var btn = this;

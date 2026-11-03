@@ -1073,17 +1073,30 @@ print("ok" if hit else "fail")
     fi
 fi
 
-# ── 10. 结果 ───────────────────────────────────────────────
+# ── 10. Hy2 订阅服务（令牌路径，供梦盒远程导入 Hy2） ──────
+# Hy2 是独立进程、进不了 s-ui 订阅；用共用订阅小服务单独发一份
+# Hy2-only YAML（随机令牌路径、错路径 404、不记日志）。
+HY2_SUB_URL=""; HY2_SUB_PORT=0; HY2_SUB_OK="fail"
+if has_proto hy2; then
+    RUN_DIR="$(cd "$(dirname "$0")" && pwd)"
+    if [ -f "$RUN_DIR/sub-service.sh" ]; then
+        . "$RUN_DIR/sub-service.sh"
+        nfsub_setup hy2only || true
+        HY2_SUB_URL="$NF_SUB_URL"; HY2_SUB_PORT="$NF_SUB_PORT"; HY2_SUB_OK="$NF_SUB_OK"
+    fi
+fi
+
+# ── 11. 结果 ───────────────────────────────────────────────
 SS_LINK=""
 if has_proto ss; then
     SS_LINK="$(printf '%s' "$SUB_NOW_TXT" | grep -o 'ss://[^[:space:]]*' | head -1 || true)"
 fi
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" <<'PYEOF'
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$HY2_SUB_URL" "$HY2_SUB_PORT" "$HY2_SUB_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
  sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info,
  sub_tpl_ok, name_ok, protocols, ss_link, ss_port, ss_verify,
- hy2_link, hy2_port, hy2_ok) = sys.argv[1:25]
+ hy2_link, hy2_port, hy2_ok, hy2_sub_url, hy2_sub_port, hy2_sub_ok) = sys.argv[1:28]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
@@ -1095,6 +1108,8 @@ print("NF_RESULT " + json.dumps({
     "protocols": protocols, "ssLink": ss_link, "ssPort": int(ss_port),
     "ssVerified": ss_verify == "ok", "hy2Link": hy2_link,
     "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
+    "hy2SubUrl": hy2_sub_url, "hy2SubPort": int(hy2_sub_port),
+    "hy2SubOk": hy2_sub_ok == "ok",
 }))
 PYEOF
 log "部署完成"

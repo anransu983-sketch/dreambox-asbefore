@@ -467,6 +467,18 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 execOrThrow(session, "cat > " + dir + "/sub-ext.yaml && chmod 600 " + dir + "/sub-ext.yaml",
                         Files.readAllBytes(extFile.toPath()), 15_000);
             }
+            // 订阅小服务脚本与模板（双引擎共用）：脚本在服务器上渲染 YAML 并起
+            // 令牌订阅服务；缺了只丢远程订阅、节点部署本身不受影响。
+            File subSvcFile = new File(appContext.getFilesDir(), "packs/nodeforge/sub-service.sh");
+            if (subSvcFile.isFile()) {
+                execOrThrow(session, "cat > " + dir + "/sub-service.sh && chmod 700 " + dir + "/sub-service.sh",
+                        Files.readAllBytes(subSvcFile.toPath()), 15_000);
+            }
+            File tplFile = new File(appContext.getFilesDir(), "packs/nodeforge/template.yaml");
+            if (tplFile.isFile()) {
+                execOrThrow(session, "cat > " + dir + "/template.yaml && chmod 600 " + dir + "/template.yaml",
+                        Files.readAllBytes(tplFile.toPath()), 15_000);
+            }
             stage(st, "投递部署参数 …");
             execOrThrow(session, "cat > " + dir + "/params.env && chmod 600 " + dir + "/params.env",
                     params.getBytes(StandardCharsets.UTF_8), 15_000);
