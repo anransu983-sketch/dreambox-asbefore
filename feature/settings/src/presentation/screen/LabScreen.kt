@@ -53,6 +53,7 @@ import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.icon.FlyCat
 import com.suanran.dreambox.presentation.icon.flycat.Search
 import com.suanran.dreambox.presentation.icon.flycat.Settings2
+import com.suanran.dreambox.presentation.icon.flycat.UserKey
 import com.suanran.dreambox.presentation.navigation.Navigator
 import com.suanran.dreambox.presentation.navigation.Route
 import com.suanran.dreambox.presentation.theme.AppTheme
@@ -199,7 +200,7 @@ fun LabScreen(navigator: Navigator) {
                             .padding(horizontal = spacing.space16, vertical = spacing.space14),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        LabEntryIcon(icon = androidx.compose.material.icons.Icons.Filled.VpnKey, key = "agekey")
+                        LabEntryIcon(icon = FlyCat.UserKey, key = "agekey")
                         Spacer(modifier = Modifier.width(spacing.space12))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
