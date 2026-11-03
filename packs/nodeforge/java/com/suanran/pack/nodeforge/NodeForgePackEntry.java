@@ -11,16 +11,31 @@ import android.provider.MediaStore;
 
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
 import com.suanran.dreambox.core.pack.PackBridgeDispatcher;
 import com.suanran.dreambox.core.pack.PackCallback;
 
 import org.json.JSONObject;
 
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
+
+import java.security.KeyStore;
+import java.util.UUID;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -61,6 +76,9 @@ import kotlin.jvm.functions.Function3;
  *    配置， sing-box 建的节点也能一键导入梦盒。
  * 7) v20 表单按引擎分开保存（formsJson：sui / sing-box 各一份，部署时
  *    只更新所属引擎那份），切引擎不再把另一边填的备注名/端口带过来。
+ * 8) v22 新增部署钥匙：插件自带一把 SSH 钥匙（AndroidKeyStore AES-GCM
+ *    加密落盘，可生成、也可导入现成私钥），连接与轮询快照都优先用钥、
+ *    密码兜底，密码已关的机器也能部署；表单 SSH 公钥改为多行全装。
  */
 public class NodeForgePackEntry implements PackBridgeDispatcher {
 
@@ -232,6 +250,41 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 case "importLocalConfig":
                     importLocalConfig(new JSONObject(optionsJson == null ? "{}" : optionsJson), callback);
                     return true;
+                case "keyState":
+                    try {
+                        callback.onResult(true, keyStateJson().toString(), null);
+                    } catch (Exception e) {
+                        callback.onResult(false, null, "读取部署钥匙失败：" + e.getMessage());
+                    }
+                    return true;
+                case "genDeployKey":
+                    executor.execute(() -> {
+                        try {
+                            callback.onResult(true, doGenDeployKey().toString(), null);
+                        } catch (Exception e) {
+                            callback.onResult(false, null, "生成部署钥匙失败：" + e.getMessage());
+                        }
+                    });
+                    return true;
+                case "importDeployKey":
+                    executor.execute(() -> {
+                        try {
+                            callback.onResult(true, doImportDeployKey(
+                                    new JSONObject(optionsJson == null ? "{}" : optionsJson)).toString(), null);
+                        } catch (Exception e) {
+                            callback.onResult(false, null, "导入私钥失败：" + e.getMessage());
+                        }
+                    });
+                    return true;
+                case "deleteDeployKey":
+                    executor.execute(() -> {
+                        try {
+                            callback.onResult(true, doDeleteDeployKey().toString(), null);
+                        } catch (Exception e) {
+                            callback.onResult(false, null, "删除部署钥匙失败：" + e.getMessage());
+                        }
+                    });
+                    return true;
                 default:
                     return false;
             }
@@ -377,12 +430,18 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.sshPort = opts.optInt("sshPort", 22);
             st.sshUser = opts.optString("sshUser", "root");
             st.sshPassword = opts.getString("sshPassword");
-            String pk = opts.optString("sshPubKey", "").trim();
-            int nl = pk.indexOf('\n');
-            if (nl >= 0) {
-                pk = pk.substring(0, nl).trim();
+            String pkRaw = opts.optString("sshPubKey", "").replace("\r", "");
+            StringBuilder pkb = new StringBuilder();
+            for (String line : pkRaw.split("\n")) {
+                String t = line.trim();
+                if (!t.isEmpty()) {
+                    if (pkb.length() > 0) {
+                        pkb.append('\n');
+                    }
+                    pkb.append(t);
+                }
             }
-            st.sshPubKey = pk.replace("\r", "");
+            st.sshPubKey = pkb.toString();
             st.closeSshPassword = opts.optBoolean("closeSshPw", true);
             st.nodeName = opts.optString("nodeName", "");
             st.nodePort = opts.optInt("nodePort", 443);
@@ -393,6 +452,12 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.expireDate = opts.optString("expireDate", "");
             st.protocols = opts.optString("protocols", "reality");
             st.engine = opts.optString("engine", "sui");
+            if (st.sshPassword.isEmpty()
+                    && loadKeyJson().optString("privateKey", "").trim().isEmpty()) {
+                callback.onResult(false, null,
+                        "root 密码没填、本插件也没有部署钥匙：填密码，或先在「部署钥匙」里生成/导入一把再部署");
+                return;
+            }
             st.launchedAt = System.currentTimeMillis();
             // 同一台机器沿用已记录的指纹做 TOFU 比对；换机器则重新记录。
             if (cur.host.equals(st.host) && cur.sshPort == st.sshPort) {
@@ -714,11 +779,166 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
 
     // ── SSH 基础 ───────────────────────────────────────────────
 
+    // ── 部署钥匙：插件自带 SSH 钥匙，连接优先用钥、密码兜底 ──────
+    // 钥匙只存本插件的加密存储（AndroidKeyStore AES-256-GCM，与 sshtty 同款）；
+    // 生成的钥无口令，导入的钥可带口令（口令同存加密区）；state.json 不落钥。
+
+    private static final String KEY_ALIAS = "nodeforge.store.v1";
+
+    private File keyStoreFile() {
+        File dir = new File(appContext.getFilesDir(), "nodeforge-data");
+        //noinspection ResultOfMethodCallIgnored
+        dir.mkdirs();
+        return new File(dir, "key.json.enc");
+    }
+
+    private SecretKey nfStoreKey() throws Exception {
+        KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
+        ks.load(null);
+        KeyStore.Entry e = ks.getEntry(KEY_ALIAS, null);
+        if (e instanceof KeyStore.SecretKeyEntry) {
+            return ((KeyStore.SecretKeyEntry) e).getSecretKey();
+        }
+        KeyGenerator kg = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        kg.init(new KeyGenParameterSpec.Builder(KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build());
+        return kg.generateKey();
+    }
+
+    private synchronized JSONObject loadKeyJson() {
+        try {
+            File f = keyStoreFile();
+            if (!f.isFile()) {
+                return new JSONObject();
+            }
+            byte[] all;
+            try (InputStream in = new FileInputStream(f)) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+                all = bos.toByteArray();
+            }
+            JSONObject env = new JSONObject(new String(all, StandardCharsets.UTF_8));
+            byte[] iv = Base64.decode(env.getString("iv"), Base64.NO_WRAP);
+            byte[] ct = Base64.decode(env.getString("ct"), Base64.NO_WRAP);
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(Cipher.DECRYPT_MODE, nfStoreKey(), new GCMParameterSpec(128, iv));
+            return new JSONObject(new String(c.doFinal(ct), StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
+    private synchronized void saveKeyJson(JSONObject k) throws Exception {
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, nfStoreKey());
+        byte[] ct = c.doFinal(k.toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject env = new JSONObject()
+                .put("iv", Base64.encodeToString(c.getIV(), Base64.NO_WRAP))
+                .put("ct", Base64.encodeToString(ct, Base64.NO_WRAP));
+        try (OutputStream out = new FileOutputStream(keyStoreFile())) {
+            out.write(env.toString().getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private static String publicKeyLine(KeyPair kp) {
+        byte[] blob = kp.getPublicKeyBlob();
+        int n = ((blob[0] & 0xff) << 24) | ((blob[1] & 0xff) << 16)
+                | ((blob[2] & 0xff) << 8) | (blob[3] & 0xff);
+        String type = new String(blob, 4, n, StandardCharsets.UTF_8);
+        return type + " " + Base64.encodeToString(blob, Base64.NO_WRAP) + " nodeforge";
+    }
+
+    private String publicKeyOf(String pem, String pass) throws Exception {
+        JSch j = new JSch();
+        KeyPair kp = null;
+        try {
+            kp = KeyPair.load(j, pem.getBytes(StandardCharsets.UTF_8), null);
+            if (kp == null) throw new Exception("私钥无法解析");
+            if (kp.isEncrypted()) {
+                if (pass == null || pass.isEmpty()
+                        || !kp.decrypt(pass.getBytes(StandardCharsets.UTF_8))) {
+                    throw new Exception("私钥口令不正确或未填写");
+                }
+            }
+            return publicKeyLine(kp);
+        } finally {
+            if (kp != null) kp.dispose();
+        }
+    }
+
+    private JSONObject keyStateJson() throws Exception {
+        JSONObject k = loadKeyJson();
+        String pem = k.optString("privateKey", "");
+        JSONObject r = new JSONObject().put("hasKey", !pem.trim().isEmpty());
+        if (!pem.trim().isEmpty()) {
+            r.put("publicKey", publicKeyOf(pem, k.optString("keyPassphrase", "")));
+        }
+        return r;
+    }
+
+    private JSONObject doGenDeployKey() throws Exception {
+        JSch j = new JSch();
+        KeyPair kp = null;
+        try {
+            try {
+                kp = KeyPair.genKeyPair(j, KeyPair.ED25519);
+            } catch (Exception e) {
+                kp = KeyPair.genKeyPair(j, KeyPair.RSA, 2048);
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            kp.writePrivateKey(baos);
+            saveKeyJson(new JSONObject()
+                    .put("privateKey", baos.toString("UTF-8"))
+                    .put("keyPassphrase", ""));
+            return keyStateJson();
+        } finally {
+            if (kp != null) kp.dispose();
+        }
+    }
+
+    private JSONObject doImportDeployKey(JSONObject opts) throws Exception {
+        String pem = opts.optString("privateKey", "").trim();
+        String pass = opts.optString("keyPassphrase", "");
+        if (pem.isEmpty()) {
+            throw new Exception("先粘贴私钥文本");
+        }
+        // 先验证能解析（口令不对当场报），再落盘。
+        publicKeyOf(pem, pass);
+        saveKeyJson(new JSONObject().put("privateKey", pem).put("keyPassphrase", pass));
+        return keyStateJson();
+    }
+
+    private JSONObject doDeleteDeployKey() throws Exception {
+        saveKeyJson(new JSONObject());
+        return keyStateJson();
+    }
+
+    /** 有部署钥匙先挂 identity（JSch 先试 publickey 后 password），密码兜底。 */
+    private void applyAuth(JSch jsch, Session session, St st) throws Exception {
+        JSONObject k = loadKeyJson();
+        String pem = k.optString("privateKey", "");
+        if (!pem.trim().isEmpty()) {
+            String pass = k.optString("keyPassphrase", "");
+            byte[] passBytes = pass.isEmpty() ? null : pass.getBytes(StandardCharsets.UTF_8);
+            jsch.addIdentity("nodeforge-" + UUID.randomUUID().toString(),
+                    pem.getBytes(StandardCharsets.UTF_8), null, passBytes);
+        }
+        if (st.sshPassword != null && !st.sshPassword.isEmpty()) {
+            session.setPassword(st.sshPassword);
+        }
+    }
+
     /** 连接并做 TOFU 指纹比对：state 里有记录且不一致则停手；首次则记录（由调用方落盘时机决定）。 */
     private Session openSessionChecked(St st) throws Exception {
         JSch jsch = new JSch();
         Session session = jsch.getSession(st.sshUser, st.host, st.sshPort);
-        session.setPassword(st.sshPassword);
+        applyAuth(jsch, session, st);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setTimeout(20_000);
         session.setServerAliveInterval(10_000);

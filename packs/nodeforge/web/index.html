@@ -63,10 +63,24 @@
   </div>
   <label>root 密码（SSH 登录密码）</label>
   <div class="eye-wrap"><input id="sshPassword" type="password" placeholder="服务器的 root 密码" autocomplete="off"><button type="button" class="eye" data-eye="sshPassword">显示</button></div>
-  <label>SSH 公钥（选填，装完可用私钥登录）</label>
-  <textarea id="sshPubKey" style="height:64px" placeholder="粘贴一整行：ssh-rsa AAAA… 或 ssh-ed25519 AAAA…（sshtty 里点『查看公钥』复制）" autocomplete="off"></textarea>
+  <label>部署钥匙（本插件连接服务器用，选填）</label>
+  <div class="warn" id="keyState" style="margin-top:0">读取中…</div>
+  <div>
+    <button type="button" class="mini" id="genKeyBtn">生成部署钥匙</button>
+    <button type="button" class="mini" id="copyKeyBtn">复制本插件公钥</button>
+    <button type="button" class="mini" id="importKeyBtn">导入私钥</button>
+    <button type="button" class="mini" id="delKeyBtn">删除钥匙</button>
+  </div>
+  <div id="importKeyBox" class="hidden">
+    <textarea id="importKeyText" style="height:90px" placeholder="粘贴完整私钥（-----BEGIN ... PRIVATE KEY-----）。也可以粘 sshtty 里那把私钥：粘了它，本插件就以 sshtty 的身份连接，目标机不用再加公钥" autocomplete="off"></textarea>
+    <div class="eye-wrap"><input id="importKeyPass" type="password" placeholder="私钥口令（没有就留空）" autocomplete="off"><button type="button" class="eye" data-eye="importKeyPass">显示</button></div>
+    <button type="button" class="mini" id="importKeySave">保存这把私钥</button>
+  </div>
+  <div class="warn">目标机已关掉密码登录时（比如英国机），靠这把钥匙才能连上部署：先把「本插件公钥」加进目标机的 authorized_keys，或者导入 sshtty 的私钥，二选一。钥匙在本机加密保存，不上传。</div>
+  <label>SSH 公钥（选填，装到目标机，可多行）</label>
+  <textarea id="sshPubKey" style="height:64px" placeholder="一行一把、可粘多行：把 sshtty 的公钥和上面「本插件公钥」都粘上，装完两边都能登" autocomplete="off"></textarea>
   <label style="margin:0"><input type="checkbox" id="closeSshPw" checked style="width:auto"> 写入公钥后关闭 SSH 密码登录</label>
-  <div class="warn">不填公钥，这两项都不生效。关密码后只能用私钥进这台机——请确认私钥在你手里（sshtty 生成的钥就在插件里），否则只能去云厂商控制台救机。</div>
+  <div class="warn">不填公钥，这两项都不生效。关密码后只能用私钥进这台机——请确认私钥在你手里（sshtty 的钥在 sshtty 里、本插件的钥在上面「部署钥匙」里），否则只能去云厂商控制台救机。</div>
   <label>节点备注名（显示在链接和配置里）</label>
   <input id="nodeName" placeholder="点下面旗帜选国家，再接名字" autocomplete="off">
   <div class="flagrow" id="flagRow"></div>
@@ -454,7 +468,7 @@
 
   function sshRow(r) {
     if (!r.sshKeyOk && !r.sshPwClosed) return '';
-    return (r.sshKeyOk ? '<br><b>SSH 公钥</b>：已写入，可用 sshtty 私钥连接' : '') +
+    return (r.sshKeyOk ? '<br><b>SSH 公钥</b>：已写入' + (r.sshKeys ? '（' + r.sshKeys + ' 把）' : '') + '，可用私钥连接' : '') +
       (r.sshPwClosed ? '<br><b>SSH 密码登录</b>：已关闭' : '');
   }
 
@@ -683,6 +697,47 @@
       $('log').textContent = '启动失败：' + e.message;
     });
   });
+
+  // ── 部署钥匙：状态 / 生成 / 导入 / 删除 ──
+  var deployPubKey = '';
+  function refreshKeyState() {
+    callNative('keyState', {}).then(function (r) {
+      deployPubKey = r.publicKey || '';
+      $('keyState').textContent = r.hasKey
+        ? '已有一把部署钥匙：连接时优先用它，密码兜底。'
+        : '还没有部署钥匙：目前只能用 root 密码连接（密码已关的机器连不上）。';
+      $('copyKeyBtn').disabled = !r.hasKey;
+      $('delKeyBtn').disabled = !r.hasKey;
+    }).catch(function (e) {
+      $('keyState').textContent = '部署钥匙读取失败：' + e.message;
+    });
+  }
+  $('genKeyBtn').addEventListener('click', function () {
+    $('keyState').textContent = '正在生成…（若之前有钥会被换掉，旧公钥进过的机器要重新加新公钥）';
+    callNative('genDeployKey', {}).then(function () { refreshKeyState(); })
+      .catch(function (e) { $('keyState').textContent = '生成失败：' + e.message; });
+  });
+  $('copyKeyBtn').addEventListener('click', function () {
+    if (deployPubKey) copyText(deployPubKey, $('copyKeyBtn'));
+  });
+  $('importKeyBtn').addEventListener('click', function () {
+    $('importKeyBox').classList.toggle('hidden');
+  });
+  $('importKeySave').addEventListener('click', function () {
+    callNative('importDeployKey', {
+      privateKey: $('importKeyText').value,
+      keyPassphrase: $('importKeyPass').value
+    }).then(function () {
+      $('importKeyText').value = ''; $('importKeyPass').value = '';
+      $('importKeyBox').classList.add('hidden');
+      refreshKeyState();
+    }).catch(function (e) { $('keyState').textContent = '导入失败：' + e.message; });
+  });
+  $('delKeyBtn').addEventListener('click', function () {
+    callNative('deleteDeployKey', {}).then(function () { refreshKeyState(); })
+      .catch(function (e) { $('keyState').textContent = '删除失败：' + e.message; });
+  });
+  refreshKeyState();
 
   // 进页面时若已有部署在跑/刚跑完（切出去又回来），接上状态
   callNative('deployState', {}).then(function (st) {

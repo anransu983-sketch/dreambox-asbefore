@@ -264,23 +264,34 @@ if [ -f "$RUN_DIR/sub-service.sh" ]; then
     nfsub_setup full "$RUN_DIR/template.yaml" "$UUID" "$REALITY_PUB" "$SHORT_ID" || true
 fi
 
-# ── 10. SSH 公钥 / 关密码登录（可选，表单填了公钥才执行） ──
-SSH_KEY_OK="fail"; SSH_PW_CLOSED="fail"
+# ── 10. SSH 公钥 / 关密码登录（可选，表单填了公钥才执行；可多行，一行一把全装） ──
+SSH_KEY_OK="fail"; SSH_PW_CLOSED="fail"; SSH_KEY_CNT=0
 if [ -n "${NF_SSH_PUBKEY:-}" ]; then
-    KEY_LINE="$(printf '%s' "$NF_SSH_PUBKEY" | tr -d '\r' | head -1)"
+    SSH_HOME_DIR="$(getent passwd "$(id -un)" | cut -d: -f6)"
+    [ -n "$SSH_HOME_DIR" ] || SSH_HOME_DIR="$HOME"
+    mkdir -p "$SSH_HOME_DIR/.ssh" && chmod 700 "$SSH_HOME_DIR/.ssh"
+    touch "$SSH_HOME_DIR/.ssh/authorized_keys"
     KEY_TMP="$(mktemp)"
-    printf '%s\n' "$KEY_LINE" > "$KEY_TMP"
-    if ssh-keygen -l -f "$KEY_TMP" >/dev/null 2>&1; then
-        SSH_HOME_DIR="$(getent passwd "$(id -un)" | cut -d: -f6)"
-        [ -n "$SSH_HOME_DIR" ] || SSH_HOME_DIR="$HOME"
-        mkdir -p "$SSH_HOME_DIR/.ssh" && chmod 700 "$SSH_HOME_DIR/.ssh"
-        touch "$SSH_HOME_DIR/.ssh/authorized_keys"
-        if grep -qxF "$KEY_LINE" "$SSH_HOME_DIR/.ssh/authorized_keys"; then
-            log "SSH 公钥已在 authorized_keys 中（重复部署，跳过写入）"
+    while IFS= read -r KEY_LINE; do
+        KEY_LINE="$(printf '%s' "$KEY_LINE" | tr -d '\r')"
+        [ -n "$KEY_LINE" ] || continue
+        printf '%s\n' "$KEY_LINE" > "$KEY_TMP"
+        if ssh-keygen -l -f "$KEY_TMP" >/dev/null 2>&1; then
+            if grep -qxF "$KEY_LINE" "$SSH_HOME_DIR/.ssh/authorized_keys"; then
+                log "SSH 公钥已在 authorized_keys 中（跳过重复）"
+            else
+                printf '%s\n' "$KEY_LINE" >> "$SSH_HOME_DIR/.ssh/authorized_keys"
+                log "SSH 公钥已写入 authorized_keys"
+            fi
+            SSH_KEY_CNT=$((SSH_KEY_CNT + 1))
         else
-            printf '%s\n' "$KEY_LINE" >> "$SSH_HOME_DIR/.ssh/authorized_keys"
-            log "SSH 公钥已写入 authorized_keys"
+            log "警告：有一行公钥格式不对，已跳过该行"
         fi
+    done <<NFKEYEOF
+$(printf '%s' "$NF_SSH_PUBKEY" | tr -d '\r')
+NFKEYEOF
+    rm -f "$KEY_TMP"
+    if [ "$SSH_KEY_CNT" -gt 0 ]; then
         chmod 600 "$SSH_HOME_DIR/.ssh/authorized_keys"
         SSH_KEY_OK="ok"
         if [ "${NF_CLOSE_SSH_PASSWORD:-0}" = "1" ]; then
@@ -295,20 +306,19 @@ if [ -n "${NF_SSH_PUBKEY:-}" ]; then
             fi
         fi
     else
-        log "警告：填入的 SSH 公钥格式不对（ssh-keygen 无法解析），已跳过写钥与关密码"
+        log "警告：填入的公钥没有一行能解析，已跳过写钥与关密码"
     fi
-    rm -f "$KEY_TMP"
 fi
 
 # ── 11. 结果 ───────────────────────────────────────────────
 python3 - "$UUID" "$REALITY_PUB" "$SHORT_ID" "$NODE_PORT" "$SNI" "$VLESS_LINK" \
     "$VERIFY" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" \
     "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$SB_VER" \
-    "$NF_SUB_URL" "$NF_SUB_PORT" "$NF_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" <<'PYEOF'
+    "$NF_SUB_URL" "$NF_SUB_PORT" "$NF_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" "$SSH_KEY_CNT" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, node_port, sni, vless, verify, protocols,
  ss_link, ss_port, ss_verify, hy2_link, hy2_port, hy2_ok, sb_ver,
- sub_url, sub_port, sub_ok, ssh_key_ok, ssh_pw_closed) = sys.argv[1:21]
+ sub_url, sub_port, sub_ok, ssh_key_ok, ssh_pw_closed, ssh_key_cnt) = sys.argv[1:22]
 print("NF_RESULT " + json.dumps({
     "engine": "singbox", "sbVersion": sb_ver,
     "uuid": uuid, "publicKey": pub, "shortId": sid,
@@ -319,6 +329,7 @@ print("NF_RESULT " + json.dumps({
     "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
     "subUrl": sub_url, "subPort": int(sub_port), "subOk": sub_ok == "ok",
     "sshKeyOk": ssh_key_ok == "ok", "sshPwClosed": ssh_pw_closed == "ok",
+    "sshKeys": int(ssh_key_cnt),
 }))
 PYEOF
 log "部署完成"
