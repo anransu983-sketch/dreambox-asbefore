@@ -40,7 +40,7 @@ object DelayHistory {
                     val list = mutableListOf<Int>()
                     for (i in 0 until arr.length()) {
                         val v = arr.optInt(i, 0)
-                        if (v > 0) list.add(v)
+                        if (v in 1..5000) list.add(v)
                     }
                     if (list.isNotEmpty()) map[k] = list
                 }
@@ -52,7 +52,8 @@ object DelayHistory {
 
     @Synchronized
     fun record(context: Context, node: String, delayMs: Int) {
-        if (delayMs <= 0) return
+        // 超时（<=0）与内核失败哨兵 65535（>5000）都不记，避免把曲线拉变形。
+        if (delayMs <= 0 || delayMs > 5000) return
         val map = load(context)
         val list = map.getOrPut(node) { mutableListOf() }
         if (list.lastOrNull() == delayMs) return

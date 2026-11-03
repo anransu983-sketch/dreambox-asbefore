@@ -225,9 +225,11 @@ internal fun NodeGroupCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                // 组内最快：已测速节点里最小的正延迟，一眼看出这个组还有没有救。
+                // 组内最快：已测速节点里最小的有效延迟，一眼看出这个组还有没有救。
+                // 65535 是内核测速失败的哨兵值（uint16 最大），>5000 一律不算有效延迟，
+                // 否则节点明明能用却显示「最快 65535ms」。口径与 nodeLatencyLabel 一致。
                 val fastestDelay = remember(group.proxies) {
-                    group.proxies.mapNotNull { it.delay }.filter { it > 0 }.minOrNull()
+                    group.proxies.mapNotNull { it.delay }.filter { it in 1..5000 }.minOrNull()
                 }
                 if (fastestDelay != null && group.proxies.size > 1) {
                     Text(
