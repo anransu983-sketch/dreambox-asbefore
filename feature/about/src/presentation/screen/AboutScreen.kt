@@ -26,6 +26,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -312,8 +314,14 @@ private fun UpdateCandidateDialog(candidate: UpdateCandidate?, downloadProgressF
             if (dp.isDownloading) {
                 UpdateDownloadContent(progress = dp, onCancelDownload = onCancelDownload)
             } else {
-                // Fixed header
-                UpdateDialogMessage(message)
+                // 正文可滚动（1.53 修：长更新说明以前把按钮挤出弹窗、看着像卡死）
+                Box(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    UpdateDialogMessage(message)
+                }
                 // Fixed buttons
                 Spacer(modifier = Modifier.height(UiDp.dp12))
                 DialogButtonRow(
