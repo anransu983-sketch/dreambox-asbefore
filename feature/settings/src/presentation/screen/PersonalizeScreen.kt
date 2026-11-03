@@ -8,6 +8,8 @@ import com.suanran.dreambox.presentation.icon.flycat.ScrollText
 import com.suanran.dreambox.presentation.icon.flycat.Settings2
 import com.suanran.dreambox.presentation.icon.flycat.WifiCog
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DragHandle
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.Switch
 import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
