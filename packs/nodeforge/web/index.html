@@ -103,6 +103,7 @@
     <button class="mini hidden" id="copyHy2">复制 Hy2 链接</button>
     <button class="mini" id="copySub">复制订阅链接</button>
     <button class="mini" id="importSub">📥 导入到梦盒</button>
+    <button class="mini hidden" id="importHy2">📥 导入 Hy2 到梦盒</button>
     <button class="mini" id="copyTunnel">复制面板隧道命令</button>
   </div>
   <label>梦盒配置（按 4837 v2 模板：防 DNS 泄露 / 防 WebRTC）</label>
@@ -349,6 +350,91 @@
     return '***';
   }
 
+  function parseHy2Link(link) {
+    try {
+      var u = new URL(link);
+      return {
+        password: decodeURIComponent(u.username || ''),
+        port: parseInt(u.port, 10) || 0,
+        sni: u.searchParams.get('sni') || '',
+        insecure: u.searchParams.get('insecure') !== '0'
+      };
+    } catch (e) { return null; }
+  }
+
+  function parseSsLink(link) {
+    try {
+      var u = new URL(link);
+      var raw = atob(decodeURIComponent(u.username || ''));
+      var i = raw.indexOf(':');
+      if (i < 0) return null;
+      return { cipher: raw.slice(0, i), password: raw.slice(i + 1), port: parseInt(u.port, 10) || 0 };
+    } catch (e) { return null; }
+  }
+
+  function yamlQ(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
+
+  // 结果里带了 Hy2/SS 链接时，现算出对应的 mihomo 节点条目，
+  // 让模板 YAML 一次带齐全部已选协议（不止 Reality 主节点）。
+  function extraProxies(r) {
+    var list = [];
+    var nodeName = lastOpts.nodeName || r.subId || 'node';
+    if (r.hy2Link) {
+      var h = parseHy2Link(r.hy2Link);
+      if (h && h.port) {
+        list.push({ name: nodeName + ' Hy2', lines:
+          '- name: ' + nodeName + ' Hy2\n' +
+          '  type: hysteria2\n' +
+          '  server: ' + lastOpts.host + '\n' +
+          '  port: ' + h.port + '\n' +
+          '  password: ' + yamlQ(h.password) + '\n' +
+          (h.sni ? '  sni: ' + h.sni + '\n' : '') +
+          '  skip-cert-verify: ' + (h.insecure ? 'true' : 'false') });
+      }
+    }
+    if (r.ssLink) {
+      var s = parseSsLink(r.ssLink);
+      if (s && s.port) {
+        list.push({ name: nodeName + ' SS', lines:
+          '- name: ' + nodeName + ' SS\n' +
+          '  type: ss\n' +
+          '  server: ' + lastOpts.host + '\n' +
+          '  port: ' + s.port + '\n' +
+          '  cipher: ' + s.cipher + '\n' +
+          '  password: ' + yamlQ(s.password) + '\n' +
+          '  udp: true' });
+      }
+    }
+    return list;
+  }
+
+  function buildYaml(tpl, r) {
+    var nodeName = lastOpts.nodeName || r.subId || 'node';
+    var yaml = tpl
+      .split('{{NODE_NAME}}').join(nodeName)
+      .split('{{SERVER}}').join(lastOpts.host)
+      .split('{{PORT}}').join(String(r.nodePort))
+      .split('{{UUID}}').join(r.uuid)
+      .split('{{PUBLIC_KEY}}').join(r.publicKey)
+      .split('{{SHORT_ID}}').join(r.shortId);
+    var extras = extraProxies(r);
+    if (extras.length) {
+      var block = extras.map(function (x) { return x.lines; }).join('\n');
+      yaml = yaml.replace('\nproxy-groups:', '\n' + block + '\nproxy-groups:');
+      var names = extras.map(function (x) { return x.name; });
+      var addTo = function (anchor) {
+        var idx = yaml.indexOf(anchor);
+        if (idx >= 0) {
+          var ins = names.map(function (n) { return '\n  - ' + n; }).join('');
+          yaml = yaml.slice(0, idx + anchor.length) + ins + yaml.slice(idx + anchor.length);
+        }
+      };
+      addTo('- Auto\n  - ' + nodeName);
+      addTo('  tolerance: 50\n  proxies:\n  - ' + nodeName);
+    }
+    return yaml;
+  }
+
   function buildVless(r) {
     if (r.vlessLink) return r.vlessLink;
     var name = encodeURIComponent(lastOpts.nodeName || r.subId);
@@ -360,6 +446,7 @@
 
   function showResult(r) {
     lastResult = r;
+    $('importHy2').classList.add('hidden');
     var vless = buildVless(r);
     ['copySub', 'importSub', 'copyTunnel'].forEach(function (id) { $(id).classList.remove('hidden'); });
     if (r.engine === 'singbox') {
@@ -371,18 +458,12 @@
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh0) : '') +
         '<br><span class="warn">完整配置已在上方部署终端里打印；下面这份 YAML 也可直接导入梦盒当配置用。</span>';
       ['copySub', 'copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
-      $('yamlWarn').textContent = 'sing-box 模式没有订阅网址：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，不用再去配置页手动选文件。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
+      $('yamlWarn').textContent = 'sing-box 模式没有订阅网址：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，Reality、Hy2、SS 勾了哪个都在里面，不用再去配置页手动选文件。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
       if (r.ssLink) { $('copySs').classList.remove('hidden'); $('copySs').onclick = function () { copyText(r.ssLink, this); }; }
       if (r.hy2Link) { $('copyHy2').classList.remove('hidden'); $('copyHy2').onclick = function () { copyText(r.hy2Link, this); }; }
       $('copyVless').onclick = function () { copyText(vless, this); };
       fetch('template.yaml').then(function (res) { return res.text(); }).then(function (tpl) {
-        var yaml = tpl
-          .split('{{NODE_NAME}}').join(lastOpts.nodeName || r.subId || 'node')
-          .split('{{SERVER}}').join(lastOpts.host)
-          .split('{{PORT}}').join(String(r.nodePort))
-          .split('{{UUID}}').join(r.uuid)
-          .split('{{PUBLIC_KEY}}').join(r.publicKey)
-          .split('{{SHORT_ID}}').join(r.shortId);
+        var yaml = buildYaml(tpl, r);
         $('yaml').value = yaml;
         $('copyYaml').onclick = function () { copyText(yaml, this); };
         var sbUri = '';
@@ -441,7 +522,7 @@
       pl.innerHTML = '<b>协议</b>：' + r.protocols +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh) : '') +
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh) +
-          '<br><span class="warn">Hy2 是独立服务、不在 s-ui 订阅里：在梦盒「配置」页从剪贴板导入这条链接即可。</span>' : '');
+          '<br><span class="warn">Hy2 是独立服务、不在 s-ui 订阅里：点下方「导入 Hy2 到梦盒」单独把它建成本地配置即可。</span>' : '');
       $('resultKv').appendChild(document.createElement('br'));
       $('resultKv').appendChild(pl);
     }
@@ -463,15 +544,28 @@
         alert('打开导入失败：' + (e && e.message ? e.message : e));
       });
     };
+    if (r.hy2Link) {
+      $('importHy2').classList.remove('hidden');
+      $('importHy2').onclick = function () {
+        var btn = this;
+        var extras = extraProxies(r).filter(function (x) { return x.name.slice(-3) === 'Hy2'; });
+        if (!extras.length) { alert('Hy2 链接解析失败，改用「复制 Hy2 链接」手动导入'); return; }
+        var hy2Yaml = 'mixed-port: 7890\nmode: rule\nlog-level: info\nproxies:\n' + extras[0].lines +
+          '\nproxy-groups:\n- name: Proxy\n  type: select\n  proxies:\n  - ' + extras[0].name +
+          '\nrules:\n- MATCH,Proxy\n';
+        callNative('saveTextFile', { name: (r.subId || 'node') + '-hy2-dreambox.yaml', text: hy2Yaml }).then(function (res) {
+          if (!res.uri) { throw new Error('配置文件保存失败'); }
+          return callNative('importLocalConfig', { uri: res.uri, name: extras[0].name });
+        }).then(function () {
+          btn.textContent = '已打开导入 ✓';
+        }).catch(function (e) {
+          alert('导入 Hy2 失败：' + (e && e.message ? e.message : e));
+        });
+      };
+    }
     $('copyTunnel').onclick = function () { copyText(tunnel, this); };
     fetch('template.yaml').then(function (res) { return res.text(); }).then(function (tpl) {
-      var yaml = tpl
-        .split('{{NODE_NAME}}').join(lastOpts.nodeName || r.subId)
-        .split('{{SERVER}}').join(lastOpts.host)
-        .split('{{PORT}}').join(String(r.nodePort))
-        .split('{{UUID}}').join(r.uuid)
-        .split('{{PUBLIC_KEY}}').join(r.publicKey)
-        .split('{{SHORT_ID}}').join(r.shortId);
+      var yaml = buildYaml(tpl, r);
       $('yaml').value = yaml;
       $('copyYaml').onclick = function () { copyText(yaml, this); };
       $('dlYaml').onclick = function () {
