@@ -165,14 +165,14 @@ fun LabScreen(navigator: Navigator) {
                                     text = e.title,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = BocchiTextDark,
+                                    color = MiuixTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = e.summary,
                                     fontSize = 11.sp,
-                                    color = BocchiTextGray,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     maxLines = 1,
                                 )
                             }
@@ -185,7 +185,7 @@ fun LabScreen(navigator: Navigator) {
                             Icon(
                                 imageVector = Icons.Filled.ChevronRight,
                                 contentDescription = null,
-                                tint = BocchiTextGray,
+                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 modifier = Modifier.size(18.dp),
                             )
                         }

@@ -159,6 +159,7 @@
             <div class="desc" id="hallRankList"></div>
           </div>
         </div></div>
+        <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
         <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
         <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
         <div class="foot">境界变化会同步改本体的布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨。重启梦盒后完全生效。</div>
@@ -170,7 +171,7 @@
 <script>
 (function(){
 "use strict";
-/* 七修定版：seed 与宿主 HostSect 的 sectDefs 必须一致（fu 为明，余皆暗） */
+/* 七修定版：seed 与宿主 HostSect 的 sectDefs 必须一致（符修默认浅色、余皆深色）；入门后可在山门页明暗翻转 */
 var SECTS=[
  {id:"jian",name:"剑修",sect:"青冥剑宗",icon:"⚔️",seal:"剑",motto:"一剑霜寒十四州",xinfa:"青冥剑诀",
   desc:"御剑而行，快意直达。本道主速：节点延迟如剑锋，一眼见分晓。",
@@ -212,7 +213,7 @@ var RANKS=[
 ];
 var $=function(id){return document.getElementById(id)};
 var selSect=null, selRank=0;
-var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"外门弟子",nextThreshold:60,lastCultivateDay:"",today:""};
+var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"外门弟子",nextThreshold:60,lastCultivateDay:"",today:"",themeMode:"Dark"};
 var hasBridge = !!(window.Capacitor && window.Capacitor.toNative);
 
 function sectById(id){for(var i=0;i<SECTS.length;i++)if(SECTS[i].id===id)return SECTS[i];return null}
@@ -328,6 +329,8 @@ function renderHall(){
     var mark=i<state.rankIndex?"✅":(i===state.rankIndex?"👉":"🔒");
     return mark+" "+r.name+" · "+r.title+"（"+r.need+" 修为）<br>";
   }).join("");
+  var isLight = state.themeMode==="Light";
+  $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
   var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
   $("btnCultivate").disabled=!!doneToday;
   $("btnCultivate").textContent=doneToday?"今日已修炼":"开始修炼（+20）";
@@ -352,6 +355,7 @@ $("btnJoin").addEventListener("click",function(){
       .catch(function(e){$("guideErr").textContent="入门失败："+e.message});
   }else{
     state.sectId=selSect;
+    state.themeMode = selSect==="fu" ? "Light" : "Dark";
     if(!state.joinedAt)state.joinedAt=Date.now();
     if(!state.packCount)state.packCount=1;
     mockDerive();mockSave();render();
@@ -374,6 +378,16 @@ $("btnSwitch").addEventListener("click",function(){
   $("view-guide").classList.remove("hidden");
   renderGrid();renderPreview();
   window.scrollTo(0,0);
+});
+$("btnFlip").addEventListener("click",function(){
+  var toDark = state.themeMode==="Light";
+  $("hallErr").textContent="";
+  if(hasBridge){
+    callNative("setDark",{dark:toDark}).then(function(s){state=Object.assign(state,s);render()})
+      .catch(function(e){$("hallErr").textContent="翻转失败："+e.message});
+  }else{
+    state.themeMode=toDark?"Dark":"Light"; mockSave(); render();
+  }
 });
 $("btnLeave").addEventListener("click",function(){
   if(!confirm("叛出师门？主题恢复默认，入门时间与修为保留（日后回来接着算）。"))return;

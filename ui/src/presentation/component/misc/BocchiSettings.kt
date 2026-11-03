@@ -61,6 +61,8 @@ import com.suanran.dreambox.presentation.theme.horizontalPadding
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.CardColors
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.suanran.dreambox.presentation.theme.colorSchemeFromSeed
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import kotlin.math.roundToInt
 
@@ -106,7 +108,12 @@ fun BocchiCard(
                 .border(1.dp, borderColor, shape)
                 .padding(insideMargin),
     ) {
-        content()
+        // 白卡是浅色设计：卡内强制浅色配色，否则深色模式下 Miuix 组件按深色配色
+        // 渲染成白字白图标贴在白卡上看不见（关于/Meta/日志/网络模式卡实测）。
+        // 种子取当前主题主色，浅色配色仍随门派/主题变色。浅色模式下与全局一致、无变化。
+        val seed = MiuixTheme.colorScheme.primary
+        val lightColors = remember(seed) { colorSchemeFromSeed(seed = seed, isDark = false) }
+        MiuixTheme(colors = lightColors) { content() }
     }
 }
 

@@ -254,7 +254,7 @@ class PackHostActivity : Activity() {
 
     private val sectDefs: Map<String, SectDef> = mapOf(
         "jian" to SectDef(0xFF0284C7L, true),
-        "fu" to SectDef(0xFFF59E0BL, false),
+        "fu" to SectDef(0xFFF59E0BL, false), // 符修默认浅色（黄纸）；1.69 起山门页可明暗翻转，白卡坏页已在 BocchiCard 中央修复
         "zhen" to SectDef(0xFF6366F1L, true),
         "ti" to SectDef(0xFFEA580CL, true),
         "kuilei" to SectDef(0xFF0F766EL, true),
@@ -362,6 +362,15 @@ class PackHostActivity : Activity() {
                         s.sectExpBonus.set(s.sectExpBonus.value + 20)
                         val st = JSONObject(sectStateJson())
                         applySectRankLayout(st.optInt("rankIndex", 0))
+                        sectStateJson()
+                    }
+                    "setDark" -> {
+                        // 明暗翻转：不改门派，只翻本体明暗（种子色不动）
+                        val dark = options.optBoolean("dark", true)
+                        s.themeMode.set(
+                            if (dark) com.suanran.dreambox.core.model.ThemeMode.Dark
+                            else com.suanran.dreambox.core.model.ThemeMode.Light
+                        )
                         sectStateJson()
                     }
                     "leave" -> {
