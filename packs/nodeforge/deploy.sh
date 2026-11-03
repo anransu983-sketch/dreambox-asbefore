@@ -383,22 +383,13 @@ if not hits:
     hits = [t for t in items if t.get("tag") == sys.argv[1]]
 host, port = sys.argv[2], int(sys.argv[3])
 if hits:
-    t = dict(hits[-1])
-    changed = False
-    if t.get("tag") != sys.argv[1]:
-        t["tag"] = sys.argv[1]
-        changed = True
-    if str(t.get("listen_port", "")) != str(port):
-        t["listen_port"] = port
-        changed = True
-    addrs = t.get("addrs") or []
-    cur = addrs[0].get("server") if addrs and isinstance(addrs[0], dict) else ""
-    cur_port = addrs[0].get("server_port") if addrs and isinstance(addrs[0], dict) else None
-    if cur != host or str(cur_port) != str(port):
-        t["addrs"] = [{"server": host, "server_port": port}]
-        changed = True
-    if changed:
-        print(json.dumps(t))
+    t = hits[-1]
+    tls_id = t.get("tls_id") or 0
+    if int(tls_id) > 0:
+        d = {"id": int(t["id"]), "type": "vless", "tag": sys.argv[1], "listen": "::",
+             "listen_port": port, "tls_id": int(tls_id),
+             "addrs": [{"server": host, "server_port": port}]}
+        print(json.dumps(d))
 ' "$INBOUND_TAG" "$PUBLIC_HOST" "$NODE_PORT" "$INBOUND_ID")"
         if [ -n "$EDIT_DATA" ]; then
             if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
@@ -488,28 +479,14 @@ items = [x for x in (o or []) if isinstance(x, dict)]
 hits = [t for t in items if str(t.get("id")) == sys.argv[1]]
 port, psk, host = int(sys.argv[2]), sys.argv[3], sys.argv[4]
 if hits:
-    t = dict(hits[-1])
-    changed = False
-    if str(t.get("listen_port", "")) != str(port):
-        t["listen_port"] = port; changed = True
-    opts = t.get("options") or {}
-    if isinstance(opts, str):
-        try: opts = json.loads(opts)
-        except Exception: opts = {}
-    if not isinstance(opts, dict): opts = {}
-    cur_method = t.get("method") or opts.get("method")
-    cur_psk = t.get("password") or opts.get("password")
-    if cur_psk != psk or cur_method != "2022-blake3-aes-128-gcm":
-        t["method"] = "2022-blake3-aes-128-gcm"; t["password"] = psk
-        opts["method"] = "2022-blake3-aes-128-gcm"; opts["password"] = psk
-        t["options"] = opts; changed = True
-    addrs = t.get("addrs") or []
-    cur = addrs[0].get("server") if addrs and isinstance(addrs[0], dict) else ""
-    curp = addrs[0].get("server_port") if addrs and isinstance(addrs[0], dict) else None
-    if host and (cur != host or str(curp) != str(port)):
-        t["addrs"] = [{"server": host, "server_port": port}]; changed = True
-    if changed: print(json.dumps(t))
-' "$SS_INBOUND_ID" "$SS_PORT" "$SS_PSK" "$PUBLIC_HOST")"
+    t = hits[-1]
+    d = {"id": int(t["id"]), "type": "shadowsocks", "tag": t.get("tag") or sys.argv[5],
+         "listen": "::", "listen_port": port,
+         "method": "2022-blake3-aes-128-gcm", "password": psk}
+    if host:
+        d["addrs"] = [{"server": host, "server_port": port}]
+    print(json.dumps(d))
+' "$SS_INBOUND_ID" "$SS_PORT" "$SS_PSK" "$PUBLIC_HOST" "$SS_TAG")"
         if [ -n "$SS_EDIT" ]; then
             if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
                 --data-urlencode "data=$SS_EDIT" >/dev/null; then
