@@ -63,6 +63,10 @@
   </div>
   <label>root 密码（SSH 登录密码）</label>
   <div class="eye-wrap"><input id="sshPassword" type="password" placeholder="服务器的 root 密码" autocomplete="off"><button type="button" class="eye" data-eye="sshPassword">显示</button></div>
+  <label>SSH 公钥（选填，装完可用私钥登录）</label>
+  <textarea id="sshPubKey" style="height:64px" placeholder="粘贴一整行：ssh-rsa AAAA… 或 ssh-ed25519 AAAA…（sshtty 里点『查看公钥』复制）" autocomplete="off"></textarea>
+  <label style="margin:0"><input type="checkbox" id="closeSshPw" checked style="width:auto"> 写入公钥后关闭 SSH 密码登录</label>
+  <div class="warn">不填公钥，这两项都不生效。关密码后只能用私钥进这台机——请确认私钥在你手里（sshtty 生成的钥就在插件里），否则只能去云厂商控制台救机。</div>
   <label>节点备注名（显示在链接和配置里）</label>
   <input id="nodeName" placeholder="点下面旗帜选国家，再接名字" autocomplete="off">
   <div class="flagrow" id="flagRow"></div>
@@ -205,6 +209,8 @@
       sshPort: parseInt($('sshPort').value, 10) || 22,
       sshUser: $('sshUser').value.trim() || 'root',
       sshPassword: $('sshPassword').value,
+      sshPubKey: $('sshPubKey').value.trim(),
+      closeSshPw: $('closeSshPw').checked,
       nodeName: $('nodeName').value.trim(),
       nodePort: parseInt($('nodePort').value, 10) || 443,
       subId: $('subId').value,
@@ -226,6 +232,8 @@
     $('sshPort').value = f.sshPort || 22;
     $('sshUser').value = f.sshUser || 'root';
     if (f.sshPassword) $('sshPassword').value = f.sshPassword;
+    $('sshPubKey').value = f.sshPubKey || '';
+    $('closeSshPw').checked = f.closeSshPw !== false;
     $('nodeName').value = f.nodeName || '';
     $('nodePort').value = f.nodePort || 443;
     $('subId').value = f.subId || 'node1';
@@ -291,7 +299,7 @@
     if (!f || !f.host) return;
     lastOpts = {
       host: f.host, sshPort: f.sshPort || 22, sshUser: f.sshUser || 'root',
-      sshPassword: f.sshPassword || '', nodeName: f.nodeName || '',
+      sshPassword: f.sshPassword || '', sshPubKey: f.sshPubKey || '', closeSshPw: f.closeSshPw !== false, nodeName: f.nodeName || '',
       nodePort: f.nodePort || 443, subId: f.subId || 'node1',
       adminUser: f.adminUser || 'sui', adminPass: f.adminPass || '',
       quotaGb: f.quotaGb || '', expireDate: f.expireDate || '',
@@ -307,7 +315,7 @@
       // 旧版只有一份表单：归到它所属引擎名下，另一引擎首次切过去时走重置。
       formStore[fe] = {
         host: f.host, sshPort: f.sshPort, sshUser: f.sshUser,
-        sshPassword: f.sshPassword, nodeName: f.nodeName, nodePort: f.nodePort,
+        sshPassword: f.sshPassword, sshPubKey: f.sshPubKey || '', closeSshPw: f.closeSshPw !== false, nodeName: f.nodeName, nodePort: f.nodePort,
         subId: f.subId, adminUser: f.adminUser, adminPass: f.adminPass,
         quotaGb: f.quotaGb, expireDate: f.expireDate,
         protocols: f.protocols, engine: fe
@@ -444,6 +452,12 @@
       '&flow=xtls-rprx-vision#' + name;
   }
 
+  function sshRow(r) {
+    if (!r.sshKeyOk && !r.sshPwClosed) return '';
+    return (r.sshKeyOk ? '<br><b>SSH 公钥</b>：已写入，可用 sshtty 私钥连接' : '') +
+      (r.sshPwClosed ? '<br><b>SSH 密码登录</b>：已关闭' : '');
+  }
+
   function showResult(r) {
     lastResult = r;
     $('importHy2').classList.add('hidden');
@@ -464,6 +478,7 @@
         '<b>vless 链接</b><br>' + vless.split(lastOpts.host).join(mh0) +
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh0) : '') +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh0) : '') +
+        sshRow(r) +
         '<br><span class="warn">完整配置已在上方部署终端里打印；下面这份 YAML 也可直接导入梦盒当配置用。</span>';
       ['copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
       if (r.subUrl) {
@@ -551,6 +566,11 @@
       $('resultKv').appendChild(document.createElement('br'));
       $('resultKv').appendChild(pl);
     }
+    if (r.sshKeyOk || r.sshPwClosed) {
+      var sl = document.createElement('span');
+      sl.innerHTML = sshRow(r);
+      $('resultKv').appendChild(sl);
+    }
     if (r.ssLink) {
       $('copySs').classList.remove('hidden');
       $('copySs').onclick = function () { copyText(r.ssLink, this); };
@@ -626,6 +646,8 @@
       sshPort: parseInt($('sshPort').value, 10) || 22,
       sshUser: $('sshUser').value.trim() || 'root',
       sshPassword: $('sshPassword').value,
+      sshPubKey: $('sshPubKey').value.trim(),
+      closeSshPw: $('closeSshPw').checked,
       nodeName: $('nodeName').value.trim(),
       nodePort: parseInt($('nodePort').value, 10) || 443,
       subId: sanitizeSubId($('subId').value),

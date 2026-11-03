@@ -86,6 +86,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         int sshPort = 22;
         String sshUser = "root";
         String sshPassword = "";
+        String sshPubKey = "";
+        boolean closeSshPassword = true;
         String nodeName = "";
         int nodePort = 443;
         String subId = "node1";
@@ -124,6 +126,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.sshPort = o.optInt("sshPort", 22);
             st.sshUser = o.optString("sshUser", "root");
             st.sshPassword = o.optString("sshPassword", "");
+            st.sshPubKey = o.optString("sshPubKey", "");
+            st.closeSshPassword = o.optBoolean("closeSshPassword", true);
             st.nodeName = o.optString("nodeName", "");
             st.nodePort = o.optInt("nodePort", 443);
             st.subId = o.optString("subId", "node1");
@@ -159,6 +163,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             o.put("sshPort", st.sshPort);
             o.put("sshUser", st.sshUser);
             o.put("sshPassword", st.sshPassword);
+            o.put("sshPubKey", st.sshPubKey);
+            o.put("closeSshPassword", st.closeSshPassword);
             o.put("nodeName", st.nodeName);
             o.put("nodePort", st.nodePort);
             o.put("subId", st.subId);
@@ -371,6 +377,13 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.sshPort = opts.optInt("sshPort", 22);
             st.sshUser = opts.optString("sshUser", "root");
             st.sshPassword = opts.getString("sshPassword");
+            String pk = opts.optString("sshPubKey", "").trim();
+            int nl = pk.indexOf('\n');
+            if (nl >= 0) {
+                pk = pk.substring(0, nl).trim();
+            }
+            st.sshPubKey = pk.replace("\r", "");
+            st.closeSshPassword = opts.optBoolean("closeSshPw", true);
             st.nodeName = opts.optString("nodeName", "");
             st.nodePort = opts.optInt("nodePort", 443);
             st.subId = opts.optString("subId", "node1");
@@ -401,6 +414,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 f.put("subId", st.subId);
                 f.put("adminUser", st.adminUser);
                 f.put("adminPass", st.adminPass);
+                f.put("sshPubKey", st.sshPubKey);
+                f.put("closeSshPw", st.closeSshPassword);
                 f.put("quotaGb", st.quotaGb);
                 f.put("expireDate", st.expireDate);
                 f.put("protocols", st.protocols);
@@ -450,7 +465,9 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                     + "NF_NODE_NAME=" + shq(st.nodeName) + "\n"
                     + "NF_QUOTA_GB=" + shq(st.quotaGb) + "\n"
                     + "NF_EXPIRE_DATE=" + shq(st.expireDate) + "\n"
-                    + "NF_PROTOCOLS=" + shq(st.protocols) + "\n";
+                    + "NF_PROTOCOLS=" + shq(st.protocols) + "\n"
+                    + "NF_SSH_PUBKEY=" + shq(st.sshPubKey) + "\n"
+                    + "NF_CLOSE_SSH_PASSWORD=" + (st.closeSshPassword ? "1" : "0") + "\n";
             String wrapper = "#!/bin/bash\n"
                     + "set -a\n"
                     + ". " + dir + "/params.env\n"

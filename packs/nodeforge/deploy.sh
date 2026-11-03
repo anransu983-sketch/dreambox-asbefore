@@ -1086,17 +1086,54 @@ if has_proto hy2; then
     fi
 fi
 
-# ── 11. 结果 ───────────────────────────────────────────────
+# ── 11. SSH 公钥 / 关密码登录（可选，表单填了公钥才执行） ──
+SSH_KEY_OK="fail"; SSH_PW_CLOSED="fail"
+if [ -n "${NF_SSH_PUBKEY:-}" ]; then
+    KEY_LINE="$(printf '%s' "$NF_SSH_PUBKEY" | tr -d '\r' | head -1)"
+    KEY_TMP="$(mktemp)"
+    printf '%s\n' "$KEY_LINE" > "$KEY_TMP"
+    if ssh-keygen -l -f "$KEY_TMP" >/dev/null 2>&1; then
+        SSH_HOME_DIR="$(getent passwd "$(id -un)" | cut -d: -f6)"
+        [ -n "$SSH_HOME_DIR" ] || SSH_HOME_DIR="$HOME"
+        mkdir -p "$SSH_HOME_DIR/.ssh" && chmod 700 "$SSH_HOME_DIR/.ssh"
+        touch "$SSH_HOME_DIR/.ssh/authorized_keys"
+        if grep -qxF "$KEY_LINE" "$SSH_HOME_DIR/.ssh/authorized_keys"; then
+            log "SSH 公钥已在 authorized_keys 中（重复部署，跳过写入）"
+        else
+            printf '%s\n' "$KEY_LINE" >> "$SSH_HOME_DIR/.ssh/authorized_keys"
+            log "SSH 公钥已写入 authorized_keys"
+        fi
+        chmod 600 "$SSH_HOME_DIR/.ssh/authorized_keys"
+        SSH_KEY_OK="ok"
+        if [ "${NF_CLOSE_SSH_PASSWORD:-0}" = "1" ]; then
+            printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPubkeyAuthentication yes\n' > /etc/ssh/sshd_config.d/00-nodeforge-keyonly.conf
+            if sshd -t; then
+                systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || service ssh reload 2>/dev/null || true
+                SSH_PW_CLOSED="ok"
+                log "SSH 密码登录已关闭（之后请用私钥连接本机）"
+            else
+                rm -f /etc/ssh/sshd_config.d/00-nodeforge-keyonly.conf
+                log "警告：sshd 配置校验未过，已放弃关闭密码登录"
+            fi
+        fi
+    else
+        log "警告：填入的 SSH 公钥格式不对（ssh-keygen 无法解析），已跳过写钥与关密码"
+    fi
+    rm -f "$KEY_TMP"
+fi
+
+# ── 12. 结果 ───────────────────────────────────────────────
 SS_LINK=""
 if has_proto ss; then
     SS_LINK="$(printf '%s' "$SUB_NOW_TXT" | grep -o 'ss://[^[:space:]]*' | head -1 || true)"
 fi
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$HY2_SUB_URL" "$HY2_SUB_PORT" "$HY2_SUB_OK" <<'PYEOF'
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$HY2_SUB_URL" "$HY2_SUB_PORT" "$HY2_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
  sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info,
  sub_tpl_ok, name_ok, protocols, ss_link, ss_port, ss_verify,
- hy2_link, hy2_port, hy2_ok, hy2_sub_url, hy2_sub_port, hy2_sub_ok) = sys.argv[1:28]
+ hy2_link, hy2_port, hy2_ok, hy2_sub_url, hy2_sub_port, hy2_sub_ok,
+ ssh_key_ok, ssh_pw_closed) = sys.argv[1:30]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
@@ -1110,6 +1147,7 @@ print("NF_RESULT " + json.dumps({
     "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
     "hy2SubUrl": hy2_sub_url, "hy2SubPort": int(hy2_sub_port),
     "hy2SubOk": hy2_sub_ok == "ok",
+    "sshKeyOk": ssh_key_ok == "ok", "sshPwClosed": ssh_pw_closed == "ok",
 }))
 PYEOF
 log "部署完成"
