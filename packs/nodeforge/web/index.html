@@ -34,6 +34,7 @@
   .flagchip { padding: 6px 10px; border-radius: 999px; border: 1px solid #4a3d6e; background: #2a2142;
     color: #e8defc; font-size: 13.5px; }
   .flagchip:active { border-color: #e88bb0; background: #3a2a52; }
+  .flagchip.on { border-color: #e88bb0; background: #3a2a52; color: #fff; }
   .eye-wrap { position: relative; }
   .eye-wrap input { padding-right: 62px; }
   .eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 5px 10px;
@@ -44,10 +45,16 @@
 </head>
 <body>
 <h1>🚀 一键节点</h1>
-<div class="sub">填服务器信息，一键装好 s-ui + 多协议节点（全自动，约 1–3 分钟）。<br>
-面板默认只绑本机回环、公网打不开，管理走 SSH 隧道；root 密码只在内存里用，不保存。</div>
+<div class="sub">填服务器信息，一键装好多协议节点（全自动，约 1–3 分钟）。<br>
+两种引擎：s-ui 带面板和订阅链接；sing-box 无面板、无网址，配置直接在部署终端里打印。root 密码只在内存里用，不保存。</div>
 
 <div class="card" id="formCard">
+  <label style="margin-top:0">部署引擎</label>
+  <div class="row">
+    <button type="button" class="flagchip on" id="engSui" style="flex:1">s-ui 面板版</button>
+    <button type="button" class="flagchip" id="engSb" style="flex:1">sing-box 无面板版</button>
+  </div>
+  <div class="warn" id="engineHint" style="margin-top:8px">带网页面板和订阅链接；面板只绑本机回环、公网打不开，管理走 SSH 隧道。</div>
   <label>服务器 IP / 域名</label>
   <div class="eye-wrap"><input id="host" type="password" placeholder="如 1.2.3.4" autocomplete="off"><button type="button" class="eye" data-eye="host">显示</button></div>
   <div class="row">
@@ -61,26 +68,26 @@
   <div class="flagrow" id="flagRow"></div>
   <div class="row">
     <div><label>节点端口</label><input id="nodePort" type="number" value="443"></div>
-    <div><label>订阅 ID（英文/数字）</label><input id="subId" placeholder="node1" autocomplete="off"></div>
+    <div id="subIdWrap"><label>订阅 ID（英文/数字）</label><input id="subId" placeholder="node1" autocomplete="off"></div>
   </div>
-  <div class="row">
+  <div class="row" id="adminRow">
     <div><label>面板管理员账号</label><input id="adminUser" value="sui" autocomplete="off"></div>
     <div><label>面板管理员密码（记好）</label><div class="eye-wrap"><input id="adminPass" type="password" autocomplete="off"><button type="button" class="eye" data-eye="adminPass">显示</button></div></div>
   </div>
-  <div class="row">
+  <div class="row" id="quotaRow">
     <div><label>总流量 GB（留空=不限）</label><input id="quotaGb" type="number" placeholder="如 800" autocomplete="off"></div>
     <div><label>到期日期（留空=不限）</label><input id="expireDate" type="date"></div>
   </div>
-  <div class="warn">流量/到期填了才会显示在订阅卡上；到期是真到期、流量按 30 天自动重置一轮，按你买的机器套餐填。</div>
+  <div class="warn" id="quotaWarn">流量/到期填了才会显示在订阅卡上；到期是真到期、流量按 30 天自动重置一轮，按你买的机器套餐填。</div>
   <label>协议（可多选，端口自动顺延）</label>
   <div class="row">
     <label style="margin:0"><input type="checkbox" id="protoReality" checked disabled style="width:auto"> VLESS Reality（主）</label>
     <label style="margin:0"><input type="checkbox" id="protoHy2" checked style="width:auto"> Hysteria2</label>
     <label style="margin:0"><input type="checkbox" id="protoSs" checked style="width:auto"> SS 2022</label>
   </div>
-  <div class="warn">端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。</div>
+  <div class="warn" id="protoWarn">端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。</div>
   <button class="main" id="deployBtn">一键部署</button>
-  <div class="warn" style="margin-top:10px">云厂商控制台的安全组记得放行节点端口与订阅端口（2096），机内防火墙脚本会自动处理。</div>
+  <div class="warn" id="subPortWarn" style="margin-top:10px">云厂商控制台的安全组记得放行节点端口与订阅端口（2096），机内防火墙脚本会自动处理。</div>
 </div>
 
 <div class="card hidden" id="logCard">
@@ -104,7 +111,7 @@
     <button class="mini" id="copyYaml">复制配置</button>
     <button class="mini" id="dlYaml">下载 .yaml</button>
   </div>
-  <div class="warn" style="margin-top:8px">点「导入到梦盒」即可：订阅已带完整模板（分组/规则/sniffer/防泄露）和流量/到期显示。下面这份 YAML 是同模板的本地版，效果相同，可作备份。页面上的地址与密码已打码，按钮复制的仍是原文。</div>
+  <div class="warn" id="yamlWarn" style="margin-top:8px">点「导入到梦盒」即可：订阅已带完整模板（分组/规则/sniffer/防泄露）和流量/到期显示。下面这份 YAML 是同模板的本地版，效果相同，可作备份。页面上的地址与密码已打码，按钮复制的仍是原文。</div>
 </div>
 
 <script>
@@ -185,6 +192,25 @@
     }
   }
 
+  var engine = 'sui';
+  function setEngine(e) {
+    engine = e;
+    $('engSui').classList.toggle('on', e === 'sui');
+    $('engSb').classList.toggle('on', e === 'singbox');
+    var suiOnly = ['subIdWrap', 'adminRow', 'quotaRow', 'quotaWarn', 'subPortWarn'];
+    suiOnly.forEach(function (id) {
+      var el = $(id); if (el) el.style.display = (e === 'sui') ? '' : 'none';
+    });
+    $('engineHint').textContent = e === 'sui'
+      ? '带网页面板和订阅链接；面板只绑本机回环、公网打不开，管理走 SSH 隧道。'
+      : '没有面板、没有订阅网址：sing-box 一个进程跑全部协议，配置和链接直接打印在部署终端里；这个模式没有流量/到期统计。';
+    $('protoWarn').textContent = e === 'sui'
+      ? '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。'
+      : '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP），SS 用 +3（TCP/UDP），都由 sing-box 托管；安全组记得连同放行。';
+  }
+  $('engSui').addEventListener('click', function () { setEngine('sui'); });
+  $('engSb').addEventListener('click', function () { setEngine('singbox'); });
+
   var pollTimer = null;
   var lastOpts = null;
   var lastResult = null;
@@ -209,8 +235,10 @@
       nodePort: f.nodePort || 443, subId: f.subId || 'node1',
       adminUser: f.adminUser || 'sui', adminPass: f.adminPass || '',
       quotaGb: f.quotaGb || '', expireDate: f.expireDate || '',
-      protocols: f.protocols || 'reality'
+      protocols: f.protocols || 'reality',
+      engine: f.engine || 'sui'
     };
+    setEngine(f.engine || 'sui');
     var protos = (f.protocols || 'reality').split(',');
     $('protoHy2').checked = protos.indexOf('hy2') >= 0;
     $('protoSs').checked = protos.indexOf('ss') >= 0;
@@ -270,6 +298,41 @@
   function showResult(r) {
     lastResult = r;
     var vless = buildVless(r);
+    ['copySub', 'importSub', 'copyTunnel'].forEach(function (id) { $(id).classList.remove('hidden'); });
+    if (r.engine === 'singbox') {
+      var mh0 = maskHost(lastOpts.host);
+      $('resultKv').innerHTML =
+        '<b>引擎</b>：sing-box' + (r.sbVersion ? ' v' + r.sbVersion : '') + '（无面板、无订阅网址）<br>' +
+        '<b>vless 链接</b><br>' + vless.split(lastOpts.host).join(mh0) +
+        (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh0) : '') +
+        (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh0) : '') +
+        '<br><span class="warn">完整配置已在上方部署终端里打印；下面这份 YAML 也可直接导入梦盒当配置用。</span>';
+      ['copySub', 'importSub', 'copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
+      $('yamlWarn').textContent = 'sing-box 模式没有订阅：把上面的链接或这份 YAML 导入梦盒即可。页面上的地址已打码，按钮复制的仍是原文。';
+      if (r.ssLink) { $('copySs').classList.remove('hidden'); $('copySs').onclick = function () { copyText(r.ssLink, this); }; }
+      if (r.hy2Link) { $('copyHy2').classList.remove('hidden'); $('copyHy2').onclick = function () { copyText(r.hy2Link, this); }; }
+      $('copyVless').onclick = function () { copyText(vless, this); };
+      fetch('template.yaml').then(function (res) { return res.text(); }).then(function (tpl) {
+        var yaml = tpl
+          .split('{{NODE_NAME}}').join(lastOpts.nodeName || r.subId || 'node')
+          .split('{{SERVER}}').join(lastOpts.host)
+          .split('{{PORT}}').join(String(r.nodePort))
+          .split('{{UUID}}').join(r.uuid)
+          .split('{{PUBLIC_KEY}}').join(r.publicKey)
+          .split('{{SHORT_ID}}').join(r.shortId);
+        $('yaml').value = yaml;
+        $('copyYaml').onclick = function () { copyText(yaml, this); };
+        $('dlYaml').onclick = function () {
+          var btn = this; btn.disabled = true;
+          callNative('saveTextFile', { name: (lastOpts.subId || 'node') + '-dreambox.yaml', text: yaml }).then(function (res) {
+            btn.textContent = '已存到 ' + (res.path || 'Download');
+          }).catch(function () { btn.disabled = false; btn.textContent = '保存失败，改用「复制配置」'; });
+        };
+      });
+      $('resultCard').classList.remove('hidden');
+      $('resultCard').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
     var sub = 'http://' + lastOpts.host + ':' + r.subPort + r.subPath + r.subId;
     var tunnel = 'ssh -L ' + r.panelPort + ':127.0.0.1:' + r.panelPort +
       (lastOpts.sshPort !== 22 ? ' -p ' + lastOpts.sshPort : '') +
@@ -356,13 +419,14 @@
       adminPass: $('adminPass').value,
       quotaGb: $('quotaGb').value.trim(),
       expireDate: $('expireDate').value,
-      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoSs').checked ? ',ss' : '')
+      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoSs').checked ? ',ss' : ''),
+      engine: engine
     };
     if ($('protoSs').checked && opts.nodePort + 3 > 65535) { alert('节点端口太大：SS 要用节点端口+3，不能超过 65535'); return; }
     if ($('protoHy2').checked && opts.nodePort + 1 > 65535) { alert('节点端口太大：Hy2 要用节点端口+1'); return; }
     if (!opts.host) { alert('先填服务器 IP'); return; }
     if (!opts.sshPassword) { alert('先填 root 密码'); return; }
-    if (!opts.adminPass) { alert('面板管理员密码不能为空'); return; }
+    if (opts.engine === 'sui' && !opts.adminPass) { alert('面板管理员密码不能为空'); return; }
     $('subId').value = opts.subId;
     lastOpts = opts;
     $('deployBtn').disabled = true;

@@ -88,6 +88,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         String quotaGb = "";
         String expireDate = "";
         String protocols = "reality";
+        String engine = "sui";
         String banner = "";
         String lastLog = "";
         String error = "";
@@ -123,6 +124,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.quotaGb = o.optString("quotaGb", "");
             st.expireDate = o.optString("expireDate", "");
             st.protocols = o.optString("protocols", "reality");
+            st.engine = o.optString("engine", "sui");
             st.banner = o.optString("banner", "");
             st.lastLog = o.optString("lastLog", "");
             st.error = o.optString("error", "");
@@ -156,6 +158,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             o.put("quotaGb", st.quotaGb);
             o.put("expireDate", st.expireDate);
             o.put("protocols", st.protocols);
+            o.put("engine", st.engine);
             o.put("banner", st.banner);
             o.put("lastLog", st.lastLog);
             o.put("error", st.error);
@@ -328,6 +331,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.quotaGb = opts.optString("quotaGb", "");
             st.expireDate = opts.optString("expireDate", "");
             st.protocols = opts.optString("protocols", "reality");
+            st.engine = opts.optString("engine", "sui");
             st.launchedAt = System.currentTimeMillis();
             // 同一台机器沿用已记录的指纹做 TOFU 比对；换机器则重新记录。
             if (cur.host.equals(st.host) && cur.sshPort == st.sshPort) {
@@ -349,9 +353,11 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
     private void deliver(St st) {
         Session session = null;
         try {
-            File script = new File(appContext.getFilesDir(), "packs/nodeforge/deploy.sh");
+            boolean sbEngine = "singbox".equals(st.engine);
+            File script = new File(appContext.getFilesDir(),
+                    "packs/nodeforge/" + (sbEngine ? "deploy-singbox.sh" : "deploy.sh"));
             if (!script.isFile()) {
-                throw new IllegalStateException("功能包内缺少 deploy.sh，包可能损坏，请删包重装");
+                throw new IllegalStateException("功能包内缺少部署脚本，包可能损坏，请删包重装");
             }
             byte[] scriptBytes = Files.readAllBytes(script.toPath());
             String dir = st.dir();
@@ -507,6 +513,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         f.put("adminUser", st.adminUser);
         f.put("adminPass", st.adminPass);
         f.put("protocols", st.protocols);
+        f.put("engine", st.engine);
         return f;
     }
 
