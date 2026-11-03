@@ -220,7 +220,6 @@ fun PersonalizeSections() {
                 }
             }
 
-            item {
                 BocchiSectionTitle("导航栏图标")
                 BocchiCard {
                     Column {
@@ -402,7 +401,6 @@ fun PersonalizeSections() {
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-    }
 }
 
 @Composable
