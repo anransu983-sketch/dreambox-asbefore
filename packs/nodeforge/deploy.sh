@@ -905,6 +905,11 @@ if command -v ss >/dev/null 2>&1; then
 fi
 
 # ── 9. 实测验证：重启核心后回环真连，过关才算部署成功 ────
+# 实测客户端的本地监听端口动态挑空闲的：写死端口会和机器上已有服务
+# 撞车（英国机 18091 被 zhixiang-logs receiver 占用、SS 实测假阴性实测）。
+pick_free_port() {
+    python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()' 2>/dev/null || echo 18099
+}
 log "重启核心使最终配置生效"
 curl -s --max-time 25 -b "$CJ" -H "$HDR" -X POST "$API/restartSb" >/dev/null 2>&1 || true
 for _ in $(seq 1 20); do
@@ -922,9 +927,10 @@ if [ ! -x "$SB_BIN" ]; then
     fi
 fi
 if [ -x "$SB_BIN" ]; then
-    if python3 - "$INBOUND_TAG" "$SUB_ID" "$NODE_PORT" "$SB_DIR/verify-client.json" <<'PYEOF3'
+    VPORT="$(pick_free_port)"
+    if python3 - "$INBOUND_TAG" "$SUB_ID" "$NODE_PORT" "$SB_DIR/verify-client.json" "$VPORT" <<'PYEOF3'
 import sqlite3, glob, json, sys
-tag, cname, dport, out = sys.argv[1:5]
+tag, cname, dport, out, vport = sys.argv[1:6]
 db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
 con = sqlite3.connect(db)
 row = con.execute('select tls_id, options from inbounds where tag=?', (tag,)).fetchone()
@@ -934,7 +940,7 @@ cli = json.loads(con.execute('select client from tls where id=?', (tls_id,)).fet
 ucfg = json.loads(con.execute('select config from clients where name=?', (cname,)).fetchone()[0])
 cfg = {
   "log": {"level": "error"},
-  "inbounds": [{"type": "mixed", "tag": "vin", "listen": "127.0.0.1", "listen_port": 18090}],
+  "inbounds": [{"type": "mixed", "tag": "vin", "listen": "127.0.0.1", "listen_port": int(vport)}],
   "outbounds": [{
     "type": "vless", "tag": "vout", "server": "127.0.0.1", "server_port": port,
     "uuid": ucfg['vless']['uuid'], "flow": "xtls-rprx-vision",
@@ -950,7 +956,7 @@ PYEOF3
         "$SB_BIN" run -c "$SB_DIR/verify-client.json" > "$SB_DIR/verify.log" 2>&1 &
         VPID=$!
         sleep 2
-        VCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:18090 -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
+        VCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:$VPORT -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
         kill "$VPID" 2>/dev/null || true
         if [ "$VCODE" = "204" ]; then
             VERIFY="ok"
@@ -969,10 +975,11 @@ fi
 SS_VERIFY="fail"
 if has_proto ss && [ -x "$SB_BIN" ]; then
     SS_COMBINED="${SS_PSK}:${SS_USER_PSK}"
-    if python3 - "$SS_PORT" "$SS_COMBINED" "$SB_DIR/verify-ss.json" <<'PYEOF4'
+    SPORT_V="$(pick_free_port)"
+    if python3 - "$SS_PORT" "$SS_COMBINED" "$SB_DIR/verify-ss.json" "$SPORT_V" <<'PYEOF4'
 import json, sys
 cfg = {"log": {"level": "error"},
-  "inbounds": [{"type": "mixed", "tag": "sin", "listen": "127.0.0.1", "listen_port": 18091}],
+  "inbounds": [{"type": "mixed", "tag": "sin", "listen": "127.0.0.1", "listen_port": int(sys.argv[4])}],
   "outbounds": [{"type": "shadowsocks", "tag": "sout", "server": "127.0.0.1",
                  "server_port": int(sys.argv[1]), "method": "2022-blake3-aes-128-gcm",
                  "password": sys.argv[2]}]}
@@ -982,7 +989,7 @@ PYEOF4
         "$SB_BIN" run -c "$SB_DIR/verify-ss.json" > "$SB_DIR/verify-ss.log" 2>&1 &
         SPID=$!
         sleep 2
-        SCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:18091 -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
+        SCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:$SPORT_V -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
         kill "$SPID" 2>/dev/null || true
         if [ "$SCODE" = "204" ]; then
             SS_VERIFY="ok"
