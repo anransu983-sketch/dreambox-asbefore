@@ -607,7 +607,7 @@ cfg = {"vless": {"uuid": sys.argv[2], "flow": "xtls-rprx-vision"}}
 inbs = [int(sys.argv[3])]
 ss_id, ss_psk = sys.argv[4], sys.argv[5]
 if ss_id.isdigit() and ss_psk:
-    cfg["shadowsocks"] = {"password": ss_psk}
+    cfg["shadowsocks16"] = {"password": ss_psk}
     inbs.append(int(ss_id))
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": cfg,
