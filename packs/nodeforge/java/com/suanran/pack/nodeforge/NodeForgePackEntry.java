@@ -59,6 +59,8 @@ import kotlin.jvm.functions.Function3;
  *    url 深链；改为把 saveTextFile 存进 Download 的模板 YAML 以
  *    dreambox://import-file 深链交给宿主，配置页直接建成本地（文件型）
  *    配置， sing-box 建的节点也能一键导入梦盒。
+ * 7) v20 表单按引擎分开保存（formsJson：sui / sing-box 各一份，部署时
+ *    只更新所属引擎那份），切引擎不再把另一边填的备注名/端口带过来。
  */
 public class NodeForgePackEntry implements PackBridgeDispatcher {
 
@@ -93,6 +95,8 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         String expireDate = "";
         String protocols = "reality";
         String engine = "sui";
+        /** 双引擎各自保存的表单（JSON 对象：engine -> form），切引擎不串值。 */
+        String formsJson = "";
         String banner = "";
         String lastLog = "";
         String error = "";
@@ -129,6 +133,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             st.expireDate = o.optString("expireDate", "");
             st.protocols = o.optString("protocols", "reality");
             st.engine = o.optString("engine", "sui");
+            st.formsJson = o.optString("formsJson", "");
             st.banner = o.optString("banner", "");
             st.lastLog = o.optString("lastLog", "");
             st.error = o.optString("error", "");
@@ -163,6 +168,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             o.put("expireDate", st.expireDate);
             o.put("protocols", st.protocols);
             o.put("engine", st.engine);
+            o.put("formsJson", st.formsJson);
             o.put("banner", st.banner);
             o.put("lastLog", st.lastLog);
             o.put("error", st.error);
@@ -380,6 +386,29 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 st.hostKey = cur.hostKey;
                 st.hostKeyFp = cur.hostKeyFp;
             }
+            // 双引擎表单分开保存：沿用已存的双份表单，并把本次提交存进所属引擎那份
+            // （不存 SSH 密码，口径与终结时抹密码一致）。
+            st.formsJson = cur.formsJson;
+            try {
+                JSONObject forms = st.formsJson.isEmpty()
+                        ? new JSONObject() : new JSONObject(st.formsJson);
+                JSONObject f = new JSONObject();
+                f.put("host", st.host);
+                f.put("sshPort", st.sshPort);
+                f.put("sshUser", st.sshUser);
+                f.put("nodeName", st.nodeName);
+                f.put("nodePort", st.nodePort);
+                f.put("subId", st.subId);
+                f.put("adminUser", st.adminUser);
+                f.put("adminPass", st.adminPass);
+                f.put("quotaGb", st.quotaGb);
+                f.put("expireDate", st.expireDate);
+                f.put("protocols", st.protocols);
+                f.put("engine", st.engine);
+                forms.put(st.engine, f);
+                st.formsJson = forms.toString();
+            } catch (Exception ignored) {
+            }
             st.banner = "== [" + stamp() + "] 准备投递到 "
                     + st.sshUser + "@" + maskHost(st.host) + ":" + st.sshPort + " …\n";
             saveState(st);
@@ -556,6 +585,12 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         f.put("adminPass", st.adminPass);
         f.put("protocols", st.protocols);
         f.put("engine", st.engine);
+        if (!st.formsJson.isEmpty()) {
+            try {
+                f.put("forms", new JSONObject(st.formsJson));
+            } catch (Exception ignored) {
+            }
+        }
         return f;
     }
 

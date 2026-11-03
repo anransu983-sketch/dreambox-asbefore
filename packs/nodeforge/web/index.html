@@ -193,8 +193,67 @@
   }
 
   var engine = 'sui';
+  // 双引擎表单分开保存：formStore 各存一份（页面内暂存 + 部署时落盘到宿主状态），
+  // 切引擎先暂存当前份、再恢复目标引擎那份；目标引擎从没存过时只重置节点字段。
+  var formStore = { sui: null, singbox: null };
+  var programmaticSwitch = false;
+
+  function readForm() {
+    return {
+      host: $('host').value.trim(),
+      sshPort: parseInt($('sshPort').value, 10) || 22,
+      sshUser: $('sshUser').value.trim() || 'root',
+      sshPassword: $('sshPassword').value,
+      nodeName: $('nodeName').value.trim(),
+      nodePort: parseInt($('nodePort').value, 10) || 443,
+      subId: $('subId').value,
+      adminUser: $('adminUser').value.trim() || 'sui',
+      adminPass: $('adminPass').value,
+      quotaGb: $('quotaGb').value.trim(),
+      expireDate: $('expireDate').value,
+      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoSs').checked ? ',ss' : ''),
+      engine: engine
+    };
+  }
+
+  function fillDom(f) {
+    if (!f) return;
+    var protos = (f.protocols || 'reality').split(',');
+    $('protoHy2').checked = protos.indexOf('hy2') >= 0;
+    $('protoSs').checked = protos.indexOf('ss') >= 0;
+    $('host').value = f.host || '';
+    $('sshPort').value = f.sshPort || 22;
+    $('sshUser').value = f.sshUser || 'root';
+    if (f.sshPassword) $('sshPassword').value = f.sshPassword;
+    $('nodeName').value = f.nodeName || '';
+    $('nodePort').value = f.nodePort || 443;
+    $('subId').value = f.subId || 'node1';
+    $('adminUser').value = f.adminUser || 'sui';
+    if (f.adminPass) $('adminPass').value = f.adminPass;
+    $('quotaGb').value = f.quotaGb || '';
+    $('expireDate').value = f.expireDate || '';
+  }
+
+  function resetNodeFields() {
+    $('nodeName').value = '';
+    $('nodePort').value = 443;
+    $('subId').value = 'node1';
+    $('quotaGb').value = '';
+    $('expireDate').value = '';
+    $('protoHy2').checked = false;
+    $('protoSs').checked = false;
+  }
+
   function setEngine(e) {
-    engine = e;
+    if (engine !== e) {
+      if (!programmaticSwitch) {
+        formStore[engine] = readForm();
+        engine = e;
+        if (formStore[e]) { fillDom(formStore[e]); } else { resetNodeFields(); }
+      } else {
+        engine = e;
+      }
+    }
     $('engSui').classList.toggle('on', e === 'sui');
     $('engSb').classList.toggle('on', e === 'singbox');
     var suiOnly = ['subIdWrap', 'adminRow', 'quotaRow', 'quotaWarn', 'subPortWarn'];
@@ -202,8 +261,8 @@
       var el = $(id); if (el) el.style.display = (e === 'sui') ? '' : 'none';
     });
     $('engineHint').textContent = e === 'sui'
-      ? '带网页面板和订阅链接；面板只绑本机回环、公网打不开，管理走 SSH 隧道。'
-      : '没有面板、没有订阅网址：sing-box 一个进程跑全部协议，配置和链接直接打印在部署终端里；这个模式没有流量/到期统计。';
+      ? '带网页面板和订阅链接；面板只绑本机回环、公网打不开，管理走 SSH 隧道。两个引擎的表单分开保存，各记各的。'
+      : '没有面板、没有订阅网址：sing-box 一个进程跑全部协议，配置和链接直接打印在部署终端里；这个模式没有流量/到期统计。两个引擎的表单分开保存，各记各的。';
     $('protoWarn').textContent = e === 'sui'
       ? '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。'
       : '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP），SS 用 +3（TCP/UDP），都由 sing-box 托管；安全组记得连同放行。';
@@ -238,21 +297,25 @@
       protocols: f.protocols || 'reality',
       engine: f.engine || 'sui'
     };
-    setEngine(f.engine || 'sui');
-    var protos = (f.protocols || 'reality').split(',');
-    $('protoHy2').checked = protos.indexOf('hy2') >= 0;
-    $('protoSs').checked = protos.indexOf('ss') >= 0;
-    $('host').value = f.host;
-    $('sshPort').value = f.sshPort || 22;
-    $('sshUser').value = f.sshUser || 'root';
-    if (f.sshPassword) $('sshPassword').value = f.sshPassword;
-    $('nodeName').value = f.nodeName || '';
-    $('nodePort').value = f.nodePort || 443;
-    $('subId').value = f.subId || 'node1';
-    $('adminUser').value = f.adminUser || 'sui';
-    if (f.adminPass) $('adminPass').value = f.adminPass;
-    $('quotaGb').value = f.quotaGb || '';
-    $('expireDate').value = f.expireDate || '';
+    if (f.forms) {
+      if (f.forms.sui) formStore.sui = f.forms.sui;
+      if (f.forms.singbox) formStore.singbox = f.forms.singbox;
+    }
+    var fe = f.engine || 'sui';
+    if (!formStore[fe]) {
+      // 旧版只有一份表单：归到它所属引擎名下，另一引擎首次切过去时走重置。
+      formStore[fe] = {
+        host: f.host, sshPort: f.sshPort, sshUser: f.sshUser,
+        sshPassword: f.sshPassword, nodeName: f.nodeName, nodePort: f.nodePort,
+        subId: f.subId, adminUser: f.adminUser, adminPass: f.adminPass,
+        quotaGb: f.quotaGb, expireDate: f.expireDate,
+        protocols: f.protocols, engine: fe
+      };
+    }
+    programmaticSwitch = true;
+    fillDom(formStore[fe]);
+    setEngine(fe);
+    programmaticSwitch = false;
   }
 
   function pollOnce() {
@@ -456,6 +519,7 @@
     }
     $('subId').value = opts.subId;
     lastOpts = opts;
+    formStore[opts.engine] = readForm();
     $('deployBtn').disabled = true;
     $('resultCard').classList.add('hidden');
     $('logCard').classList.remove('hidden');
