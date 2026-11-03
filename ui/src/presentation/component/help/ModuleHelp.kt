@@ -2,7 +2,6 @@ package com.suanran.dreambox.presentation.component.help
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,10 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -137,11 +134,11 @@ fun ModuleHelpAction(helpKey: String) {
     val entry = remember(helpKey) { ModuleHelp.find(helpKey) } ?: return
     var show by remember { mutableStateOf(false) }
     IconButton(onClick = { show = true }) {
-        Icon(
-            imageVector = MiuixIcons.Info,
-            contentDescription = "功能说明",
-            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.size(20.dp),
+        // ui 模块没有 extended 图标集的 Info 图标，用文字字形 ⓘ 代替（本就是小而低调的提示钮）。
+        Text(
+            text = "\u24d8",
+            fontSize = 19.sp,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
     }
     AppDialog(
