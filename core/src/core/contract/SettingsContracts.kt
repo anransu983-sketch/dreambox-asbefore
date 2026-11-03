@@ -122,6 +122,11 @@ interface AppSettingsReader {
     /** s-ui 面板地址（用户自建，如 http://38.209.71.17:2095/app）。 */
     val suiPanelUrl: Preference<String>
     val animOpacityOverride: Preference<Float>
+    // 高武门派插件（HostSect 桥写入）：所选修行流派 id（空=未入门）、入门时间、插件内修炼攒下的修为加成、上次修炼日期（yyyy-MM-dd）
+    val sectPathId: Preference<String>
+    val sectJoinedAt: Preference<Long>
+    val sectExpBonus: Preference<Int>
+    val sectLastCultivateDay: Preference<String>
 }
 
 /** Read/write contract for WebDAV backup settings. */

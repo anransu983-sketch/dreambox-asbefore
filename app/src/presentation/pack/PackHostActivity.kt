@@ -49,6 +49,7 @@ class PackHostActivity : Activity() {
     private var pluginHeadersJson: String = "[]"
     private var hostBackupAllowed: Boolean = false
     private var hostKernelAllowed: Boolean = false
+    private var hostSectAllowed: Boolean = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,6 +71,10 @@ class PackHostActivity : Activity() {
         hostKernelAllowed = runCatching {
             val marker = File(packDir, "pack.json")
             marker.isFile && JSONObject(marker.readText()).optBoolean("hostKernel", false)
+        }.getOrDefault(false)
+        hostSectAllowed = runCatching {
+            val marker = File(packDir, "pack.json")
+            marker.isFile && JSONObject(marker.readText()).optBoolean("hostSect", false)
         }.getOrDefault(false)
         requestPackPermissions()
         dispatcher = loadDispatcher(entryClass)
@@ -215,6 +220,10 @@ class PackHostActivity : Activity() {
                 handleHostKernel(callbackId, method, options)
                 return
             }
+            if (pluginId == "HostSect") {
+                handleHostSect(callbackId, method, options)
+                return
+            }
             val current = dispatcher
             if (current == null) {
                 sendResult(callbackId, success = false, dataJson = null, error = "插件原生代码不可用（$pluginId 未实现）")
@@ -234,6 +243,142 @@ class PackHostActivity : Activity() {
                 if (!handled) {
                     sendResult(callbackId, success = false, dataJson = null, error = "插件未实现 $pluginId.$method")
                 }
+            }
+        }
+    }
+
+    // ── 高武门派桥（HostSect）─────────────────────────────────
+
+    /** 七修流派的宿主侧定版：种子色与明暗必须与插件页 SECTS 一致，改一处须同步另一处。 */
+    private data class SectDef(val seedArgb: Long, val dark: Boolean)
+
+    private val sectDefs: Map<String, SectDef> = mapOf(
+        "jian" to SectDef(0xFF0284C7L, true),
+        "fu" to SectDef(0xFFF59E0BL, false),
+        "zhen" to SectDef(0xFF6366F1L, true),
+        "ti" to SectDef(0xFFEA580CL, true),
+        "kuilei" to SectDef(0xFF0F766EL, true),
+        "gui" to SectDef(0xFF16A34AL, true),
+        "mo" to SectDef(0xFFDC2626L, true),
+    )
+
+    private val sectRankThresholds = intArrayOf(0, 60, 180, 400, 800, 1400, 2200)
+    private val sectRankNames = listOf("炼气", "筑基", "金丹", "元婴", "化神", "炼虚", "大乘")
+    private val sectTitleNames = listOf("外门弟子", "内门弟子", "真传弟子", "执事长老", "峰主长老", "太上长老", "掌门老祖")
+
+    private fun sectSettings() =
+        org.koin.core.context.GlobalContext.get().get<com.suanran.dreambox.data.store.AppSettingsStore>()
+
+    /** 修为 = 入门天数×10 + 已导入配置×25 + 已装插件×20 + 插件内修炼加成。 */
+    private fun sectStateJson(): String {
+        val s = sectSettings()
+        val joinedAt = s.sectJoinedAt.value
+        val days = if (joinedAt <= 0L) 0 else
+            ((System.currentTimeMillis() - joinedAt) / 86_400_000L).toInt().coerceAtLeast(0)
+        val profileCount = runCatching {
+            File(filesDir, "imported").listFiles()?.count { it.isDirectory } ?: 0
+        }.getOrDefault(0)
+        val packCount = runCatching {
+            File(filesDir, "packs").listFiles()
+                ?.count { it.isDirectory && File(it, "pack.json").isFile } ?: 0
+        }.getOrDefault(0)
+        val bonus = s.sectExpBonus.value
+        val exp = days * 10 + profileCount * 25 + packCount * 20 + bonus
+        var rank = 0
+        for (i in sectRankThresholds.indices) if (exp >= sectRankThresholds[i]) rank = i
+        val next = if (rank + 1 < sectRankThresholds.size) sectRankThresholds[rank + 1] else -1
+        return JSONObject().apply {
+            put("sectId", s.sectPathId.value)
+            put("joinedAt", joinedAt)
+            put("days", days)
+            put("profileCount", profileCount)
+            put("packCount", packCount)
+            put("expBonus", bonus)
+            put("exp", exp)
+            put("rankIndex", rank)
+            put("rankName", sectRankNames[rank])
+            put("title", sectTitleNames[rank])
+            put("nextThreshold", next)
+            put("lastCultivateDay", s.sectLastCultivateDay.value)
+            put("today", java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()))
+            put("seedArgb", s.themeAccentColorArgb.value)
+            put("themeMode", s.themeMode.value.name)
+        }.toString()
+    }
+
+    /** 境界到了，整个 App 的布局跟着变：不是插件页自娱自乐，本体设置同步落盘、重启生效。 */
+    private fun applySectRankLayout(rank: Int) {
+        val s = sectSettings()
+        s.topBarBlurEnabled.set(rank >= 2)
+        s.animationEnabled.set(rank >= 3)
+        s.bottomBarAutoHide.set(rank < 4)
+        s.pageScale.set(
+            when {
+                rank <= 0 -> 0.96f
+                rank >= 6 -> 1.04f
+                rank >= 4 -> 1.02f
+                else -> 1.0f
+            }
+        )
+    }
+
+    /**
+     * 宿主门派桥：只有 pack.json 声明 "hostSect": true 的包能调。
+     * 选修 = 把该流派的种子色/明暗写进本体主题（全 App 换装）；境界由宿主按真实使用数据算，
+     * 插件页只能展示与领每日修炼加成，改不了境界本身。
+     */
+    private fun handleHostSect(callbackId: String, method: String, options: JSONObject) {
+        if (!hostSectAllowed) {
+            sendResult(callbackId, success = false, dataJson = null, error = "该插件未声明 hostSect 权限")
+            return
+        }
+        io.execute {
+            val result = runCatching {
+                val s = sectSettings()
+                when (method) {
+                    "state" -> sectStateJson()
+                    "choose" -> {
+                        val sectId = options.optString("sectId")
+                        val def = sectDefs[sectId] ?: throw IllegalArgumentException("未知流派 $sectId")
+                        if (s.sectJoinedAt.value <= 0L) s.sectJoinedAt.set(System.currentTimeMillis())
+                        s.sectPathId.set(sectId)
+                        s.themeAccentColorArgb.set(def.seedArgb)
+                        s.themeMode.set(
+                            if (def.dark) com.suanran.dreambox.core.model.ThemeMode.Dark
+                            else com.suanran.dreambox.core.model.ThemeMode.Light
+                        )
+                        // 门派引导走完，旧的新手引导不再弹
+                        s.homePreviewGuideShown.set(true)
+                        val st = JSONObject(sectStateJson())
+                        applySectRankLayout(st.optInt("rankIndex", 0))
+                        sectStateJson()
+                    }
+                    "cultivate" -> {
+                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派再修炼")
+                        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                            .format(java.util.Date())
+                        if (s.sectLastCultivateDay.value == today) throw IllegalStateException("今日已修炼，明日再来")
+                        s.sectLastCultivateDay.set(today)
+                        s.sectExpBonus.set(s.sectExpBonus.value + 20)
+                        val st = JSONObject(sectStateJson())
+                        applySectRankLayout(st.optInt("rankIndex", 0))
+                        sectStateJson()
+                    }
+                    "leave" -> {
+                        s.sectPathId.set("")
+                        s.themeAccentColorArgb.set(0xFF138A74L)
+                        s.themeMode.set(com.suanran.dreambox.core.model.ThemeMode.Auto)
+                        applySectRankLayout(1)
+                        sectStateJson()
+                    }
+                    else -> throw IllegalArgumentException("未知方法 $method")
+                }
+            }
+            result.onSuccess { data ->
+                sendResult(callbackId, success = true, dataJson = data, error = null)
+            }.onFailure { e ->
+                AppLogBuffer.forceAdd(Log.ERROR, "Pack", "HostSect.$method 失败\n" + Log.getStackTraceString(e))
+                sendResult(callbackId, success = false, dataJson = null, error = e.message ?: "门派桥失败")
             }
         }
     }

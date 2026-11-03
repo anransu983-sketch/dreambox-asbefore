@@ -135,6 +135,15 @@ class PackStore(context: Context) {
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
             ),
             PackDef(
+                id = "sect",
+                name = "高武门派",
+                summary = "把新手引导换成选道：剑修/符修/阵修/体修/傀儡修/鬼修/魔修七道任选其一，选哪道整个梦盒就换成哪道的主题色与明暗；修为按入门天数、导入配置数、已装插件数与每日修炼累积，炼气→筑基→金丹→元婴→化神→炼虚→大乘七境，每升一境插件页与本体布局都跟着变（金丹居中、元婴分栏、化神横幅、大乘金框，顶栏毛玻璃/氛围动画/底栏常驻随境界解锁）",
+                version = "1",
+                sizeText = "约 80 KB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sect-pack-v1.zip",
+                entryClass = "com.suanran.pack.sect.SectPackEntry",
+            ),
+            PackDef(
                 id = "iptest",
                 name = "IP 测试",
                 summary = "IP 查询与纯净度检测：13 个常用检测站经当前代理出口一键打开",

@@ -80,6 +80,11 @@ class AppSettingsStore(externalMmkv: MMKV) : MMKVPreference(externalMmkv = exter
     override val probeServerUrl by strFlow("https://probe.suanran9527.com")
     // s-ui 面板地址（用户自建）
     override val suiPanelUrl by strFlow("")
+    // 高武门派插件（HostSect）
+    override val sectPathId by strFlow("")
+    override val sectJoinedAt by longFlow(0L)
+    override val sectExpBonus by intFlow(0)
+    override val sectLastCultivateDay by strFlow("")
 
     init { migrateLegacyHomeKeys() }
 

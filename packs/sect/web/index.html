@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>高武门派 · 选道</title>
+<style>
+  :root{
+    --bg:#0b0f16; --bg2:#101826; --card:#151d2c; --border:#26334d;
+    --accent:#38bdf8; --accent2:#818cf8; --text:#eef4ff; --sub:#93a5c4;
+    --radius:16px; --bw:1px;
+    color-scheme: dark;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:18px 16px 40px;transition:background .4s,color .4s;min-height:100vh}
+  /* —— 各道氛围 —— */
+  body[data-sect="fu"]{color-scheme:light}
+  body[data-sect="gui"]::before,body[data-sect="zhen"]::before,body[data-sect="mo"]::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  }
+  body[data-sect="gui"]::before{background:radial-gradient(600px 300px at 20% 0%,rgba(74,222,128,.13),transparent 60%),radial-gradient(500px 260px at 90% 30%,rgba(74,222,128,.08),transparent 60%)}
+  body[data-sect="zhen"]::before{background:radial-gradient(700px 340px at 50% -60px,rgba(129,140,248,.16),transparent 65%)}
+  body[data-sect="mo"]::before{background:radial-gradient(700px 320px at 50% -60px,rgba(220,38,38,.18),transparent 65%),radial-gradient(400px 240px at 95% 60%,rgba(168,85,247,.10),transparent 60%)}
+  body>*{position:relative;z-index:1}
+  h1{font-size:24px;font-weight:800;letter-spacing:1px}
+  .hero-sub{color:var(--sub);font-size:13px;line-height:1.6;margin:6px 0 16px}
+  .steps{display:flex;gap:6px;margin-bottom:16px}
+  .step{flex:1;text-align:center;font-size:11.5px;color:var(--sub);padding:7px 2px;border:var(--bw) solid var(--border);border-radius:calc(var(--radius)*.6);background:var(--card)}
+  .step.on{color:#fff;background:linear-gradient(120deg,var(--accent),var(--accent2));border-color:transparent;font-weight:700}
+  body[data-sect="fu"] .step.on{color:#fff}
+  .sect-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sect-card{border:var(--bw) solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;transition:transform .15s, box-shadow .15s;position:relative;overflow:hidden}
+  .sect-card:active{transform:scale(.98)}
+  .sect-card.sel{box-shadow:0 0 0 2px var(--c1),0 8px 24px rgba(0,0,0,.35)}
+  .sect-card .ic{font-size:26px}
+  .sect-card .nm{font-size:17px;font-weight:800;margin-top:6px}
+  .sect-card .sc{font-size:12px;opacity:.75;margin-top:2px}
+  .sect-card .mt{font-size:11.5px;opacity:.85;margin-top:7px;line-height:1.5;font-style:italic}
+  .sect-card .seal{position:absolute;right:8px;top:8px;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
+  .card{background:var(--card);border:var(--bw) solid var(--border);border-radius:var(--radius);padding:16px;margin-top:14px}
+  .card h2{font-size:16px;margin-bottom:8px}
+  .desc{font-size:13px;color:var(--sub);line-height:1.65}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);cursor:pointer}
+  .chip.on{background:var(--accent);border-color:transparent;color:#fff;font-weight:700}
+  button.main{width:100%;border:0;border-radius:calc(var(--radius)*.8);padding:15px;font-size:16px;font-weight:800;letter-spacing:1px;background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;margin-top:16px;cursor:pointer}
+  button.main:disabled{opacity:.4}
+  button.ghost{width:100%;border:1px solid var(--border);border-radius:calc(var(--radius)*.8);padding:12px;font-size:14px;background:transparent;color:var(--sub);margin-top:10px;cursor:pointer}
+  .err{color:#ff9db0;font-size:13px;margin-top:10px;line-height:1.5;min-height:0}
+  .ok{color:var(--accent);font-size:13px;margin-top:10px;line-height:1.5}
+  /* —— 手机样机（选道时预览该道 UI） —— */
+  .phone{width:230px;margin:14px auto 4px;border:2px solid var(--border);border-radius:26px;padding:12px 12px 14px;background:var(--bg2)}
+  .phone .p-top{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-bottom:10px}
+  .phone .p-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0}
+  .phone .p-core{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;box-shadow:0 0 24px var(--accent)}
+  .phone .p-row{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:12px}
+  .phone .p-row .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+  .phone .p-row .ms{margin-left:auto;color:var(--sub);font-size:11px}
+  .phone .p-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .phone .p-tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12px;text-align:center}
+  .phone .p-tile b{display:block;font-size:15px;color:var(--accent);margin-bottom:2px}
+  /* —— 山门（已入门）与境界布局 —— */
+  .hall-frame{border-radius:calc(var(--radius) + 6px)}
+  .hall-head{text-align:left}
+  .hall-head .big{font-size:22px;font-weight:800}
+  .rankbar{height:10px;border-radius:99px;background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-top:10px}
+  .rankbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .5s}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .stat{background:var(--card);border:var(--bw) solid var(--border);border-radius:var(--radius);padding:13px}
+  .stat b{font-size:19px;color:var(--accent)}
+  .stat div{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.5}
+  .layout-note{font-size:12.5px;color:var(--sub);line-height:1.65;margin-top:10px}
+  /* 炼气：单列简朴（默认即单列） */
+  /* 筑基：洞府成形 —— 身份卡与统计并排感（统计已是双列），标题加印记 */
+  .layout-1 .hall-head .big::after{content:" · 洞府初成";font-size:12px;color:var(--accent)}
+  /* 金丹：金丹居中 —— 身份区居中、核心圆显形、统计三列 */
+  .layout-2 .hall-head{text-align:center}
+  .layout-2 .stats{grid-template-columns:1fr 1fr 1fr}
+  .layout-2 .core-orb{display:flex!important}
+  /* 元婴：分栏理事 —— 左侧竖排身份轨 */
+  .layout-3 .hall-wrap{display:grid;grid-template-columns:44px 1fr;gap:12px}
+  .layout-3 .hall-rail{display:flex!important}
+  /* 化神：一峰之主 —— 顶部横幅渐变、面板双列 */
+  .layout-4 .hall-head{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:var(--radius);padding:16px}
+  .layout-4 .hall-head .desc,.layout-4 .hall-head .layout-note{color:rgba(255,255,255,.85)}
+  .layout-4 .panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .layout-4 .panels .card{margin-top:0}
+  .layout-4 .panels-wrap{margin-top:14px}
+  /* 炼虚：洞天全景 —— 毛玻璃 + 氛围浮动 */
+  .layout-5 .card,.layout-5 .stat{backdrop-filter:blur(8px);background:color-mix(in srgb,var(--card) 82%,transparent)}
+  .layout-5 .hall-head{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:var(--radius);padding:16px}
+  .layout-5 .hall-head .desc,.layout-5 .hall-head .layout-note{color:rgba(255,255,255,.85)}
+  .layout-5 .panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .layout-5 .panels .card{margin-top:0}
+  .layout-5 .panels-wrap{margin-top:14px}
+  .layout-5 .stats{grid-template-columns:1fr 1fr 1fr}
+  /* 大乘：宗门全开 —— 金框加冕、全布局叠加 */
+  .layout-6{border:2px solid #d4af37;border-radius:26px;padding:12px;background:color-mix(in srgb,var(--bg2) 70%,transparent)}
+  .layout-6 .hall-head{text-align:center;background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:var(--radius);padding:16px}
+  .layout-6 .hall-head .desc,.layout-6 .hall-head .layout-note{color:rgba(255,255,255,.88)}
+  .layout-6 .stats{grid-template-columns:1fr 1fr 1fr}
+  .layout-6 .panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .layout-6 .panels .card{margin-top:0}
+  .layout-6 .panels-wrap{margin-top:14px}
+  .layout-6 .core-orb{display:flex!important}
+  .core-orb{display:none;justify-content:center;margin:12px 0 2px}
+  .core-orb i{width:86px;height:86px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--accent) 55%,var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;font-style:normal;color:#fff;box-shadow:0 0 34px var(--accent)}
+  .hall-rail{display:none;writing-mode:vertical-rl;letter-spacing:6px;font-size:14px;font-weight:800;color:var(--accent);border:var(--bw) solid var(--border);border-radius:var(--radius);background:var(--card);align-items:center;justify-content:center;padding:14px 0}
+  .hidden{display:none!important}
+  .foot{color:var(--sub);font-size:11.5px;line-height:1.6;margin-top:18px;text-align:center}
+</style>
+</head>
+<body>
+<div id="view-guide">
+  <h1>⚔️ 高武降临 · 万道争锋</h1>
+  <div class="hero-sub">此界没有默认的模样。你选哪一道，梦盒就长成哪一道的模样——配色、明暗、脾性全换；修为越深，界面布局越开：从外门弟子的单列陋室，一路开到掌门老祖的宗门全景。</div>
+  <div class="steps">
+    <div class="step on">一 · 入世</div><div class="step on">二 · 选道</div><div class="step">三 · 览境</div><div class="step">四 · 入门</div>
+  </div>
+  <div class="sect-grid" id="sectGrid"></div>
+
+  <div class="card" id="previewCard">
+    <h2 id="pvTitle">先选一道</h2>
+    <div class="desc" id="pvDesc">点上面任意一道，下面立刻变出它在梦盒里的模样。</div>
+    <div class="phone" id="phoneMock"></div>
+    <div class="desc" style="margin-top:10px">境界预览（入门后按真实修为自动升，不是手动换肤）：</div>
+    <div class="chips" id="rankChips"></div>
+    <div class="layout-note" id="rankNote"></div>
+    <div class="err" id="guideErr"></div>
+    <button class="main" id="btnJoin" disabled>拜入此门</button>
+    <div class="foot">入门即生效：整个梦盒的主题色与明暗随道统而变，退出本页就能看见。日后在插件里可改投他派。</div>
+  </div>
+</div>
+
+<div id="view-hall" class="hidden">
+  <div class="hall-frame" id="hallFrame">
+    <div class="hall-wrap">
+      <div class="hall-rail" id="hallRail">外门弟子</div>
+      <div>
+        <div class="card hall-head" style="margin-top:0">
+          <div class="big" id="hallTitle">山门</div>
+          <div class="desc" id="hallSub"></div>
+          <div class="core-orb"><i id="hallOrb">⚔️</i></div>
+          <div class="desc" id="hallExpText" style="margin-top:8px"></div>
+          <div class="rankbar"><i id="hallExpBar" style="width:0%"></i></div>
+          <div class="layout-note" id="hallLayoutNote"></div>
+        </div>
+        <div class="stats" id="hallStats"></div>
+        <div class="panels-wrap"><div class="panels">
+          <div class="card">
+            <h2>🧘 每日修炼</h2>
+            <div class="desc">运功一周天，修为 +20。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界越高。</div>
+            <button class="main" id="btnCultivate">开始修炼</button>
+            <div class="ok" id="cultOk"></div>
+            <div class="err" id="hallErr"></div>
+          </div>
+          <div class="card">
+            <h2>🏯 境界与布局</h2>
+            <div class="desc" id="hallRankList"></div>
+          </div>
+        </div></div>
+        <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
+        <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
+        <div class="foot">境界变化会同步改本体的布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨。重启梦盒后完全生效。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* 七修定版：seed 与宿主 HostSect 的 sectDefs 必须一致（fu 为明，余皆暗） */
+var SECTS=[
+ {id:"jian",name:"剑修",sect:"青冥剑宗",icon:"⚔️",seal:"剑",motto:"一剑霜寒十四州",xinfa:"青冥剑诀",
+  desc:"御剑而行，快意直达。本道主速：节点延迟如剑锋，一眼见分晓。",
+  trait:"极简凌厉 · 小圆角斜切 · 青锋留白",perk:"专长：御剑疾行（测速与延迟）",
+  c:{bg:"#071018",bg2:"#0a1826",card:"#0c1d29",border:"#164e63",accent:"#0284c7",accent2:"#38bdf8",text:"#ecf7ff",sub:"#8fb8cc",radius:"6px",bw:"1px"}},
+ {id:"fu",name:"符修",sect:"太清符宗",icon:"📜",seal:"符",motto:"一符镇山河",xinfa:"太清符经",
+  desc:"黄纸朱砂，落笔成禁。本道主封：规则如符箓，一张压住一类纷扰。",
+  trait:"黄纸朱砂 · 浅色纸面 · 印章落款",perk:"专长：符箓封印（规则与拦截）",
+  c:{bg:"#f3e9d2",bg2:"#efe3c8",card:"#fff8e6",border:"#d6b25e",accent:"#c2410c",accent2:"#d97706",text:"#3b2f1a",sub:"#8a6d3b",radius:"4px",bw:"1px"}},
+ {id:"zhen",name:"阵修",sect:"星枢阵宫",icon:"◎",seal:"阵",motto:"阵里乾坤大",xinfa:"星枢阵图",
+  desc:"落子成阵，进退有法。本道主局：策略组与分流规则，就是你的阵图。",
+  trait:"星盘罗列 · 对称阵列 · 深蓝星辉",perk:"专长：布阵分流（策略组与规则）",
+  c:{bg:"#0b0a1f",bg2:"#100e2a",card:"#151332",border:"#3730a3",accent:"#6366f1",accent2:"#a5b4fc",text:"#eef0ff",sub:"#9aa3d9",radius:"16px",bw:"1px"}},
+ {id:"ti",name:"体修",sect:"金刚体宗",icon:"👊",seal:"体",motto:"一力降十会",xinfa:"金刚不坏身",
+  desc:"不借外物，肉身即是法宝。本道主扛：全局 TUN 一开，千钧压顶面不改色。",
+  trait:"厚重粗边 · 大字压阵 · 铜皮铁骨",perk:"专长：肉身成圣（全局与 TUN）",
+  c:{bg:"#170d06",bg2:"#201106",card:"#26160b",border:"#9a3412",accent:"#ea580c",accent2:"#fbbf24",text:"#fff4e8",sub:"#c99a6b",radius:"10px",bw:"2.5px"}},
+ {id:"kuilei",name:"傀儡修",sect:"千机傀儡门",icon:"🪆",seal:"傀",motto:"千机牵一线",xinfa:"千机牵丝诀",
+  desc:"十指牵丝，傀儡如活。本道主分：多份配置、多台节点，都是你手里的傀儡。",
+  trait:"模块拼接 · 丝线牵引 · 铜绿机关",perk:"专长：傀儡分身（多配置与插件）",
+  c:{bg:"#061514",bg2:"#08201e",card:"#0b2422",border:"#115e59",accent:"#0f766e",accent2:"#2dd4bf",text:"#e8fdfa",sub:"#7fb5ad",radius:"12px",bw:"1px"}},
+ {id:"gui",name:"鬼修",sect:"幽冥鬼府",icon:"👻",seal:"鬼",motto:"夜行三千里",xinfa:"幽冥鬼经",
+  desc:"来无影，去无踪。本道主隐：行迹如鬼魅，窥探者只见一团幽绿雾气。",
+  trait:"幽绿半透 · 雾气缭绕 · 极夜低光",perk:"专长：鬼影潜行（隐匿与防窥）",
+  c:{bg:"#030a05",bg2:"#051209",card:"#07150b",border:"#14532d",accent:"#16a34a",accent2:"#4ade80",text:"#eafff1",sub:"#79a887",radius:"18px",bw:"1px"}},
+ {id:"mo",name:"魔修",sect:"血煞魔宗",icon:"🔥",seal:"魔",motto:"我命由我不由天",xinfa:"血煞魔功",
+  desc:"不敬天，不畏仙，只信自己。本道主逆：配色最烈、对比最狠，魔焰所至无素净。",
+  trait:"黑红血煞 · 高对比 · 紫焰点缀",perk:"专长：血遁千里（爆发与突围）",
+  c:{bg:"#120405",bg2:"#1a0608",card:"#1f0709",border:"#7f1d1d",accent:"#dc2626",accent2:"#a855f7",text:"#fff0f0",sub:"#c48a8a",radius:"8px",bw:"1px"}}
+];
+var RANKS=[
+ {name:"炼气",title:"外门弟子",need:0,note:"布局：单列陋室。统计只有两格，页面缩放 0.96，一切从简——先活下去。"},
+ {name:"筑基",title:"内门弟子",need:60,note:"布局：洞府初成。标题添「洞府初成」印记，缩放回到 1.0，算是有了自己的地盘。"},
+ {name:"金丹",title:"真传弟子",need:180,note:"布局：金丹居中。身份区居中、金丹圆显形、统计扩到三列，本体顶栏开启毛玻璃。"},
+ {name:"元婴",title:"执事长老",need:400,note:"布局：分栏理事。左侧立起竖排身份轨，本体首页氛围动画开启，开始管事了。"},
+ {name:"化神",title:"峰主长老",need:800,note:"布局：一峰之主。顶部横幅换上道统渐变，面板双列铺开，本体底栏改为常驻。"},
+ {name:"炼虚",title:"太上长老",need:1400,note:"布局：洞天全景。横幅、双列、三列统计俱全，卡片带毛玻璃，氛围拉满。"},
+ {name:"大乘",title:"掌门老祖",need:2200,note:"布局：宗门全开。金框加冕，所有布局形态叠加显形，一派之主不过如此。"}
+];
+var $=function(id){return document.getElementById(id)};
+var selSect=null, selRank=0;
+var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"外门弟子",nextThreshold:60,lastCultivateDay:"",today:""};
+var hasBridge = !!(window.Capacitor && window.Capacitor.toNative);
+
+function sectById(id){for(var i=0;i<SECTS.length;i++)if(SECTS[i].id===id)return SECTS[i];return null}
+function applySectTheme(s){
+  if(!s)return;
+  var r=document.documentElement.style;
+  r.setProperty("--bg",s.c.bg);r.setProperty("--bg2",s.c.bg2);r.setProperty("--card",s.c.card);
+  r.setProperty("--border",s.c.border);r.setProperty("--accent",s.c.accent);r.setProperty("--accent2",s.c.accent2);
+  r.setProperty("--text",s.c.text);r.setProperty("--sub",s.c.sub);r.setProperty("--radius",s.c.radius);r.setProperty("--bw",s.c.bw);
+  document.body.setAttribute("data-sect",s.id);
+}
+function callNative(method,options){
+  return new Promise(function(resolve,reject){
+    if(!hasBridge){reject(new Error("no-bridge"));return}
+    window.Capacitor.toNative("HostSect",method,options||{},{
+      callback:function(res,err){
+        if(err){reject(new Error(err.message||String(err)));return}
+        if(res&&res.error){reject(new Error(res.error.message||"调用失败"));return}
+        resolve(res||{});
+      }
+    });
+  });
+}
+/* —— 浏览器预览兜底：无桥时用 localStorage 模拟宿主，让同一页面能在手机浏览器直接看 —— */
+function mockLoad(){
+  try{var s=JSON.parse(localStorage.getItem("sectMock")||"{}");
+    if(s.sectId){state=Object.assign(state,s)} }catch(e){}
+  mockDerive();
+}
+function mockDerive(){
+  if(state.joinedAt){
+    state.days=Math.max(0,Math.floor((Date.now()-state.joinedAt)/86400000));
+  }
+  state.exp=state.days*10+state.profileCount*25+state.packCount*20+state.expBonus;
+  var r=0;for(var i=0;i<RANKS.length;i++)if(state.exp>=RANKS[i].need)r=i;
+  state.rankIndex=r;state.rankName=RANKS[r].name;state.title=RANKS[r].title;
+  state.nextThreshold=(r+1<RANKS.length)?RANKS[r+1].need:-1;
+  state.today=new Date().toISOString().slice(0,10);
+}
+function mockSave(){try{localStorage.setItem("sectMock",JSON.stringify(state))}catch(e){}}
+function refreshState(){
+  if(hasBridge){
+    return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
+  }
+  mockLoad();render();return Promise.resolve();
+}
+/* —— 选道页 —— */
+function renderGrid(){
+  $("sectGrid").innerHTML=SECTS.map(function(s){
+    return '<div class="sect-card'+(selSect===s.id?" sel":"")+'" data-id="'+s.id+'" style="background:'+s.c.card+';border-color:'+s.c.border+';color:'+s.c.text+';--c1:'+s.c.accent+'">'+
+      '<div class="seal" style="background:'+s.c.accent+'">'+s.seal+'</div>'+
+      '<div class="ic">'+s.icon+'</div><div class="nm">'+s.name+'</div><div class="sc">'+s.sect+'</div>'+
+      '<div class="mt">「'+s.motto+'」</div></div>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll(".sect-card"),function(el){
+    el.addEventListener("click",function(){selSect=el.getAttribute("data-id");renderGrid();renderPreview()});
+  });
+}
+function renderMock(s,rank){
+  var rows='<div class="p-row"><span class="dot"></span>青冥节点 · 香港<span class="ms">86ms</span></div>'+
+           '<div class="p-row"><span class="dot"></span>青冥节点 · 东京<span class="ms">112ms</span></div>';
+  var tiles='<div class="p-tiles"><div class="p-tile"><b>86ms</b>最快节点</div><div class="p-tile"><b>12.4G</b>本月流量</div></div>';
+  var core='<div class="p-hero"><div class="p-core">'+s.icon+'</div><div style="font-size:12px;color:var(--sub)">'+(rank>=2?"金丹运转中":"点击启程")+'</div></div>';
+  var inner='<div class="p-top"><span>'+s.sect+'</span><span>'+RANKS[rank].name+' · '+RANKS[rank].title+'</span></div>';
+  if(rank<=0) inner+=core+rows;
+  else if(rank===1) inner+=core+tiles;
+  else if(rank===2) inner+=core+tiles+rows;
+  else if(rank===3) inner+='<div style="display:grid;grid-template-columns:34px 1fr;gap:8px"><div style="writing-mode:vertical-rl;text-align:center;font-size:11px;color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:6px 0">'+RANKS[rank].title+'</div><div>'+core+rows+'</div></div>';
+  else inner+=core+tiles+rows+'<div class="p-row"><span class="dot"></span>宗门面板 · 全开<span class="ms">长老</span></div>';
+  $("phoneMock").innerHTML=inner;
+}
+function renderPreview(){
+  var s=sectById(selSect);
+  $("rankChips").innerHTML=RANKS.map(function(r,i){
+    return '<span class="chip'+(i===selRank?" on":"")+'" data-r="'+i+'">'+r.name+' · '+r.title+'</span>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("#rankChips .chip"),function(el){
+    el.addEventListener("click",function(){selRank=parseInt(el.getAttribute("data-r"),10);renderPreview()});
+  });
+  if(!s){$("rankNote").textContent=RANKS[selRank].note;$("btnJoin").disabled=true;renderMock(SECTS[0],selRank);return}
+  applySectTheme(s);
+  $("pvTitle").textContent=s.icon+" "+s.name+" · "+s.sect;
+  $("pvDesc").innerHTML=s.desc+"<br>心法：<b>"+s.xinfa+"</b>　"+s.perk+"<br>UI 脾性："+s.trait;
+  $("rankNote").textContent=RANKS[selRank].note;
+  $("btnJoin").disabled=false;
+  renderMock(s,selRank);
+}
+/* —— 山门页 —— */
+function renderHall(){
+  var s=sectById(state.sectId); if(!s)return;
+  applySectTheme(s);
+  var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex;
+  document.querySelector("#view-hall .hall-wrap").parentElement.className="hall-frame layout-"+state.rankIndex;
+  $("hallRail").textContent=state.title;
+  $("hallTitle").textContent=s.icon+" "+s.sect+" · "+state.rankName+"境";
+  $("hallSub").textContent="道统："+s.name+"（"+s.xinfa+"）　身份："+state.title+"　座右铭：「"+s.motto+"」";
+  $("hallOrb").textContent=s.icon;
+  var pct,expText;
+  if(state.nextThreshold>0){
+    var base=RANKS[state.rankIndex].need;
+    pct=Math.round((state.exp-base)/(state.nextThreshold-base)*100);
+    expText="修为 "+state.exp+" / "+state.nextThreshold+"（距 "+RANKS[state.rankIndex+1].name+" 还差 "+(state.nextThreshold-state.exp)+"）";
+  }else{pct=100;expText="修为 "+state.exp+" · 已至绝巅";}
+  $("hallExpText").textContent=expText;
+  $("hallExpBar").style.width=Math.max(3,Math.min(100,pct))+"%";
+  $("hallLayoutNote").textContent="当前布局 · "+RANKS[state.rankIndex].note;
+  $("hallStats").innerHTML=
+    '<div class="stat"><b>'+state.days+' 天</b><div>入门时日（每日 +10 修为）</div></div>'+
+    '<div class="stat"><b>'+state.profileCount+' 份</b><div>已导入配置（每份 +25）</div></div>'+
+    '<div class="stat"><b>'+state.packCount+' 个</b><div>已装插件（每个 +20）</div></div>'+
+    '<div class="stat"><b>+'+state.expBonus+'</b><div>修炼攒下的修为</div></div>';
+  $("hallRankList").innerHTML=RANKS.map(function(r,i){
+    var mark=i<state.rankIndex?"✅":(i===state.rankIndex?"👉":"🔒");
+    return mark+" "+r.name+" · "+r.title+"（"+r.need+" 修为）<br>";
+  }).join("");
+  var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
+  $("btnCultivate").disabled=!!doneToday;
+  $("btnCultivate").textContent=doneToday?"今日已修炼":"开始修炼（+20）";
+}
+function render(){
+  if(state.sectId && sectById(state.sectId)){
+    $("view-guide").classList.add("hidden");
+    $("view-hall").classList.remove("hidden");
+    renderHall();
+  }else{
+    $("view-hall").classList.add("hidden");
+    $("view-guide").classList.remove("hidden");
+    renderGrid();renderPreview();
+  }
+}
+/* —— 动作 —— */
+$("btnJoin").addEventListener("click",function(){
+  if(!selSect)return;
+  $("guideErr").textContent="";
+  if(hasBridge){
+    callNative("choose",{sectId:selSect}).then(function(s){state=Object.assign(state,s);render()})
+      .catch(function(e){$("guideErr").textContent="入门失败："+e.message});
+  }else{
+    state.sectId=selSect;
+    if(!state.joinedAt)state.joinedAt=Date.now();
+    if(!state.packCount)state.packCount=1;
+    mockDerive();mockSave();render();
+  }
+});
+$("btnCultivate").addEventListener("click",function(){
+  $("hallErr").textContent="";$("cultOk").textContent="";
+  if(hasBridge){
+    callNative("cultivate",{}).then(function(s){state=Object.assign(state,s);render();$("cultOk").textContent="运功完毕，修为 +20。"})
+      .catch(function(e){$("hallErr").textContent=e.message});
+  }else{
+    if(state.lastCultivateDay===state.today){$("hallErr").textContent="今日已修炼，明日再来";return}
+    state.lastCultivateDay=state.today;state.expBonus+=20;mockDerive();mockSave();render();
+    $("cultOk").textContent="运功完毕，修为 +20。";
+  }
+});
+$("btnSwitch").addEventListener("click",function(){
+  selSect=state.sectId;
+  $("view-hall").classList.add("hidden");
+  $("view-guide").classList.remove("hidden");
+  renderGrid();renderPreview();
+  window.scrollTo(0,0);
+});
+$("btnLeave").addEventListener("click",function(){
+  if(!confirm("叛出师门？主题恢复默认，入门时间与修为保留（日后回来接着算）。"))return;
+  if(hasBridge){
+    callNative("leave",{}).then(function(s){state=Object.assign(state,s);document.body.removeAttribute("data-sect");location.reload()})
+      .catch(function(e){$("hallErr").textContent=e.message});
+  }else{
+    state.sectId="";mockSave();document.body.removeAttribute("data-sect");location.reload();
+  }
+});
+refreshState();
+})();
+</script>
+</body>
+</html>
