@@ -306,15 +306,16 @@ idset = set()
 for p in cli_ids.split(","):
     p = p.strip()
     if p.isdigit(): idset.add(int(p))
-hits = [t for t in items if t.get("id") in idset]
+vitems = [t for t in items if t.get("type") == "vless"]
+hits = [t for t in vitems if t.get("id") in idset]
 if not hits:
-    hits = [t for t in items if t.get("tag") == want_tag]
+    hits = [t for t in vitems if t.get("tag") == want_tag]
 if not hits:
-    hits = [t for t in items if t.get("tag") == "nf-vless"]
+    hits = [t for t in vitems if t.get("tag") == "nf-vless"]
 if not hits:
-    hits = [t for t in items if str(t.get("listen_port", "")) == want_port]
+    hits = [t for t in vitems if str(t.get("listen_port", "")) == want_port]
 if hits:
-    t = hits[-1]
+    t = hits[0]
     print(t.get("id"), t.get("listen_port", ""))
 ' "$INBOUND_TAG" "$NODE_PORT" "$CLI_INB_IDS")"
 INBOUND_ID=""; INB_PORT=""
@@ -348,10 +349,15 @@ if isinstance(o, dict):
     cand = [x for x in o.values() if isinstance(x, list)]
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
+mounted = set()
+for p in sys.argv[3].split(","):
+    p = p.strip()
+    if p.isdigit(): mounted.add(int(p))
 for t in items:
-    if t.get("tag") == sys.argv[1] and str(t.get("id")) != sys.argv[2]:
+    if t.get("tag") == sys.argv[1] and str(t.get("id")) != sys.argv[2] \
+            and t.get("type") == "vless" and t.get("id") not in mounted:
         print(json.dumps(t.get("tag")))
-' "$INBOUND_TAG" "$INBOUND_ID")"
+' "$INBOUND_TAG" "$INBOUND_ID" "$CLI_INB_IDS")"
         if [ -n "$SWEEP" ]; then
             printf '%s\n' "$SWEEP" | while IFS= read -r line; do
                 [ -n "$line" ] || continue
@@ -457,7 +463,7 @@ if isinstance(o, dict):
     cand = [x for x in o.values() if isinstance(x, list)]
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
-hits = [t for t in items if t.get("tag") == sys.argv[1]]
+hits = [t for t in items if t.get("tag") == sys.argv[1] and t.get("type") == "shadowsocks"]
 print(hits[-1].get("id") if hits else "")
 ' "$SS_TAG")"
     if [ -n "$SS_ID_FOUND" ]; then
@@ -525,7 +531,7 @@ if isinstance(o, dict):
     cand = [x for x in o.values() if isinstance(x, list)]
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
-hits = [t for t in items if t.get("tag") == sys.argv[1]]
+hits = [t for t in items if t.get("tag") == sys.argv[1] and t.get("type") == "shadowsocks"]
 print(hits[-1].get("id") if hits else "")
 ' "$SS_TAG")"
         [ -n "$SS_INBOUND_ID" ] || fail "SS 入站创建后未找到"
@@ -597,7 +603,8 @@ inbs = [int(sys.argv[3])]
 ss_id, ss_psk = sys.argv[4], sys.argv[5]
 if ss_id.isdigit() and ss_psk:
     cfg["shadowsocks16"] = {"password": ss_psk}
-    inbs.append(int(ss_id))
+    if int(ss_id) not in inbs:
+        inbs.append(int(ss_id))
 links = []
 if sys.argv[10]:
     disp = sys.argv[9] if sys.argv[9] else sys.argv[1]
@@ -678,7 +685,7 @@ name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.a
 nm = sys.argv[5] if len(sys.argv) > 5 else ''
 want_ids = []
 for a in sys.argv[6:8]:
-    if a and a.isdigit():
+    if a and a.isdigit() and int(a) not in want_ids:
         want_ids.append(int(a))
 ss_psk = sys.argv[8] if len(sys.argv) > 8 else ''
 hy2_link = sys.argv[9] if len(sys.argv) > 9 else ''

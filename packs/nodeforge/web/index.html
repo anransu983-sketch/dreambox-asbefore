@@ -576,7 +576,7 @@
       pl.innerHTML = '<b>协议</b>：' + r.protocols +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh) : '') +
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh) +
-          '<br><span class="warn">Hy2 是独立服务、不在 s-ui 订阅里：点下方「导入 Hy2 到梦盒」单独把它建成本地配置即可。</span>' : '');
+          '<br><span class="warn">Hy2 已合并进上方订阅（与 VLESS、SS 同一份）：点「导入到梦盒」或更新已有订阅，三个节点一起进来；下方按钮是备用（单独导入 Hy2），一般不用点。</span>' : '');
       $('resultKv').appendChild(document.createElement('br'));
       $('resultKv').appendChild(pl);
     }
@@ -605,7 +605,7 @@
     };
     if (r.hy2SubUrl) {
       $('importHy2').classList.remove('hidden');
-      $('importHy2').textContent = '📥 远程导入 Hy2 到梦盒';
+      $('importHy2').textContent = '📥 备用：单独导入 Hy2';
       $('importHy2').onclick = function () {
         var btn = this;
         callNative('importSubscription', { url: r.hy2SubUrl }).then(function () {
