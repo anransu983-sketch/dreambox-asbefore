@@ -50,6 +50,9 @@ sealed interface Route {
     data object NetworkSettings : Route
 
     @Serializable
+    data object KernelManager : Route
+
+    @Serializable
     data object VpnServiceOptions : Route
 
     @Serializable

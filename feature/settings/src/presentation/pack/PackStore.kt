@@ -162,15 +162,6 @@ class PackStore(context: Context) {
                 entryClass = "com.suanran.pack.webdav.WebDavPackEntry",
             ),
             PackDef(
-                id = "kernel",
-                name = "内核管家",
-                summary = "切换、检查更新与安装自定义内核：网络设置里只留当前内核状态，细节都在这里；所有操作由本体 KernelManager 执行，内置 Alpha 随时可切回",
-                version = "1",
-                sizeText = "约 30 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/kernel-pack-v1.zip",
-                entryClass = "com.suanran.pack.kernel.KernelPackEntry",
-            ),
-            PackDef(
                 id = "sshtty",
                 name = "VPS 终端",
                 summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；另带一键 TQ 测速（报告链接自动提取可复制）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）",

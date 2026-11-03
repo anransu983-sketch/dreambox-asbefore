@@ -103,6 +103,7 @@ fun LabScreen(navigator: Navigator) {
 
     var ageKeyHybrid by remember { mutableStateOf(false) }
     var ageKeyDialogVisible by remember { mutableStateOf(false) }
+    var ageChooserVisible by remember { mutableStateOf(false) }
 
     val defaultKeys = listOf("packs", "modules")
     var hiddenKeys by remember { mutableStateOf(loadHiddenSections(mmkv, "lab")) }
@@ -190,23 +191,70 @@ fun LabScreen(navigator: Navigator) {
                     }
             }
             item {
-                BocchiSectionTitle(FlyTxt.MetaFeature.AgeKey.Section)
+                // 与上面插件/模块完全同款的入口行（原先标题在卡外、两行裸文字，和整页风格不一致，用户指为突兀）
                 BocchiCard {
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.AgeKey.X25519Title,
-                        onClick = {
-                            ageKeyHybrid = false
-                            ageKeyDialogVisible = true
-                        },
-                    )
-                    ArrowPreference(
-                        title = FlyTxt.MetaFeature.AgeKey.HybridTitle,
-                        onClick = {
-                            ageKeyHybrid = true
-                            ageKeyDialogVisible = true
-                        },
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { ageChooserVisible = true }
+                            .padding(horizontal = spacing.space16, vertical = spacing.space14),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        LabEntryIcon(icon = androidx.compose.material.icons.Icons.Filled.VpnKey, key = "agekey")
+                        Spacer(modifier = Modifier.width(spacing.space12))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = FlyTxt.MetaFeature.AgeKey.Section,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BocchiTextDark,
+                                maxLines = 1,
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "生成 X25519 或混合后量子密钥",
+                                fontSize = 11.sp,
+                                color = BocchiTextGray,
+                                maxLines = 1,
+                            )
+                        }
+                        Text(
+                            text = "✦",
+                            fontSize = 12.sp,
+                            color = BocchiPink.copy(alpha = 0.6f),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = BocchiTextGray,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
+            }
+        }
+        com.suanran.dreambox.presentation.component.dialog.AppDialog(
+            show = ageChooserVisible,
+            title = FlyTxt.MetaFeature.AgeKey.Section,
+            onDismissRequest = { ageChooserVisible = false },
+        ) {
+            Column {
+                ArrowPreference(
+                    title = FlyTxt.MetaFeature.AgeKey.X25519Title,
+                    onClick = {
+                        ageChooserVisible = false
+                        ageKeyHybrid = false
+                        ageKeyDialogVisible = true
+                    },
+                )
+                ArrowPreference(
+                    title = FlyTxt.MetaFeature.AgeKey.HybridTitle,
+                    onClick = {
+                        ageChooserVisible = false
+                        ageKeyHybrid = true
+                        ageKeyDialogVisible = true
+                    },
+                )
             }
         }
         AgeKeyGeneratorDialog(

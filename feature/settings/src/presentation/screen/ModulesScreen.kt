@@ -38,7 +38,7 @@ private val MAIN_MODULES = listOf(
     ModuleToggle("network", "网络", "网络设置入口"),
     ModuleToggle("override", "覆写", "覆写配置入口"),
     ModuleToggle("meta", "Meta 功能", "Meta 功能入口"),
-    ModuleToggle("lab", "实验室", "主题 · 插件"),
+    ModuleToggle("lab", "实验室", "插件 · 模块 · 密钥"),
     ModuleToggle("log", "日志", "日志入口"),
     ModuleToggle("about", "关于", "关于入口"),
 )

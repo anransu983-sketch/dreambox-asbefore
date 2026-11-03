@@ -145,7 +145,7 @@ private fun defaultModules(): List<SettingsModule> = listOf(
     SettingsModule(
         key = "lab",
         title = "实验室",
-        summary = "主题 · 插件",
+        summary = "插件 · 模块 · 密钥",
         icon = Icons.Filled.Science,
         route = Route.Lab,
     ),

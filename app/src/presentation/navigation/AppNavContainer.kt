@@ -69,6 +69,7 @@ import com.suanran.dreambox.feature.settings.presentation.screen.AppSettingsScre
 import com.suanran.dreambox.feature.settings.presentation.screen.EbpfServiceOptionsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.MetaFeatureScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.MoeWallpaperCropScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.KernelManagerScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.NetworkSettingsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.ThemeScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.LabScreen
@@ -99,6 +100,7 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         )
         Route.AppSettings -> AppSettingsScreen(navigator)
         Route.NetworkSettings -> NetworkSettingsScreen(navigator)
+        Route.KernelManager -> KernelManagerScreen(navigator)
         Route.VpnServiceOptions -> VpnServiceOptionsScreen(navigator)
         Route.TunServiceOptions -> TunServiceOptionsScreen(navigator)
         Route.EbpfServiceOptions -> EbpfServiceOptionsScreen(navigator)

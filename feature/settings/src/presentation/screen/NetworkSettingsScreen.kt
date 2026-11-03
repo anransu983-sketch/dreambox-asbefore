@@ -435,6 +435,221 @@ private fun KernelListRow(
 }
 
 @Composable
+internal fun KernelManagerSection(viewModel: NetworkSettingsViewModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val kernels by viewModel.kernels.collectAsStateWithLifecycle()
+    val activeKernelId by viewModel.activeKernelId.collectAsStateWithLifecycle()
+    val kernelBusy by viewModel.kernelBusy.collectAsStateWithLifecycle()
+    val downloadingIds by viewModel.downloadingKernelIds.collectAsStateWithLifecycle()
+    val installedCommits by viewModel.installedKernelCommits.collectAsStateWithLifecycle()
+    var showCustomDialog by remember { mutableStateOf(false) }
+    val restartRequired by viewModel.restartRequired.collectAsStateWithLifecycle()
+    var kernelsExpanded by remember { mutableStateOf(false) }
+
+    BocchiCard {
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            // 当前内核（展示行，切换在下方可用内核列表里点）
+            KernelIconRow(
+                icon = "🧠",
+                title = FlyTxt.NetworkSettings.Kernel.ActiveTitle,
+                summary = kernelLabel(activeKernelId, installedCommits[activeKernelId]),
+                trailing = { KernelChip(text = FlyTxt.NetworkSettings.Kernel.ActiveTag, filled = true) },
+            )
+            KernelDivider()
+            // 检查更新
+            KernelIconRow(
+                icon = "🔄",
+                title = FlyTxt.NetworkSettings.Kernel.RefreshTitle,
+                summary = if (kernels.isNotEmpty()) "共 ${kernels.size} 个可用内核" else "点按获取最新内核列表",
+                onClick = { viewModel.refreshKernels() },
+                trailing = { KernelChevron() },
+            )
+            // 可用内核：内置 + 索引目录 + 已装的自定义内核（保证任何已装内核都能切回）
+            val displayKernels = remember(kernels, installedCommits) {
+                val list = mutableListOf<NetworkSettingsViewModel.KernelInfo>()
+                if (kernels.none { it.id == KernelManager.BUNDLED_ALPHA_ID }) {
+                    list += NetworkSettingsViewModel.KernelInfo(
+                        id = KernelManager.BUNDLED_ALPHA_ID, name = "", version = "内置",
+                        commit = installedCommits[KernelManager.BUNDLED_ALPHA_ID] ?: "",
+                    )
+                }
+                list += kernels
+                val known = list.map { it.id }.toSet()
+                installedCommits.keys.filter { it !in known }.sorted().forEach { id ->
+                    list += NetworkSettingsViewModel.KernelInfo(
+                        id = id, name = "", version = "已安装", commit = installedCommits[id] ?: "",
+                    )
+                }
+                list
+            }
+            KernelDivider()
+            KernelIconRow(
+                icon = "📦",
+                title = "可用内核（${displayKernels.size}）",
+                summary = if (kernelsExpanded) "点按收起" else "点按展开，选内核切换或下载",
+                onClick = { kernelsExpanded = !kernelsExpanded },
+                trailing = {
+                    Icon(
+                        imageVector = Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        tint = colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.graphicsLayer { rotationZ = if (kernelsExpanded) 180f else 0f },
+                    )
+                },
+            )
+            AnimatedVisibility(
+                visible = kernelsExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                Column {
+                    for (kernel in displayKernels) {
+                        val isInstalled = kernel.id == KernelManager.BUNDLED_ALPHA_ID || KernelManager.isInstalled(context, kernel.id)
+                        val isActive = activeKernelId == kernel.id
+                        val isDownloading = kernel.id in downloadingIds
+                        KernelListRow(
+                            label = kernelLabel(kernel.id, kernel.commit),
+                            summary = when {
+                                isDownloading -> FlyTxt.NetworkSettings.Kernel.DownloadingTag
+                                isActive -> "当前使用中"
+                                isInstalled -> FlyTxt.NetworkSettings.Kernel.InstalledTag
+                                else -> kernel.version
+                            },
+                            active = isActive,
+                            installed = isInstalled,
+                            downloading = isDownloading,
+                            onClick = {
+                                if (!kernelBusy) {
+                                    if (isInstalled) {
+                                        viewModel.selectKernel(kernel.id)
+                                    } else {
+                                        viewModel.downloadKernels(setOf(kernel.id)) {}
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            KernelDivider()
+            // 自定义内核
+            KernelIconRow(
+                icon = "🧩",
+                title = FlyTxt.NetworkSettings.Kernel.CustomTitle,
+                summary = "粘贴链接安装第三方内核",
+                onClick = { showCustomDialog = true },
+                trailing = { KernelChevron() },
+            )
+        }
+    }
+
+    if (showCustomDialog) {
+        var customUrl by remember { mutableStateOf("") }
+        var showFormatHint by remember { mutableStateOf(false) }
+        AppFormDialog(
+            show = showCustomDialog,
+            title = FlyTxt.NetworkSettings.Kernel.CustomTitle,
+            onDismissRequest = { showCustomDialog = false },
+            onConfirm = {
+                if (customUrl.isNotBlank()) {
+                    viewModel.installCustomPluginUrl(customUrl.trim()) { success ->
+                        if (success) showCustomDialog = false
+                    }
+                }
+            },
+        ) {
+            top.yukonga.miuix.kmp.basic.TextField(
+                value = customUrl,
+                onValueChange = { customUrl = it },
+                label = "https://example.com/kernel-plugin.zip",
+                useLabelAsPlaceholder = true,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(
+                        onClick = { showFormatHint = true },
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        top.yukonga.miuix.kmp.basic.Icon(
+                            imageVector = MiuixIcons.Info,
+                            contentDescription = null,
+                            tint = colorScheme.onSurfaceVariantSummary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+            )
+        }
+        if (showFormatHint) {
+            val annotatedText = androidx.compose.ui.text.buildAnnotatedString {
+                val body = FlyTxt.NetworkSettings.Kernel.PluginFormatBody
+                val url = "https://github.com/LM-Firefly/Kernel-Builder"
+                val start = body.indexOf(url)
+                if (start >= 0) {
+                    append(body.substring(0, start))
+                    val linkStart = length
+                    append(url)
+                    val linkEnd = length
+                    addLink(
+                        androidx.compose.ui.text.LinkAnnotation.Url(url = url),
+                        start = linkStart,
+                        end = linkEnd,
+                    )
+                    addStyle(
+                        style = androidx.compose.ui.text.SpanStyle(
+                            color = colorScheme.primary,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                        ),
+                        start = linkStart,
+                        end = linkEnd,
+                    )
+                    append(body.substring(start + url.length))
+                } else {
+                    append(body)
+                }
+            }
+            AppFormDialog(
+                show = true,
+                title = FlyTxt.NetworkSettings.Kernel.PluginFormatTitle,
+                onDismissRequest = { showFormatHint = false },
+                onConfirm = { showFormatHint = false },
+            ) {
+                androidx.compose.foundation.text.BasicText(
+                    text = annotatedText,
+                    style = androidx.compose.ui.text.TextStyle(
+                        color = colorScheme.onSurface
+                    ),
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+        }
+    }
+
+    if (restartRequired) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        AppFormDialog(
+            show = true,
+            title = FlyTxt.NetworkSettings.Kernel.RestartDialogTitle,
+            onDismissRequest = { viewModel.dismissRestartPrompt() },
+            onConfirm = {
+                viewModel.dismissRestartPrompt()
+                val pm = context.packageManager
+                val intent = pm.getLaunchIntentForPackage(context.packageName)
+                if (intent != null) {
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
+                }
+                android.os.Process.killProcess(android.os.Process.myPid())
+            },
+        ) {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = FlyTxt.NetworkSettings.Kernel.RestartDialogMessage,
+            )
+        }
+    }
+}
+
+@Composable
 private fun NetworkKernelStatusSection(viewModel: NetworkSettingsViewModel, navigator: Navigator) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activeKernelId by viewModel.activeKernelId.collectAsStateWithLifecycle()
@@ -448,21 +663,7 @@ private fun NetworkKernelStatusSection(viewModel: NetworkSettingsViewModel, navi
                 icon = "🧠",
                 title = FlyTxt.NetworkSettings.Kernel.ActiveTitle,
                 summary = kernelLabel(activeKernelId, installedCommits[activeKernelId]),
-                onClick = {
-                    val packDir = java.io.File(context.filesDir, "packs/kernel")
-                    if (java.io.File(packDir, "pack.json").isFile) {
-                        val intent = android.content.Intent().apply {
-                            setClassName(context.packageName, "com.suanran.dreambox.presentation.pack.PackHostActivity")
-                            putExtra("pack_id", "kernel")
-                            putExtra("pack_name", "内核管家")
-                            putExtra("pack_dir", packDir.absolutePath)
-                            putExtra("pack_entry_class", "com.suanran.pack.kernel.KernelPackEntry")
-                        }
-                        context.startActivity(intent)
-                    } else {
-                        navigator.push(Route.FeaturePacks)
-                    }
-                },
+                onClick = { navigator.push(Route.KernelManager) },
                 trailing = { KernelChip(text = FlyTxt.NetworkSettings.Kernel.ActiveTag, filled = true) },
             )
         }

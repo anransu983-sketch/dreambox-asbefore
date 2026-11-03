@@ -16,7 +16,7 @@ Settings = {
         Override = "上書き"
         OverrideSummary = "YAML、JS、ルールの上書き"
         MetaFeatures = "Meta 機能"
-        MetaFeaturesSummary = "接続、ルーティング、GeoX、キー"
+        MetaFeaturesSummary = "ルール、ルーティング、GeoX"
     }
 
     More = {

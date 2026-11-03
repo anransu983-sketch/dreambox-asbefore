@@ -16,7 +16,7 @@ Settings = {
         Override = "Переопределения"
         OverrideSummary = "YAML, JS и переопределение правил"
         MetaFeatures = "Функции Meta"
-        MetaFeaturesSummary = "Соединения, маршрутизация, GeoX и ключи"
+        MetaFeaturesSummary = "Правила, маршрутизация, GeoX"
     }
 
     More = {
