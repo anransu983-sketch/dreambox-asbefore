@@ -425,27 +425,15 @@ private fun PredictiveBackProgressPreferenceItem(
 ) {
     var localProgress by remember(progress) { mutableFloatStateOf(progress) }
 
-    BocchiArrowItem(
+    BocchiSliderBlock(
         title = FlyTxt.AppSettings.PredictiveBack.ProgressTitle,
-        endActions = {
-            Text(
-                text = "${localProgress.toInt()}%",
-                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "1%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            Slider(
-                value = localProgress,
-                onValueChange = { localProgress = it },
-                onValueChangeFinished = { onApply(localProgress) },
-                valueRange = 1f..100f,
-                magnetThreshold = 0.01f,
-                hapticEffect = SliderDefaults.SliderHapticEffect.Step,
-                modifier = Modifier.width(96.dp),
-            )
-            Text(text = "100%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        },
-        onClick = {},
+        valueText = "${localProgress.toInt()}%",
+        minLabel = "1%",
+        maxLabel = "100%",
+        value = localProgress,
+        valueRange = 1f..100f,
+        onValueChange = { localProgress = it },
+        onApply = onApply,
     )
 }
 
@@ -703,42 +691,77 @@ private fun batteryOptimizationIntents(
 }
 
 @Composable
-private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) {
-    var pageScaleLocal by remember(pageScale) { mutableFloatStateOf(pageScale) }
-    val pageScalePercentText = remember(pageScaleLocal) { "${(pageScaleLocal * 100).toInt()}%" }
-    val showPageScaleDialogState = remember { mutableStateOf(false) }
-
-    // 滑杆收进行内右侧（带数值），不再整宽横贯卡片——之前那种最显拼搭。
-    BocchiArrowItem(
-        title = FlyTxt.AppSettings.Interface.PageScaleTitle,
-        endActions = {
+private fun BocchiSliderBlock(
+    title: String,
+    valueText: String,
+    minLabel: String,
+    maxLabel: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    onApply: (Float) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = pageScalePercentText,
-                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                text = title,
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "80%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Text(
+                text = valueText,
+                style = MiuixTheme.textStyles.body2,
+                fontWeight = FontWeight.SemiBold,
+                color = com.suanran.dreambox.presentation.component.misc.BocchiStar,
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 2.dp),
+        ) {
+            Text(
+                text = minLabel,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
             Slider(
-                value = pageScaleLocal,
-                onValueChange = { pageScaleLocal = it },
-                onValueChangeFinished = { onApply(pageScaleLocal) },
-                valueRange = 0.8f..1.2f,
+                value = value,
+                onValueChange = onValueChange,
+                onValueChangeFinished = { onApply(value) },
+                valueRange = valueRange,
                 magnetThreshold = 0.01f,
                 hapticEffect = SliderDefaults.SliderHapticEffect.Step,
-                modifier = Modifier.width(96.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 10.dp),
             )
-            Text(text = "120%", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        },
-        onClick = { showPageScaleDialogState.value = true },
-        holdDownState = showPageScaleDialogState.value,
-    )
+            Text(
+                text = maxLabel,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
+    }
+}
 
-    PageScaleDialog(
-        show = showPageScaleDialogState.value,
-        pageScale = pageScaleLocal,
-        onPageScaleChange = { pageScaleLocal = it },
+@Composable
+private fun PageScalePreferenceItem(pageScale: Float, onApply: (Float) -> Unit) {
+    var pageScaleLocal by remember(pageScale) { mutableFloatStateOf(pageScale) }
+
+    BocchiSliderBlock(
+        title = FlyTxt.AppSettings.Interface.PageScaleTitle,
+        valueText = "${(pageScaleLocal * 100).toInt()}%",
+        minLabel = "80%",
+        maxLabel = "120%",
+        value = pageScaleLocal,
+        valueRange = 0.8f..1.2f,
+        onValueChange = { pageScaleLocal = it },
         onApply = onApply,
-        onDismissRequest = { showPageScaleDialogState.value = false },
     )
 }
 
