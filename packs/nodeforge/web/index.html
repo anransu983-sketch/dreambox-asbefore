@@ -448,6 +448,12 @@
     if (!opts.host) { alert('先填服务器 IP'); return; }
     if (!opts.sshPassword) { alert('先填 root 密码'); return; }
     if (opts.engine === 'sui' && !opts.adminPass) { alert('面板管理员密码不能为空'); return; }
+    if (lastResult && lastResult.engine && lastResult.engine !== opts.engine &&
+        lastOpts && lastOpts.host === opts.host && lastResult.nodePort === opts.nodePort) {
+      if (!confirm('提醒：这台机器上次是用 ' + (lastResult.engine === 'singbox' ? 'sing-box' : 's-ui') +
+        ' 装的节点，端口同为 ' + opts.nodePort + '。表单是两引擎共用的，切引擎只是换部署方式；' +
+        '现在按 ' + (opts.engine === 'singbox' ? 'sing-box' : 's-ui') + ' 再部署会同机同端口相撞，两边都可能起不来。确定还要继续？')) return;
+    }
     $('subId').value = opts.subId;
     lastOpts = opts;
     $('deployBtn').disabled = true;
