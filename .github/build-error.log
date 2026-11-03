@@ -4,32 +4,14 @@ Execution failed for task ':feature:settings:compileReleaseKotlin' (registered b
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
    > Kotlin compiler: UNRESOLVED_REFERENCE
        Kotlin compiler error
-         Unresolved reference 'item'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:223
+         Unresolved reference 'FontWeight'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/AppSettingsScreen.kt:719
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
 > Run with --info or --debug option to get more log output.
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 > Get more help at https://help.gradle.org.
-==============================================================================
-
-2: Task failed with an exception.
------------
-* What went wrong:
-Execution failed for task ':feature:override:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: CONFLICTING_IMPORT
-       Kotlin compiler error
-         Conflicting import: imported name 'Color' is ambiguous.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/override/src/presentation/screen/ListScreen.kt:62
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights from a Build Scan (powered by Develocity).
-> Get more help at https://help.gradle.org.
-==============================================================================
 
 Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
 
@@ -37,26 +19,12 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 1m 23s
-483 actionable tasks: 258 executed, 225 from cache
+BUILD FAILED in 3m 2s
+468 actionable tasks: 259 executed, 209 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:223:13 Unresolved reference 'item'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:224:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:225:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:243:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:244:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:281:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:282:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:308:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:309:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:359:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:360:17 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:404:17 @Composable invocations can only happen from the context of a @Composable function
 > Task :feature:settings:compileReleaseKotlin FAILED
-> Task :feature:override:compileReleaseKotlin FAILED
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/override/src/presentation/screen/ListScreen.kt:62:37 Conflicting import: imported name 'Color' is ambiguous.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/override/src/presentation/screen/ListScreen.kt:124:37 Conflicting import: imported name 'Color' is ambiguous.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/override/src/presentation/screen/ListScreen.kt:235:207 Unresolved reference 'ModuleHelpAction'.
-BUILD FAILED in 1m 23s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/AppSettingsScreen.kt:719:30 Unresolved reference 'FontWeight'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/LabScreen.kt:202:90 Unresolved reference 'VpnKey'.
+BUILD FAILED in 3m 2s
