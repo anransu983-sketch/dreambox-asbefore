@@ -228,7 +228,7 @@ data = {
         "reality": {"enabled": True, "public_key": pub, "short_id": sid},
     },
 }
-print(json.dumps(data))
+print(json.dumps(data, separators=(",", ":")))
 PYEOF2
 )" || fail "TLS 数据组装失败"
     api_post_ok save --data-urlencode object=tls --data-urlencode action=new \
@@ -389,7 +389,7 @@ if hits:
         d = {"id": int(t["id"]), "type": "vless", "tag": sys.argv[1], "listen": "::",
              "listen_port": port, "tls_id": int(tls_id),
              "addrs": [{"server": host, "server_port": port}]}
-        print(json.dumps(d))
+        print(json.dumps(d, separators=(",", ":")))
 ' "$INBOUND_TAG" "$PUBLIC_HOST" "$NODE_PORT" "$INBOUND_ID")"
         if [ -n "$EDIT_DATA" ]; then
             if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
@@ -411,7 +411,7 @@ d = {"type": "vless", "tag": sys.argv[4], "listen": "::",
 host = sys.argv[3].strip()
 if host:
     d["addrs"] = [{"server": host, "server_port": int(sys.argv[1])}]
-print(json.dumps(d))
+print(json.dumps(d, separators=(",", ":")))
 ' "$NODE_PORT" "$TLS_ID" "$PUBLIC_HOST" "$INBOUND_TAG")"
     api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
         --data-urlencode "data=$inbound_data" >/dev/null
@@ -485,7 +485,7 @@ if hits:
          "method": "2022-blake3-aes-128-gcm", "password": psk}
     if host:
         d["addrs"] = [{"server": host, "server_port": port}]
-    print(json.dumps(d))
+    print(json.dumps(d, separators=(",", ":")))
 ' "$SS_INBOUND_ID" "$SS_PORT" "$SS_PSK" "$PUBLIC_HOST" "$SS_TAG")"
         if [ -n "$SS_EDIT" ]; then
             if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
@@ -506,7 +506,7 @@ d = {"type": "shadowsocks", "tag": sys.argv[1], "listen": "::",
 host = sys.argv[4].strip()
 if host:
     d["addrs"] = [{"server": host, "server_port": int(sys.argv[2])}]
-print(json.dumps(d))
+print(json.dumps(d, separators=(",", ":")))
 ' "$SS_TAG" "$SS_PORT" "$SS_PSK" "$PUBLIC_HOST")"
         api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
             --data-urlencode "data=$ss_data" >/dev/null
@@ -591,7 +591,7 @@ print(json.dumps({"enable": True, "name": sys.argv[1],
                   "inbounds": inbs, "links": [],
                   "volume": vol, "expiry": exp, "remark": "",
                   "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
-                  "nextReset": nxt if vol > 0 else 0}))
+                  "nextReset": nxt if vol > 0 else 0}, separators=(",", ":")))
 ' "$SUB_ID" "$UUID" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
@@ -700,9 +700,9 @@ else:
     cur_cfg = jload(r.get('config'), {})
     new_cfg = dict(cur_cfg) if isinstance(cur_cfg, dict) else {}
     if ss_psk:
-        ss_cfg = dict(new_cfg.get('shadowsocks') or {})
+        ss_cfg = dict(new_cfg.get('shadowsocks16') or {})
         ss_cfg['password'] = ss_psk
-        new_cfg['shadowsocks'] = ss_cfg
+        new_cfg['shadowsocks16'] = ss_cfg
     if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
             and new_remark == (b2s(r.get('remark')) or '') and new_inb == cur_inb and new_cfg == cur_cfg \
             and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
@@ -728,7 +728,7 @@ else:
             out['autoReset'] = bool(r.get('auto_reset'))
             out['resetDays'] = int(r.get('reset_days') or 0)
             out['nextReset'] = int(r.get('next_reset') or 0)
-        print(json.dumps(out))
+        print(json.dumps(out, separators=(",", ":")))
 PYEOF2
 )"
     case "$CLI_EDIT" in
@@ -793,7 +793,7 @@ if [ -f "$EXT_FILE" ]; then
 import json, sys
 ext = open(sys.argv[1], encoding="utf-8").read()
 print(json.dumps({"subClashExt": ext, "subClashNoDefGrp": "true",
-                  "subClashSprtAll": "true"}))
+                  "subClashSprtAll": "true"}, separators=(",", ":")))
 ' "$EXT_FILE")"
     if api_post_ok save --data-urlencode object=settings \
         --data-urlencode "data=$EXT_JSON" >/dev/null; then
@@ -842,6 +842,7 @@ masquerade:
     url: https://www.microsoft.com
     rewriteHost: true
 EOF2
+        chmod 600 /etc/hysteria/config.yaml 2>/dev/null || true
         cat > /etc/systemd/system/hysteria-server.service <<'EOF3'
 [Unit]
 Description=Hysteria2 Server (NodeForge)
@@ -967,10 +968,7 @@ fi
 # SS 实测（按服务端密钥组装客户端，与订阅链接同构）
 SS_VERIFY="fail"
 if has_proto ss && [ -x "$SB_BIN" ]; then
-    SS_COMBINED="$(python3 -c '
-import base64, sys
-print(base64.b64encode((sys.argv[1] + ":" + sys.argv[2]).encode()).decode())
-' "$SS_PSK" "$SS_USER_PSK")"
+    SS_COMBINED="${SS_PSK}:${SS_USER_PSK}"
     if python3 - "$SS_PORT" "$SS_COMBINED" "$SB_DIR/verify-ss.json" <<'PYEOF4'
 import json, sys
 cfg = {"log": {"level": "error"},
