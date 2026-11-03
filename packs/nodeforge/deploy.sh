@@ -533,6 +533,18 @@ print(hits[-1].get("id") if hits else "")
     fi
 fi
 
+# Hy2 链接提前组装：§6 要把它作为 external 链接写进 s-ui 客户端，
+# 订阅生成时 s-ui 会把 external 链接转成节点并入同一份订阅（本地实测）。
+HY2_LINK=""
+if has_proto hy2 && [ -n "$PUBLIC_HOST" ] && [ -n "$HY2_PASS" ]; then
+    HY2_NAME_ENC="$(python3 -c 'import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))' "$NODE_NAME")"
+    if [ -n "$HY2_NAME_ENC" ]; then
+        HY2_LINK="hysteria2://${HY2_PASS}@${PUBLIC_HOST}:${HY2_PORT}/?insecure=1&sni=www.microsoft.com#${HY2_NAME_ENC}%20Hy2"
+    else
+        HY2_LINK="hysteria2://${HY2_PASS}@${PUBLIC_HOST}:${HY2_PORT}/?insecure=1&sni=www.microsoft.com#Hy2"
+    fi
+fi
+
 # ── 5.9 流量/到期换算（订阅卡显示用，写进客户端 volume/expiry）──
 VOL_BYTES=0
 if [ -n "$QUOTA_GB" ]; then
@@ -586,13 +598,17 @@ ss_id, ss_psk = sys.argv[4], sys.argv[5]
 if ss_id.isdigit() and ss_psk:
     cfg["shadowsocks16"] = {"password": ss_psk}
     inbs.append(int(ss_id))
+links = []
+if sys.argv[10]:
+    disp = sys.argv[9] if sys.argv[9] else sys.argv[1]
+    links = [{"remark": disp + " Hy2", "type": "external", "uri": sys.argv[10]}]
 print(json.dumps({"enable": True, "name": sys.argv[1],
                   "config": cfg,
-                  "inbounds": inbs, "links": [],
+                  "inbounds": inbs, "links": links,
                   "volume": vol, "expiry": exp, "remark": "",
                   "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
                   "nextReset": nxt if vol > 0 else 0}, separators=(",", ":")))
-' "$SUB_ID" "$UUID" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME")"
+' "$SUB_ID" "$UUID" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$HY2_LINK")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
     CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
@@ -656,7 +672,7 @@ fi
 # 不能拿来回写），只改 volume/expiry/autoReset/resetDays/nextReset 五项，
 # 其余字段（config/计数/时间戳）逐字保留，经 API edit 落盘。
 if [ -n "$INBOUND_ID" ]; then
-    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" <<'PYEOF2'
+    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$HY2_LINK" <<'PYEOF2'
 import sqlite3, glob, json, sys
 name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 nm = sys.argv[5] if len(sys.argv) > 5 else ''
@@ -664,7 +680,8 @@ want_ids = []
 for a in sys.argv[6:8]:
     if a and a.isdigit():
         want_ids.append(int(a))
-ss_psk = sys.argv[8] if len(sys.argv) > 8 else '' 
+ss_psk = sys.argv[8] if len(sys.argv) > 8 else ''
+hy2_link = sys.argv[9] if len(sys.argv) > 9 else ''
 try:
     db = glob.glob('/usr/local/s-ui/**/s-ui.db', recursive=True)[0]
     con = sqlite3.connect(db)
@@ -703,15 +720,23 @@ else:
         ss_cfg = dict(new_cfg.get('shadowsocks16') or {})
         ss_cfg['password'] = ss_psk
         new_cfg['shadowsocks16'] = ss_cfg
+    # Hy2 合并进同一份订阅：以 external 链接形式挂在客户端上（s-ui 订阅
+    # 生成会把它转成节点；重跑时先摘旧的再挂新的，取消勾选则摘除）。
+    cur_links = jload(r.get('links'), [])
+    new_links = [l for l in cur_links if not (isinstance(l, dict) and l.get('type') == 'external'
+                 and str(l.get('uri') or '').startswith('hysteria2://'))]
+    if hy2_link:
+        disp = nm if nm else name
+        new_links.append({'remark': disp + ' Hy2', 'type': 'external', 'uri': hy2_link})
     if new_vol == int(r.get('volume') or 0) and new_exp == int(r.get('expiry') or 0) \
-            and new_remark == (b2s(r.get('remark')) or '') and new_inb == cur_inb and new_cfg == cur_cfg \
+            and new_remark == (b2s(r.get('remark')) or '') and new_inb == cur_inb and new_cfg == cur_cfg and new_links == cur_links \
             and (vol == 0 or (r.get('auto_reset') in (1, True) and int(r.get('reset_days') or 0) == 30)):
         print('SAME')
     else:
         out = {
             'id': r.get('id'), 'enable': bool(r.get('enable')), 'name': b2s(r.get('name')) or '',
             'config': new_cfg, 'inbounds': new_inb,
-            'links': jload(r.get('links'), []),
+            'links': new_links,
             'volume': new_vol, 'expiry': new_exp,
             'down': int(r.get('down') or 0), 'up': int(r.get('up') or 0),
             'desc': b2s(r.get('desc')) or '', 'group': b2s(r.get('group')) or '',
@@ -867,7 +892,7 @@ EOF3
         else
             log "Hysteria2 未能启动（主节点不受影响，可 journalctl -u hysteria-server 查）"
         fi
-        if [ -n "$PUBLIC_HOST" ]; then
+        if [ -n "$PUBLIC_HOST" ] && [ -z "$HY2_LINK" ]; then
             HY2_NAME_ENC="$(python3 -c 'import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))' "$NODE_NAME")"
             if [ -n "$HY2_NAME_ENC" ]; then
                 HY2_LINK="hysteria2://${HY2_PASS}@${PUBLIC_HOST}:${HY2_PORT}/?insecure=1&sni=www.microsoft.com#${HY2_NAME_ENC}%20Hy2"
