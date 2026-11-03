@@ -110,6 +110,27 @@ sealed interface Route {
     data object Theme : Route
 
     @Serializable
+    data object AppIcon : Route
+
+    @Serializable
+    data object IconWorkshop : Route
+
+    @Serializable
+    data object NavIcons : Route
+
+    @Serializable
+    data object ModuleIcons : Route
+
+    @Serializable
+    data object BackButtonIcon : Route
+
+    @Serializable
+    data object HomePanels : Route
+
+    @Serializable
+    data object SparklineSettings : Route
+
+    @Serializable
     data object Lab : Route
 
     @Serializable

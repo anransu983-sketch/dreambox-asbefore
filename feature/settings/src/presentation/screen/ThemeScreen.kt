@@ -76,6 +76,7 @@ import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
 import com.suanran.dreambox.presentation.component.misc.BocchiSectionTitle
+import com.suanran.dreambox.presentation.component.misc.BocchiStar
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.navigation.Navigator
@@ -167,8 +168,37 @@ fun ThemeScreen(navigator: Navigator) {
             verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.space12),
         ) {
             item {
-                BocchiSectionTitle(themeTxt.StoreTitle)
+                BocchiSectionTitle(themeTxt.MarketTitle)
                 Card {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.refreshMarket() }
+                                .padding(
+                                    horizontal = AppTheme.spacing.space16,
+                                    vertical = AppTheme.spacing.space12,
+                                ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = themeTxt.MarketBrowse,
+                                style = MiuixTheme.textStyles.title4,
+                                color = MiuixTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(AppTheme.spacing.space4))
+                            Text(
+                                text = themeTxt.MarketHint,
+                                style = MiuixTheme.textStyles.body2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                        if (marketState == MarketState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = AppTheme.spacing.space16))
                     Row(
                         modifier =
                             Modifier
@@ -216,11 +246,21 @@ fun ThemeScreen(navigator: Navigator) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
                         }
                     }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = AppTheme.spacing.space16))
+                    Text(
+                        text = themeTxt.StoreHint,
+                        style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier =
+                            Modifier.padding(
+                                horizontal = AppTheme.spacing.space16,
+                                vertical = AppTheme.spacing.space10,
+                            ),
+                    )
                 }
             }
             item {
-                BocchiSectionTitle(themeTxt.MarketTitle)
-                ThemeMarketSection(
+                ThemeMarketResults(
                     marketState = marketState,
                     marketThemes = marketThemes,
                     installedIds = remember(userThemes) { userThemes.map { it.id }.toSet() },
@@ -246,20 +286,10 @@ fun ThemeScreen(navigator: Navigator) {
                 )
             }
             item {
-                // 主题模式/配色只保留顶部一组（原「自定义」卡与顶部重复且读的是另一份状态，已删）。
-                Text(
-                    text = themeTxt.StoreHint,
-                    style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(horizontal = AppTheme.spacing.space16),
-                )
-            }
-
-            item {
                 BocchiSectionTitle("个性化")
             }
             item {
-                PersonalizeSections()
+                PersonalizeEntriesCard(navigator)
             }
         }
 
@@ -435,39 +465,29 @@ private fun ThemeStoreCard(
                     )
                 }
                 if (inUse) {
-                    Surface(
-                        color = MiuixTheme.colorScheme.primary.copy(alpha = opacity.subtle),
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.height(32.dp),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = spacing.space12),
-                        ) {
-                            Text(
-                                text = themeTxt.InUse,
-                                style =
-                                    MiuixTheme.textStyles.footnote1.copy(
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
-                                color = MiuixTheme.colorScheme.primary,
-                            )
-                        }
-                    }
+                    Text(
+                        text = "✓ " + themeTxt.InUse,
+                        style =
+                            MiuixTheme.textStyles.footnote1.copy(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        color = BocchiStar,
+                    )
                 } else {
-                    Button(
-                        onClick = onEnable,
-                        colors = ButtonDefaults.buttonColorsPrimary(),
-                        modifier = Modifier.height(32.dp),
-                        enabled = !busy,
-                    ) {
-                        Text(
-                            text = themeTxt.Enable,
-                            style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
-                            color = MiuixTheme.colorScheme.onPrimary,
-                        )
-                    }
+                    Text(
+                        text = themeTxt.Enable,
+                        style =
+                            MiuixTheme.textStyles.footnote1.copy(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        color = BocchiStar,
+                        modifier =
+                            Modifier
+                                .clickable(enabled = !busy) { onEnable() }
+                                .padding(horizontal = spacing.space4, vertical = spacing.space4),
+                    )
                 }
             }
         }
@@ -503,7 +523,7 @@ private fun ThemeColorPreview(seedColorArgb: Long) {
 
 /** 主题市场区：浏览在线主题目录，一键安装（对标 Komari 主题市场）。 */
 @Composable
-private fun ThemeMarketSection(
+private fun ThemeMarketResults(
     marketState: MarketState,
     marketThemes: List<ThemeCatalogEntry>,
     installedIds: Set<String>,
@@ -515,50 +535,10 @@ private fun ThemeMarketSection(
     val spacing = AppTheme.spacing
     when (marketState) {
         MarketState.Idle -> {
-            Card {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onBrowse)
-                            .padding(horizontal = spacing.space16, vertical = spacing.space12),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = themeTxt.MarketBrowse,
-                            style = MiuixTheme.textStyles.title4,
-                            color = MiuixTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(spacing.space4))
-                        Text(
-                            text = themeTxt.MarketHint,
-                            style = MiuixTheme.textStyles.body2,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
-                    }
-                }
-            }
+            // 入口已并进市场卡的「浏览在线主题」行，Idle 时这里不出卡。
         }
         MarketState.Loading -> {
-            Card {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = spacing.space16, vertical = spacing.space16),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(spacing.space8))
-                    Text(
-                        text = themeTxt.MarketLoading,
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
-                }
-            }
+            // 加载转圈已在市场卡的浏览行尾部显示，这里不出重复卡。
         }
         MarketState.Failed -> {
             Card {
@@ -681,18 +661,19 @@ private fun MarketThemeCard(
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 } else {
-                    Button(
-                        onClick = onInstall,
-                        colors = ButtonDefaults.buttonColorsPrimary(),
-                        modifier = Modifier.height(32.dp),
-                        enabled = !busy,
-                    ) {
-                        Text(
-                            text = themeTxt.MarketInstall,
-                            style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
-                            color = MiuixTheme.colorScheme.onPrimary,
-                        )
-                    }
+                    Text(
+                        text = themeTxt.MarketInstall,
+                        style =
+                            MiuixTheme.textStyles.footnote1.copy(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        color = BocchiStar,
+                        modifier =
+                            Modifier
+                                .clickable(enabled = !busy) { onInstall() }
+                                .padding(horizontal = spacing.space4, vertical = spacing.space4),
+                    )
                 }
             }
         }

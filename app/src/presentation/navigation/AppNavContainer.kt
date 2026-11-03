@@ -70,6 +70,13 @@ import com.suanran.dreambox.feature.settings.presentation.screen.EbpfServiceOpti
 import com.suanran.dreambox.feature.settings.presentation.screen.MetaFeatureScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.MoeWallpaperCropScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.KernelManagerScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.AppIconScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.BackButtonIconScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.HomePanelsScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.IconWorkshopScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.ModuleIconsScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.NavIconsScreen
+import com.suanran.dreambox.feature.settings.presentation.screen.SparklineSettingsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.NetworkSettingsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.ThemeScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.LabScreen
@@ -101,6 +108,13 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
         Route.AppSettings -> AppSettingsScreen(navigator)
         Route.NetworkSettings -> NetworkSettingsScreen(navigator)
         Route.KernelManager -> KernelManagerScreen(navigator)
+        Route.AppIcon -> AppIconScreen(navigator)
+        Route.IconWorkshop -> IconWorkshopScreen(navigator)
+        Route.NavIcons -> NavIconsScreen(navigator)
+        Route.ModuleIcons -> ModuleIconsScreen(navigator)
+        Route.BackButtonIcon -> BackButtonIconScreen(navigator)
+        Route.HomePanels -> HomePanelsScreen(navigator)
+        Route.SparklineSettings -> SparklineSettingsScreen(navigator)
         Route.VpnServiceOptions -> VpnServiceOptionsScreen(navigator)
         Route.TunServiceOptions -> TunServiceOptionsScreen(navigator)
         Route.EbpfServiceOptions -> EbpfServiceOptionsScreen(navigator)

@@ -22,6 +22,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +69,8 @@ import com.suanran.dreambox.presentation.component.navigation.BottomBarDestinati
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.navigation.Navigator
+import com.suanran.dreambox.presentation.navigation.Route
+import com.suanran.dreambox.feature.settings.presentation.screen.component.OneCardDivider
 import com.suanran.dreambox.presentation.theme.AppTheme
 import com.suanran.dreambox.presentation.util.toast
 import com.tencent.mmkv.MMKV
@@ -125,14 +131,8 @@ private val MODULE_ICON_ROWS = listOf(
 )
 
 @Composable
-fun PersonalizeSections() {
+fun rememberIconPicker(): (String) -> Unit {
     val context = LocalContext.current
-    val spacing = AppTheme.spacing
-    val mmkv: MMKV = koinInject(named("settings"))
-    var iconVariant by remember {
-        mutableStateOf(mmkv.decodeString(ICON_VARIANT_KEY, "default").orEmpty().ifBlank { "default" })
-    }
-
     var pendingKey by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
@@ -147,260 +147,418 @@ fun PersonalizeSections() {
             }
         }
     }
-    fun pick(key: String) {
-        pendingKey = key
-        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    return remember(picker) {
+        { key: String ->
+            pendingKey = key
+            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
     }
+}
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BocchiSectionTitle("应用图标")
-                BocchiCard {
-                    Column(
-                        modifier = Modifier.padding(horizontal = spacing.space16, vertical = spacing.space14),
-                        verticalArrangement = Arrangement.spacedBy(spacing.space10),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(spacing.space12),
-                        ) {
-                            APP_ICON_VARIANTS.forEach { variant ->
-                                val selected = iconVariant == variant.id
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(variant.swatch)
-                                            .then(
-                                                if (selected) {
-                                                    Modifier.border(2.dp, BocchiPink, RoundedCornerShape(14.dp))
-                                                } else {
-                                                    Modifier
-                                                },
-                                            )
-                                            .clickable {
-                                                iconVariant = variant.id
-                                                mmkv.encode(ICON_VARIANT_KEY, variant.id)
-                                                runCatching { applyAppIconVariant(context, variant) }
-                                                if (variant.id == "custom") {
-                                                    context.toast("已切到自定义款：在下面工坊传图构建、装上定制版后生效")
-                                                } else {
-                                                    context.toast("已切换为「${variant.name}」，桌面图标稍等片刻刷新")
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            text = if (variant.id == "custom") "图" else "梦",
-                                            fontSize = 20.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (variant.id == "default") BocchiTextDark else Color.White,
-                                        )
-                                    }
-                                    Text(
-                                        text = variant.name,
-                                        fontSize = 12.sp,
-                                        color = if (selected) BocchiPink else BocchiTextGray,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                    )
+/** 应用图标子页内容：预置款秒换（工坊已拆到独立子页）。 */
+@Composable
+fun AppIconBlock() {
+    val context = LocalContext.current
+    val spacing = AppTheme.spacing
+    val mmkv: MMKV = koinInject(named("settings"))
+    var iconVariant by remember {
+        mutableStateOf(mmkv.decodeString(ICON_VARIANT_KEY, "default").orEmpty().ifBlank { "default" })
+    }
+    Column(
+        modifier = Modifier.padding(horizontal = spacing.space16, vertical = spacing.space14),
+        verticalArrangement = Arrangement.spacedBy(spacing.space10),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.space12),
+        ) {
+            APP_ICON_VARIANTS.forEach { variant ->
+                val selected = iconVariant == variant.id
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(variant.swatch)
+                            .then(
+                                if (selected) {
+                                    Modifier.border(2.dp, BocchiPink, RoundedCornerShape(14.dp))
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable {
+                                iconVariant = variant.id
+                                mmkv.encode(ICON_VARIANT_KEY, variant.id)
+                                runCatching { applyAppIconVariant(context, variant) }
+                                if (variant.id == "custom") {
+                                    context.toast("已切到自定义款：先在工坊传图构建、装上定制版后生效")
+                                } else {
+                                    context.toast("已切换为「${variant.name}」，桌面图标稍等片刻刷新")
                                 }
-                            }
-                        }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
-                            text = "预置款秒换；自定义款在下面工坊传图、云端打包后安装定制版生效。",
-                            fontSize = 11.sp,
-                            color = BocchiTextGray,
+                            text = if (variant.id == "custom") "图" else "梦",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (variant.id == "default") BocchiTextDark else Color.White,
                         )
-                        IconWorkshopBlock(mmkv = mmkv)
                     }
+                    Text(
+                        text = variant.name,
+                        fontSize = 12.sp,
+                        color = if (selected) BocchiPink else BocchiTextGray,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    )
                 }
             }
+        }
+        Text(
+            text = "预置款秒换；自定义款先去「自定义图标工坊」传图、云端打包后安装定制版生效。",
+            fontSize = 11.sp,
+            color = BocchiTextGray,
+        )
+    }
+}
 
-                BocchiSectionTitle("导航栏图标")
-                BocchiCard {
-                    Column {
-                        BottomBarDestination.entries.forEach { dest ->
-                            CustomIconRow(
-                                title = dest.label,
-                                customKey = "tab_" + dest.name.lowercase(),
-                                onPick = { pick("tab_" + dest.name.lowercase()) },
-                            ) {
-                                Icon(
-                                    imageVector = dest.icon,
-                                    contentDescription = null,
-                                    tint = BocchiTextDark,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
-                    }
+/** 导航栏图标子页内容。 */
+@Composable
+fun NavIconsBlock() {
+    val pick = rememberIconPicker()
+    Column {
+        BottomBarDestination.entries.forEach { dest ->
+            CustomIconRow(
+                title = dest.label,
+                customKey = "tab_" + dest.name.lowercase(),
+                onPick = { pick("tab_" + dest.name.lowercase()) },
+            ) {
+                Icon(
+                    imageVector = dest.icon,
+                    contentDescription = null,
+                    tint = BocchiTextDark,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+    }
+}
+
+/** 模块图标子页内容。 */
+@Composable
+fun ModuleIconsBlock() {
+    val pick = rememberIconPicker()
+    Column {
+        MODULE_ICON_ROWS.forEach { (key, title, icon) ->
+            CustomIconRow(
+                title = title,
+                customKey = "module_$key",
+                onPick = { pick("module_$key") },
+            ) {
+                // 与设置页 ModuleIcon 同款贴片（底色按 key 轮换粉/蓝/绿），不用单字占位。
+                val bg = when (kotlin.math.abs(key.hashCode()) % 3) {
+                    0 -> BocchiPinkBg
+                    1 -> BocchiBlueBg
+                    else -> androidx.compose.ui.graphics.Color(0xFFE3F5E9)
                 }
-                BocchiSectionTitle("模块图标")
-                BocchiCard {
-                    Column {
-                        MODULE_ICON_ROWS.forEach { (key, title, icon) ->
-                            CustomIconRow(
-                                title = title,
-                                customKey = "module_$key",
-                                onPick = { pick("module_$key") },
-                            ) {
-                                // 与设置页 ModuleIcon 同款贴片（底色按 key 轮换粉/蓝/绿），不用单字占位。
-                                val bg = when (kotlin.math.abs(key.hashCode()) % 3) {
-                                    0 -> BocchiPinkBg
-                                    1 -> BocchiBlueBg
-                                    else -> androidx.compose.ui.graphics.Color(0xFFE3F5E9)
-                                }
-                                val fg = when (kotlin.math.abs(key.hashCode()) % 3) {
-                                    0 -> BocchiStar
-                                    1 -> BocchiBlueFg
-                                    else -> androidx.compose.ui.graphics.Color(0xFF43A047)
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(RoundedCornerShape(9.dp))
-                                        .background(bg),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        tint = fg,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
+                val fg = when (kotlin.math.abs(key.hashCode()) % 3) {
+                    0 -> BocchiStar
+                    1 -> BocchiBlueFg
+                    else -> androidx.compose.ui.graphics.Color(0xFF43A047)
                 }
-                BocchiSectionTitle("返回按钮")
-                BocchiCard {
-                    Column {
-                        CustomIconRow(
-                            title = "返回按钮图标",
-                            customKey = "back_button",
-                            onPick = { pick("back_button") },
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = null,
-                                tint = BocchiTextDark,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
-                        Text(
-                            text = "所有页面的返回按钮统一用这个图；系统全面屏手势返回照常有效。",
-                            fontSize = 11.sp,
-                            color = BocchiTextGray,
-                            modifier = Modifier.padding(
-                                start = spacing.space16,
-                                end = spacing.space16,
-                                bottom = spacing.space12,
-                            ),
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(bg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = fg,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
-                BocchiSectionTitle("首页面板")
-                BocchiCard {
-                    Column {
-                        val panelContext = LocalContext.current
-                        val (panelOrder, panelHidden) = rememberHomePanels()
-                        panelOrder.forEachIndexed { index, key ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = spacing.space16, vertical = spacing.space8),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = HomePanels.LABELS[key] ?: key,
-                                    fontSize = 13.sp,
-                                    color = BocchiTextDark,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                TextButton(
-                                    text = "↑",
-                                    onClick = { HomePanels.move(panelContext, key, -1) },
-                                    enabled = index > 0,
-                                )
-                                TextButton(
-                                    text = "↓",
-                                    onClick = { HomePanels.move(panelContext, key, 1) },
-                                    enabled = index < panelOrder.lastIndex,
-                                )
-                                Switch(
-                                    checked = key !in panelHidden,
-                                    onCheckedChange = { show ->
-                                        HomePanels.setHidden(
-                                            panelContext,
-                                            if (show) panelHidden - key else panelHidden + key,
-                                        )
+            }
+        }
+    }
+}
+
+/** 返回按钮图标子页内容。 */
+@Composable
+fun BackButtonBlock() {
+    val pick = rememberIconPicker()
+    val spacing = AppTheme.spacing
+    Column {
+        CustomIconRow(
+            title = "返回按钮图标",
+            customKey = "back_button",
+            onPick = { pick("back_button") },
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Back,
+                contentDescription = null,
+                tint = BocchiTextDark,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Text(
+            text = "所有页面的返回按钮统一用这个图；系统全面屏手势返回照常有效。",
+            fontSize = 11.sp,
+            color = BocchiTextGray,
+            modifier = Modifier.padding(
+                start = spacing.space16,
+                end = spacing.space16,
+                bottom = spacing.space12,
+            ),
+        )
+    }
+}
+
+/** 首页面板子页内容：按住把手上下拖动排序（拖动中只改本地顺序，松手才落盘），右侧开关控制显隐。 */
+@Composable
+fun HomePanelsBlock() {
+    val context = LocalContext.current
+    val spacing = AppTheme.spacing
+    val (storedOrder, panelHidden) = rememberHomePanels()
+    var localOrder by remember { mutableStateOf<List<String>?>(null) }
+    val panelOrder = localOrder ?: storedOrder
+    var dragKey by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(0f) }
+    val rowPx = with(androidx.compose.ui.platform.LocalDensity.current) { 52.dp.toPx() }
+    Column {
+        panelOrder.forEach { key ->
+            androidx.compose.runtime.key(key) {
+                val isDragging = dragKey == key
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .graphicsLayer { translationY = if (isDragging) dragOffset else 0f }
+                        .then(if (isDragging) Modifier.background(BocchiPinkBg) else Modifier)
+                        .padding(horizontal = spacing.space16),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .pointerInput(key) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        localOrder = panelOrder
+                                        dragKey = key
+                                        dragOffset = 0f
+                                    },
+                                    onDragEnd = {
+                                        localOrder?.let { HomePanels.setOrder(context, it) }
+                                        localOrder = null
+                                        dragKey = null
+                                        dragOffset = 0f
+                                    },
+                                    onDragCancel = {
+                                        localOrder = null
+                                        dragKey = null
+                                        dragOffset = 0f
+                                    },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        val working = (localOrder ?: panelOrder).toMutableList()
+                                        var idx = working.indexOf(key)
+                                        if (idx < 0) idx = 0
+                                        var off = dragOffset + amount.y
+                                        var changed = false
+                                        while (off > rowPx / 2 && idx < working.lastIndex) {
+                                            working.removeAt(idx)
+                                            working.add(idx + 1, key)
+                                            idx += 1
+                                            off -= rowPx
+                                            changed = true
+                                        }
+                                        while (off < -rowPx / 2 && idx > 0) {
+                                            working.removeAt(idx)
+                                            working.add(idx - 1, key)
+                                            idx -= 1
+                                            off += rowPx
+                                            changed = true
+                                        }
+                                        if (changed) localOrder = working
+                                        dragOffset = off.coerceIn(-idx * rowPx, (working.lastIndex - idx) * rowPx)
                                     },
                                 )
-                            }
-                        }
-                        Text(
-                            text = "首页顶部的流量与开关区固定，其余卡片可在这里调顺序、关掉不要的。",
-                            fontSize = 11.sp,
-                            color = BocchiTextGray,
-                            modifier = Modifier.padding(
-                                start = spacing.space16,
-                                end = spacing.space16,
-                                bottom = spacing.space12,
-                            ),
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Filled.DragHandle,
+                            contentDescription = null,
+                            tint = BocchiTextGray,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
-                }
-                BocchiSectionTitle("延迟曲线")
-                BocchiCard {
-                    Column {
-                        var sparkShape by remember {
-                            mutableStateOf(
-                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.shape(context)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = HomePanels.LABELS[key] ?: key,
+                        fontSize = 13.sp,
+                        color = BocchiTextDark,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = key !in panelHidden,
+                        onCheckedChange = { show ->
+                            HomePanels.setHidden(
+                                context,
+                                if (show) panelHidden - key else panelHidden + key,
                             )
-                        }
-                        var sparkColor by remember {
-                            mutableStateOf(
-                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.colorMode(context)
-                            )
-                        }
-                        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
-                            title = "曲线形状",
-                            summary = "节点行与详情抽屉里延迟走势线的形状",
-                            items = listOf("折线", "平滑曲线", "柱状"),
-                            selectedIndex = sparkShape,
-                            onSelectedIndexChange = { index ->
-                                sparkShape = index
-                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.setShape(context, index)
-                            },
-                        )
-                        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
-                            title = "曲线颜色",
-                            summary = "跟随主题用主题色；按延迟用绿 / 黄 / 红表示快慢",
-                            items = listOf("跟随主题", "按延迟"),
-                            selectedIndex = sparkColor,
-                            onSelectedIndexChange = { index ->
-                                sparkColor = index
-                                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.setColorMode(context, index)
-                            },
-                        )
-                        Text(
-                            text = "节点图标也能换：点开任意节点，在详情抽屉里点「换图标」。",
-                            fontSize = 11.sp,
-                            color = BocchiTextGray,
-                            modifier = Modifier.padding(
-                                start = spacing.space16,
-                                end = spacing.space16,
-                                bottom = spacing.space12,
-                            ),
-                        )
-                    }
+                        },
+                    )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+        Text(
+            text = "按住左侧把手上下拖动排序；首页顶部的流量与开关区固定，其余卡片可在这里调顺序、关掉不要的。",
+            fontSize = 11.sp,
+            color = BocchiTextGray,
+            modifier = Modifier.padding(
+                start = spacing.space16,
+                end = spacing.space16,
+                top = spacing.space8,
+                bottom = spacing.space12,
+            ),
+        )
+    }
+}
+
+/** 延迟曲线子页内容。 */
+@Composable
+fun SparklineBlock() {
+    val context = LocalContext.current
+    val spacing = AppTheme.spacing
+    Column {
+        var sparkShape by remember {
+            mutableStateOf(
+                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.shape(context)
+            )
+        }
+        var sparkColor by remember {
+            mutableStateOf(
+                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.colorMode(context)
+            )
+        }
+        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+            title = "曲线形状",
+            summary = "节点行与详情抽屉里延迟走势线的形状",
+            items = listOf("折线", "平滑曲线", "柱状"),
+            selectedIndex = sparkShape,
+            onSelectedIndexChange = { index ->
+                sparkShape = index
+                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.setShape(context, index)
+            },
+        )
+        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+            title = "曲线颜色",
+            summary = "跟随主题用主题色；按延迟用绿 / 黄 / 红表示快慢",
+            items = listOf("跟随主题", "按延迟"),
+            selectedIndex = sparkColor,
+            onSelectedIndexChange = { index ->
+                sparkColor = index
+                com.suanran.dreambox.presentation.component.misc.SparklinePrefs.setColorMode(context, index)
+            },
+        )
+        Text(
+            text = "节点图标也能换：点开任意节点，在详情抽屉里点「换图标」。",
+            fontSize = 11.sp,
+            color = BocchiTextGray,
+            modifier = Modifier.padding(
+                start = spacing.space16,
+                end = spacing.space16,
+                bottom = spacing.space12,
+            ),
+        )
+    }
+}
+
+/**
+ * 主题页「个性化」入口卡（点进去版）：七行入口各带当前状态小字，点进各自子页，
+ * 主题页本身保持一屏，不再把七块设置全摊开。
+ */
+@Composable
+fun PersonalizeEntriesCard(navigator: Navigator) {
+    val context = LocalContext.current
+    val mmkv: MMKV = koinInject(named("settings"))
+    val iconVariantId = mmkv.decodeString(ICON_VARIANT_KEY, "default").orEmpty().ifBlank { "default" }
+    val iconVariantName = APP_ICON_VARIANTS.firstOrNull { it.id == iconVariantId }?.name ?: "默认"
+    val workshopSummary =
+        if (mmkv.decodeString(TOKEN_KEY, "").orEmpty().isNotBlank()) "令牌已保存" else "未设置"
+    val backCustom = rememberCustomIconBitmap("back_button") != null
+    val (panelOrder, panelHidden) = rememberHomePanels()
+    val shownCount = panelOrder.count { it !in panelHidden }
+    val panelsSummary = "${panelOrder.size} 个 · " +
+        if (shownCount == panelOrder.size) "全部显示" else "显示 $shownCount 个"
+    val sparkSummary = "${
+        listOf("折线", "平滑曲线", "柱状")[
+            com.suanran.dreambox.presentation.component.misc.SparklinePrefs.shape(context)]
+    } · ${
+        listOf("跟随主题", "按延迟")[
+            com.suanran.dreambox.presentation.component.misc.SparklinePrefs.colorMode(context)]
+    }"
+    BocchiCard {
+        Column {
+            PersonalizeEntryRow("应用图标", iconVariantName) { navigator.push(Route.AppIcon) }
+            OneCardDivider()
+            PersonalizeEntryRow("自定义图标工坊", workshopSummary) { navigator.push(Route.IconWorkshop) }
+            OneCardDivider()
+            PersonalizeEntryRow("导航栏图标", "${BottomBarDestination.entries.size} 项") {
+                navigator.push(Route.NavIcons)
+            }
+            OneCardDivider()
+            PersonalizeEntryRow("模块图标", "${MODULE_ICON_ROWS.size} 项") {
+                navigator.push(Route.ModuleIcons)
+            }
+            OneCardDivider()
+            PersonalizeEntryRow("返回按钮图标", if (backCustom) "自定义" else "默认") {
+                navigator.push(Route.BackButtonIcon)
+            }
+            OneCardDivider()
+            PersonalizeEntryRow("首页面板", panelsSummary) { navigator.push(Route.HomePanels) }
+            OneCardDivider()
+            PersonalizeEntryRow("延迟曲线", sparkSummary) { navigator.push(Route.SparklineSettings) }
+        }
+    }
+}
+
+@Composable
+private fun PersonalizeEntryRow(title: String, summary: String, onClick: () -> Unit) {
+    val spacing = AppTheme.spacing
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = spacing.space16, vertical = spacing.space14),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = BocchiTextDark,
+            modifier = Modifier.weight(1f),
+        )
+        Text(text = summary, fontSize = 13.sp, color = BocchiTextGray)
+        Spacer(modifier = Modifier.width(4.dp))
+        Icon(
+            imageVector = androidx.compose.material.icons.Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = BocchiTextGray,
+            modifier = Modifier.size(18.dp),
+        )
+    }
 }
 
 @Composable
@@ -465,7 +623,7 @@ private const val GH_REPO = "anransu983-sketch/dreambox-asbefore"
 private const val TOKEN_KEY = "icon_build_token"
 
 @Composable
-private fun IconWorkshopBlock(mmkv: MMKV) {
+fun IconWorkshopBlock(mmkv: MMKV) {
     val context = LocalContext.current
     val spacing = AppTheme.spacing
     val scope = androidx.compose.runtime.rememberCoroutineScope()
