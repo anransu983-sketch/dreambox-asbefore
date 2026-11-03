@@ -307,8 +307,8 @@
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh0) : '') +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh0) : '') +
         '<br><span class="warn">完整配置已在上方部署终端里打印；下面这份 YAML 也可直接导入梦盒当配置用。</span>';
-      ['copySub', 'importSub', 'copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
-      $('yamlWarn').textContent = 'sing-box 模式没有订阅：把上面的链接或这份 YAML 导入梦盒即可。页面上的地址已打码，按钮复制的仍是原文。';
+      ['copySub', 'copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
+      $('yamlWarn').textContent = 'sing-box 模式没有订阅网址：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，不用再去配置页手动选文件。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
       if (r.ssLink) { $('copySs').classList.remove('hidden'); $('copySs').onclick = function () { copyText(r.ssLink, this); }; }
       if (r.hy2Link) { $('copyHy2').classList.remove('hidden'); $('copyHy2').onclick = function () { copyText(r.hy2Link, this); }; }
       $('copyVless').onclick = function () { copyText(vless, this); };
@@ -322,11 +322,32 @@
           .split('{{SHORT_ID}}').join(r.shortId);
         $('yaml').value = yaml;
         $('copyYaml').onclick = function () { copyText(yaml, this); };
+        var sbUri = '';
+        var saveSbYaml = function () {
+          if (sbUri) return Promise.resolve({ uri: sbUri });
+          return callNative('saveTextFile', { name: (lastOpts.subId || 'node') + '-dreambox.yaml', text: yaml }).then(function (res) {
+            sbUri = res.uri || '';
+            $('dlYaml').textContent = '已存到 ' + (res.path || 'Download');
+            return res;
+          });
+        };
+        saveSbYaml().catch(function () {});
         $('dlYaml').onclick = function () {
           var btn = this; btn.disabled = true;
-          callNative('saveTextFile', { name: (lastOpts.subId || 'node') + '-dreambox.yaml', text: yaml }).then(function (res) {
-            btn.textContent = '已存到 ' + (res.path || 'Download');
-          }).catch(function () { btn.disabled = false; btn.textContent = '保存失败，改用「复制配置」'; });
+          sbUri = '';
+          saveSbYaml().then(function () { btn.disabled = false; }).catch(function () { btn.disabled = false; btn.textContent = '保存失败，改用「复制配置」'; });
+        };
+        $('importSub').onclick = function () {
+          var btn = this;
+          var go = function () {
+            if (!sbUri) { alert('配置文件还没保存好，请稍等一下再点导入'); return; }
+            callNative('importLocalConfig', { uri: sbUri, name: lastOpts.nodeName || lastOpts.subId || 'node' }).then(function () {
+              btn.textContent = '已打开导入 ✓';
+            }).catch(function (e) {
+              alert('打开导入失败：' + (e && e.message ? e.message : e));
+            });
+          };
+          if (sbUri) { go(); } else { saveSbYaml().then(go).catch(function () { alert('配置文件保存失败，无法导入'); }); }
         };
       });
       $('resultCard').classList.remove('hidden');

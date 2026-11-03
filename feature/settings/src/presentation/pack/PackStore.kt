@@ -129,9 +129,9 @@ class PackStore(context: Context) {
                 id = "nodeforge",
                 name = "一键节点",
                 summary = "填服务器 IP 与 root 密码，一键部署多协议节点（VLESS+Reality 主协议，可加 Hysteria2 与 Shadowsocks 2022）。双引擎：s-ui 面板版（订阅链接、面板绑回环防爆破）或 sing-box 无面板版（无网址，配置直接在终端里看），并按防 DNS/WebRTC 泄露模板生成梦盒配置",
-                version = "19",
+                version = "20",
                 sizeText = "约 300 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v19.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/nodeforge-pack-v20.zip",
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
             ),
             PackDef(

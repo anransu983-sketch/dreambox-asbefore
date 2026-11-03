@@ -55,6 +55,10 @@ import kotlin.jvm.functions.Function3;
  *    不一致直接报错停手；部署终结后抹掉落盘的 root 密码。
  * 5) 新增 importSubscription：把订阅链接以 ?format=clash 经宿主现成的
  *    clash://install-config 深链导入梦盒（一键建订阅配置）。
+ * 6) v20 新增 importLocalConfig：sing-box 模式没有订阅网址，走不了 5) 的
+ *    url 深链；改为把 saveTextFile 存进 Download 的模板 YAML 以
+ *    dreambox://import-file 深链交给宿主，配置页直接建成本地（文件型）
+ *    配置， sing-box 建的节点也能一键导入梦盒。
  */
 public class NodeForgePackEntry implements PackBridgeDispatcher {
 
@@ -213,6 +217,9 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 case "importSubscription":
                     importSubscription(new JSONObject(optionsJson == null ? "{}" : optionsJson), callback);
                     return true;
+                case "importLocalConfig":
+                    importLocalConfig(new JSONObject(optionsJson == null ? "{}" : optionsJson), callback);
+                    return true;
                 default:
                     return false;
             }
@@ -249,6 +256,37 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
         }
     }
 
+    // ── importLocalConfig：经 dreambox://import-file 深链把本地 YAML 导入梦盒 ──
+    // sing-box 模式没有订阅网址：uri 指向 saveTextFile 写进 Download 的模板
+    // YAML（包代码就跑在宿主进程里、MediaStore 条目同应用可读）；宿主
+    // MainActivity 接住后存进 PendingImportFileHolder，配置页观测到即以
+    // 文件型配置建档，不用用户再去配置页手动选文件。
+
+    private void importLocalConfig(JSONObject opts, PackCallback callback) {
+        try {
+            String uri = opts.getString("uri").trim();
+            if (uri.isEmpty()) {
+                throw new IllegalArgumentException("本地配置文件为空");
+            }
+            String name = opts.optString("name", "node").trim();
+            if (name.isEmpty()) {
+                name = "node";
+            }
+            String deep = "dreambox://import-file?uri="
+                    + URLEncoder.encode(uri, "UTF-8")
+                    + "&name=" + URLEncoder.encode(name, "UTF-8");
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(deep));
+            intent.setPackage(appContext.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(intent);
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            callback.onResult(true, r.toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "打开导入失败：" + e.getMessage());
+        }
+    }
+
     // ── saveTextFile：把文本存进系统 Download 目录 ──────────────
     // WebView 里的 Blob+a[download] 没有宿主 DownloadListener 接管、点了没反应，
     // 故走原生：API 29+ 用 MediaStore 写公共 Download（免权限），低版本退回应用外部目录。
@@ -261,6 +299,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
             }
             byte[] bytes = opts.optString("text", "").getBytes(StandardCharsets.UTF_8);
             String where;
+            String fileUri = "";
             if (Build.VERSION.SDK_INT >= 29) {
                 ContentResolver cr = appContext.getContentResolver();
                 ContentValues cv = new ContentValues();
@@ -282,6 +321,7 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                 cv.put(MediaStore.Downloads.IS_PENDING, 0);
                 cr.update(uri, cv, null, null);
                 where = "Download/" + name;
+                fileUri = uri.toString();
             } else {
                 File dir = new File(appContext.getExternalFilesDir(null), "Download");
                 if (!dir.isDirectory() && !dir.mkdirs()) {
@@ -292,10 +332,12 @@ public class NodeForgePackEntry implements PackBridgeDispatcher {
                     out.write(bytes);
                 }
                 where = f.getAbsolutePath();
+                fileUri = Uri.fromFile(f).toString();
             }
             JSONObject r = new JSONObject();
             r.put("ok", true);
             r.put("path", where);
+            r.put("uri", fileUri);
             callback.onResult(true, r.toString(), null);
         } catch (Exception e) {
             callback.onResult(false, null, "保存失败：" + e.getMessage());

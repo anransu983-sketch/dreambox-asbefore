@@ -21,6 +21,7 @@
 
 package com.suanran.dreambox.feature.profiles.presentation.screen
 
+import android.net.Uri
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suanran.dreambox.core.model.override.OverrideConfig
+import com.suanran.dreambox.core.util.PendingImportFileHolder
 import com.suanran.dreambox.core.util.PendingImportUrlHolder
 import com.suanran.dreambox.feature.profiles.presentation.viewmodel.ProfilesViewModel
 import kotlinx.coroutines.launch
@@ -51,6 +53,16 @@ fun ProfilesPager(mainInnerPadding: PaddingValues) {
             dialogs.profileToEdit = null
             dialogs.showAdd.value = true
             PendingImportUrlHolder.clear()
+        }
+    }
+
+    val pendingImportFile by PendingImportFileHolder.pendingImportFile.collectAsStateWithLifecycle()
+
+    LaunchedEffect(pendingImportFile) {
+        val pending = pendingImportFile
+        if (pending != null) {
+            PendingImportFileHolder.clear()
+            profilesViewModel.importProfileFromFile(Uri.parse(pending.uri), pending.name)
         }
     }
 

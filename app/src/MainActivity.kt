@@ -244,6 +244,14 @@ class MainActivity : FragmentActivity() {
                             com.suanran.dreambox.core.util.PendingImportUrlHolder.set(configUrl)
                         }
                     }
+                } else if (scheme == "dreambox" && uri.host == "import-file") {
+                    val fileUri = uri.getQueryParameter("uri")
+                    if (!fileUri.isNullOrBlank()) {
+                        com.suanran.dreambox.core.util.PendingImportFileHolder.set(
+                            fileUri,
+                            uri.getQueryParameter("name")?.takeIf { it.isNotBlank() } ?: "node",
+                        )
+                    }
                 } else if (scheme == "flycat") {
                     _pendingDeepLink.value = uri.toString()
                 }
