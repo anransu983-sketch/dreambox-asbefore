@@ -263,8 +263,28 @@ class PackHostActivity : Activity() {
     )
 
     private val sectRankThresholds = intArrayOf(0, 60, 180, 400, 800, 1400, 2200)
+
+    // 宗门品级：不入流(0)→九品(1)→…→一品(9)→圣地(10)，按总修为晋升；品级定名号（插件页名字表）、
+    // 山门布局与资源：俸禄 = 品级×4/日，修炼加成 = 品级（单次修炼 = 20 + 品级）。
+    private val sectGradeThresholds = intArrayOf(0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4500)
+    private val sectGradeNames = listOf("不入流", "九品", "八品", "七品", "六品", "五品", "四品", "三品", "二品", "一品", "圣地")
+
+    private fun sectGradeOf(exp: Int): Int {
+        var g = 0
+        for (i in sectGradeThresholds.indices) if (exp >= sectGradeThresholds[i]) g = i
+        return g
+    }
     private val sectRankNames = listOf("炼气", "筑基", "金丹", "元婴", "化神", "炼虚", "大乘")
-    private val sectTitleNames = listOf("外门弟子", "内门弟子", "真传弟子", "执事长老", "峰主长老", "太上长老", "掌门老祖")
+    // 身份阶梯（用户定版，独立于境界按修为晋升）
+    // 十一档：弟子线（杂役→外门→内门→核心→真传）→执事（管外门/内门）→长老（管杂役/外门/内门）→峰主（执掌一峰）→道子→门主→掌门老祖（4500，与圣地同期）
+    private val sectIdentityThresholds = intArrayOf(0, 60, 180, 400, 800, 1100, 1400, 1900, 2500, 3200, 4500)
+    private val sectIdentityNames = listOf("杂役弟子", "外门弟子", "内门弟子", "核心弟子", "真传弟子", "执事", "长老", "峰主", "道子", "门主", "掌门老祖")
+
+    private fun sectIdentityOf(exp: Int): Int {
+        var g = 0
+        for (i in sectIdentityThresholds.indices) if (exp >= sectIdentityThresholds[i]) g = i
+        return g
+    }
 
     private fun sectSettings() =
         org.koin.core.context.GlobalContext.get().get<com.suanran.dreambox.data.store.AppSettingsStore>()
@@ -297,8 +317,22 @@ class PackHostActivity : Activity() {
             put("exp", exp)
             put("rankIndex", rank)
             put("rankName", sectRankNames[rank])
-            put("title", sectTitleNames[rank])
+            // 职务自选：执事（下标5）起是职务，修为解锁后可自选（含选低不选高）；未选或所选未解锁时按最高解锁档
+            val eligible = sectIdentityOf(exp)
+            val choice = s.sectPostChoice.value
+            val identity = if (choice >= 5 && choice <= eligible) choice else eligible
+            put("identityIndex", identity)
+            put("eligibleIndex", eligible)
+            put("postChoice", choice)
+            put("title", sectIdentityNames[identity])
             put("nextThreshold", next)
+            val grade = sectGradeOf(exp)
+            put("gradeIndex", grade)
+            put("gradeName", sectGradeNames[grade])
+            put("nextGradeThreshold", if (grade + 1 < sectGradeThresholds.size) sectGradeThresholds[grade + 1] else -1)
+            put("salary", grade * 4)
+            put("cultGain", 20 + grade)
+            put("lastSalaryDay", s.sectLastSalaryDay.value)
             put("lastCultivateDay", s.sectLastCultivateDay.value)
             put("today", java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()))
             put("seedArgb", s.themeAccentColorArgb.value)
@@ -358,8 +392,9 @@ class PackHostActivity : Activity() {
                         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
                             .format(java.util.Date())
                         if (s.sectLastCultivateDay.value == today) throw IllegalStateException("今日已修炼，明日再来")
+                        val gain = JSONObject(sectStateJson()).optInt("cultGain", 20)
                         s.sectLastCultivateDay.set(today)
-                        s.sectExpBonus.set(s.sectExpBonus.value + 20)
+                        s.sectExpBonus.set(s.sectExpBonus.value + gain)
                         val st = JSONObject(sectStateJson())
                         applySectRankLayout(st.optInt("rankIndex", 0))
                         sectStateJson()
@@ -371,6 +406,34 @@ class PackHostActivity : Activity() {
                             if (dark) com.suanran.dreambox.core.model.ThemeMode.Dark
                             else com.suanran.dreambox.core.model.ThemeMode.Light
                         )
+                        sectStateJson()
+                    }
+                    "salary" -> {
+                        // 宗门俸禄：每日一次，数额由品级定（不入流没有俸禄）
+                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派再领俸禄")
+                        val st0 = JSONObject(sectStateJson())
+                        val grade = st0.optInt("gradeIndex", 0)
+                        if (grade <= 0) throw IllegalStateException("不入流的宗门没有俸禄，先晋品再说")
+                        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                            .format(java.util.Date())
+                        if (s.sectLastSalaryDay.value == today) throw IllegalStateException("今日俸禄已领过")
+                        s.sectLastSalaryDay.set(today)
+                        s.sectExpBonus.set(s.sectExpBonus.value + st0.optInt("salary", 0))
+                        val st = JSONObject(sectStateJson())
+                        applySectRankLayout(st.optInt("rankIndex", 0))
+                        sectStateJson()
+                    }
+                    "choosePost" -> {
+                        // 自选职务：index=-1 回到自动（随修为）；5..10 须已解锁（门槛<=当前修为）
+                        val idx = options.optInt("index", -1)
+                        if (idx == -1) {
+                            s.sectPostChoice.set(-1)
+                        } else {
+                            if (idx < 5 || idx >= sectIdentityNames.size) throw IllegalArgumentException("该档不是可选职务")
+                            val st0 = JSONObject(sectStateJson())
+                            if (idx > st0.optInt("eligibleIndex", 0)) throw IllegalStateException("修为未到，还当不了${sectIdentityNames[idx]}")
+                            s.sectPostChoice.set(idx)
+                        }
                         sectStateJson()
                     }
                     "leave" -> {

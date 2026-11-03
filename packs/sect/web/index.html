@@ -103,6 +103,26 @@
   .layout-6 .panels .card{margin-top:0}
   .layout-6 .panels-wrap{margin-top:14px}
   .layout-6 .core-orb{display:flex!important}
+  /* —— 宗门品级：印、框、晋品梯（品级定名号/布局/资源） —— */
+  .grade-seal{display:inline-block;vertical-align:middle;font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(120deg,#b8860b,#d4af37);border-radius:6px;padding:3px 9px;margin-left:8px;letter-spacing:2px}
+  .grade-0 .grade-seal{background:#6b7280}
+  .sect-card .gd{font-size:11px;opacity:.7;margin-top:5px}
+  .grade-0{border:1.5px dashed var(--border);padding:10px}
+  .grade-1,.grade-2,.grade-3{border:1.5px solid var(--border);padding:10px}
+  .grade-4,.grade-5,.grade-6{border:1.5px solid var(--accent);padding:10px;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 22%,transparent)}
+  .grade-7,.grade-8{border:2px solid var(--accent);padding:11px;box-shadow:0 0 26px color-mix(in srgb,var(--accent) 35%,transparent)}
+  .grade-9{border:2px solid #d4af37;padding:11px;box-shadow:0 0 30px rgba(212,175,55,.35)}
+  .grade-10{border:2.5px solid #d4af37;padding:12px;box-shadow:0 0 44px rgba(212,175,55,.55),inset 0 0 30px rgba(212,175,55,.12)}
+  .grade-10 .hall-head{background:linear-gradient(120deg,#8a6d1f,#d4af37 55%,#8a6d1f);color:#fff}
+  .grade-10 .hall-head .desc,.grade-10 .hall-head .layout-note{color:rgba(255,255,255,.88)}
+  .ladder{margin-top:8px}
+  .ladder .lr{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
+  .ladder .lr b{color:var(--text)}
+  .ladder .lr.cur{border-color:#d4af37;color:var(--text);box-shadow:0 0 12px rgba(212,175,55,.25)}
+  .ladder .lr .rs{white-space:nowrap}
+  .orgrow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
+  .orgrow b{color:var(--text)}
+  .orgrow .rs{white-space:nowrap}
   .core-orb{display:none;justify-content:center;margin:12px 0 2px}
   .core-orb i{width:86px;height:86px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--accent) 55%,var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;font-style:normal;color:#fff;box-shadow:0 0 34px var(--accent)}
   .hall-rail{display:none;writing-mode:vertical-rl;letter-spacing:6px;font-size:14px;font-weight:800;color:var(--accent);border:var(--bw) solid var(--border);border-radius:var(--radius);background:var(--card);align-items:center;justify-content:center;padding:14px 0}
@@ -113,7 +133,7 @@
 <body>
 <div id="view-guide">
   <h1>⚔️ 高武降临 · 万道争锋</h1>
-  <div class="hero-sub">此界没有默认的模样。你选哪一道，梦盒就长成哪一道的模样——配色、明暗、脾性全换；修为越深，界面布局越开：从外门弟子的单列陋室，一路开到掌门老祖的宗门全景。</div>
+  <div class="hero-sub">此界没有默认的模样。你选哪一道，梦盒就长成哪一道的模样——配色、明暗、脾性全换；修为越深，界面布局越开：从杂役的单列陋室，一路开到门主的宗门全景。宗门本身还有品级：不入流、九品…一品，一品之上更有传说中的圣地——品级不同，宗门的名字、布局、俸禄资源全然不同。</div>
   <div class="steps">
     <div class="step on">一 · 入世</div><div class="step on">二 · 选道</div><div class="step">三 · 览境</div><div class="step">四 · 入门</div>
   </div>
@@ -126,6 +146,8 @@
     <div class="desc" style="margin-top:10px">境界预览（入门后按真实修为自动升，不是手动换肤）：</div>
     <div class="chips" id="rankChips"></div>
     <div class="layout-note" id="rankNote"></div>
+    <div class="desc" style="margin-top:12px">宗门品级晋升路（修为到点自动晋品，共十一级；每一级名字、布局、资源都不同）：</div>
+    <div class="ladder" id="gradeLadder"></div>
     <div class="err" id="guideErr"></div>
     <button class="main" id="btnJoin" disabled>拜入此门</button>
     <div class="foot">入门即生效：整个梦盒的主题色与明暗随道统而变，退出本页就能看见。日后在插件里可改投他派。</div>
@@ -135,7 +157,7 @@
 <div id="view-hall" class="hidden">
   <div class="hall-frame" id="hallFrame">
     <div class="hall-wrap">
-      <div class="hall-rail" id="hallRail">外门弟子</div>
+      <div class="hall-rail" id="hallRail">杂役弟子</div>
       <div>
         <div class="card hall-head" style="margin-top:0">
           <div class="big" id="hallTitle">山门</div>
@@ -143,13 +165,15 @@
           <div class="core-orb"><i id="hallOrb">⚔️</i></div>
           <div class="desc" id="hallExpText" style="margin-top:8px"></div>
           <div class="rankbar"><i id="hallExpBar" style="width:0%"></i></div>
+          <div class="desc" id="hallGradeText" style="margin-top:10px"></div>
+          <div class="rankbar"><i id="hallGradeBar" style="width:0%"></i></div>
           <div class="layout-note" id="hallLayoutNote"></div>
         </div>
         <div class="stats" id="hallStats"></div>
         <div class="panels-wrap"><div class="panels">
           <div class="card">
             <h2>🧘 每日修炼</h2>
-            <div class="desc">运功一周天，修为 +20。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界越高。</div>
+            <div class="desc" id="cultDesc">运功一周天，修为 +20。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界与品级越高。</div>
             <button class="main" id="btnCultivate">开始修炼</button>
             <div class="ok" id="cultOk"></div>
             <div class="err" id="hallErr"></div>
@@ -157,12 +181,28 @@
           <div class="card">
             <h2>🏯 境界与布局</h2>
             <div class="desc" id="hallRankList"></div>
+            <div class="desc" style="margin-top:10px">职务自选（顺序只是高低，修为解锁后想当哪个当哪个，也可选低不选高）：</div>
+            <div class="chips" id="postChips"></div>
+            <div class="layout-note" id="postNote"></div>
+          </div>
+          <div class="card">
+            <h2>💰 宗门资源</h2>
+            <div class="desc" id="hallResText"></div>
+            <button class="main" id="btnSalary">领取今日俸禄</button>
+            <div class="ok" id="salaryOk"></div>
+            <div class="desc" style="margin-top:10px">本门晋品之路（名字与资源随品级而变）：</div>
+            <div class="ladder" id="hallLadder"></div>
+          </div>
+          <div class="card">
+            <h2>🏛️ 宗门架构</h2>
+            <div class="desc" id="hallPosText"></div>
+            <div id="hallOrg"></div>
           </div>
         </div></div>
         <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
         <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
         <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
-        <div class="foot">境界变化会同步改本体的布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨。重启梦盒后完全生效。</div>
+        <div class="foot">境界管你的身份（杂役→外门→内门→核心→真传→道子→门主）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div>
       </div>
     </div>
   </div>
@@ -173,47 +213,94 @@
 "use strict";
 /* 七修定版：seed 与宿主 HostSect 的 sectDefs 必须一致（符修默认浅色、余皆深色）；入门后可在山门页明暗翻转 */
 var SECTS=[
- {id:"jian",name:"剑修",sect:"青冥剑宗",icon:"⚔️",seal:"剑",motto:"一剑霜寒十四州",xinfa:"青冥剑诀",
+ {id:"jian",name:"剑修",sect:"青冥剑宗",names:["无名剑庐","青石剑派","流云剑门","寒潭剑谷","破军剑府","凌霄剑宫","太白剑宗","洗剑天宗","通天剑阁","青冥剑宗","万剑青冥圣地"],icon:"⚔️",seal:"剑",motto:"一剑霜寒十四州",xinfa:"青冥剑诀",
   desc:"御剑而行，快意直达。本道主速：节点延迟如剑锋，一眼见分晓。",
   trait:"极简凌厉 · 小圆角斜切 · 青锋留白",perk:"专长：御剑疾行（测速与延迟）",
   c:{bg:"#071018",bg2:"#0a1826",card:"#0c1d29",border:"#164e63",accent:"#0284c7",accent2:"#38bdf8",text:"#ecf7ff",sub:"#8fb8cc",radius:"6px",bw:"1px"}},
- {id:"fu",name:"符修",sect:"太清符宗",icon:"📜",seal:"符",motto:"一符镇山河",xinfa:"太清符经",
+ {id:"fu",name:"符修",sect:"太清符宗",names:["黄纸符庐","朱砂符派","云篆符门","灵应符谷","玄符宝府","紫霄符宫","三清符宗","万符天宗","玉篆宝阁","太清符宗","太清万符圣地"],icon:"📜",seal:"符",motto:"一符镇山河",xinfa:"太清符经",
   desc:"黄纸朱砂，落笔成禁。本道主封：规则如符箓，一张压住一类纷扰。",
   trait:"黄纸朱砂 · 浅色纸面 · 印章落款",perk:"专长：符箓封印（规则与拦截）",
   c:{bg:"#f3e9d2",bg2:"#efe3c8",card:"#fff8e6",border:"#d6b25e",accent:"#c2410c",accent2:"#d97706",text:"#3b2f1a",sub:"#8a6d3b",radius:"4px",bw:"1px"}},
- {id:"zhen",name:"阵修",sect:"星枢阵宫",icon:"◎",seal:"阵",motto:"阵里乾坤大",xinfa:"星枢阵图",
+ {id:"zhen",name:"阵修",sect:"星枢阵宫",names:["残阵小庐","青旗阵派","八门阵门","星罗阵谷","玄枢阵府","璇玑阵宫","天衍阵宗","周天星宗","万象阵阁","星枢阵宫","周天星枢圣地"],icon:"◎",seal:"阵",motto:"阵里乾坤大",xinfa:"星枢阵图",
   desc:"落子成阵，进退有法。本道主局：策略组与分流规则，就是你的阵图。",
   trait:"星盘罗列 · 对称阵列 · 深蓝星辉",perk:"专长：布阵分流（策略组与规则）",
   c:{bg:"#0b0a1f",bg2:"#100e2a",card:"#151332",border:"#3730a3",accent:"#6366f1",accent2:"#a5b4fc",text:"#eef0ff",sub:"#9aa3d9",radius:"16px",bw:"1px"}},
- {id:"ti",name:"体修",sect:"金刚体宗",icon:"👊",seal:"体",motto:"一力降十会",xinfa:"金刚不坏身",
+ {id:"ti",name:"体修",sect:"金刚体宗",names:["铁骨武庐","磐石体派","金钟武门","虎啸体谷","镇岳体府","罗汉体宫","伏魔体宗","撼天体宗","镇国体殿","金刚体宗","金刚不坏圣地"],icon:"👊",seal:"体",motto:"一力降十会",xinfa:"金刚不坏身",
   desc:"不借外物，肉身即是法宝。本道主扛：全局 TUN 一开，千钧压顶面不改色。",
   trait:"厚重粗边 · 大字压阵 · 铜皮铁骨",perk:"专长：肉身成圣（全局与 TUN）",
   c:{bg:"#170d06",bg2:"#201106",card:"#26160b",border:"#9a3412",accent:"#ea580c",accent2:"#fbbf24",text:"#fff4e8",sub:"#c99a6b",radius:"10px",bw:"2.5px"}},
- {id:"kuilei",name:"傀儡修",sect:"千机傀儡门",icon:"🪆",seal:"傀",motto:"千机牵一线",xinfa:"千机牵丝诀",
+ {id:"kuilei",name:"傀儡修",sect:"千机傀儡门",names:["木偶小庐","竹甲傀派","机关傀门","千丝傀谷","偃甲傀府","天工傀宫","偃师傀宗","万傀天宗","天工宝阁","千机傀儡门","千机天工圣地"],icon:"🪆",seal:"傀",motto:"千机牵一线",xinfa:"千机牵丝诀",
   desc:"十指牵丝，傀儡如活。本道主分：多份配置、多台节点，都是你手里的傀儡。",
   trait:"模块拼接 · 丝线牵引 · 铜绿机关",perk:"专长：傀儡分身（多配置与插件）",
   c:{bg:"#061514",bg2:"#08201e",card:"#0b2422",border:"#115e59",accent:"#0f766e",accent2:"#2dd4bf",text:"#e8fdfa",sub:"#7fb5ad",radius:"12px",bw:"1px"}},
- {id:"gui",name:"鬼修",sect:"幽冥鬼府",icon:"👻",seal:"鬼",motto:"夜行三千里",xinfa:"幽冥鬼经",
+ {id:"gui",name:"鬼修",sect:"幽冥鬼府",names:["孤魂野庐","阴符鬼派","招魂鬼门","黄泉鬼谷","幽都鬼府","森罗鬼宫","幽冥鬼宗","九幽天宗","轮回鬼阁","幽冥鬼府","幽冥轮回圣地"],icon:"👻",seal:"鬼",motto:"夜行三千里",xinfa:"幽冥鬼经",
   desc:"来无影，去无踪。本道主隐：行迹如鬼魅，窥探者只见一团幽绿雾气。",
   trait:"幽绿半透 · 雾气缭绕 · 极夜低光",perk:"专长：鬼影潜行（隐匿与防窥）",
   c:{bg:"#030a05",bg2:"#051209",card:"#07150b",border:"#14532d",accent:"#16a34a",accent2:"#4ade80",text:"#eafff1",sub:"#79a887",radius:"18px",bw:"1px"}},
- {id:"mo",name:"魔修",sect:"血煞魔宗",icon:"🔥",seal:"魔",motto:"我命由我不由天",xinfa:"血煞魔功",
+ {id:"mo",name:"魔修",sect:"血煞魔宗",names:["无名魔窟","血手魔派","赤发魔门","噬魂魔谷","血河魔府","天魔宫","吞天魔宗","万魔天宗","魔极殿","血煞魔宗","血煞万魔圣地"],icon:"🔥",seal:"魔",motto:"我命由我不由天",xinfa:"血煞魔功",
   desc:"不敬天，不畏仙，只信自己。本道主逆：配色最烈、对比最狠，魔焰所至无素净。",
   trait:"黑红血煞 · 高对比 · 紫焰点缀",perk:"专长：血遁千里（爆发与突围）",
   c:{bg:"#120405",bg2:"#1a0608",card:"#1f0709",border:"#7f1d1d",accent:"#dc2626",accent2:"#a855f7",text:"#fff0f0",sub:"#c48a8a",radius:"8px",bw:"1px"}}
 ];
 var RANKS=[
- {name:"炼气",title:"外门弟子",need:0,note:"布局：单列陋室。统计只有两格，页面缩放 0.96，一切从简——先活下去。"},
- {name:"筑基",title:"内门弟子",need:60,note:"布局：洞府初成。标题添「洞府初成」印记，缩放回到 1.0，算是有了自己的地盘。"},
- {name:"金丹",title:"真传弟子",need:180,note:"布局：金丹居中。身份区居中、金丹圆显形、统计扩到三列，本体顶栏开启毛玻璃。"},
- {name:"元婴",title:"执事长老",need:400,note:"布局：分栏理事。左侧立起竖排身份轨，本体首页氛围动画开启，开始管事了。"},
- {name:"化神",title:"峰主长老",need:800,note:"布局：一峰之主。顶部横幅换上道统渐变，面板双列铺开，本体底栏改为常驻。"},
- {name:"炼虚",title:"太上长老",need:1400,note:"布局：洞天全景。横幅、双列、三列统计俱全，卡片带毛玻璃，氛围拉满。"},
- {name:"大乘",title:"掌门老祖",need:2200,note:"布局：宗门全开。金框加冕，所有布局形态叠加显形，一派之主不过如此。"}
+ {name:"炼气",title:"杂役弟子",need:0,note:"布局：单列陋室。杂役身份，统计只有两格，页面缩放 0.96，一切从简——先活下去。"},
+ {name:"筑基",title:"外门弟子",need:60,note:"布局：洞府初成。标题添「洞府初成」印记，缩放回到 1.0，算是有了自己的地盘。"},
+ {name:"金丹",title:"内门弟子",need:180,note:"布局：金丹居中。身份区居中、金丹圆显形、统计扩到三列，本体顶栏开启毛玻璃。"},
+ {name:"元婴",title:"核心弟子",need:400,note:"布局：分栏理事。左侧立起竖排身份轨，本体首页氛围动画开启，开始管事了。"},
+ {name:"化神",title:"真传弟子",need:800,note:"布局：一峰之主。顶部横幅换上道统渐变，面板双列铺开，本体底栏改为常驻。"},
+ {name:"炼虚",title:"长老",need:1400,note:"布局：洞天全景。横幅、双列、三列统计俱全，卡片带毛玻璃，氛围拉满。"},
+ {name:"大乘",title:"峰主",need:2200,note:"布局：宗门全开。门主之尊，金框加冕，所有布局形态叠加显形，一派之主不过如此。"}
 ];
+/* 品级定版：与宿主 HostSect 的 sectGradeThresholds 一致；俸禄=品级×4/日，修炼加成=品级 */
+var GRADES=[
+ {name:"不入流",need:0},{name:"九品",need:100},{name:"八品",need:250},{name:"七品",need:450},
+ {name:"六品",need:700},{name:"五品",need:1000},{name:"四品",need:1400},{name:"三品",need:1900},
+ {name:"二品",need:2500},{name:"一品",need:3200},{name:"圣地",need:4500}];
+/* 身份阶梯（与宿主一致，独立按修为晋升）：长老分管杂役、外门、内门三堂 */
+var IDENTITIES=[
+ {name:"杂役弟子",need:0,duty:"打杂跑腿，先把山门混熟"},
+ {name:"外门弟子",need:60,duty:"可领外门任务，入外门武库"},
+ {name:"内门弟子",need:180,duty:"入内门藏经阁，资源翻倍"},
+ {name:"核心弟子",need:400,duty:"宗门核心资源优先供给"},
+ {name:"真传弟子",need:800,duty:"得门主亲传，诸弟子仰望"},
+ {name:"执事",need:1100,duty:"分管外门、内门两堂事务"},
+ {name:"长老",need:1400,duty:"分管杂役、外门、内门三堂"},
+ {name:"峰主",need:1900,duty:"执掌一峰，各个峰头自成一系"},
+ {name:"道子",need:2500,duty:"宗门继承人，诸堂见之行礼"},
+ {name:"门主",need:3200,duty:"一门之主，全宗上下皆辖"},
+ {name:"掌门老祖",need:4500,duty:"全宗至高，圣地之主"}];
+/* 宗门内部架构：堂口与山峰，各有主事；你的身份决定你在这张图里的位置 */
+var HALLS=[
+ {icon:"📖",name:"传功堂",duty:"传授功法、讲经授课",head:"长老",headIdx:6},
+ {icon:"⚔️",name:"演武堂",duty:"演武切磋、宗门大比",head:"长老",headIdx:6},
+ {icon:"🧪",name:"丹堂",duty:"炼丹制药、供给全宗丹药",head:"长老",headIdx:6},
+ {icon:"🔨",name:"器峰",duty:"炼器铸兵、法宝维护",head:"峰主",headIdx:7},
+ {icon:"⚖️",name:"执法堂",duty:"戒律执法、赏罚分明",head:"长老",headIdx:6},
+ {icon:"📚",name:"藏经阁",duty:"典籍收藏、功法兑换",head:"长老",headIdx:6}];
+var POSITIONS=[
+ "杂役弟子：在各堂各峰打杂轮差，哪儿缺人去哪儿",
+ "外门弟子：在外门听差，还没入堂口编制",
+ "内门弟子：可入一堂听用，在传功、演武诸堂轮值",
+ "核心弟子：堂口重点培养，常驻一堂修行",
+ "真传弟子：亲传一脉，不受堂口差遣",
+ "执事：执掌一堂日常事务，堂里大小事先过你的手",
+ "长老：主事一堂，这一堂的兴废系于你身",
+ "峰主：执掌器峰，一峰上下皆听你号令",
+ "道子：诸堂诸峰见你都要礼让三分",
+ "门主：全宗堂口峰头，尽归你调度",
+ "掌门老祖：超然物外，堂口自有后辈打理"];
+function identityAt(exp){var ii=0;for(var k=0;k<IDENTITIES.length;k++)if(exp>=IDENTITIES[k].need)ii=k;return IDENTITIES[ii]}
+function gradeSalary(g){return g*4}
+function gradeGain(g){return 20+g}
+function ladderHtml(s,cur){
+  return GRADES.map(function(gr,g){
+    var rs = g===0 ? "无俸禄 · 修炼 +20" : "俸禄 +"+gradeSalary(g)+"/日 · 修炼 +"+gradeGain(g);
+    return '<div class="lr'+(g===cur?" cur":"")+'"><span><b>'+gr.name+'</b> · '+s.names[g]+(g===cur?" 👈 当前":"")+'</span><span class="rs">'+rs+'</span></div>';
+  }).join("");
+}
 var $=function(id){return document.getElementById(id)};
 var selSect=null, selRank=0;
-var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"外门弟子",nextThreshold:60,lastCultivateDay:"",today:"",themeMode:"Dark"};
+var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"杂役弟子",nextThreshold:60,identityIndex:0,eligibleIndex:0,postChoice:-1,gradeIndex:0,gradeName:"不入流",nextGradeThreshold:100,salary:0,cultGain:20,lastSalaryDay:"",lastCultivateDay:"",today:"",themeMode:"Dark"};
 var hasBridge = !!(window.Capacitor && window.Capacitor.toNative);
 
 function sectById(id){for(var i=0;i<SECTS.length;i++)if(SECTS[i].id===id)return SECTS[i];return null}
@@ -249,8 +336,16 @@ function mockDerive(){
   }
   state.exp=state.days*10+state.profileCount*25+state.packCount*20+state.expBonus;
   var r=0;for(var i=0;i<RANKS.length;i++)if(state.exp>=RANKS[i].need)r=i;
-  state.rankIndex=r;state.rankName=RANKS[r].name;state.title=RANKS[r].title;
+  state.rankIndex=r;state.rankName=RANKS[r].name;
+  var ii=0;for(var k=0;k<IDENTITIES.length;k++)if(state.exp>=IDENTITIES[k].need)ii=k;
+  state.eligibleIndex=ii;
+  state.identityIndex=(state.postChoice>=5&&state.postChoice<=ii)?state.postChoice:ii;
+  state.title=IDENTITIES[state.identityIndex].name;
   state.nextThreshold=(r+1<RANKS.length)?RANKS[r+1].need:-1;
+  var g=0;for(var j=0;j<GRADES.length;j++)if(state.exp>=GRADES[j].need)g=j;
+  state.gradeIndex=g;state.gradeName=GRADES[g].name;
+  state.nextGradeThreshold=(g+1<GRADES.length)?GRADES[g+1].need:-1;
+  state.salary=gradeSalary(g);state.cultGain=gradeGain(g);
   state.today=new Date().toISOString().slice(0,10);
 }
 function mockSave(){try{localStorage.setItem("sectMock",JSON.stringify(state))}catch(e){}}
@@ -266,7 +361,7 @@ function renderGrid(){
     return '<div class="sect-card'+(selSect===s.id?" sel":"")+'" data-id="'+s.id+'" style="background:'+s.c.card+';border-color:'+s.c.border+';color:'+s.c.text+';--c1:'+s.c.accent+'">'+
       '<div class="seal" style="background:'+s.c.accent+'">'+s.seal+'</div>'+
       '<div class="ic">'+s.icon+'</div><div class="nm">'+s.name+'</div><div class="sc">'+s.sect+'</div>'+
-      '<div class="mt">「'+s.motto+'」</div></div>';
+      '<div class="mt">「'+s.motto+'」</div><div class="gd">十一品级 · 终至圣地「'+s.names[10]+'」</div></div>';
   }).join("");
   Array.prototype.forEach.call(document.querySelectorAll(".sect-card"),function(el){
     el.addEventListener("click",function(){selSect=el.getAttribute("data-id");renderGrid();renderPreview()});
@@ -293,10 +388,11 @@ function renderPreview(){
   Array.prototype.forEach.call(document.querySelectorAll("#rankChips .chip"),function(el){
     el.addEventListener("click",function(){selRank=parseInt(el.getAttribute("data-r"),10);renderPreview()});
   });
-  if(!s){$("rankNote").textContent=RANKS[selRank].note;$("btnJoin").disabled=true;renderMock(SECTS[0],selRank);return}
+  if(!s){$("rankNote").textContent=RANKS[selRank].note;$("gradeLadder").innerHTML="";$("btnJoin").disabled=true;renderMock(SECTS[0],selRank);return}
   applySectTheme(s);
-  $("pvTitle").textContent=s.icon+" "+s.name+" · "+s.sect;
-  $("pvDesc").innerHTML=s.desc+"<br>心法：<b>"+s.xinfa+"</b>　"+s.perk+"<br>UI 脾性："+s.trait;
+  $("pvTitle").textContent=s.icon+" "+s.name+" · "+s.names[9]+"（一品）";
+  $("pvDesc").innerHTML=s.desc+"<br>心法：<b>"+s.xinfa+"</b>　"+s.perk+"<br>UI 脾性："+s.trait+"<br>入门时只是不入流的「"+s.names[0]+"」，修为够了逐级晋品，终成圣地「"+s.names[10]+"」。<br>宗门内设传功堂、演武堂、丹堂、器峰、执法堂、藏经阁，身份从杂役弟子到掌门老祖共十一档，你的身份决定你在架构里的位置。";
+  $("gradeLadder").innerHTML=ladderHtml(s,-1);
   $("rankNote").textContent=RANKS[selRank].note;
   $("btnJoin").disabled=false;
   renderMock(s,selRank);
@@ -305,11 +401,10 @@ function renderPreview(){
 function renderHall(){
   var s=sectById(state.sectId); if(!s)return;
   applySectTheme(s);
-  var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex;
-  document.querySelector("#view-hall .hall-wrap").parentElement.className="hall-frame layout-"+state.rankIndex;
+  var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex+" grade-"+state.gradeIndex;
   $("hallRail").textContent=state.title;
-  $("hallTitle").textContent=s.icon+" "+s.sect+" · "+state.rankName+"境";
-  $("hallSub").textContent="道统："+s.name+"（"+s.xinfa+"）　身份："+state.title+"　座右铭：「"+s.motto+"」";
+  $("hallTitle").innerHTML=s.icon+" "+s.names[state.gradeIndex]+'<span class="grade-seal">'+state.gradeName+'</span>';
+  $("hallSub").textContent="道统："+s.name+"（"+s.xinfa+"）　境界："+state.rankName+"　身份："+state.title+"　宗门品级："+state.gradeName+"　座右铭：「"+s.motto+"」";
   $("hallOrb").textContent=s.icon;
   var pct,expText;
   if(state.nextThreshold>0){
@@ -319,7 +414,15 @@ function renderHall(){
   }else{pct=100;expText="修为 "+state.exp+" · 已至绝巅";}
   $("hallExpText").textContent=expText;
   $("hallExpBar").style.width=Math.max(3,Math.min(100,pct))+"%";
-  $("hallLayoutNote").textContent="当前布局 · "+RANKS[state.rankIndex].note;
+  var gText,gPct;
+  if(state.nextGradeThreshold>0){
+    var gBase=GRADES[state.gradeIndex].need;
+    gPct=Math.round((state.exp-gBase)/(state.nextGradeThreshold-gBase)*100);
+    gText="宗门品级 "+state.gradeName+" · "+s.names[state.gradeIndex]+"（距 "+GRADES[state.gradeIndex+1].name+"「"+s.names[state.gradeIndex+1]+"」还差 "+(state.nextGradeThreshold-state.exp)+" 修为）";
+  }else{gPct=100;gText="宗门品级 圣地 · "+s.names[10]+" ——一品之上，万宗来朝。";}
+  $("hallGradeText").textContent=gText;
+  $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
+  $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note+" 品级排面随品级而变：不入流是虚线陋框，晋品后边框渐盛，一品金框、圣地金辉全开。";
   $("hallStats").innerHTML=
     '<div class="stat"><b>'+state.days+' 天</b><div>入门时日（每日 +10 修为）</div></div>'+
     '<div class="stat"><b>'+state.profileCount+' 份</b><div>已导入配置（每份 +25）</div></div>'+
@@ -327,13 +430,52 @@ function renderHall(){
     '<div class="stat"><b>+'+state.expBonus+'</b><div>修炼攒下的修为</div></div>';
   $("hallRankList").innerHTML=RANKS.map(function(r,i){
     var mark=i<state.rankIndex?"✅":(i===state.rankIndex?"👉":"🔒");
-    return mark+" "+r.name+" · "+r.title+"（"+r.need+" 修为）<br>";
+    return mark+" "+r.name+" · "+identityAt(r.need).name+"（"+r.need+" 修为）<br>";
+  }).join("")+"<br>身份阶梯（修为定解锁，执事起职务自选）：<br>"+IDENTITIES.map(function(t,i){
+    var mark,tag="";
+    if(i===state.identityIndex){mark="👉";tag=" · 在任"}
+    else if(i<=state.eligibleIndex){mark="✅";tag=i>=5?" · 可自选":""}
+    else{mark="🔒"}
+    return mark+" "+t.name+"（"+t.need+" 修为） · "+t.duty+tag+"<br>";
   }).join("");
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
+  $("cultDesc").innerHTML="运功一周天，修为 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+"）。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界与品级越高。";
   var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
   $("btnCultivate").disabled=!!doneToday;
-  $("btnCultivate").textContent=doneToday?"今日已修炼":"开始修炼（+20）";
+  $("btnCultivate").textContent=doneToday?"今日已修炼":"开始修炼（+"+state.cultGain+"）";
+  var salDone = state.lastSalaryDay && state.today && state.lastSalaryDay===state.today;
+  if(state.gradeIndex<=0){
+    $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20）。修为到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36/日、圣地 +40/日。";
+    $("btnSalary").disabled=true; $("btnSalary").textContent="不入流 · 无俸禄";
+  }else{
+    $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 修为</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+"）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
+    $("btnSalary").disabled=!!salDone;
+    $("btnSalary").textContent=salDone?"今日俸禄已领":"领取今日俸禄（+"+state.salary+"）";
+  }
+  $("hallLadder").innerHTML=ladderHtml(s,state.gradeIndex);
+  var postNames=["执事","长老","峰主","道子","门主","掌门老祖"];
+  var chipsHtml='<span class="chip'+(state.postChoice===-1?" on":"")+'" data-post="-1">自动（随修为）</span>';
+  for(var pi=5;pi<IDENTITIES.length;pi++){
+    var locked=state.exp<IDENTITIES[pi].need;
+    chipsHtml+='<span class="chip'+(state.postChoice===pi?" on":"")+'" data-post="'+pi+'"'+(locked?' style="opacity:.45"':'')+'>'+IDENTITIES[pi].name+(locked?" 🔒"+IDENTITIES[pi].need:"")+'</span>';
+  }
+  $("postChips").innerHTML=chipsHtml;
+  Array.prototype.forEach.call(document.querySelectorAll("#postChips .chip"),function(el){
+    el.addEventListener("click",function(){
+      var idx=parseInt(el.getAttribute("data-post"),10);
+      if(idx>=0 && state.exp<IDENTITIES[idx].need){$("hallErr").textContent="修为未到，还当不了"+IDENTITIES[idx].name;return}
+      doChoosePost(idx);
+    });
+  });
+  $("postNote").textContent = state.postChoice>=5
+    ? "当前职务："+state.title+"（自选在任；修为已解锁到 "+IDENTITIES[state.eligibleIndex].name+"，随时可改）"
+    : "当前职务："+state.title+"（自动随修为晋升；点上面任意已解锁职务即可改任）";
+  $("hallPosText").innerHTML="你在宗门架构里的位置：<b>"+state.title+"</b> · "+POSITIONS[state.identityIndex];
+  $("hallOrg").innerHTML=HALLS.map(function(h){
+    var st = state.identityIndex>=h.headIdx ? "✅ 你已可主事" : ("主事："+h.head+"（"+IDENTITIES[h.headIdx].need+" 修为起）");
+    return '<div class="orgrow"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+'</span></div>';
+  }).join("");
 }
 function render(){
   if(state.sectId && sectById(state.sectId)){
@@ -364,12 +506,34 @@ $("btnJoin").addEventListener("click",function(){
 $("btnCultivate").addEventListener("click",function(){
   $("hallErr").textContent="";$("cultOk").textContent="";
   if(hasBridge){
-    callNative("cultivate",{}).then(function(s){state=Object.assign(state,s);render();$("cultOk").textContent="运功完毕，修为 +20。"})
+    callNative("cultivate",{}).then(function(s){state=Object.assign(state,s);render();$("cultOk").textContent="运功完毕，修为 +"+state.cultGain+"。"})
       .catch(function(e){$("hallErr").textContent=e.message});
   }else{
     if(state.lastCultivateDay===state.today){$("hallErr").textContent="今日已修炼，明日再来";return}
-    state.lastCultivateDay=state.today;state.expBonus+=20;mockDerive();mockSave();render();
-    $("cultOk").textContent="运功完毕，修为 +20。";
+    var gain=state.cultGain;
+    state.lastCultivateDay=state.today;state.expBonus+=gain;mockDerive();mockSave();render();
+    $("cultOk").textContent="运功完毕，修为 +"+gain+"。";
+  }
+});
+function doChoosePost(idx){
+  $("hallErr").textContent="";
+  if(hasBridge){
+    callNative("choosePost",{index:idx}).then(function(s){state=Object.assign(state,s);render()})
+      .catch(function(e){$("hallErr").textContent=e.message});
+  }else{
+    state.postChoice=idx;mockDerive();mockSave();render();
+  }
+}
+$("btnSalary").addEventListener("click",function(){
+  $("hallErr").textContent="";$("salaryOk").textContent="";
+  if(hasBridge){
+    callNative("salary",{}).then(function(s){state=Object.assign(state,s);render();$("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"。"})
+      .catch(function(e){$("hallErr").textContent=e.message});
+  }else{
+    if(state.gradeIndex<=0){$("hallErr").textContent="不入流的宗门没有俸禄，先晋品再说";return}
+    if(state.lastSalaryDay===state.today){$("hallErr").textContent="今日俸禄已领过";return}
+    state.lastSalaryDay=state.today;state.expBonus+=state.salary;mockDerive();mockSave();render();
+    $("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"。";
   }
 });
 $("btnSwitch").addEventListener("click",function(){
