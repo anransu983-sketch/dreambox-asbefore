@@ -4,8 +4,8 @@ Execution failed for task ':feature:settings:compileReleaseKotlin' (registered b
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
    > Kotlin compiler: UNRESOLVED_REFERENCE
        Kotlin compiler error
-         Unresolved reference 'FontWeight'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/AppSettingsScreen.kt:719
+         Unresolved reference 'DragHandle'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:399
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,12 +19,12 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 3m 2s
-468 actionable tasks: 259 executed, 209 from cache
+BUILD FAILED in 1m 16s
+479 actionable tasks: 255 executed, 224 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:399:88 Unresolved reference 'DragHandle'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:556:72 Unresolved reference 'ChevronRight'.
 > Task :feature:settings:compileReleaseKotlin FAILED
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/AppSettingsScreen.kt:719:30 Unresolved reference 'FontWeight'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/LabScreen.kt:202:90 Unresolved reference 'VpnKey'.
-BUILD FAILED in 3m 2s
+BUILD FAILED in 1m 16s
