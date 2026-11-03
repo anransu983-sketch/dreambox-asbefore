@@ -8,6 +8,7 @@ import android.util.Base64;
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.HostKey;
 import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
 import com.suanran.dreambox.core.pack.PackBridgeDispatcher;
 import com.suanran.dreambox.core.pack.PackCallback;
@@ -107,6 +108,24 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                         callback.onResult(true, resultWithServers(store).toString(), null);
                     } catch (Exception e) {
                         callback.onResult(false, null, "保存失败：" + msg(e));
+                    }
+                });
+                return true;
+            case "genKeyPair":
+                io.execute(() -> {
+                    try {
+                        callback.onResult(true, doGenKeyPair().toString(), null);
+                    } catch (Exception e) {
+                        callback.onResult(false, null, "生成密钥失败：" + msg(e));
+                    }
+                });
+                return true;
+            case "getPublicKey":
+                io.execute(() -> {
+                    try {
+                        callback.onResult(true, doGetPublicKey(opts).toString(), null);
+                    } catch (Exception e) {
+                        callback.onResult(false, null, "读取公钥失败：" + msg(e));
                     }
                 });
                 return true;
@@ -235,7 +254,9 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                         .put("port", s.optInt("port", 22))
                         .put("user", s.optString("user"))
                         .put("bw", s.optInt("bw", 1000))
-                        .put("hasPassword", s.optString("password").length() > 0));
+                        .put("hasPassword", s.optString("password").length() > 0)
+                        .put("hasKey", s.optString("privateKey").length() > 0)
+                        .put("authMode", s.optString("authMode", "password")));
             }
         }
         return new JSONObject().put("servers", safe);
@@ -275,6 +296,31 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         } else if (!target.has("password")) {
             target.put("password", "");
         }
+        String mode = o.optString("authMode", "");
+        if (mode.length() > 0) {
+            target.put("authMode", mode);
+        } else if (!target.has("authMode")) {
+            target.put("authMode", "password");
+        }
+        if (o.optBoolean("clearKey", false)) {
+            target.put("privateKey", "");
+            target.put("keyPassphrase", "");
+        }
+        String newKey = o.optString("privateKey", "");
+        if (newKey.length() > 0) {
+            // 换钥：口令按本次表单为准（无口令即空），先校验可解析/口令对再落盘
+            String pass = o.optString("keyPassphrase", "");
+            validateKey(newKey, pass);
+            target.put("privateKey", newKey);
+            target.put("keyPassphrase", pass);
+        } else if (!target.has("privateKey")) {
+            target.put("privateKey", "");
+            target.put("keyPassphrase", "");
+        } else if (o.optString("keyPassphrase", "").length() > 0) {
+            // 只改口令：拿已存私钥校验一遍再存
+            validateKey(target.optString("privateKey"), o.optString("keyPassphrase", ""));
+            target.put("keyPassphrase", o.optString("keyPassphrase", ""));
+        }
     }
 
     private void removeServer(JSONObject store, String id) throws Exception {
@@ -300,9 +346,98 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
 
     // ── SSH 会话 ─────────────────────────────────────────────
 
+    // ── 私钥认证 ─────────────────────────────────────────
+
+    private void validateKey(String pem, String passphrase) throws Exception {
+        JSch j = new JSch();
+        KeyPair kp = null;
+        try {
+            kp = KeyPair.load(j, pem.getBytes(StandardCharsets.UTF_8), null);
+            if (kp == null) throw new Exception("私钥无法解析，请确认粘贴的是完整的私钥文本");
+            if (kp.isEncrypted()) {
+                if (passphrase == null || passphrase.length() == 0) {
+                    throw new Exception("这把私钥有口令，请填写私钥口令");
+                }
+                if (!kp.decrypt(passphrase.getBytes(StandardCharsets.UTF_8))) {
+                    throw new Exception("私钥口令不正确");
+                }
+            }
+        } catch (com.jcraft.jsch.JSchException e) {
+            throw new Exception("私钥无法解析：" + msg(e));
+        } finally {
+            if (kp != null) kp.dispose();
+        }
+    }
+
+    private String publicKeyLine(KeyPair kp) {
+        byte[] blob = kp.getPublicKeyBlob();
+        int n = ((blob[0] & 0xff) << 24) | ((blob[1] & 0xff) << 16)
+                | ((blob[2] & 0xff) << 8) | (blob[3] & 0xff);
+        String type = new String(blob, 4, n, StandardCharsets.UTF_8);
+        return type + " " + Base64.encodeToString(blob, Base64.NO_WRAP) + " sshtty";
+    }
+
+    private JSONObject doGenKeyPair() throws Exception {
+        JSch j = new JSch();
+        KeyPair kp = null;
+        try {
+            try {
+                kp = KeyPair.genKeyPair(j, KeyPair.ED25519);
+            } catch (Exception e) {
+                kp = KeyPair.genKeyPair(j, KeyPair.RSA, 2048);
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            kp.writePrivateKey(baos);
+            return new JSONObject()
+                    .put("privateKey", baos.toString("UTF-8"))
+                    .put("publicKey", publicKeyLine(kp));
+        } finally {
+            if (kp != null) kp.dispose();
+        }
+    }
+
+    private JSONObject doGetPublicKey(JSONObject opts) throws Exception {
+        String pem = opts.optString("privateKey", "");
+        String pass = opts.optString("keyPassphrase", "");
+        if (pem.length() == 0) {
+            JSONObject s = findServer(loadStore(), opts.optString("id", ""));
+            if (s == null) throw new Exception("保存的服务器不存在");
+            pem = s.optString("privateKey", "");
+            if (pass.length() == 0) pass = s.optString("keyPassphrase", "");
+            if (pem.length() == 0) throw new Exception("这台服务器还没有保存私钥");
+        }
+        JSch j = new JSch();
+        KeyPair kp = null;
+        try {
+            kp = KeyPair.load(j, pem.getBytes(StandardCharsets.UTF_8), null);
+            if (kp == null) throw new Exception("私钥无法解析");
+            if (kp.isEncrypted()) {
+                if (pass.length() == 0
+                        || !kp.decrypt(pass.getBytes(StandardCharsets.UTF_8))) {
+                    throw new Exception("私钥口令不正确或未填写");
+                }
+            }
+            return new JSONObject().put("publicKey", publicKeyLine(kp));
+        } finally {
+            if (kp != null) kp.dispose();
+        }
+    }
+
+    /** 有私钥时先挂 identity（JSch 默认先试 publickey 后 password），密码兜底。 */
+    private void applyAuth(JSch jsch, Session ss, String keyPem, String keyPass, String pw)
+            throws Exception {
+        if (keyPem != null && keyPem.trim().length() > 0) {
+            byte[] pass = (keyPass != null && keyPass.length() > 0)
+                    ? keyPass.getBytes(StandardCharsets.UTF_8) : null;
+            jsch.addIdentity("sshtty-" + UUID.randomUUID().toString(),
+                    keyPem.getBytes(StandardCharsets.UTF_8), null, pass);
+        }
+        if (pw != null && pw.length() > 0) ss.setPassword(pw);
+    }
+
     private void doConnect(JSONObject opts, PackCallback callback) {
         try {
-            String host, user, pw;
+            String host, user, pw, keyPem, keyPass, authMode;
             int port;
             String label;
             String id = opts.optString("id", "");
@@ -316,6 +451,9 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                 port = s.optInt("port", 22);
                 user = s.optString("user", "root");
                 pw = s.optString("password", "");
+                keyPem = s.optString("privateKey", "");
+                keyPass = s.optString("keyPassphrase", "");
+                authMode = s.optString("authMode", "password");
                 label = s.optString("name", "");
                 if (label.length() == 0) label = host;
             } else {
@@ -323,6 +461,9 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                 port = opts.optInt("port", 22);
                 user = opts.optString("user", "root");
                 pw = opts.optString("password", "");
+                keyPem = opts.optString("privateKey", "");
+                keyPass = opts.optString("keyPassphrase", "");
+                authMode = opts.optString("authMode", "password");
                 label = host;
             }
             if (host.length() == 0) {
@@ -331,9 +472,13 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             }
             disconnectInternal();
 
+            if ("key".equals(authMode) && keyPem.trim().length() == 0) {
+                callback.onResult(false, null, "已选私钥登录，但这台服务器还没有私钥（先在编辑页生成或粘贴一把）");
+                return;
+            }
             JSch jsch = new JSch();
             Session ss = jsch.getSession(user, host, port);
-            if (pw.length() > 0) ss.setPassword(pw);
+            applyAuth(jsch, ss, "password".equals(authMode) ? "" : keyPem, keyPass, pw);
             java.util.Properties cfg = new java.util.Properties();
             cfg.put("StrictHostKeyChecking", "no");
             ss.setConfig(cfg);
@@ -521,8 +666,10 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         JSch jsch = new JSch();
         Session ss = jsch.getSession(srv.optString("user", "root"),
                 srv.optString("host"), srv.optInt("port", 22));
-        String pw = srv.optString("password", "");
-        if (pw.length() > 0) ss.setPassword(pw);
+        String kPem = "password".equals(srv.optString("authMode", "password"))
+                ? "" : srv.optString("privateKey", "");
+        applyAuth(jsch, ss, kPem, srv.optString("keyPassphrase", ""),
+                srv.optString("password", ""));
         java.util.Properties cfg = new java.util.Properties();
         cfg.put("StrictHostKeyChecking", "no");
         ss.setConfig(cfg);

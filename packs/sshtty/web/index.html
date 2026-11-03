@@ -96,6 +96,27 @@
       <div style="flex:1"><input id="f-pass" type="password" placeholder="服务器密码" autocomplete="off"></div>
       <button class="mini" id="btn-pass-eye" style="margin:0">👁 显示</button>
     </div>
+    <label>登录方式</label>
+    <select id="f-auth" style="width:100%">
+      <option value="password">密码登录</option>
+      <option value="key">私钥登录（优先用钥，密码兜底）</option>
+    </select>
+    <div id="key-box" class="hidden">
+      <label>私钥（粘贴导入，或点下面在手机上生成；编辑时留空表示不改）</label>
+      <textarea id="f-key" rows="4" style="width:100%;font-family:monospace;font-size:11px" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" autocomplete="off"></textarea>
+      <label>私钥口令（无口令留空；换钥时按新钥的口令填）</label>
+      <input id="f-keypass" type="password" placeholder="私钥口令" autocomplete="off">
+      <div class="row" style="margin-top:6px">
+        <button class="mini" id="btn-genkey" style="margin:0">🔑 生成新密钥</button>
+        <button class="mini" id="btn-showpub" style="margin:0">查看公钥</button>
+        <button class="mini danger" id="btn-clearkey" style="margin:0">清除私钥</button>
+      </div>
+      <div id="pub-box" class="hidden">
+        <p class="sub">公钥（整行复制，贴到服务器的 ~/.ssh/authorized_keys）：</p>
+        <div class="url" id="pub-text" style="word-break:break-all"></div>
+        <button class="mini primary" id="btn-copypub" style="margin:0">复制公钥</button>
+      </div>
+    </div>
     <button class="main" id="btn-save">保存</button>
     <button class="mini" id="btn-cancel">取消</button>
     <div class="err" id="form-err"></div>
@@ -269,7 +290,7 @@
       title.textContent = '🖥️ ' + (s.name || s.host);
       var meta = document.createElement('div');
       meta.className = 'srv-meta';
-      meta.textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasPassword ? ' · 密码已保存' : ' · 无密码');
+      meta.textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasKey ? (' · 🔑 私钥' + (s.authMode === 'key' ? '登录' : '已存')) : (s.hasPassword ? ' · 密码已保存' : ' · 无密码'));
       card.appendChild(title);
       card.appendChild(meta);
       var bConn = document.createElement('button');
@@ -317,6 +338,14 @@
     $('f-bw').value = s ? (s.bw || 1000) : 1000;
     $('f-pass').value = '';
     $('f-pass').placeholder = s && s.hasPassword ? '已保存，留空不改' : '服务器密码';
+    $('f-auth').value = s ? (s.authMode || 'password') : 'password';
+    $('f-key').value = '';
+    $('f-key').placeholder = s && s.hasKey ? '已保存私钥，留空不改；粘贴新私钥即替换' : '-----BEGIN OPENSSH PRIVATE KEY-----';
+    $('f-keypass').value = '';
+    clearKeyFlag = false;
+    $('pub-box').classList.add('hidden');
+    $('pub-text').textContent = '';
+    syncAuthBox();
     $('form-err').textContent = '';
     show('view-form');
   }
@@ -330,7 +359,11 @@
       port: parseInt($('f-port').value, 10) || 22,
       user: $('f-user').value.trim() || 'root',
       bw: parseInt($('f-bw').value, 10) || 1000,
-      password: $('f-pass').value
+      password: $('f-pass').value,
+      authMode: $('f-auth').value,
+      privateKey: $('f-key').value.trim(),
+      keyPassphrase: $('f-keypass').value,
+      clearKey: clearKeyFlag
     };
     if (!payload.host) { $('form-err').textContent = 'IP/域名不能为空'; return; }
     $('btn-save').disabled = true;
@@ -342,6 +375,44 @@
       $('form-err').textContent = e.message;
     });
   };
+
+  // ── 私钥 ─────────────────────────────────────
+  var clearKeyFlag = false;
+  function syncAuthBox() {
+    $('key-box').classList.toggle('hidden', $('f-auth').value !== 'key');
+  }
+  $('f-auth').onchange = syncAuthBox;
+  $('btn-genkey').onclick = function () {
+    $('btn-genkey').disabled = true;
+    callNative('genKeyPair', {}).then(function (r) {
+      $('btn-genkey').disabled = false;
+      $('f-key').value = r.privateKey || '';
+      clearKeyFlag = false;
+      $('pub-text').textContent = r.publicKey || '';
+      $('pub-box').classList.remove('hidden');
+      $('form-err').textContent = '新密钥已生成：私钥已填入上面的框，点保存生效；公钥先复制好，保存后贴到服务器。';
+    }).catch(function (e) {
+      $('btn-genkey').disabled = false;
+      $('form-err').textContent = e.message;
+    });
+  };
+  $('btn-showpub').onclick = function () {
+    var req = $('f-key').value.trim()
+      ? { privateKey: $('f-key').value.trim(), keyPassphrase: $('f-keypass').value }
+      : { id: editingId };
+    callNative('getPublicKey', req).then(function (r) {
+      $('pub-text').textContent = r.publicKey || '';
+      $('pub-box').classList.remove('hidden');
+    }).catch(function (e) { $('form-err').textContent = e.message; });
+  };
+  $('btn-clearkey').onclick = function () {
+    if (!confirm('清除这台服务器保存的私钥？（点保存后生效）')) return;
+    clearKeyFlag = true;
+    $('f-key').value = '';
+    $('pub-box').classList.add('hidden');
+    $('form-err').textContent = '已标记清除私钥，点保存生效。';
+  };
+  $('btn-copypub').onclick = function () { copyText($('pub-text').textContent, this); };
 
   // ── TQ ───────────────────────────────────────
   function openTq(s, start) {
