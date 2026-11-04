@@ -37,9 +37,13 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -190,12 +194,26 @@ fun SkyIslandScene(
     val overrides = remember { mutableStateMapOf<BottomBarDestination, Offset>() }
     val painter = rememberAsyncImagePainter(request = ImageRequest(LocalContext.current, art.assetUri))
 
+    // 光字门控只管「加载中」：图就绪即放行；1.2s 超时也放行，图缺失/加载失败时退到 NightBase 底色+光字，不让首页失联
+    var timedOut by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(1200)
+        timedOut = true
+    }
+
     BoxWithConstraints(modifier.fillMaxSize().background(NightBase)) {
         val density = LocalDensity.current
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
         val sz = painter.intrinsicSize
         val artReady = sz.isSpecified && sz.width > 0f
+        val labelsReady = artReady || timedOut
+        val labelsFade by
+            animateFloatAsState(
+                targetValue = if (labelsReady) 1f else 0f,
+                animationSpec = tween(300),
+                label = "skyLabelsFade",
+            )
         val iw = art.aspect
         val ih = 1f
         val map = remember(w, h, iw, ih) { SkyMap(w, h, iw, ih) }
@@ -269,7 +287,7 @@ fun SkyIslandScene(
                 val labelPos = map.at(overrides[dest] ?: place.label)
                 val labelModifier =
                     Modifier.centeredAt(labelPos) {
-                            if (!artReady) 0f else if (pressed) 1f else breatheAlpha(phase, index)
+                            labelsFade * (if (pressed) 1f else breatheAlpha(phase, index))
                         }
                         .then(
                             if (debug) {
