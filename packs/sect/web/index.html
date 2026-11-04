@@ -1755,6 +1755,14 @@ function npcLoveReply(n){
   if(__npcLoveN===2)return pk(["还来？你这人……真是。","（声音低了些）我听见了。……两遍都听见了。","你再这样，我值守都要分心了。","行了行了，知道你的心意了——别在大庭广众之下说。"]);
   return pk(["第三遍了。我记在心里的账本上，一笔一笔，都算着呢。","你这张嘴啊……罢了，我认栽。晚上巡山，陪我走一段？","再说下去，我这「冷」字招牌可就挂不住了。","好好好，我信，我全信。你呀，就是吃准我拿你没办法。"]);
 }
+function npcProposalReply(n){
+  function pk(a){return a[Math.floor(Math.random()*a.length)]}
+  if(__npcLoveId!==n.id){__npcLoveId=n.id;__npcLoveN=0}
+  __npcLoveN++;
+  if(__npcLoveN===1)return pk(["（后退半步）你、你认真的？这种事，哪能站在门口就说了。","执法堂门口说这个，你胆子是真大。……我没说不行，我是说，太快了。","（耳根红了）胡闹。……先、先把今天的差事办完再说。"]);
+  if(__npcLoveN===2)return pk(["你先别急着要答案。……容我想想，想好了，我去找你。","我这人认死理。你要是三分钟热度，现在收回还来得及——不是的话……（声音低下去）那就别收回。","同门都看着呢。晚上巡山，你陪我走一段，边走边说。"]);
+  return pk(["……好。（声音很轻）但先说好：修行路上你敢掉队，我亲自罚你。","我这关，你算过了。往后的路，两个人走。","问了这么多遍，我再不点头，倒显得我矫情了。……嗯，就依你。"]);
+}
 function npcFollowReply(n){
   function pk(a){return a[Math.floor(Math.random()*a.length)]}
   if(__npcLast==="love")return pk(["真的。我这人，不拿这种话开玩笑。","千真万确。……你的心意是真的，我的回答也是。","嗯，真的。（顿了顿）你要是敢反悔，我执法堂的板子可不认人。","比真金还真。你看我的眼睛，像说谎的样子吗？"]);
@@ -1770,7 +1778,9 @@ function npcReply(n,text){
   var t=text||"";
   var tt=t.replace(/[\s。！!~～…·]+$/,"");
   if(/^(真的吗|真的|是吗|是么|嗯+|哦+|噢+|啊|额|好|好的|行|对|没错|然后呢|继续|接着说|真的假的|不会吧|厉害|牛|哇|哈哈+|呵呵|这样啊|原来如此|明白了|懂了)$/.test(tt)&&__npcLast)return npcFollowReply(n);
+  if(__npcLast==="love"&&tt.length<=12&&/好不好|可以吗|行吗|愿意|真的/.test(tt))return npcFollowReply(n);
   __npcLast="topic";
+  if(/抱抱|抱一下|抱我|亲亲|亲一下|亲我|想你|喜欢|心动|动心|娶我|娶你|嫁|道侣|双修|好看|漂亮/.test(t)){__npcLast="love";return npcLoveReply(n)}
   if(/你好|您好|hi|hello|在吗/.test(t)){__npcLast="hi";return pick(["哟，来了。今天"+sect+"的风不错，坐会儿？","正巧，我刚想找人说话，你就来了。","来了啊。看你气色，又精进了？"])}
   if(/再见|告辞|拜拜|走了/.test(t)){__npcLast="bye";return pick(["慢走，路上当心。","回见。下次带故事来换茶。","去吧去吧，"+sect+"还指望你呢。"])}
   if(/谢谢|多谢/.test(t)){__npcLast="thanks";return pick(["跟我还客气什么。","小事。下次有好东西，先想着我就行。","记心里就好，不必挂嘴上。"])}
@@ -1787,7 +1797,7 @@ function npcReply(n,text){
   if(/决斗|打架|切磋|比斗|打|战/.test(t))return pick(["演武堂的铁牛教头，拳头硬，嘴更硬。","想打架去决斗场，押注赢了还有灵石赚——输了别哭。","动手之前先看看对方战力，这叫知己知彼。",genLine(n,"advice")]);
   if(/灵兽|宠物/.test(t))return pick(["你的灵兽养得怎么样了？喂食别断，进化就看你勤不勤快。","灵兽通人性。你对它好，它在万界里能替你挡刀。","血月界的血酿喂下去，灵兽眼睛都映着月亮，邪性得很。"]);
   if(/弟子|徒弟|收徒/.test(t))return pick(["收徒弟是结因果。资质好的，先看人品。","我看你门下那几个，假以时日，能成气候。","当师父的，最怕的不是徒弟笨，是徒弟跑了。"]);
-  if(/抱抱|抱一下|抱我|亲亲|亲一下|亲我|想你|喜欢|心动|动心|娶我|娶你|嫁|道侣|双修|好看|漂亮/.test(t)){__npcLast="love";return npcLoveReply(n)}
+  if(/对象|女朋友|男朋友|在一起|处对象|交往|谈恋爱|嫁给我|做我|当我/.test(t)){__npcLast="love";return npcProposalReply(n)}
   if(/为什么|怎么|如何|哪里|哪儿|谁|什么|\?|？/.test(t))return pick(["这事啊，说来话长。你先坐，我慢慢跟你讲——"+genLine(n),"你问我，我问谁去？不过我可以帮你打听打听。","容我想想……嗯，我觉得吧，"+genLine(n,"advice")]);
   return pick([genLine(n),genLine(n),"你这话……有点意思。接着说，我听着呢。","嗯，我记下了。"+pick(["对了，","说起来，"])+genLine(n),n.lines[Math.floor(Math.random()*n.lines.length)]]);
 }
