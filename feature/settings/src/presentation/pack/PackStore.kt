@@ -138,9 +138,9 @@ class PackStore(context: Context) {
                 id = "sect",
                 name = "高武门派",
                 summary = "把新手引导换成选道：剑修/符修/阵修/体修/傀儡修/鬼修/魔修七道任选其一，选哪道整个梦盒就换成哪道的主题色与明暗；修为按入门天数、导入配置数、已装插件数与每日修炼累积，炼气→筑基→金丹→元婴→化神→炼虚→大乘七境，每升一境插件页与本体布局都跟着变；身份与职位是两轨：身份从杂役弟子到道子随修为自动晋升，职位从执事到老祖解锁后自选任职；宗门另有品级：不入流→九品→…→一品→圣地共十一级，每一级宗门名字、山门排面、俸禄与修炼加成各不相同（俸禄每日可领，品级越高越厚）",
-                version = "8",
+                version = "9",
                 sizeText = "约 80 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sect-pack-v8.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sect-pack-v9.zip",
                 entryClass = "com.suanran.pack.sect.SectPackEntry",
             ),
             PackDef(

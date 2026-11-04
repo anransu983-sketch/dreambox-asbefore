@@ -361,7 +361,9 @@ class PackHostActivity : Activity() {
             put("gradeName", sectGradeNames[grade])
             put("nextGradeThreshold", if (grade + 1 < sectGradeThresholds.size) sectGradeThresholds[grade + 1] else -1)
             put("salary", grade * 4)
-            put("cultGain", 20 + grade)
+            put("cultGain", 20 + grade + s.sectSeriesBonus.value)
+            put("seriesBonus", s.sectSeriesBonus.value)
+            put("rewardLog", s.sectRewardLog.value)
             put("lastSalaryDay", s.sectLastSalaryDay.value)
             put("lastCultivateDay", s.sectLastCultivateDay.value)
             put("today", java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()))
@@ -467,6 +469,55 @@ class PackHostActivity : Activity() {
                             else -> throw IllegalArgumentException("未知职位")
                         }
                         s.sectPostMigrated.set(true)
+                        sectStateJson()
+                    }
+                    "reward" -> {
+                        // 互动奖励（1.77）：数额与每日上限由宿主定版，插件只报 kind/result，防刷靠宿主台账
+                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派")
+                        val kind = options.optString("kind")
+                        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                            .format(java.util.Date())
+                        if (kind == "series") {
+                            // 功法系列集齐：永久修炼加成 +2/系列，一次性领取
+                            val sid = options.optString("series")
+                            if (sid.isBlank()) throw IllegalArgumentException("缺 series")
+                            val claimed = s.sectSeriesClaimed.value.split(",").filter { it.isNotBlank() }
+                            if (sid in claimed) throw IllegalStateException("这个系列的加成已经领过")
+                            s.sectSeriesClaimed.set((claimed + sid).joinToString(","))
+                            s.sectSeriesBonus.set(s.sectSeriesBonus.value + 2)
+                            return@runCatching sectStateJson()
+                        }
+                        val counts = mutableMapOf<String, Int>()
+                        val saved = s.sectRewardLog.value
+                        if (saved.startsWith("$today|")) {
+                            saved.removePrefix("$today|").split(",").forEach { part ->
+                                val kv = part.split("=")
+                                if (kv.size == 2) counts[kv[0]] = kv[1].toIntOrNull() ?: 0
+                            }
+                        }
+                        val result = options.optString("result")
+                        // 静室（洞府设施，经 series 通道领过 "jingshi1"）让奇遇每日多 1 次
+                        val eventLimit = 2 +
+                            if (s.sectSeriesClaimed.value.split(",").contains("jingshi1")) 1 else 0
+                        val (amount, limit) = when (kind) {
+                            "spar" -> (if (result == "win") 20 else 6) to 1
+                            "alchemy" -> (when (result) {
+                                "perfect" -> 18; "fine" -> 10; else -> 3
+                            }) to 1
+                            "event" -> options.optInt("amount", 0).coerceIn(0, 20) to eventLimit
+                            "lecture" -> 10 to 1
+                            "patrol" -> 8 to 1
+                            "tome_dup" -> 3 to 2
+                            "garden" -> options.optInt("amount", 0).coerceIn(0, 8) to 1
+                            else -> throw IllegalArgumentException("未知奖励 $kind")
+                        }
+                        val used = counts[kind] ?: 0
+                        if (used >= limit) throw IllegalStateException("今日次数已用完")
+                        counts[kind] = used + 1
+                        s.sectRewardLog.set(today + "|" + counts.entries.joinToString(",") { "${it.key}=${it.value}" })
+                        if (amount > 0) s.sectExpBonus.set(s.sectExpBonus.value + amount)
+                        val st = JSONObject(sectStateJson())
+                        applySectRankLayout(st.optInt("rankIndex", 0))
                         sectStateJson()
                     }
                     "leave" -> {

@@ -81,6 +81,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -926,12 +927,14 @@ private fun ProxyStatusBar(
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(AppTheme.radii.radius12)
+    // 深色跟随主题卡面（旧版恒白卡配主题浅字，深色下状态文案看不清，1.77 改）
+    val dark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Color.White)
-            .border(1.dp, BocchiPink.copy(alpha = 0.5f), shape)
+            .background(if (dark) MiuixTheme.colorScheme.surfaceContainer else Color.White)
+            .border(1.dp, BocchiPink.copy(alpha = if (dark) 0.3f else 0.5f), shape)
             .padding(horizontal = UiDp.dp12, vertical = UiDp.dp10),
         verticalAlignment = Alignment.CenterVertically,
     ) {

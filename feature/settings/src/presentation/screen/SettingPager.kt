@@ -73,8 +73,9 @@ import com.suanran.dreambox.presentation.component.misc.BocchiBlueFg
 import com.suanran.dreambox.presentation.component.misc.BocchiPink
 import com.suanran.dreambox.presentation.component.misc.BocchiPinkBg
 import com.suanran.dreambox.presentation.component.misc.BocchiStar
-import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
-import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
+import com.suanran.dreambox.presentation.component.misc.bocchiDark
+import com.suanran.dreambox.presentation.component.misc.bocchiSummaryColor
+import com.suanran.dreambox.presentation.component.misc.bocchiTitleColor
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
@@ -191,12 +192,27 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
     val listState = rememberLazyListState()
     val visibleModules = modules.distinctBy { it.key }.filter { it.key !in hiddenKeys }
 
+    // 深色时背景换成种子色深色渐变，不再整页波奇粉（与其它页黑底不统一，深色专项 1.77）。
+    val dark = bocchiDark()
+    val scheme = MiuixTheme.colorScheme
+    val pageBrush = if (dark) {
+        Brush.verticalGradient(
+            listOf(
+                scheme.primary.copy(alpha = 0.22f),
+                scheme.background.copy(alpha = 0.6f),
+                scheme.background,
+            ),
+        )
+    } else {
+        animeBackgroundBrush
+    }
+
     Scaffold(topBar = { TopBar(title = FlyTxt.Settings.Title, scrollBehavior = scrollBehavior) }) { innerPadding ->
         ScreenLazyColumn(
             lazyListState = listState,
             scrollBehavior = scrollBehavior,
             innerPadding = combinePaddingValues(innerPadding, mainInnerPadding),
-            modifier = if (isAnime) Modifier.background(animeBackgroundBrush) else Modifier,
+            modifier = if (isAnime) Modifier.background(pageBrush) else Modifier,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             itemsIndexed(visibleModules, key = { _, m -> m.key }) { _, module ->
@@ -234,13 +250,14 @@ private fun AnimeModuleCard(
     onClick: () -> Unit,
 ) {
     val cardShape = RoundedCornerShape(20.dp)
+    val dark = bocchiDark()
     Box(
         modifier = Modifier
             .horizontalPadding()
             .then(if (isDragging) Modifier.shadow(12.dp, cardShape) else Modifier)
             .clip(cardShape)
-            .background(Color.White)
-            .border(1.dp, BocchiPink.copy(alpha = 0.45f), cardShape)
+            .background(if (dark) MiuixTheme.colorScheme.surfaceContainer else Color.White)
+            .border(1.dp, BocchiPink.copy(alpha = if (dark) 0.3f else 0.45f), cardShape)
             .clickable(onClick = onClick),
     ) {
         Row(
@@ -255,7 +272,7 @@ private fun AnimeModuleCard(
                     text = module.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = BocchiTextDark,
+                    color = bocchiTitleColor(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -263,7 +280,7 @@ private fun AnimeModuleCard(
                 Text(
                     text = if (module.badge != null) "${module.summary} · ${module.badge}" else module.summary,
                     fontSize = 11.sp,
-                    color = BocchiTextGray,
+                    color = bocchiSummaryColor(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -277,7 +294,7 @@ private fun AnimeModuleCard(
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
-                tint = BocchiTextGray,
+                tint = bocchiSummaryColor(),
                 modifier = Modifier.size(18.dp),
             )
         }

@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,6 +77,20 @@ val BocchiBlueFg = Color(0xFF4A90D9)
 val BocchiTextDark = Color(0xFF4A2E35)
 val BocchiTextGray = Color(0xFF9A7B83)
 
+/** 当前配色是否深色（按表面色亮度判断，与 EditorThemeManager 同口径）。 */
+@Composable
+fun bocchiDark(): Boolean = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+
+/** 波奇行标题色：浅色用粉褐字，深色跟随主题 onSurface（防深底深字）。 */
+@Composable
+fun bocchiTitleColor(): Color =
+    if (bocchiDark()) MiuixTheme.colorScheme.onSurface else BocchiTextDark
+
+/** 波奇行副题色：浅色用粉灰字，深色跟随主题 onSurfaceVariantSummary。 */
+@Composable
+fun bocchiSummaryColor(): Color =
+    if (bocchiDark()) MiuixTheme.colorScheme.onSurfaceVariantSummary else BocchiTextGray
+
 /** 波奇酱分组小标题：12sp 粉字。 */
 @Composable
 fun BocchiSectionTitle(text: String) {
@@ -88,7 +103,7 @@ fun BocchiSectionTitle(text: String) {
     )
 }
 
-/** 波奇酱卡片：白色圆角 + 1dp 粉/蓝细描边。签名与 Card 保持一致方便替换。 */
+/** 波奇酱卡片：圆角 + 1dp 粉/蓝细描边。签名与 Card 保持一致方便替换。 */
 @Composable
 fun BocchiCard(
     modifier: Modifier = Modifier,
@@ -100,20 +115,22 @@ fun BocchiCard(
     content: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius.dp)
+    val scheme = MiuixTheme.colorScheme
+    val dark = bocchiDark()
     Column(
         modifier =
             (if (applyHorizontalPadding) modifier.horizontalPadding() else modifier)
                 .clip(shape)
-                .background(Color.White)
-                .border(1.dp, borderColor, shape)
+                .background(if (dark) scheme.surfaceContainer else Color.White)
+                .border(1.dp, if (dark) borderColor.copy(alpha = 0.3f) else borderColor, shape)
                 .padding(insideMargin),
     ) {
-        // 白卡是浅色设计：卡内强制浅色配色，否则深色模式下 Miuix 组件按深色配色
-        // 渲染成白字白图标贴在白卡上看不见（关于/Meta/日志/网络模式卡实测）。
-        // 种子取当前主题主色，浅色配色仍随门派/主题变色。浅色模式下与全局一致、无变化。
-        val seed = MiuixTheme.colorScheme.primary
-        val lightColors = remember(seed) { colorSchemeFromSeed(seed = seed, isDark = false) }
-        MiuixTheme(colors = lightColors) { content() }
+        // 卡面跟随本体明暗：卡内嵌套同明暗的种子配色，组件取色与卡面永远一致。
+        // 旧版恒白卡 + 强制浅色配色，深色下白卡浮黑底像贴纸（1.77 改）。
+        // 种子取当前主题主色，配色仍随门派/主题变色。
+        val seed = scheme.primary
+        val cardColors = remember(seed, dark) { colorSchemeFromSeed(seed = seed, isDark = dark) }
+        MiuixTheme(colors = cardColors) { content() }
     }
 }
 
@@ -165,7 +182,7 @@ private fun BocchiRowTexts(
             text = title,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = BocchiTextDark,
+            color = bocchiTitleColor(),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -174,7 +191,7 @@ private fun BocchiRowTexts(
             Text(
                 text = summary,
                 fontSize = 11.sp,
-                color = BocchiTextGray,
+                color = bocchiSummaryColor(),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -229,7 +246,7 @@ fun BocchiArrowItem(
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
-                tint = BocchiTextGray,
+                tint = bocchiSummaryColor(),
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -353,7 +370,7 @@ fun <T> BocchiEnumItem(
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = BocchiTextGray,
+            tint = bocchiSummaryColor(),
             modifier = Modifier.size(18.dp),
         )
     }
@@ -414,11 +431,12 @@ fun BocchiSegmentedTabs(
 ) {
     if (tabs.isEmpty()) return
     val shape = RoundedCornerShape(14.dp)
+    val dark = bocchiDark()
     Row(
         modifier =
             modifier
                 .clip(shape)
-                .background(Color.White)
+                .background(if (dark) MiuixTheme.colorScheme.surfaceContainer else Color.White)
                 .border(1.dp, BocchiPink.copy(alpha = 0.4f), shape)
                 .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -426,7 +444,7 @@ fun BocchiSegmentedTabs(
         tabs.forEachIndexed { index, tab ->
             val selected = index == selectedTabIndex
             val bg = if (selected) BocchiPink else Color.Transparent
-            val fg = if (selected) Color.White else BocchiTextGray
+            val fg = if (selected) Color.White else bocchiSummaryColor()
             Box(
                 modifier =
                     Modifier

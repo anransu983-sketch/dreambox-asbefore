@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -156,13 +157,14 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
                     verticalArrangement =
                         Arrangement.spacedBy(UiDp.dp24),
                 ) {
-                    // 全局搜索入口（Stash 式搜索条）：点开搜节点/配置/功能。
+                    // 全局搜索入口（Stash 式搜索条）：点开搜节点/配置/功能。深色跟随主题面（1.77）。
+                    val homeDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(UiDp.dp12))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFFFB7C5).copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(UiDp.dp12))
+                            .background(if (homeDark) MiuixTheme.colorScheme.surfaceContainer else Color.White)
+                            .border(1.dp, Color(0xFFFFB7C5).copy(alpha = if (homeDark) 0.3f else 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(UiDp.dp12))
                             .clickable { openSecondary(Route.GlobalSearch) }
                             .padding(horizontal = UiDp.dp14, vertical = UiDp.dp10),
                         verticalAlignment = Alignment.CenterVertically,

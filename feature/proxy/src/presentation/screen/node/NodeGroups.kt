@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.suanran.dreambox.presentation.component.dialog.AppDialog
+import androidx.compose.ui.graphics.luminance
 import com.suanran.dreambox.presentation.component.misc.CustomIcons
 import com.suanran.dreambox.presentation.component.misc.rememberCustomIconBitmap
 import com.suanran.dreambox.feature.proxy.presentation.util.nodeFlagEmoji
@@ -141,13 +142,15 @@ internal fun NodeGroupCard(
     }
     // 贴纸徽章配色：Selector 粉 / URLTest·Fallback 蓝
     val isSelector = group.type == Proxy.Type.Selector
-    val badgeBg = if (isSelector) BocchiPinkBg else BocchiBlueBg
     val badgeFg = if (isSelector) BocchiStar else Color(0xFF4A90D9)
+    // 深色跟随主题：卡面换深色面、徽章换半透明色底（旧版恒白卡配主题浅字，深色下组名看不清，1.77 改）
+    val dark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+    val badgeBg = if (dark) badgeFg.copy(alpha = 0.18f) else if (isSelector) BocchiPinkBg else BocchiBlueBg
 
     Row(
         modifier = modifier
             .clip(cardShape)
-            .background(Color.White)
+            .background(if (dark) MiuixTheme.colorScheme.surfaceContainer else Color.White)
             .border(
                 width = 1.dp,
                 color = if (isSelector) BocchiPink.copy(alpha = 0.5f) else BocchiBlue.copy(alpha = 0.5f),

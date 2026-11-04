@@ -122,7 +122,7 @@
   .ladder .lr .rs{white-space:nowrap}
   .orgrow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
   .orgrow.can{border-color:#d4af37;box-shadow:0 0 10px rgba(212,175,55,.22);color:var(--text)}
-  .orgrow.dim{opacity:.62}
+  .orgrow.dim{opacity:.85}
   .hall-head{position:relative;overflow:hidden}
   .hall-head>*{position:relative;z-index:1}
   .hall-head>.crest{position:absolute;z-index:0;right:-16px;top:-16px;width:158px;height:158px;opacity:.15;pointer-events:none;background-repeat:no-repeat;background-size:contain}
@@ -147,6 +147,22 @@
   .srclegend{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--sub)}
   .srclegend b{color:var(--text)}
   .orgrow b{color:var(--text)}
+  .evcard{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--bg2)}
+  .evcard b{font-size:14px}
+  .evd{font-size:12.5px;color:var(--sub);line-height:1.55;margin-top:3px}
+  .evres{font-size:12.5px;color:var(--accent);margin-top:4px;line-height:1.55}
+  .evbtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .pbtn{font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+  .pbtn:active{background:var(--accent);color:#fff}
+  .hallact{margin:2px 0 8px}
+  .duellog{font-size:12.5px;color:var(--sub);line-height:1.7}
+  .firebar{position:relative;height:16px;border-radius:8px;background:var(--bg);border:1px solid var(--border);margin:8px 0;overflow:hidden}
+  .firezone{position:absolute;top:0;bottom:0;background:rgba(76,175,80,.55)}
+  .firemark{position:absolute;top:0;bottom:0;width:3px;background:#e25822}
+  .feedrow{font-size:12.5px;color:var(--sub);padding:6px 2px;border-bottom:1px dashed var(--border);line-height:1.5}
+  .feedrow:last-child{border-bottom:none}
+  .facrow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
+  .facrow b{color:var(--text)}
   .orgrow .rs{white-space:nowrap}
   .core-orb{display:none;justify-content:center;margin:12px 0 2px}
   .core-orb i{width:86px;height:86px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--accent) 55%,var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;font-style:normal;color:#fff;box-shadow:0 0 34px var(--accent)}
@@ -230,9 +246,21 @@
             <div class="ladder" id="hallLadder"></div>
           </div>
           <div class="card span-all">
+            <h2>🎲 今日奇遇</h2>
+            <div id="hallEvents"></div>
+          </div>
+          <div class="card span-all">
+            <h2 id="hallCaveTitle">🏡 我的洞府</h2>
+            <div id="hallCave"></div>
+          </div>
+          <div class="card span-all">
             <h2>🏛️ 宗门架构</h2>
             <div class="desc" id="hallPosText"></div>
             <div id="hallOrg"></div>
+          </div>
+          <div class="card span-all">
+            <h2>🏮 同门动态</h2>
+            <div id="hallFeed"></div>
           </div>
         </div></div>
         <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
@@ -359,7 +387,7 @@ function ladderHtml(s,cur){
 }
 var $=function(id){return document.getElementById(id)};
 var selSect=null, selRank=0;
-var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"杂役弟子",nextThreshold:60,identityIndex:0,eligibleIndex:-1,postChoice:-1,postIndex:-1,postEligibleIndex:-1,postName:"",gradeIndex:0,gradeName:"不入流",nextGradeThreshold:100,salary:0,cultGain:20,lastSalaryDay:"",lastCultivateDay:"",today:"",themeMode:"Dark"};
+var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"杂役弟子",nextThreshold:60,identityIndex:0,eligibleIndex:-1,postChoice:-1,postIndex:-1,postEligibleIndex:-1,postName:"",seriesBonus:0,rewardLog:"",gradeIndex:0,gradeName:"不入流",nextGradeThreshold:100,salary:0,cultGain:20,lastSalaryDay:"",lastCultivateDay:"",today:"",themeMode:"Dark"};
 var hasBridge = !!(window.Capacitor && window.Capacitor.toNative);
 
 function sectById(id){for(var i=0;i<SECTS.length;i++)if(SECTS[i].id===id)return SECTS[i];return null}
@@ -419,7 +447,7 @@ function mockDerive(){
   var g=0;for(var j=0;j<GRADES.length;j++)if(state.exp>=GRADES[j].need)g=j;
   state.gradeIndex=g;state.gradeName=GRADES[g].name;
   state.nextGradeThreshold=(g+1<GRADES.length)?GRADES[g+1].need:-1;
-  state.salary=gradeSalary(g);state.cultGain=gradeGain(g);
+  state.salary=gradeSalary(g);state.cultGain=gradeGain(g)+(state.seriesBonus||0);
   state.today=new Date().toISOString().slice(0,10);
 }
 function mockSave(){try{localStorage.setItem("sectMock",JSON.stringify(state))}catch(e){}}
@@ -573,12 +601,263 @@ function renderHall(){
     localStorage.setItem("sectPromo2",JSON.stringify(cur));
   }catch(e){}
   $("hallPosText").innerHTML="你在宗门架构里的位置：<b>"+state.title+"</b> · "+ID_POSITIONS[state.identityIndex]+(state.postIndex>=0?("<br>任职 <b>"+state.postName+"</b> · "+POST_POSITIONS[state.postIndex]):"<br>尚未就任职位（1100 修为起可任执事）");
-  $("hallOrg").innerHTML=HALLS.map(function(h){
+  $("hallOrg").innerHTML=HALLS.map(function(h,hi){
     var can = state.postIndex>=h.headIdx;
     var st = can ? "✅ 你已可主事" : ("主事："+h.head+"（职位解锁 "+POSTS[h.headIdx].need+" 修为起）");
-    return '<div class="orgrow'+(can?" can":" dim")+'"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+'</span></div>';
+    return '<div class="orgrow'+(can?" can":" dim")+'"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+'</span></div><div class="hallact" id="act'+hi+'"></div>';
   }).join("");
+  renderPlay(s);
 }
+/* ── 1.77 互动批：奇遇 / 堂口差事 / 同门动态 / 洞府建设 ── */
+var FELLOWS=["林惊羽","苏暮云","楚寒烟","叶孤鸿","沈青禾","陆九川","唐小蛮","白未央","江枫眠","洛清辞","顾长风","萧听雨"];
+var EVENTS=[
+ {t:"后山灵草",d:"巡山走到后山石缝，瞥见一株凝灵草，药香扑鼻，周围没人。",a:{x:"摘下服下",r:"草香入腹，灵气顺经脉走了一圈。",amt:15},b:{x:"上交丹堂",r:"丹堂长老捋须点头：懂事。记你一功。",amt:10}},
+ {t:"同门挑衅",d:"演武堂前，有个外门弟子拦住你，说要讨教三招。",a:{x:"应战",r:"三招过后他抱拳认输，围观同门喝彩。",amt:18},b:{x:"摆手避让",r:"你笑笑走开，他讪讪收了拳。省了力气，也少了麻烦。",amt:4}},
+ {t:"残阵悟机",d:"藏经阁角落有一卷残阵图，线条断了大半，你盯着看了半晌。",a:{x:"坐下推演",r:"残线接上的那一刻，脑中豁然开朗。",amt:16},b:{x:"记下位置先走",r:"来日方长，你把残卷位置记牢了。",amt:5}},
+ {t:"灵兽下山",d:"一只青耳灵兔窜进药园啃灵苗，守园弟子追得满头汗。",a:{x:"出手逮住",r:"灵兔被你拎着耳朵提出药园，守园弟子塞给你一把灵石碎。",amt:8,st:3},b:{x:"帮着围堵",r:"折腾一炷香，总算把药园保住了。",amt:9}},
+ {t:"长老讲经",d:"传功堂今日由长老开讲，堂下蒲团还空着一个。",a:{x:"坐下听完",r:"一字一句都落在心上，下堂时天已擦黑。",amt:12},b:{x:"门口听半段",r:"听到妙处被差事叫走，可惜。",amt:6}},
+ {t:"剑痕石壁",d:"后山石壁上有一道旧剑痕，传闻是某位前辈破境时留下的。",a:{x:"临壁揣摩",r:"剑意扑面，你站到腿麻才回神。",amt:17},b:{x:"拓印带走",r:"拓片收好，回去慢慢看。",amt:7}},
+ {t:"山门访客",d:"山门外来了个迷路的樵夫，背着一筐山菌，说要谢当年救命的道长。",a:{x:"引他入内奉茶",r:"樵夫千恩万谢，临走把一筐山菌硬塞给你。",amt:6,st:2},b:{x:"指路送下山",r:"樵夫作了个揖，挑着担子下山了。",amt:5}},
+ {t:"丹炉异动",d:"路过丹堂，听见炉里咕嘟声不对，像要炸炉。",a:{x:"冲进去压火",r:"一把灵泉浇下去，炉火稳了。丹堂师兄后怕地直作揖。",amt:14},b:{x:"喊人来处理",r:"执事赶到及时，一炉丹保住了大半。",amt:8}},
+ {t:"雨夜顿悟",d:"夜里雨打芭蕉，你睡不着，披衣坐在洞口看雨。",a:{x:"顺势打坐",r:"雨声渐远，心里那层窗户纸捅破了。",amt:19},b:{x:"回屋睡觉",r:"一夜好睡，第二天神清气爽。",amt:5}},
+ {t:"秘境传闻",d:"茶摊上听人说，百里外的枯井夜里会冒宝光，已有散修赶去。",a:{x:"记下方位",r:"你把方位默记在心，谁知道哪天用得上。",amt:9},b:{x:"听个热闹",r:"宝光真假难辨，你喝完茶就回了山门。",amt:3}}];
+var TOME_SERIES=[
+ {id:"jianjue",name:"剑诀",tomes:["破云剑式","流风回雪","寒潭照月","一线天"]},
+ {id:"shenfa",name:"身法",tomes:["踏雪无痕","缩地成寸","云龙三折","鬼影迷踪"]},
+ {id:"xinfa",name:"心法",tomes:["抱元守一","沧海潮生","太虚引气","焚心诀"]}];
+var FEED_T=[
+ "{n} 昨日闭关出来，气息又厚了一层",
+ "{n} 在演武堂连胜三场，名声渐起",
+ "丹堂今日开炉，{n} 守炉有功，被夸了一句",
+ "{n} 接了巡山的差事，背剑下山去了",
+ "{n} 在藏经阁枯坐一日，悟出一式新招",
+ "{n} 被执法堂罚抄门规，说是夜里在后山烤鱼",
+ "传功堂新到一批功法抄本，{n} 排队排在头一个",
+ "{n} 的灵兽又把药园拱了，正被守园弟子追着赔",
+ "后山剑痕石壁前围了一圈人，{n} 站在最前面",
+ "{n} 炼丹炸了炉，眉毛燎掉半边，还笑得出来"];
+var FACS=[
+ {key:"space",icon:"🏠",name:"扩建空间",max:3,costs:[15,40,90],desc:"石室→两进→三进→小洞天；设施等级不能超过空间等级 +1"},
+ {key:"juling",icon:"🌀",name:"聚灵阵",max:3,costs:[10,25,50],desc:"每升一级，永久修炼 +2（宿主结算）"},
+ {key:"garden",icon:"🌱",name:"药园",max:3,costs:[8,20,45],desc:"每日晨收灵药：+2 / +4 / +7 修为"},
+ {key:"decor",icon:"🏮",name:"装修陈设",max:3,costs:[6,18,45],desc:"石桌→玉案香炉→夜明珠字画，洞府评级跟着涨"},
+ {key:"danfang",icon:"🔥",name:"丹房",max:2,costs:[15,35],desc:"炼丹绿区变宽；成丹（良品以上且建了丹房）额外得灵石"},
+ {key:"jingshi",icon:"🧘",name:"静室",max:1,costs:[25],desc:"每日奇遇 +1 次，并永久修炼 +2"}];
+function caveTitle(total){return total>=14?"洞天":total>=10?"福地":total>=6?"洞府":total>=3?"石室":"草庐"}
+function seedRand(seed){var h=2166136261;for(var i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619)}return function(){h=Math.imul(h^h>>>15,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^h>>>16)>>>0)/4294967296}}
+var play=null;
+function playLoad(){
+  try{play=JSON.parse(localStorage.getItem("sectPlay")||"null")}catch(e){play=null}
+  if(!play||typeof play!=="object")play=null;
+  var todayStr=state.today||new Date().toISOString().slice(0,10);
+  if(!play)play={stones:10,starter:true,fac:{space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0},tomes:[],seriesClaimed:{}};
+  if(!play.fac)play.fac={space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0};
+  if(play.day!==todayStr){
+    var keep={stones:play.stones,fac:play.fac,tomes:play.tomes||[],seriesClaimed:play.seriesClaimed||{},starter:play.starter};
+    play=keep;play.day=todayStr;
+    var lim=2+(play.fac.jingshi?1:0);
+    var rnd=seedRand(todayStr+state.sectId+"ev");
+    var pool=EVENTS.map(function(_,i){return i});
+    play.evList=[];for(var k=0;k<lim&&pool.length;k++){play.evList.push(pool.splice(Math.floor(rnd()*pool.length),1)[0])}
+    play.evDone={};
+    var frnd=seedRand(todayStr+state.sectId+"feed");
+    play.feed=[];var usedF={};
+    for(var f=0;f<5;f++){var n=FELLOWS[Math.floor(frnd()*FELLOWS.length)];var t=FEED_T[Math.floor(frnd()*FEED_T.length)];var line=t.split("{n}").join(n);if(usedF[line])continue;usedF[line]=1;play.feed.push(line)}
+    playSave();
+  }
+}
+function playSave(){try{localStorage.setItem("sectPlay",JSON.stringify(play))}catch(e){}}
+function addStones(n){if(play&&n>0){play.stones+=n;playSave()}}
+function claimReward(kind,opts,done){
+  opts=opts||{};
+  if(hasBridge){
+    var o={kind:kind};for(var k in opts)o[k]=opts[k];
+    callNative("reward",o).then(function(s){state=Object.assign(state,s);done&&done(null)})
+      .catch(function(e){done&&done(e)});
+  }else{
+    var amt=0;
+    if(kind==="spar")amt=opts.result==="win"?20:6;
+    else if(kind==="alchemy")amt=opts.result==="perfect"?18:(opts.result==="fine"?10:3);
+    else if(kind==="event")amt=Math.max(0,Math.min(20,opts.amount||0));
+    else if(kind==="lecture")amt=10;else if(kind==="patrol")amt=8;
+    else if(kind==="tome_dup")amt=3;else if(kind==="garden")amt=Math.max(0,Math.min(8,opts.amount||0));
+    else if(kind==="series"){state.seriesBonus=(state.seriesBonus||0)+2}
+    state.expBonus+=amt;mockDerive();mockSave();done&&done(null);
+  }
+}
+function caveSvg(){
+  var f=play.fac,g="";
+  g+='<path d="M10 118 L70 40 L120 78 L170 30 L250 118 Z" fill="var(--bg2)" stroke="var(--border)"/>';
+  if(f.space>=1)g+='<rect x="188" y="86" width="44" height="32" rx="6" fill="var(--bg2)" stroke="var(--accent)"/><text x="210" y="106" font-size="11" text-anchor="middle" fill="var(--sub)">侧室</text>';
+  if(f.space>=2)g+='<rect x="22" y="88" width="38" height="30" rx="6" fill="var(--bg2)" stroke="var(--accent)"/><text x="41" y="107" font-size="11" text-anchor="middle" fill="var(--sub)">西厢</text>';
+  if(f.space>=3)g+='<path d="M238 84 q7 17 0 34" stroke="var(--accent2)" stroke-width="3" fill="none" opacity=".7"/><circle cx="240" cy="112" r="3" fill="var(--accent2)"/>';
+  g+='<path d="M104 118 v-26 a16 14 0 0 1 32 0 v26 Z" fill="var(--bg)" stroke="var(--accent)" stroke-width="2"/>';
+  for(var i=0;i<f.juling;i++){g+='<ellipse cx="120" cy="120" rx="'+(26+i*11)+'" ry="'+(6+i*3)+'" fill="none" stroke="var(--accent)" stroke-width="1.6" opacity="'+(0.85-i*0.22)+'"/>'}
+  if(f.decor>=1)g+='<rect x="112" y="106" width="16" height="5" rx="2" fill="var(--sub)"/>';
+  if(f.decor>=2)g+='<circle cx="120" cy="98" r="3.4" fill="#d4af37"/><path d="M120 101 v5" stroke="#d4af37" stroke-width="2"/>';
+  if(f.decor>=3)g+='<circle cx="120" cy="86" r="4" fill="#ffe9a8"/><rect x="129" y="90" width="7" height="10" fill="var(--accent2)" opacity=".8"/>';
+  if(f.danfang>=1)g+='<rect x="76" y="100" width="14" height="11" rx="2" fill="var(--bg2)" stroke="var(--sub)"/><path d="M83 100 v-8" stroke="var(--sub)" stroke-width="3"/><circle cx="83" cy="86" r="2.4" fill="var(--sub)" opacity=".6"/>';
+  if(f.danfang>=2)g+='<circle cx="89" cy="78" r="3" fill="var(--sub)" opacity=".45"/><path d="M79 106 h8" stroke="#e25822" stroke-width="2"/>';
+  if(f.jingshi>=1)g+='<rect x="142" y="100" width="12" height="10" rx="2" fill="#ffe9a8" opacity=".85"/>';
+  for(var r2=0;r2<f.garden;r2++){for(var c=0;c<4;c++){g+='<path d="M'+(148+c*10+r2*3)+' 117 q2-7 5-8 q0 6-2 8" stroke="#4caf50" fill="none" stroke-width="1.6"/>';}}
+  return '<svg viewBox="0 0 260 128" style="width:100%;display:block;margin-top:6px">'+g+'</svg>';
+}
+function renderCave(){
+  var f=play.fac;
+  var total=f.space+f.juling+f.garden+f.decor+f.danfang+f.jingshi;
+  $("hallCaveTitle").textContent="🏡 我的洞府 · "+caveTitle(total);
+  var html='<div class="desc">灵石：<b style="color:var(--accent)">'+play.stones+'</b> 枚（切磋、炼丹、奇遇、领俸禄都能攒）　建设总计 '+total+' 级</div>'
+    +caveSvg()
+    +(f.garden>0?(play.gardenDone?'<div class="desc" style="margin-top:6px">药园今日已晨收。</div>':'<button class="pbtn" id="btnGarden" style="margin-top:6px">🌱 药园晨收（+'+[0,2,4,7][f.garden]+' 修为）</button>'):"")
+    +FACS.map(function(fc){
+      var lvl=f[fc.key];var maxed=lvl>=fc.max;
+      var capOk=fc.key==="space"||(lvl+1)<=f.space+1;
+      var cost=maxed?null:fc.costs[lvl];
+      var dots="";for(var di=0;di<fc.max;di++)dots+=di<lvl?"●":"○";
+      var btn=maxed?'<span class="rs">已满级</span>'
+        :(!capOk?'<span class="rs">需先扩建空间</span>'
+        :'<button class="pbtn" data-fac="'+fc.key+'"'+(play.stones<cost?' disabled style="opacity:.5"':'')+'>'+(lvl===0?"建造":"升级")+" · "+cost+" 灵石</button>");
+      return '<div class="facrow"><span><b>'+fc.icon+" "+fc.name+'</b> <span style="color:var(--accent)">'+dots+'</span><div class="evd">'+fc.desc+'</div></span><span>'+btn+"</span></div>";
+    }).join("");
+  $("hallCave").innerHTML=html;
+  Array.prototype.forEach.call(document.querySelectorAll("#hallCave [data-fac]"),function(el){
+    el.addEventListener("click",function(){doBuild(el.getAttribute("data-fac"))});
+  });
+  var bg=$("btnGarden");if(bg)bg.addEventListener("click",doGarden);
+}
+function doBuild(key){
+  var fc=null;FACS.forEach(function(x){if(x.key===key)fc=x});
+  var lvl=play.fac[key];var cost=fc.costs[lvl];
+  if(play.stones<cost)return;
+  play.stones-=cost;play.fac[key]=lvl+1;playSave();
+  if(key==="juling")claimReward("series",{series:"juling"+(lvl+1)},function(){render()});
+  else if(key==="jingshi")claimReward("series",{series:"jingshi1"},function(){render()});
+  else render();
+}
+function doGarden(){
+  var y=[0,2,4,7][play.fac.garden];
+  claimReward("garden",{amount:y},function(err){
+    if(err){$("hallErr").textContent=err.message;render();return}
+    play.gardenDone=1;playSave();render();
+  });
+}
+function renderActs(){
+  var a0=$("act0"),a1=$("act1"),a2=$("act2"),a4=$("act4"),a5=$("act5");
+  if(a0)a0.innerHTML=play.lectureDone?'<div class="desc">今日讲经已听（+10 修为）。</div>':'<button class="pbtn" id="btnLecture">📖 听今日讲经（+10）</button>';
+  if(a1)a1.innerHTML=play.sparText?'<div class="desc">今日切磋：'+play.sparText+'</div>':'<button class="pbtn" id="btnSpar">⚔️ 与同门切磋</button>';
+  if(a2)a2.innerHTML=play.alchemyText?'<div class="desc">今日炼丹：'+play.alchemyText+'</div>':'<button class="pbtn" id="btnAlchemy">🧪 开炉炼丹</button>';
+  if(a4)a4.innerHTML=play.patrolDone?'<div class="desc">今日已巡山（+8 修为）。</div>':'<button class="pbtn" id="btnPatrol">⚖️ 下山巡山（+8）</button>';
+  if(a5){
+    var owned=play.tomes.length;
+    a5.innerHTML=(play.drawText?'<div class="desc">今日已抽：'+play.drawText+'</div>':'<button class="pbtn" id="btnDraw">📚 抽一卷功法</button>')
+      +'<div class="desc" style="margin-top:4px">功法图鉴：'+owned+' / 12'+(state.seriesBonus?'（系列加成：永久修炼 +'+state.seriesBonus+'）':'（集齐一个系列永久修炼 +2）')+'</div>';
+  }
+  var b;
+  b=$("btnLecture");if(b)b.addEventListener("click",function(){claimReward("lecture",{},function(err){if(err){$("hallErr").textContent=err.message;render();return}play.lectureDone=1;playSave();render()})});
+  b=$("btnPatrol");if(b)b.addEventListener("click",function(){claimReward("patrol",{},function(err){if(err){$("hallErr").textContent=err.message;render();return}play.patrolDone=1;playSave();render()})});
+  b=$("btnSpar");if(b)b.addEventListener("click",doSpar);
+  b=$("btnAlchemy");if(b)b.addEventListener("click",startAlchemy);
+  b=$("btnDraw");if(b)b.addEventListener("click",doDraw);
+}
+function doSpar(){
+  var el=$("act1");if(!el)return;
+  var foe=FELLOWS[Math.floor(Math.random()*FELLOWS.length)];
+  var win=Math.random()*100<(45+state.rankIndex*6);
+  var lines=["演武堂鼓声起，你与 "+foe+" 相对而立。","三招试探，谁都没占到便宜。",win?"你抢到半步先机，一招制胜！":"对方经验老到，你棋差一着。"];
+  el.innerHTML='<div class="duellog"></div>';
+  var log=el.firstChild,i=0;
+  (function next(){
+    if(i<lines.length){log.innerHTML+="<div>"+lines[i]+"</div>";i++;setTimeout(next,600)}
+    else{
+      claimReward("spar",{result:win?"win":"lose"},function(err){
+        if(err){$("hallErr").textContent=err.message;render();return}
+        if(win)addStones(2);
+        play.sparText=(win?"胜 "+foe+"（+20 修为，灵石 +2）":"负于 "+foe+"（+6 修为，切磋而已，不记仇）");
+        playSave();render();
+      });
+    }
+  })();
+}
+var fireTimer=null;
+function startAlchemy(){
+  var el=$("act2");if(!el)return;
+  var zoneC=30+Math.random()*40;
+  var half=9+play.fac.danfang*5;
+  el.innerHTML='<div class="desc">火候将至——指针压进绿区时停火：</div><div class="firebar"><i class="firezone" style="left:'+(zoneC-half)+'%;width:'+(half*2)+'%"></i><i class="firemark" id="fireMark"></i></div><button class="pbtn" id="btnStopFire">停火</button>';
+  var pos=0,dir=1,mark=$("fireMark");
+  if(fireTimer)clearInterval(fireTimer);
+  fireTimer=setInterval(function(){pos+=dir*2.2;if(pos>=100){pos=100;dir=-1}if(pos<=0){pos=0;dir=1}if(mark)mark.style.left=pos+"%"},30);
+  $("btnStopFire").addEventListener("click",function(){
+    clearInterval(fireTimer);fireTimer=null;
+    var d=Math.abs(pos-zoneC);
+    var res=d<=half?"perfect":(d<=half*2?"fine":"burnt");
+    var label=res==="perfect"?"丹成上品，炉光冲霄":(res==="fine"?"丹成，品相尚可":"火候过了，只剩丹渣");
+    var stGain=(res==="perfect")?3:((res==="fine"&&play.fac.danfang>0)?1:0);
+    claimReward("alchemy",{result:res},function(err){
+      if(err){$("hallErr").textContent=err.message;render();return}
+      if(stGain)addStones(stGain);
+      play.alchemyText=label+"（修为已入账"+(stGain?"，灵石 +"+stGain:"")+"）";
+      playSave();render();
+    });
+  });
+}
+function doDraw(){
+  var all=[];TOME_SERIES.forEach(function(sr){sr.tomes.forEach(function(t){all.push({sid:sr.id,sname:sr.name,t:t})})});
+  var pick=all[Math.floor(Math.random()*all.length)];
+  var key=pick.sid+":"+pick.t;
+  if(play.tomes.indexOf(key)>=0){
+    claimReward("tome_dup",{},function(err){
+      if(!err){addStones(1);play.drawText="重复的《"+pick.t+"》残页（+3 修为，灵石 +1）"}
+      else play.drawText="《"+pick.t+"》已收录过了";
+      playSave();render();
+    });
+    return;
+  }
+  play.tomes.push(key);
+  var sr=null;TOME_SERIES.forEach(function(x){if(x.id===pick.sid)sr=x});
+  var ownedIn=play.tomes.filter(function(k){return k.split(":")[0]===pick.sid}).length;
+  var justCompleted=ownedIn===sr.tomes.length&&!play.seriesClaimed[pick.sid];
+  play.drawText="《"+pick.t+"》（"+sr.name+" "+ownedIn+"/"+sr.tomes.length+"）";
+  playSave();
+  if(justCompleted){
+    claimReward("series",{series:pick.sid},function(err){
+      if(!err){play.seriesClaimed[pick.sid]=1;play.drawText+="——"+sr.name+"集齐！永久修炼 +2";playSave()}
+      render();
+    });
+  }else render();
+}
+function renderPlay(s){
+  playLoad();
+  var evHtml="",doneCount=0;
+  play.evList.forEach(function(ei,pos){
+    var ev=EVENTS[ei];var dn=play.evDone[pos];
+    if(dn){doneCount++;evHtml+='<div class="evcard"><b>'+ev.t+'</b><div class="evres">'+dn+'</div></div>'}
+    else{
+      evHtml+='<div class="evcard"><b>'+ev.t+'</b><div class="evd">'+ev.d+'</div><div class="evbtns">'
+        +'<button class="pbtn" data-ev="'+pos+'" data-ch="a">'+ev.a.x+'</button>'
+        +'<button class="pbtn" data-ev="'+pos+'" data-ch="b">'+ev.b.x+'</button></div></div>';
+    }
+  });
+  if(doneCount>=play.evList.length)evHtml+='<div class="desc" style="margin-top:8px">今日奇遇已尽，明日再来。山门的日子长着呢。</div>';
+  $("hallEvents").innerHTML=evHtml;
+  Array.prototype.forEach.call(document.querySelectorAll("#hallEvents [data-ev]"),function(el){
+    el.addEventListener("click",function(){
+      var pos=parseInt(el.getAttribute("data-ev"),10);
+      var ev=EVENTS[play.evList[pos]];
+      var c=el.getAttribute("data-ch")==="a"?ev.a:ev.b;
+      claimReward("event",{amount:c.amt},function(err){
+        if(err){$("hallErr").textContent=err.message;return}
+        if(c.st)addStones(c.st);
+        play.evDone[pos]=c.r+"（+"+c.amt+" 修为"+(c.st?"，灵石 +"+c.st:"")+"）";
+        playSave();render();
+      });
+    });
+  });
+  $("hallFeed").innerHTML=play.feed.map(function(x){return '<div class="feedrow">🏮 '+x+'</div>'}).join("");
+  renderCave();
+  renderActs();
+}
+
 function render(){
   if(state.sectId && sectById(state.sectId)){
     $("view-guide").classList.add("hidden");
@@ -629,13 +908,13 @@ function doChoosePost(idx){
 $("btnSalary").addEventListener("click",function(){
   $("hallErr").textContent="";$("salaryOk").textContent="";
   if(hasBridge){
-    callNative("salary",{}).then(function(s){state=Object.assign(state,s);render();$("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"。"})
+    callNative("salary",{}).then(function(s){state=Object.assign(state,s);render();playLoad();addStones(state.gradeIndex);render();$("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"，灵石 +"+state.gradeIndex+"。"})
       .catch(function(e){$("hallErr").textContent=e.message});
   }else{
     if(state.gradeIndex<=0){$("hallErr").textContent="不入流的宗门没有俸禄，先晋品再说";return}
     if(state.lastSalaryDay===state.today){$("hallErr").textContent="今日俸禄已领过";return}
-    state.lastSalaryDay=state.today;state.expBonus+=state.salary;mockDerive();mockSave();render();
-    $("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"。";
+    state.lastSalaryDay=state.today;state.expBonus+=state.salary;mockDerive();mockSave();render();playLoad();addStones(state.gradeIndex);render();
+    $("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"，灵石 +"+state.gradeIndex+"。";
   }
 });
 $("btnSwitch").addEventListener("click",function(){

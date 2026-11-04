@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -447,13 +448,15 @@ private fun StashConnectionCard(
         }
     }
 
+    // 深色跟随主题卡面（旧版恒白卡配主题浅字，深色下看不清，1.77 改）
+    val dark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
     Row(
         modifier = modifier
             .fillMaxWidth()
             .pressable(interactionSource = interactionSource, indication = SinkFeedback())
             .clip(shape)
-            .background(Color.White)
-            .border(1.dp, BocchiPink.copy(alpha = 0.45f), shape)
+            .background(if (dark) MiuixTheme.colorScheme.surfaceContainer else Color.White)
+            .border(1.dp, BocchiPink.copy(alpha = if (dark) 0.3f else 0.45f), shape)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
