@@ -127,18 +127,6 @@ data class SkyPlace(
 @Immutable
 data class SkyPackSpot(val id: String, val name: String, val at: Offset)
 
-/** 插件锚点（夜景图，按预览稿 v24 的位置）；没登记的包回退到崖壁中段。 */
-fun skyPackAnchor(id: String): Offset =
-    when (id) {
-        "sect" -> Offset(0.128f, 0.468f)
-        "iptest" -> Offset(0.183f, 0.580f)
-        "nodeforge" -> Offset(0.343f, 0.480f)
-        "unlock" -> Offset(0.655f, 0.480f)
-        "sshtty" -> Offset(0.850f, 0.396f)
-        "webdav" -> Offset(0.802f, 0.564f)
-        else -> Offset(0.5f, 0.52f)
-    }
-
 /** 一张图 + 这张图专属的锚点表。白天图以后单独做一份，别和夜景共用数字。 */
 @Immutable
 class SkyArt(val assetUri: String, val aspect: Float, val places: List<SkyPlace>)
@@ -185,7 +173,7 @@ fun SkyIslandScene(
     debug: Boolean = false,
     /** 已在首页时点城堡的动作（首页接入方接启停）；其它地点仍走翻页。 */
     onHomeClick: (() -> Unit)? = null,
-    /** 岛上的插件光字点（接入方按已安装的功能包生成）；点了走 [onOpenPack]。 */
+    /** 岛上的插件光字点（接入方生成；当前只有一个「插件」入口）；点了走 [onOpenPack]。 */
     packSpots: List<SkyPackSpot> = emptyList(),
     onOpenPack: (String) -> Unit = {},
 ) {
@@ -353,7 +341,7 @@ fun SkyIslandScene(
             }
         }
 
-        // 插件光字：字即地点，点字进包（与功能包页同一条 PackHostActivity 路）
+        // 插件光字：字即地点，点字进插件页
         packSpots.forEachIndexed { index, spot ->
             key(spot.id) {
                 val src = remember { MutableInteractionSource() }
