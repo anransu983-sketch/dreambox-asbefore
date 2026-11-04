@@ -271,7 +271,11 @@ private fun FloatingBottomBarContent(isVisible: Boolean = true) {
                 )
             }
         }
-    val bottomBarVisible = isVisible && (bottomBarScrollBehavior?.isBottomBarVisible ?: true)
+    // Home is the full-bleed sky-island scene: its places replace the bar there.
+    val bottomBarVisible =
+        isVisible &&
+            page != BottomBarDestination.Home.ordinal &&
+            (bottomBarScrollBehavior?.isBottomBarVisible ?: true)
     val density = LocalDensity.current
     val opacity = AppTheme.opacity
     val exitOffsetPx =
