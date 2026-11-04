@@ -5,180 +5,184 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>高武门派 · 选道</title>
 <style>
-  :root{
-    --bg:#0b0f16; --bg2:#101826; --card:#151d2c; --border:#26334d;
-    --accent:#38bdf8; --accent2:#818cf8; --text:#eef4ff; --sub:#93a5c4;
-    --radius:16px; --bw:1px;
-    color-scheme: dark;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:18px 16px 40px;transition:background .4s,color .4s;min-height:100vh}
-  /* —— 各道氛围 —— */
-  body[data-sect="fu"]{color-scheme:light}
-  body[data-sect="gui"]::before,body[data-sect="zhen"]::before,body[data-sect="mo"]::before{
-    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  }
-  body[data-sect="gui"]::before{background:radial-gradient(600px 300px at 20% 0%,rgba(74,222,128,.13),transparent 60%),radial-gradient(500px 260px at 90% 30%,rgba(74,222,128,.08),transparent 60%)}
-  body[data-sect="zhen"]::before{background:radial-gradient(700px 340px at 50% -60px,rgba(129,140,248,.16),transparent 65%)}
-  body[data-sect="mo"]::before{background:radial-gradient(700px 320px at 50% -60px,rgba(220,38,38,.18),transparent 65%),radial-gradient(400px 240px at 95% 60%,rgba(168,85,247,.10),transparent 60%)}
-  body>*{position:relative;z-index:1}
-  h1{font-size:24px;font-weight:800;letter-spacing:1px}
-  .hero-sub{color:var(--sub);font-size:13px;line-height:1.6;margin:6px 0 16px}
-  .steps{display:flex;gap:6px;margin-bottom:16px}
-  .step{flex:1;text-align:center;font-size:11.5px;color:var(--sub);padding:7px 2px;border:var(--bw) solid var(--border);border-radius:calc(var(--radius)*.6);background:var(--card)}
-  .step.on{color:#fff;background:linear-gradient(120deg,var(--accent),var(--accent2));border-color:transparent;font-weight:700}
-  body[data-sect="fu"] .step.on{color:#fff}
-  .sect-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .sect-card{border:var(--bw) solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;transition:transform .15s, box-shadow .15s;position:relative;overflow:hidden}
-  .sect-card:active{transform:scale(.98)}
-  .sect-card.sel{box-shadow:0 0 0 2px var(--c1),0 8px 24px rgba(0,0,0,.35)}
-  .sect-card .ic{font-size:26px}
-  .sect-card .nm{font-size:17px;font-weight:800;margin-top:6px}
-  .sect-card .sc{font-size:12px;opacity:.75;margin-top:2px}
-  .sect-card .mt{font-size:11.5px;opacity:.85;margin-top:7px;line-height:1.5;font-style:italic}
-  .sect-card .seal{position:absolute;right:8px;top:8px;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
-  .card{background:var(--card);border:var(--bw) solid var(--border);border-radius:var(--radius);padding:16px;margin-top:14px}
-  .card h2{font-size:16px;margin-bottom:8px}
-  .desc{font-size:13px;color:var(--sub);line-height:1.65}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .chip{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--sub);cursor:pointer}
-  .chip.on{background:var(--accent);border-color:transparent;color:#fff;font-weight:700}
-  button.main{width:100%;border:0;border-radius:calc(var(--radius)*.8);padding:15px;font-size:16px;font-weight:800;letter-spacing:1px;background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;margin-top:16px;cursor:pointer}
-  button.main:disabled{opacity:.4}
-  button.ghost{width:100%;border:1px solid var(--border);border-radius:calc(var(--radius)*.8);padding:12px;font-size:14px;background:transparent;color:var(--sub);margin-top:10px;cursor:pointer}
-  .err{color:#ff9db0;font-size:13px;margin-top:10px;line-height:1.5;min-height:0}
-  .ok{color:var(--accent);font-size:13px;margin-top:10px;line-height:1.5}
-  /* —— 手机样机（选道时预览该道 UI） —— */
-  .phone{width:230px;margin:14px auto 4px;border:2px solid var(--border);border-radius:26px;padding:12px 12px 14px;background:var(--bg2)}
-  .phone .p-top{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-bottom:10px}
-  .phone .p-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0}
-  .phone .p-core{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;box-shadow:0 0 24px var(--accent)}
-  .phone .p-row{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:12px}
-  .phone .p-row .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
-  .phone .p-row .ms{margin-left:auto;color:var(--sub);font-size:11px}
-  .phone .p-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-  .phone .p-tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12px;text-align:center}
-  .phone .p-tile b{display:block;font-size:15px;color:var(--accent);margin-bottom:2px}
-  /* —— 山门（已入门）与境界布局 —— */
-  .hall-frame{border-radius:calc(var(--radius) + 6px)}
-  .hall-head{text-align:left}
-  .hall-head .big{font-size:22px;font-weight:800}
-  .rankbar{height:10px;border-radius:99px;background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-top:10px}
-  .rankbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .5s}
-  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-  .stat{background:var(--card);border:var(--bw) solid var(--border);border-radius:var(--radius);padding:13px}
-  .stat b{font-size:19px;color:var(--accent)}
-  .stat div{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.5}
-  .layout-note{font-size:12.5px;color:var(--sub);line-height:1.65;margin-top:10px}
-  /* 炼气：单列简朴（默认即单列） */
-  /* 筑基：洞府成形 —— 身份卡与统计并排感（统计已是双列），标题加印记 */
-  .layout-1 .hall-head .big::after{content:" · 洞府初成";font-size:12px;color:var(--accent)}
-  /* 金丹：金丹居中 —— 身份区居中、核心圆显形、统计三列 */
-  .layout-2 .hall-head{text-align:center}
-  .layout-2 .stats{grid-template-columns:1fr 1fr 1fr}
-  .layout-2 .core-orb{display:flex!important}
-  /* 元婴：分栏理事 —— 左侧竖排身份轨 */
-  .layout-3 .hall-wrap{display:grid;grid-template-columns:44px 1fr;gap:12px}
-  .layout-3 .hall-rail{display:flex!important}
-  /* 化神：一峰之主 —— 顶部横幅渐变、面板双列 */
-  .layout-4 .hall-head{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:var(--radius);padding:16px}
-  .layout-4 .hall-head .desc,.layout-4 .hall-head .layout-note{color:rgba(255,255,255,.85)}
-  .layout-4 .panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .layout-4 .panels .card{margin-top:0}
-  .layout-4 .panels-wrap{margin-top:14px}
-  /* 炼虚：洞天全景 —— 毛玻璃 + 氛围浮动 */
-  .layout-5 .card,.layout-5 .stat{backdrop-filter:blur(8px);background:color-mix(in srgb,var(--card) 82%,transparent)}
-  .layout-5 .hall-head{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:var(--radius);padding:16px}
-  .layout-5 .hall-head .desc,.layout-5 .hall-head .layout-note{color:rgba(255,255,255,.85)}
-  .layout-5 .panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .layout-5 .panels .card{margin-top:0}
-  .layout-5 .panels-wrap{margin-top:14px}
-  .layout-5 .stats{grid-template-columns:1fr 1fr 1fr}
-  /* 大乘：宗门全开 —— 金框加冕、全布局叠加 */
-  .layout-6{border:2px solid #d4af37;border-radius:26px;padding:12px;background:color-mix(in srgb,var(--bg2) 70%,transparent)}
-  .layout-6 .hall-head{text-align:center;background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:var(--radius);padding:16px}
-  .layout-6 .hall-head .desc,.layout-6 .hall-head .layout-note{color:rgba(255,255,255,.88)}
-  .layout-6 .stats{grid-template-columns:1fr 1fr 1fr}
-  .layout-6 .panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .layout-6 .panels .card{margin-top:0}
-  .layout-6 .panels-wrap{margin-top:14px}
-  .layout-6 .core-orb{display:flex!important}
-  /* —— 宗门品级：印、框、晋品梯（品级定名号/布局/资源） —— */
-  .grade-seal{display:inline-block;vertical-align:middle;font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(120deg,#b8860b,#d4af37);border-radius:6px;padding:3px 9px;margin-left:8px;letter-spacing:2px}
-  .hall-frame.grade-0 .grade-seal{background:#6b7280}
-  .sect-card .gd{font-size:11px;opacity:.7;margin-top:5px}
-  .hall-frame.grade-0{border:1.5px dashed var(--border);padding:10px}
-  .hall-frame.grade-1,.hall-frame.grade-2,.hall-frame.grade-3{border:1.5px solid var(--border);padding:10px}
-  .hall-frame.grade-4,.hall-frame.grade-5,.hall-frame.grade-6{border:1.5px solid var(--accent);padding:10px;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 22%,transparent)}
-  .hall-frame.grade-7,.hall-frame.grade-8{border:2px solid var(--accent);padding:11px;box-shadow:0 0 26px color-mix(in srgb,var(--accent) 35%,transparent)}
-  .hall-frame.grade-9{border:2px solid #d4af37;padding:11px;box-shadow:0 0 30px rgba(212,175,55,.35)}
-  .hall-frame.grade-10{border:2.5px solid #d4af37;padding:12px;box-shadow:0 0 44px rgba(212,175,55,.55),inset 0 0 30px rgba(212,175,55,.12)}
-  .hall-frame.grade-10 .hall-head{background:linear-gradient(120deg,#8a6d1f,#d4af37 55%,#8a6d1f);color:#fff}
-  .hall-frame.grade-10 .hall-head .desc,.hall-frame.grade-10 .hall-head .layout-note{color:rgba(255,255,255,.88)}
-  .ladder{margin-top:8px}
-  .ladder .lr{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
-  .ladder .lr b{color:var(--text)}
-  .ladder .lr.cur{border-color:#d4af37;color:var(--text);box-shadow:0 0 12px rgba(212,175,55,.25)}
-  .ladder .lr .rs{white-space:nowrap}
-  .orgrow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
-  .orgrow.can{border-color:#d4af37;box-shadow:0 0 10px rgba(212,175,55,.22);color:var(--text)}
-  .orgrow.dim{opacity:.85}
-  .hall-head{position:relative;overflow:hidden}
-  .hall-head>*{position:relative;z-index:1}
-  .hall-head>.crest{position:absolute;z-index:0;right:-16px;top:-16px;width:158px;height:158px;opacity:.15;pointer-events:none;background-repeat:no-repeat;background-size:contain}
-  .rankchips{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px}
-  .rchip{font-size:11.5px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--sub);background:var(--bg2)}
-  .rchip.done{border-color:var(--accent);color:var(--accent)}
-  .rchip.cur{background:var(--accent);color:#fff;border-color:transparent;font-weight:700}
-  .trk{margin-top:4px}
-  .trk-step{display:flex;gap:10px;position:relative;padding:5px 0}
-  .trk-step::before{content:"";position:absolute;left:8px;top:24px;bottom:-3px;width:2px;background:var(--border)}
-  .trk-step:last-child::before{display:none}
-  .trk-node{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--border);background:var(--bg2);margin-top:1px;z-index:1;box-sizing:border-box}
-  .trk-step.done .trk-node{background:var(--accent);border-color:var(--accent)}
-  .trk-step.cur .trk-node{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent),0 0 12px var(--accent)}
-  .trk-step.lock{opacity:.55}
-  .trk-step .trk-body{font-size:12.5px;line-height:1.45;color:var(--sub)}
-  .trk-step .trk-body b{color:var(--text);font-size:13px}
-  .trk-step.cur .trk-body b{color:var(--accent)}
-  .srcwrap{margin-top:14px}
-  .srcbar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
-  .srcbar i{display:block;height:100%}
-  .srclegend{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--sub)}
-  .srclegend b{color:var(--text)}
-  .orgrow b{color:var(--text)}
-  .evcard{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--bg2)}
-  .evcard b{font-size:14px}
-  .evd{font-size:12.5px;color:var(--sub);line-height:1.55;margin-top:3px}
-  .evres{font-size:12.5px;color:var(--accent);margin-top:4px;line-height:1.55}
-  .evbtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-  .pbtn{font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
-  .pbtn:active{background:var(--accent);color:#fff}
-  .hallact{margin:2px 0 8px}
-  .duellog{font-size:12.5px;color:var(--sub);line-height:1.7}
-  .firebar{position:relative;height:16px;border-radius:8px;background:var(--bg);border:1px solid var(--border);margin:8px 0;overflow:hidden}
-  .firezone{position:absolute;top:0;bottom:0;background:rgba(76,175,80,.55)}
-  .firemark{position:absolute;top:0;bottom:0;width:3px;background:#e25822}
-  .feedrow{font-size:12.5px;color:var(--sub);padding:6px 2px;border-bottom:1px dashed var(--border);line-height:1.5}
-  .feedrow:last-child{border-bottom:none}
-  .facrow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
-  .facrow b{color:var(--text)}
-  .orgrow .rs{white-space:nowrap}
-  .core-orb{display:none;justify-content:center;margin:12px 0 2px}
-  .core-orb i{width:86px;height:86px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--accent) 55%,var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;font-style:normal;color:#fff;box-shadow:0 0 34px var(--accent)}
-  .hall-rail{display:none;writing-mode:vertical-rl;letter-spacing:6px;font-size:14px;font-weight:800;color:var(--accent);border:var(--bw) solid var(--border);border-radius:var(--radius);background:var(--card);align-items:center;justify-content:center;padding:14px 0}
-  /* —— 1.73 协调批 —— */
-  .layout-2 .core-orb,.layout-3 .core-orb,.layout-4 .core-orb,.layout-5 .core-orb,.layout-6 .core-orb{display:flex!important}
-  .layout-4 .panels .span-all,.layout-5 .panels .span-all,.layout-6 .panels .span-all{grid-column:1/-1}
-  .hall-frame.mode-light.grade-7,.hall-frame.mode-light.grade-8{box-shadow:0 0 14px color-mix(in srgb,var(--accent) 16%,transparent)}
-  .hall-frame.mode-light.grade-9{box-shadow:0 0 16px rgba(212,175,55,.20)}
-  .hall-frame.mode-light.grade-10{box-shadow:0 0 22px rgba(212,175,55,.28)}
-  .promo{display:none;margin-top:12px;border-radius:12px;padding:11px 13px;font-size:13.5px;font-weight:700;line-height:1.6;color:#fff;background:linear-gradient(120deg,#b8860b,#d4af37 55%,#b8860b)}
-  .promo.show{display:block;animation:promoIn 1.1s ease}
-  @keyframes promoIn{0%{opacity:0;transform:scale(.96)}55%{opacity:1;transform:scale(1.015)}100%{opacity:1;transform:scale(1)}}
-  .hidden{display:none!important}
-  .foot{color:var(--sub);font-size:11.5px;line-height:1.6;margin-top:18px;text-align:center}
+:root{--bg:#0b0a1f;--bg2:#100e2a;--card:#151332;--border:#3730a3;--accent:#6366f1;--accent2:#a5b4fc;--text:#eef0ff;--sub:#9aa3d9;--radius:16px;--bw:1px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent}
+.hidden{display:none!important}
+h1{font-size:22px;line-height:1.35}
+h2{font-size:16px;margin-bottom:8px}
+.desc{font-size:13px;color:var(--sub);line-height:1.65}
+.err{color:#f87171;font-size:13px;min-height:16px;margin-top:6px}
+.ok{color:#4ade80;font-size:13px;min-height:16px;margin-top:6px}
+button.main{display:block;width:100%;margin-top:12px;padding:13px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+button.main:disabled{opacity:.45}
+button.ghost{display:block;width:100%;margin-top:10px;padding:11px;border:var(--bw) solid var(--border);border-radius:var(--radius);background:transparent;color:var(--sub);font-size:13px;cursor:pointer}
+button.pbtn{padding:8px 14px;border:var(--bw) solid var(--border);border-radius:99px;background:var(--card);color:var(--text);font-size:13px;cursor:pointer}
+button.pbtn:disabled{opacity:.5}
+.foot{font-size:11px;color:var(--sub);line-height:1.7;margin-top:14px}
+/* 选道页 */
+#view-guide{padding:20px 16px 30px;max-width:560px;margin:0 auto}
+.hero-sub{font-size:13px;color:var(--sub);line-height:1.7;margin:10px 0 14px}
+.steps{display:flex;gap:6px;margin-bottom:14px}
+.steps .step{flex:1;text-align:center;font-size:12px;padding:7px 0;border:var(--bw) solid var(--border);border-radius:99px;color:var(--sub)}
+.steps .step.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sect-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:14px}
+.sect-card{border:2px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;position:relative}
+.sect-card.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.sect-card .seal{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:6px;color:#fff;font-size:12px;line-height:20px}
+.sect-card .ic{font-size:26px}
+.sect-card .nm{font-size:15px;font-weight:700;margin-top:2px}
+.sect-card .sc{font-size:11px;opacity:.85}
+.sect-card .mt{font-size:11px;opacity:.7;margin-top:3px}
+.sect-card .gd{font-size:10px;opacity:.55;margin-top:3px}
+.card{background:var(--card);border:var(--bw) solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
+.phone{border:var(--bw) solid var(--border);border-radius:14px;padding:12px;margin-top:10px;background:var(--bg2)}
+.p-top{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-bottom:10px}
+.p-hero{text-align:center;padding:8px 0}
+.p-core{font-size:40px}
+.p-row{display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 10px;border:var(--bw) solid var(--border);border-radius:10px;margin-top:8px}
+.p-row .dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:none}
+.p-row .ms{margin-left:auto;color:var(--accent2);font-size:12px}
+.p-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.p-tile{border:var(--bw) solid var(--border);border-radius:10px;padding:10px;font-size:11px;color:var(--sub);text-align:center}
+.p-tile b{display:block;font-size:16px;color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:12px;padding:6px 11px;border-radius:99px;border:var(--bw) solid var(--border);color:var(--sub);cursor:pointer}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.layout-note{font-size:12px;color:var(--sub);line-height:1.6;margin-top:8px;border-left:3px solid var(--accent);padding-left:9px}
+.ladder{margin-top:8px}
+.ladder .lr{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:7px 9px;border:var(--bw) dashed var(--border);border-radius:9px;margin-top:6px;color:var(--sub)}
+.ladder .lr.cur{border-style:solid;border-color:#d4af37;color:var(--text);background:color-mix(in srgb,#d4af37 10%,transparent)}
+.ladder .lr .rs{color:var(--accent2);white-space:nowrap}
+/* 山门通用件（大殿/弹层内复用） */
+.rankbar{height:8px;border-radius:99px;background:color-mix(in srgb,var(--text) 14%,transparent);overflow:hidden;margin-top:6px}
+.rankbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .6s ease}
+.grade-seal{display:inline-block;margin-left:8px;font-size:11px;padding:2px 9px;border-radius:99px;background:#d4af37;color:#231a04;vertical-align:middle}
+.promo{display:none;margin-top:10px;padding:10px 12px;border-radius:12px;background:linear-gradient(90deg,#d4af37,#f59e0b);color:#231a04;font-size:13px;font-weight:700;line-height:1.6}
+.promo.show{display:block}
+.srcbar{display:flex;height:10px;border-radius:99px;overflow:hidden;margin-top:4px}
+.srcbar i{display:block;height:100%}
+.srclegend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:7px;font-size:12px;color:var(--sub)}
+.rankchips{display:flex;flex-wrap:wrap;gap:6px}
+.rchip{font-size:12px;padding:6px 10px;border-radius:99px;border:var(--bw) solid var(--border);color:var(--sub)}
+.rchip.done{color:var(--accent2);border-color:var(--accent)}
+.rchip.cur{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.trk{margin-top:6px}
+.trk-step{display:flex;gap:10px;position:relative;padding:0 0 12px 0}
+.trk-step:before{content:"";position:absolute;left:5px;top:14px;bottom:0;width:2px;background:var(--border)}
+.trk-step:last-child:before{display:none}
+.trk-node{width:12px;height:12px;border-radius:50%;background:var(--bg2);border:2px solid var(--border);flex:none;margin-top:3px;z-index:1}
+.trk-step.done .trk-node{background:var(--accent2);border-color:var(--accent2)}
+.trk-step.cur .trk-node{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+.trk-body{font-size:13px;color:var(--sub);line-height:1.5}
+.trk-body b{color:var(--text)}
+.trk-step.lock .trk-body{opacity:.55}
+.orgrow{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;padding:11px 10px;border:var(--bw) solid var(--border);border-radius:11px;margin-top:8px;cursor:pointer;background:var(--card)}
+.orgrow .rs{font-size:11px;color:var(--accent2);white-space:nowrap}
+.orgrow.dim{opacity:.62}
+.evcard{border:var(--bw) solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--card)}
+.evcard b{font-size:14px}
+.evd{font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:4px}
+.evbtns{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.evres{font-size:12.5px;color:var(--accent2);line-height:1.6;margin-top:4px}
+.facrow{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;padding:10px;border:var(--bw) solid var(--border);border-radius:11px;margin-top:8px;background:var(--card)}
+.facrow .rs{font-size:11px;color:var(--sub);white-space:nowrap}
+.feedrow{font-size:13px;line-height:1.6;padding:9px 11px;border:var(--bw) solid var(--border);border-radius:11px;margin-top:8px;background:var(--card)}
+.duellog{font-size:13px;line-height:1.8;color:var(--text);padding:10px;border:var(--bw) dashed var(--border);border-radius:11px;background:var(--bg2)}
+.firebar{position:relative;height:16px;border-radius:99px;background:color-mix(in srgb,var(--text) 12%,transparent);margin:12px 0}
+.firezone{position:absolute;top:0;bottom:0;background:#4ade80;border-radius:99px;opacity:.75}
+.firemark{position:absolute;top:-4px;width:4px;height:24px;background:#f87171;border-radius:2px}
+/* ── 天空之城场景 ── */
+#view-hall{position:fixed;inset:0;overflow:hidden;background:#0a0c26}
+.scene-bgwrap{position:absolute;inset:-14px;animation:skyfloat 11s ease-in-out infinite alternate;will-change:transform}
+@keyframes skyfloat{from{transform:translateY(-7px) scale(1.03)}to{transform:translateY(8px) scale(1.05)}}
+.scene-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:0;transition:opacity 1.2s ease}
+.scene-bg.on{opacity:1}
+.scene-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,6,24,.42),transparent 26%,transparent 62%,rgba(5,6,24,.5));pointer-events:none}
+.cloud{position:absolute;width:55%;height:64px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.34),transparent 70%);filter:blur(6px);pointer-events:none;animation:drift 26s linear infinite}
+.cloud.c2{width:70%;top:64%;animation-duration:38s;animation-delay:-14s;opacity:.7}
+@keyframes drift{from{transform:translateX(-46%)}to{transform:translateX(120%)}}
+.stars{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1s;background-image:radial-gradient(1.6px 1.6px at 12% 18%,#fff,transparent),radial-gradient(1.3px 1.3px at 32% 8%,#fff,transparent),radial-gradient(1.8px 1.8px at 55% 14%,#ffe9a8,transparent),radial-gradient(1.2px 1.2px at 74% 6%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 20%,#fff,transparent),radial-gradient(1.2px 1.2px at 44% 24%,#fff,transparent);animation:twinkle 3.4s ease-in-out infinite alternate}
+.stars.on{opacity:.9}
+@keyframes twinkle{from{filter:brightness(.75)}to{filter:brightness(1.25)}}
+.sky-top{position:absolute;top:0;left:0;right:0;padding:12px 13px 0;z-index:6}
+.sky-trow{display:flex;align-items:center;gap:9px}
+.sky-crest{width:42px;height:42px;border-radius:13px;background-size:70%;background-position:center;background-repeat:no-repeat;background-color:color-mix(in srgb,var(--accent) 88%,#000 12%);box-shadow:0 4px 14px rgba(0,0,0,.4);flex:none;position:relative}
+.sky-crest i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:19px}
+.sky-name{font-size:18px;font-weight:800;color:#fff;text-shadow:0 1px 8px rgba(4,4,22,.75)}
+.sky-sub{font-size:10.5px;color:rgba(255,255,255,.82);text-shadow:0 1px 6px rgba(4,4,22,.8);margin-top:1px}
+.sky-grade{margin-left:auto;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:11px;padding:4px 10px;border-radius:99px;font-weight:700;flex:none;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.sky-xv{margin-top:10px;background:rgba(10,11,34,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:9px 12px}
+.sky-xv .l1{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,.9)}
+.sky-xv .l1 b{color:#fff}
+.sky-xv .gold{color:#fbbf24;font-weight:700}
+.sky-bar{height:6px;background:rgba(255,255,255,.25);border-radius:99px;margin-top:6px;overflow:hidden}
+.sky-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),#f59e0b);border-radius:99px;transition:width .6s ease}
+.sky-chips{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.sky-chip{font-size:10.5px;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.13);color:#ececff;border:1px solid rgba(255,255,255,.1)}
+.sky-chip b{color:#fbbf24}
+.spot{position:absolute;z-index:5;transform:translate(-50%,-100%);text-align:center;background:none;border:none;cursor:pointer;padding:0}
+.spot .tag{display:inline-flex;align-items:center;gap:4px;background:rgba(9,10,32,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid rgba(255,255,255,.35);white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.spot .pin{width:8px;height:8px;border-radius:50%;background:#fff;margin:4px auto 0;box-shadow:0 0 8px rgba(255,255,255,.9)}
+.spot.avail .tag{border-color:#fbbf24}
+.spot.avail .pin{background:#fbbf24;animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(251,191,36,.55)}70%{box-shadow:0 0 0 10px rgba(251,191,36,0)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
+.evbubble{position:absolute;z-index:5;right:12px;top:148px;background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;border:none;border-radius:15px;padding:8px 12px;font-size:12px;font-weight:700;box-shadow:0 8px 22px rgba(234,88,12,.5);cursor:pointer;text-align:left;animation:bob 3.2s ease-in-out infinite alternate}
+.evbubble small{display:block;font-weight:400;font-size:10px;opacity:.92}
+@keyframes bob{from{transform:translateY(-3px)}to{transform:translateY(4px)}}
+.evbubble.done{display:none}
+.scenetoggle{position:absolute;z-index:6;left:12px;background:rgba(9,10,32,.6);backdrop-filter:blur(6px);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px;padding:5px 11px;border-radius:99px;cursor:pointer}
+.sky-toast{position:absolute;left:12px;right:12px;bottom:86px;z-index:6;pointer-events:none}
+.sky-toast .ok,.sky-toast .err{min-height:0;margin:0;text-align:center;font-size:12.5px;text-shadow:0 1px 6px rgba(4,4,22,.9)}
+.sky-toast .ok:empty,.sky-toast .err:empty{display:none}
+.dock{position:absolute;left:12px;right:12px;bottom:12px;z-index:6;background:rgba(9,10,32,.62);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.16);border-radius:19px;padding:8px;display:flex;gap:7px}
+.dock button{flex:1;border:none;background:rgba(255,255,255,.09);color:#dcdcf5;border-radius:13px;padding:8px 2px 7px;font-size:11.5px;cursor:pointer;line-height:1.3}
+.dock button b{display:block;font-size:16px;margin-bottom:1px}
+.dock button.p{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#000));color:#fff;font-weight:600}
+.dock button:disabled{opacity:.45}
+/* ── 房间（点建筑进入，各房布局各异） ── */
+.room{position:absolute;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;transform:translateY(102%);transition:transform .34s cubic-bezier(.32,.72,.28,1);visibility:hidden}
+.room.open{transform:translateY(0);visibility:visible}
+.room-head{display:flex;align-items:center;gap:10px;padding:14px 14px 10px;flex:none}
+.room-back{border:var(--bw) solid var(--border);background:var(--card);color:var(--text);border-radius:99px;padding:7px 13px;font-size:13px;cursor:pointer}
+.room-title{font-size:17px;font-weight:800}
+.room-sub{font-size:11px;color:var(--sub)}
+.room-body{flex:1;overflow-y:auto;padding:4px 14px 26px;-webkit-overflow-scrolling:touch}
+.room .card{margin-top:10px}
+/* 传功堂经文 */
+.scripture{border:var(--bw) solid var(--border);border-radius:14px;background:linear-gradient(180deg,var(--bg2),var(--card));padding:16px 14px;text-align:center;overflow:hidden}
+.scripture .sline{font-size:15px;letter-spacing:3px;line-height:2.1;color:var(--sub);opacity:.25;animation:sline 9s ease-in-out infinite}
+.scripture .sline:nth-child(2){animation-delay:1.6s}.scripture .sline:nth-child(3){animation-delay:3.2s}.scripture .sline:nth-child(4){animation-delay:4.8s}
+@keyframes sline{0%,100%{opacity:.25}12%,30%{opacity:1;color:var(--accent2)}45%{opacity:.25}}
+/* 演武 VS */
+.vsrow{display:flex;align-items:center;gap:10px;margin-top:10px}
+.vscard{flex:1;border:var(--bw) solid var(--border);border-radius:14px;background:var(--card);padding:14px 10px;text-align:center}
+.vscard .av{font-size:34px}
+.vscard .vn{font-size:14px;font-weight:700;margin-top:4px}
+.vscard .vs2{font-size:11px;color:var(--sub);margin-top:2px}
+.vsmid{font-size:20px;font-weight:900;color:#f59e0b;flex:none}
+/* 丹堂炉 */
+.furnace{text-align:center;padding:6px 0 2px}
+.flame{display:inline-block;font-size:44px;animation:flame 1.1s ease-in-out infinite alternate;filter:drop-shadow(0 6px 14px rgba(249,115,22,.55))}
+@keyframes flame{from{transform:scale(1) rotate(-2deg)}to{transform:scale(1.13) rotate(2deg)}}
+/* 执法巡山路 */
+.patrolwrap{border:var(--bw) solid var(--border);border-radius:14px;background:var(--card);padding:10px;margin-top:10px}
+/* 藏经阁书架 */
+.shelf{border:var(--bw) solid var(--border);border-radius:12px;background:linear-gradient(180deg,var(--bg2),var(--card));padding:12px;margin-top:10px}
+.shelfrow{display:flex;gap:6px;align-items:flex-end;margin-top:8px;border-bottom:4px solid color-mix(in srgb,var(--border) 80%,#000);padding-bottom:0}
+.book{flex:1;min-height:52px;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--text) 10%,transparent);border:1px solid var(--border);color:var(--sub);font-size:10.5px;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px 2px;writing-mode:vertical-rl;letter-spacing:2px}
+.book.owned{background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#000));color:#fff;border-color:var(--accent)}
+.shelf-name{font-size:12px;color:var(--accent2);margin-top:10px}
+/* 器峰图鉴 */
+.forgegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}
+.forgeitem{border:var(--bw) solid var(--border);border-radius:13px;background:var(--card);padding:12px 6px;text-align:center;cursor:pointer}
+.forgeitem .fi{font-size:28px}
+.forgeitem .fn2{font-size:12px;font-weight:600;margin-top:4px}
+.forgeitem .fs2{font-size:10px;color:var(--sub);margin-top:2px}
+.forgeitem.lock{opacity:.45}
 </style>
+
 </head>
 <body>
 <div id="view-guide">
@@ -205,74 +209,164 @@
 </div>
 
 <div id="view-hall" class="hidden">
-  <div class="hall-frame" id="hallFrame">
-    <div class="hall-wrap">
-      <div class="hall-rail" id="hallRail">杂役弟子</div>
+  <div class="scene-bgwrap" id="sceneBgwrap">
+    <img class="scene-bg" id="sceneBgDay" src="scene-day.jpg" alt="">
+    <img class="scene-bg" id="sceneBgNight" src="scene-night.jpg" alt="">
+  </div>
+  <div class="scene-shade"></div>
+  <div class="stars" id="sceneStars"></div>
+  <div class="cloud" style="top:56%"></div>
+  <div class="cloud c2"></div>
+
+  <div class="sky-top">
+    <div class="sky-trow">
+      <div class="sky-crest" id="hallCrest"><i id="hallSeal">阵</i></div>
       <div>
-        <div class="card hall-head" style="margin-top:0">
-          <div class="crest" id="hallCrest"></div>
-          <div class="big" id="hallTitle">山门</div>
-          <div class="desc" id="hallSub"></div>
-          <div class="promo" id="promoBanner"></div>
-          <div class="core-orb"><i id="hallOrb">⚔️</i></div>
-          <div class="desc" id="hallExpText" style="margin-top:8px"></div>
-          <div class="rankbar"><i id="hallExpBar" style="width:0%"></i></div>
-          <div class="desc" id="hallGradeText" style="margin-top:10px"></div>
-          <div class="rankbar"><i id="hallGradeBar" style="width:0%"></i></div>
-          <div class="layout-note" id="hallLayoutNote"></div>
-        </div>
-        <div class="stats" id="hallStats"></div>
-        <div class="panels-wrap"><div class="panels">
-          <div class="card">
-            <h2>🧘 每日修炼</h2>
-            <div class="desc" id="cultDesc">运功一周天，修为 +20。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界与品级越高。</div>
-            <button class="main" id="btnCultivate">开始修炼</button>
-            <div class="ok" id="cultOk"></div>
-            <div class="err" id="hallErr"></div>
-          </div>
-          <div class="card">
-            <h2>🏯 境界与布局</h2>
-            <div class="desc" id="hallRankList"></div>
-            <div class="desc" style="margin-top:10px">职位自选（职位是任职、不是身份；顺序只是高低，修为解锁后想当哪个当哪个，也可选低不选高，或不就任）：</div>
-            <div class="chips" id="postChips"></div>
-            <div class="layout-note" id="postNote"></div>
-          </div>
-          <div class="card">
-            <h2>💰 宗门资源</h2>
-            <div class="desc" id="hallResText"></div>
-            <button class="main" id="btnSalary">领取今日俸禄</button>
-            <div class="ok" id="salaryOk"></div>
-            <div class="desc" style="margin-top:10px">本门晋品之路（名字与资源随品级而变）：</div>
-            <div class="ladder" id="hallLadder"></div>
-          </div>
-          <div class="card span-all">
-            <h2>🎲 今日奇遇</h2>
-            <div id="hallEvents"></div>
-          </div>
-          <div class="card span-all">
-            <h2 id="hallCaveTitle">🏡 我的洞府</h2>
-            <div id="hallCave"></div>
-          </div>
-          <div class="card span-all">
-            <h2>🏛️ 宗门架构</h2>
-            <div class="desc" id="hallPosText"></div>
-            <div id="hallOrg"></div>
-          </div>
-          <div class="card span-all">
-            <h2>🏮 同门动态</h2>
-            <div id="hallFeed"></div>
-          </div>
-        </div></div>
-        <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
-        <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
-        <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
-        <div class="foot">境界与修为管你的身份（杂役→外门→内门→核心→亲传→道子，随修为自动晋升）与职位（执事→长老→峰主→太上长老→掌门→老祖，解锁后自选任职）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div>
+        <div class="sky-name" id="hallTitle">山门</div>
+        <div class="sky-sub" id="hallSub"></div>
+      </div>
+      <div class="sky-grade" id="skyGrade">八品宗门</div>
+    </div>
+    <div class="promo" id="promoBanner"></div>
+    <div class="sky-xv">
+      <div class="l1"><span id="hallExpText">修为 0</span><span>灵石 <span class="gold" id="skyStones">0</span></span></div>
+      <div class="sky-bar"><i id="hallExpBar" style="width:0%"></i></div>
+      <div class="sky-chips" id="skyChips"></div>
+    </div>
+  </div>
+
+  <div id="spots"></div>
+  <button class="evbubble" id="evBubble">✦ 今日奇遇<small id="evBubbleSub">剩 2 次</small></button>
+  <button class="scenetoggle" id="sceneToggle" style="bottom:158px">🌗 景 · 自动</button>
+
+  <div class="sky-toast"><div class="ok" id="cultOk"></div><div class="ok" id="salaryOk"></div><div class="err" id="hallErr"></div></div>
+
+  <div class="dock">
+    <button class="p" id="btnCultivate"><b>🧘</b><span id="cultLabel">每日修炼</span></button>
+    <button id="btnSalary"><b>💰</b><span id="salaryLabel">领取俸禄</span></button>
+    <button id="dockFeed"><b>🏮</b>同门动态</button>
+    <button id="dockOrg"><b>🏛️</b>宗门架构</button>
+  </div>
+
+  <!-- 大殿 -->
+  <div class="room" id="room-palace">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏯 山门大殿</div><div class="room-sub">境界 · 身份 · 职位 · 品级</div></div></div>
+    <div class="room-body">
+      <div class="card" style="margin-top:2px">
+        <h2>宗门品级</h2>
+        <div class="desc" id="hallGradeText"></div>
+        <div class="rankbar"><i id="hallGradeBar" style="width:0%"></i></div>
+        <div class="layout-note" id="hallLayoutNote"></div>
+        <div id="hallStats"></div>
+      </div>
+      <div class="card">
+        <h2>🏯 境界与布局</h2>
+        <div class="desc" id="hallRankList"></div>
+        <div class="desc" style="margin-top:10px">职位自选（职位是任职、不是身份；修为解锁后想当哪个当哪个，也可选低不选高，或不就任）：</div>
+        <div class="chips" id="postChips"></div>
+        <div class="layout-note" id="postNote"></div>
+      </div>
+      <div class="card">
+        <h2>💰 宗门资源</h2>
+        <div class="desc" id="hallResText"></div>
+        <div class="desc" id="cultDesc" style="margin-top:8px"></div>
+        <div class="desc" style="margin-top:10px">本门晋品之路（名字与资源随品级而变）：</div>
+        <div class="ladder" id="hallLadder"></div>
+      </div>
+      <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
+      <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
+      <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
+      <div class="foot">境界与修为管你的身份（杂役→外门→内门→核心→亲传→道子，随修为自动晋升）与职位（执事→长老→峰主→太上长老→掌门→老祖，解锁后自选任职）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div>
+    </div>
+  </div>
+
+  <!-- 洞府 -->
+  <div class="room" id="room-cave">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title" id="hallCaveTitle">🏡 我的洞府</div><div class="room-sub">建设自己的洞府：扩建、聚灵阵、药园、丹房、静室</div></div></div>
+    <div class="room-body"><div id="hallCave"></div></div>
+  </div>
+
+  <!-- 传功堂 -->
+  <div class="room" id="room-lecture">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">📖 传功堂</div><div class="room-sub">长老讲经 · 坐下听完，修为自生</div></div></div>
+    <div class="room-body">
+      <div class="scripture" id="scripture"></div>
+      <div id="lecAct"></div>
+    </div>
+  </div>
+
+  <!-- 演武堂 -->
+  <div class="room" id="room-spar">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">⚔️ 演武堂</div><div class="room-sub">与同门切磋 · 胜负都有收获</div></div></div>
+    <div class="room-body">
+      <div class="vsrow">
+        <div class="vscard"><div class="av">🧑‍🎓</div><div class="vn">你</div><div class="vs2" id="sparMeRank">金丹 · 内门弟子</div></div>
+        <div class="vsmid">VS</div>
+        <div class="vscard"><div class="av">🥷</div><div class="vn">同门师兄弟</div><div class="vs2">随机匹配 · 点切磋揭晓</div></div>
+      </div>
+      <div id="sparAct"></div>
+    </div>
+  </div>
+
+  <!-- 丹堂 -->
+  <div class="room" id="room-alchemy">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🧪 丹堂</div><div class="room-sub">开炉炼丹 · 火候压中绿区出上品</div></div></div>
+    <div class="room-body">
+      <div class="furnace"><span class="flame">🔥</span><div style="font-size:52px;line-height:1">🫖</div><div class="desc">丹炉正温，药材已下。盯着火候条，指针进绿区时停火。</div></div>
+      <div id="alcAct"></div>
+    </div>
+  </div>
+
+  <!-- 执法堂 -->
+  <div class="room" id="room-patrol">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">⚖️ 执法堂</div><div class="room-sub">巡山值守 · 沿山道走一圈</div></div></div>
+    <div class="room-body">
+      <div class="patrolwrap"><div id="patrolSvg"></div><div class="desc" id="patrolNote" style="text-align:center;margin-top:4px">山门 → 后山 → 药园 → 演武场 → 藏经阁</div></div>
+      <div id="patAct"></div>
+    </div>
+  </div>
+
+  <!-- 藏经阁 -->
+  <div class="room" id="room-tome">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">📚 藏经阁</div><div class="room-sub">功法图鉴 · 集齐一个系列，永久修炼 +2</div></div></div>
+    <div class="room-body">
+      <div id="tomeShelf"></div>
+      <div id="tomeAct"></div>
+    </div>
+  </div>
+
+  <!-- 器峰 -->
+  <div class="room" id="room-forge">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🔨 器峰</div><div class="room-sub">法宝图鉴 · 品级越高，库藏越丰</div></div></div>
+    <div class="room-body">
+      <div class="forgegrid" id="forgeGrid"></div>
+      <div class="card"><div class="desc" id="forgeDetail">点一件法宝看它的来历。图鉴随宗门品级解锁，只是观瞻，不占差事次数。</div></div>
+    </div>
+  </div>
+
+  <!-- 奇遇 -->
+  <div class="room" id="room-events">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🎲 今日奇遇</div><div class="room-sub">每日刷新 · 选择决定收获</div></div></div>
+    <div class="room-body"><div id="hallEvents"></div></div>
+  </div>
+
+  <!-- 同门/架构 -->
+  <div class="room" id="room-feed">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏮 同门动态</div><div class="room-sub">山门告示牌 · 今日新鲜事</div></div></div>
+    <div class="room-body">
+      <div id="hallFeed"></div>
+      <div class="card">
+        <h2>🏛️ 宗门架构</h2>
+        <div class="desc" id="hallPosText"></div>
+        <div id="hallOrg"></div>
+        <div class="desc" style="margin-top:8px">点任意堂口，直接去它的房间。</div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
+
 (function(){
 "use strict";
 /* 七修定版：seed 与宿主 HostSect 的 sectDefs 必须一致（符修默认浅色、余皆深色）；入门后可在山门页明暗翻转 */
@@ -499,24 +593,124 @@ function renderPreview(){
   $("btnJoin").disabled=false;
   renderMock(s,selRank);
 }
-/* —— 山门页 —— */
+/* —— 天空之城山门页（1.78 / pack v10）：双景可切换、建筑热点进各自房间、每间房布局与互动各异 —— */
+var HALL_ROOMS=["room-lecture","room-spar","room-alchemy","room-forge","room-patrol","room-tome"];
+var SCENE_SPOTS=[
+ {room:"room-palace",icon:"🏯",name:"山门大殿",day:[66,25],night:[46,33]},
+ {room:"room-tome",icon:"📚",name:"藏经阁",day:[15,33],night:[19,25]},
+ {room:"room-alchemy",icon:"🧪",name:"丹堂",day:[26,47],night:[76,40],play:"alchemy"},
+ {room:"room-spar",icon:"⚔️",name:"演武台",day:[74,53],night:[82,51],play:"spar"},
+ {room:"room-cave",icon:"🏡",name:"我的洞府",day:[80,42],night:[24,56],play:"cave"},
+ {room:"room-lecture",icon:"📖",name:"传功堂",day:[33,58],night:[63,58],play:"lecture"},
+ {room:"room-forge",icon:"🔨",name:"器峰",day:[29,75],night:[71,65]},
+ {room:"room-patrol",icon:"⚖️",name:"执法堂",day:[56,68],night:[38,72],play:"patrol"}];
+var SECT_FILTER={jian:"hue-rotate(-14deg) saturate(1.06)",fu:"brightness(1.1) sepia(.22) hue-rotate(-8deg)",zhen:"",ti:"sepia(.28) hue-rotate(-18deg) saturate(1.1)",kuilei:"hue-rotate(38deg) saturate(.92)",gui:"hue-rotate(55deg) saturate(1.05) brightness(.94)",mo:"hue-rotate(-38deg) saturate(1.15) brightness(.92)"};
+var FORGE=[
+ {icon:"🗡️",name:"青锋剑",grade:0,desc:"入门佩剑，剑身泛青，吹毛断发。"},
+ {icon:"🛡️",name:"玄龟盾",grade:1,desc:"龟甲纹盾，九品宗门库藏的第一件正经法宝。"},
+ {icon:"🧿",name:"定风珠",grade:2,desc:"含在口中，狂风不迷眼。巡山弟子最爱。"},
+ {icon:"🪭",name:"流云扇",grade:3,desc:"扇面是活的云纹，展开三尺，收拢三寸。"},
+ {icon:"🔔",name:"镇魂铃",grade:4,desc:"铃声过处，邪祟退散。执法堂人手一只的升级版。"},
+ {icon:"🏮",name:"长明灯",grade:5,desc:"灯油是鲛人泪，点上百年不熄，藏经阁镇阁之宝。"},
+ {icon:"🪶",name:"鹤羽舟",grade:6,desc:"一羽化舟，载三五人横渡云海，峰主才配领用。"},
+ {icon:"🗼",name:"镇山塔",grade:8,desc:"塔落之处，地脉自稳。一品宗门的脸面。"},
+ {icon:"👑",name:"圣地道印",grade:10,desc:"圣地之主的印信，印落如天宪，万宗共遵。"}];
+function openRoom(id){Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0}
+function closeRooms(){Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.remove("open")})}
+function scenePref(){try{return localStorage.getItem("sectScenePref")||"auto"}catch(e){return "auto"}}
+function sceneIsDay(){
+  var p=scenePref();
+  if(p==="day")return true; if(p==="night")return false;
+  return state.themeMode==="Light";
+}
+function spotAvail(sp){
+  if(!sp.play||!play)return false;
+  if(sp.play==="lecture")return !play.lectureDone;
+  if(sp.play==="spar")return !play.sparText;
+  if(sp.play==="alchemy")return !play.alchemyText;
+  if(sp.play==="patrol")return !play.patrolDone;
+  if(sp.play==="cave")return play.fac.garden>0&&!play.gardenDone;
+  return false;
+}
+function updateScene(s){
+  var day=sceneIsDay();
+  $("sceneBgDay").classList.toggle("on",day);
+  $("sceneBgNight").classList.toggle("on",!day);
+  $("sceneStars").classList.toggle("on",!day);
+  $("sceneBgwrap").style.filter=SECT_FILTER[s.id]||"";
+  $("sceneToggle").textContent=scenePref()==="auto"?"🌗 景 · 自动":(day?"☀️ 景 · 云海":"🌙 景 · 浮岛");
+  $("skyStones").textContent=play?play.stones:0;
+  $("spots").innerHTML=SCENE_SPOTS.map(function(sp){
+    var pos=day?sp.day:sp.night;
+    return '<button class="spot'+(spotAvail(sp)?" avail":"")+'" data-room="'+sp.room+'" style="left:'+pos[0]+'%;top:'+pos[1]+'%"><span class="tag">'+sp.icon+" "+sp.name+'</span><span class="pin"></span></button>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("#spots .spot"),function(el){
+    el.addEventListener("click",function(){openRoom(el.getAttribute("data-room"))});
+  });
+  var left=0;if(play)play.evList.forEach(function(_,pos){if(!play.evDone[pos])left++});
+  $("evBubble").classList.toggle("done",left<=0);
+  if(left>0)$("evBubbleSub").textContent="剩 "+left+" 次 · 点我进奇遇";
+}
+function updateScripture(s){
+  var lines=[s.xinfa,"道可道，非常道","名可名，非常名","心无挂碍，气自周天","一日不修，一日空"];
+  $("scripture").innerHTML=lines.map(function(x){return '<div class="sline">'+x+"</div>"}).join("")
+    +'<div class="desc" style="margin-top:8px">长老的声音不疾不徐，经文在堂上浮起来又落下去。坐满一炷香，就是一堂课。</div>';
+}
+function updatePatrol(){
+  var pts=[[30,58],[92,26],[154,50],[216,22],[282,52]];
+  var names=["山门","后山","药园","演武场","藏经阁"];
+  var done=play&&play.patrolDone;
+  var g='<path d="M30 58 Q60 18 92 26 T154 50 T216 22 T282 52" fill="none" stroke="var(--border)" stroke-width="2.5" stroke-dasharray="6 5"/>';
+  pts.forEach(function(p,i){
+    g+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="10" fill="'+(done?"#d4af37":"var(--bg2)")+'" stroke="'+(done?"#d4af37":"var(--accent)")+'" stroke-width="2"/>';
+    g+='<text x="'+p[0]+'" y="'+(p[1]+4)+'" font-size="10" text-anchor="middle" fill="'+(done?"#231a04":"var(--sub)")+'">'+(i+1)+"</text>";
+    g+='<text x="'+p[0]+'" y="'+(p[1]+26)+'" font-size="10" text-anchor="middle" fill="var(--sub)">'+names[i]+"</text>";
+  });
+  $("patrolSvg").innerHTML='<svg viewBox="0 0 312 84" style="width:100%;display:block">'+g+"</svg>";
+  $("patrolNote").textContent=done?"今日巡山已毕，五处哨位俱已点到。":"山门 → 后山 → 药园 → 演武场 → 藏经阁，五处哨位走一圈。";
+}
+function updateTomeShelf(){
+  if(!play)return;
+  $("tomeShelf").innerHTML=TOME_SERIES.map(function(sr){
+    var books=sr.tomes.map(function(t){
+      var owned=play.tomes.indexOf(sr.id+":"+t)>=0;
+      return '<div class="book'+(owned?" owned":"")+'">'+t+"</div>";
+    }).join("");
+    var cnt=play.tomes.filter(function(k){return k.split(":")[0]===sr.id}).length;
+    return '<div class="shelf"><div class="shelf-name">'+sr.name+" · "+cnt+" / "+sr.tomes.length+(cnt===sr.tomes.length?" · 已集齐":"")+'</div><div class="shelfrow">'+books+"</div></div>";
+  }).join("");
+}
+function renderForge(){
+  $("forgeGrid").innerHTML=FORGE.map(function(f,i){
+    var locked=state.gradeIndex<f.grade;
+    return '<div class="forgeitem'+(locked?" lock":"")+'" data-fi="'+i+'"><div class="fi">'+(locked?"🔒":f.icon)+'</div><div class="fn2">'+f.name+'</div><div class="fs2">'+(locked?GRADES[f.grade].name+"解锁":"已入库")+"</div></div>";
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("#forgeGrid .forgeitem"),function(el){
+    el.addEventListener("click",function(){
+      var f=FORGE[parseInt(el.getAttribute("data-fi"),10)];
+      $("forgeDetail").textContent=state.gradeIndex<f.grade?("「"+f.name+"」还锁在库里——宗门晋到"+GRADES[f.grade].name+"（"+GRADES[f.grade].need+" 修为）后开放观瞻。"):("「"+f.name+"」"+f.desc);
+    });
+  });
+}
 function renderHall(){
   var s=sectById(state.sectId); if(!s)return;
   applySectTheme(s,state.themeMode);
-  var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex+" grade-"+state.gradeIndex+(state.themeMode==="Light"?" mode-light":" mode-dark");
-  $("hallRail").textContent=state.title;
   $("hallCrest").style.backgroundImage=crestUri(s);
-  $("hallTitle").innerHTML=s.icon+" "+s.names[state.gradeIndex]+'<span class="grade-seal">'+state.gradeName+'</span>';
-  $("hallSub").textContent="道统："+s.name+"（"+s.xinfa+"）　境界："+state.rankName+"　身份："+state.title+"　职位："+(state.postName||"暂无")+"　宗门品级："+state.gradeName+"　座右铭：「"+s.motto+"」";
-  $("hallOrb").textContent=s.icon;
+  $("hallSeal").textContent=s.seal;
+  $("hallTitle").textContent=s.names[state.gradeIndex];
+  $("hallSub").textContent=s.name+" · "+s.sect+"一脉 · 「"+s.motto+"」";
+  $("skyGrade").textContent=state.gradeIndex>=10?"圣地":state.gradeName+"宗门";
   var pct,expText;
   if(state.nextThreshold>0){
     var base=RANKS[state.rankIndex].need;
     pct=Math.round((state.exp-base)/(state.nextThreshold-base)*100);
-    expText="修为 "+state.exp+" / "+state.nextThreshold+"（距 "+RANKS[state.rankIndex+1].name+" 还差 "+(state.nextThreshold-state.exp)+"）";
+    expText="修为 "+state.exp+" / "+state.nextThreshold+" · "+state.rankName+"期";
   }else{pct=100;expText="修为 "+state.exp+" · 已至绝巅";}
   $("hallExpText").textContent=expText;
   $("hallExpBar").style.width=Math.max(3,Math.min(100,pct))+"%";
+  $("skyChips").innerHTML='<span class="sky-chip">身份 <b>'+state.title+'</b></span>'
+    +'<span class="sky-chip">职位 <b>'+(state.postName||"暂无")+'</b></span>'
+    +(state.nextThreshold>0?'<span class="sky-chip">距'+RANKS[state.rankIndex+1].name+" "+(state.nextThreshold-state.exp)+"</span>":"");
   var gText,gPct;
   if(state.nextGradeThreshold>0){
     var gBase=GRADES[state.gradeIndex].need;
@@ -525,15 +719,14 @@ function renderHall(){
   }else{gPct=100;gText="宗门品级 圣地 · "+s.names[10]+" ——一品之上，万宗来朝。";}
   $("hallGradeText").textContent=gText;
   $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
-  $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note+" 品级排面随品级而变：不入流是虚线陋框，晋品后边框渐盛，一品金框、圣地金辉全开。";
+  $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note;
   var srcs=[
     {label:"入门天数",val:state.days*10,note:state.days+" 天 · 每日 +10",color:"var(--accent)"},
     {label:"导入配置",val:state.profileCount*25,note:state.profileCount+" 份 · 每份 +25",color:"var(--accent2)"},
     {label:"已装插件",val:state.packCount*20,note:state.packCount+" 个 · 每个 +20",color:"color-mix(in srgb,var(--accent) 45%,#9ca3af)"},
     {label:"修炼攒下",val:state.expBonus,note:"+"+state.expBonus+" · 修炼与俸禄",color:"#d4af37"}];
   var srcTot=srcs.reduce(function(a,x){return a+x.val},0);
-  var hs=$("hallStats"); hs.className="srcwrap";
-  hs.innerHTML = srcTot>0
+  $("hallStats").innerHTML = srcTot>0
     ? '<div class="srcbar">'+srcs.map(function(x){return x.val>0?'<i style="width:'+(x.val/srcTot*100)+'%;background:'+x.color+'"></i>':""}).join("")+'</div>'
       +'<div class="srclegend">'+srcs.map(function(x){return '<span><b>'+x.label+' +'+x.val+'</b>（'+x.note+'）</span>'}).join("")+'</div>'
     : '<div class="desc">修为来源：入门天数（每日 +10）、导入配置（每份 +25）、已装插件（每个 +20）、每日修炼与俸禄——用得越久，家底越厚。</div>';
@@ -552,18 +745,18 @@ function renderHall(){
     +'<div style="margin-top:8px">职位（任职差事，修为解锁后自选，可任低不任高）：</div><div class="trk">'+postSteps+'</div>';
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
-  $("cultDesc").innerHTML="运功一周天，修为 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+"）。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界与品级越高。";
+  $("cultDesc").innerHTML="每日修炼：运功一周天，修为 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在山门底部动作坞里。";
   var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
   $("btnCultivate").disabled=!!doneToday;
-  $("btnCultivate").textContent=doneToday?"今日已修炼":"开始修炼（+"+state.cultGain+"）";
+  $("cultLabel").textContent=doneToday?"今日已修炼":"每日修炼 +"+state.cultGain;
   var salDone = state.lastSalaryDay && state.today && state.lastSalaryDay===state.today;
   if(state.gradeIndex<=0){
     $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20）。修为到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36/日、圣地 +40/日。";
-    $("btnSalary").disabled=true; $("btnSalary").textContent="不入流 · 无俸禄";
+    $("btnSalary").disabled=true; $("salaryLabel").textContent="不入流 · 无俸禄";
   }else{
     $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 修为</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+"）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
     $("btnSalary").disabled=!!salDone;
-    $("btnSalary").textContent=salDone?"今日俸禄已领":"领取今日俸禄（+"+state.salary+"）";
+    $("salaryLabel").textContent=salDone?"俸禄已领":"俸禄 +"+state.salary;
   }
   $("hallLadder").innerHTML=ladderHtml(s,state.gradeIndex);
   var chipsHtml='<span class="chip'+(state.postChoice===-1?" on":"")+'" data-post="-1">自动（随修为）</span>';
@@ -595,7 +788,7 @@ function renderHall(){
       if(cur.grade>prev.grade)msgs.push("🎉 晋品！"+GRADES[prev.grade].name+" → "+GRADES[cur.grade].name+"，本门更名「"+s.names[cur.grade]+"」");
       if(cur.rank>prev.rank)msgs.push("🎉 破境！"+RANKS[prev.rank].name+" → "+RANKS[cur.rank].name);
       if(cur.ident>prev.ident)msgs.push("🎉 身份晋升："+IDENTITIES[prev.ident].name+" → "+IDENTITIES[cur.ident].name);
-      if(cur.postElig>prev.postElig && POSTS[cur.postElig])msgs.push("🎉 新职解锁："+POSTS[cur.postElig].name+"（可在下方自选就任）");
+      if(cur.postElig>prev.postElig && POSTS[cur.postElig])msgs.push("🎉 新职解锁："+POSTS[cur.postElig].name+"（可在大殿自选就任）");
       if(msgs.length){var pb=$("promoBanner");pb.innerHTML=msgs.join("<br>");pb.classList.add("show")}
     }
     localStorage.setItem("sectPromo2",JSON.stringify(cur));
@@ -604,10 +797,32 @@ function renderHall(){
   $("hallOrg").innerHTML=HALLS.map(function(h,hi){
     var can = state.postIndex>=h.headIdx;
     var st = can ? "✅ 你已可主事" : ("主事："+h.head+"（职位解锁 "+POSTS[h.headIdx].need+" 修为起）");
-    return '<div class="orgrow'+(can?" can":" dim")+'"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+'</span></div><div class="hallact" id="act'+hi+'"></div>';
+    return '<div class="orgrow'+(can?" can":" dim")+'" data-room="'+HALL_ROOMS[hi]+'"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+" ›</span></div>";
   }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("#hallOrg .orgrow"),function(el){
+    el.addEventListener("click",function(){openRoom(el.getAttribute("data-room"))});
+  });
+  $("sparMeRank").textContent=state.rankName+" · "+state.title;
   renderPlay(s);
+  updateScene(s);
+  updateScripture(s);
+  updatePatrol();
+  updateTomeShelf();
+  renderForge();
 }
+Array.prototype.forEach.call(document.querySelectorAll("[data-close]"),function(el){
+  el.addEventListener("click",closeRooms);
+});
+$("evBubble").addEventListener("click",function(){openRoom("room-events")});
+$("dockFeed").addEventListener("click",function(){openRoom("room-feed")});
+$("dockOrg").addEventListener("click",function(){openRoom("room-feed")});
+$("sceneToggle").addEventListener("click",function(){
+  var p=scenePref();
+  var next=p==="auto"?"day":(p==="day"?"night":"auto");
+  try{localStorage.setItem("sectScenePref",next)}catch(e){}
+  var s=sectById(state.sectId);if(s)updateScene(s);
+});
+
 /* ── 1.77 互动批：奇遇 / 堂口差事 / 同门动态 / 洞府建设 ── */
 var FELLOWS=["林惊羽","苏暮云","楚寒烟","叶孤鸿","沈青禾","陆九川","唐小蛮","白未央","江枫眠","洛清辞","顾长风","萧听雨"];
 var EVENTS=[
@@ -742,7 +957,7 @@ function doGarden(){
   });
 }
 function renderActs(){
-  var a0=$("act0"),a1=$("act1"),a2=$("act2"),a4=$("act4"),a5=$("act5");
+  var a0=$("lecAct"),a1=$("sparAct"),a2=$("alcAct"),a4=$("patAct"),a5=$("tomeAct");
   if(a0)a0.innerHTML=play.lectureDone?'<div class="desc">今日讲经已听（+10 修为）。</div>':'<button class="pbtn" id="btnLecture">📖 听今日讲经（+10）</button>';
   if(a1)a1.innerHTML=play.sparText?'<div class="desc">今日切磋：'+play.sparText+'</div>':'<button class="pbtn" id="btnSpar">⚔️ 与同门切磋</button>';
   if(a2)a2.innerHTML=play.alchemyText?'<div class="desc">今日炼丹：'+play.alchemyText+'</div>':'<button class="pbtn" id="btnAlchemy">🧪 开炉炼丹</button>';
@@ -760,7 +975,7 @@ function renderActs(){
   b=$("btnDraw");if(b)b.addEventListener("click",doDraw);
 }
 function doSpar(){
-  var el=$("act1");if(!el)return;
+  var el=$("sparAct");if(!el)return;
   var foe=FELLOWS[Math.floor(Math.random()*FELLOWS.length)];
   var win=Math.random()*100<(45+state.rankIndex*6);
   var lines=["演武堂鼓声起，你与 "+foe+" 相对而立。","三招试探，谁都没占到便宜。",win?"你抢到半步先机，一招制胜！":"对方经验老到，你棋差一着。"];
@@ -780,7 +995,7 @@ function doSpar(){
 }
 var fireTimer=null;
 function startAlchemy(){
-  var el=$("act2");if(!el)return;
+  var el=$("alcAct");if(!el)return;
   var zoneC=30+Math.random()*40;
   var half=9+play.fac.danfang*5;
   el.innerHTML='<div class="desc">火候将至——指针压进绿区时停火：</div><div class="firebar"><i class="firezone" style="left:'+(zoneC-half)+'%;width:'+(half*2)+'%"></i><i class="firemark" id="fireMark"></i></div><button class="pbtn" id="btnStopFire">停火</button>';
