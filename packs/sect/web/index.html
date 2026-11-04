@@ -333,6 +333,35 @@ button.pbtn:disabled{opacity:.5}
 .statusline{margin-top:11px;padding:10px 11px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:13px;color:#cbd2ff;line-height:1.55}
 .fac-foot{margin-top:11px;font-size:12.5px;color:#9aa3d9;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .fac-foot b{color:#fbbf24}
+
+/* ── 洞府设施专属小界面（v16）：每处建筑有自己的样子 ── */
+.facvis{margin:11px 0 2px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);padding:12px;overflow:hidden}
+.plan{display:flex;gap:7px}
+.pstage{flex:1;text-align:center;padding:8px 2px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);font-size:11.5px;color:#9aa3d9}
+.pstage .pic{font-size:20px;display:block;margin-bottom:3px}
+.pstage.done{color:#dfe4ff}
+.pstage.on{color:#fff;border-color:#fbbf24;background:rgba(251,191,36,.13);box-shadow:0 0 10px rgba(251,191,36,.25)}
+.arraybig{width:118px;height:118px;margin:2px auto;border-radius:50%;position:relative;border:2px solid rgba(165,180,252,.55);background:conic-gradient(from 0deg,transparent 0 11%,rgba(165,180,252,.55) 11% 13%,transparent 13% 24%,rgba(165,180,252,.55) 24% 26%,transparent 26% 37%,rgba(165,180,252,.55) 37% 39%,transparent 39% 49%,rgba(165,180,252,.55) 49% 51%,transparent 51% 62%,rgba(165,180,252,.55) 62% 64%,transparent 64% 74%,rgba(165,180,252,.55) 74% 76%,transparent 76% 87%,rgba(165,180,252,.55) 87% 89%,transparent 89%);animation:spinarray 16s linear infinite}
+.arraybig .core{position:absolute;inset:25px;border-radius:50%;background:radial-gradient(circle,#312e81,#14122e);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.arraybig .core b{font-size:21px;color:#fbbf24;line-height:1}
+.arraybig .core span{font-size:10px;color:#a5b4fc;margin-top:3px}
+.arraybig.off{opacity:.4;animation:none;filter:grayscale(.6)}
+.plots{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.plot{height:50px;border-radius:10px;background:linear-gradient(180deg,#43301f,#291b10);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;font-size:23px}
+.viscap{text-align:center;font-size:12px;color:#9aa3d9;margin-top:9px}
+.viscap b{color:#fbbf24}
+.furn2{text-align:center;padding:2px 0}
+.furn2 .pot{font-size:50px;line-height:1.1;filter:drop-shadow(0 8px 16px rgba(249,115,22,.4))}
+.flk{display:inline-block;animation:flk .65s ease-in-out infinite alternate;font-size:19px}
+@keyframes flk{from{transform:scale(1) rotate(-3deg)}to{transform:scale(1.18) rotate(3deg)}}
+.breath{width:102px;height:102px;margin:4px auto;border-radius:50%;border:2px solid rgba(165,180,252,.5);display:flex;align-items:center;justify-content:center;font-size:31px;background:radial-gradient(circle,rgba(99,102,241,.28),transparent 72%);animation:breath 4.6s ease-in-out infinite}
+.breath.off{opacity:.4;animation:none;filter:grayscale(.6)}
+@keyframes breath{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
+.showcase{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.showitem{text-align:center;padding:9px 2px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);font-size:11.5px;color:#dfe4ff}
+.showitem .pic{font-size:21px;display:block;margin-bottom:3px}
+.showitem.lock{opacity:.42;filter:grayscale(.85);color:#9aa3d9}
+.showitem.on{border-color:#fbbf24;background:rgba(251,191,36,.12)}
 </style>
 
 </head>
@@ -1101,6 +1130,45 @@ function renderCave(){
   });
   if(caveSel)renderCaveSheet();
 }
+
+function facVisual(fc,lvl){
+  var k=fc.key;
+  if(k==="space"){
+    var st=[["🛖","草庐"],["🏠","石室"],["🏘️","两进"],["🏯","小洞天"]];
+    var h='<div class="plan">';
+    st.forEach(function(x,i){h+='<div class="pstage'+(i===lvl?" on":(i<lvl?" done":""))+'"><span class="pic">'+x[0]+"</span>"+x[1]+"</div>"});
+    return h+'</div><div class="viscap">洞府格局 · 当前 <b>'+st[lvl][1]+'</b>，空间决定其他设施的等级上限</div>';
+  }
+  if(k==="juling"){
+    if(lvl===0)return '<div class="arraybig off"><div class="core"><b>未启</b><span>聚灵阵</span></div></div><div class="viscap">阵盘沉寂，建成后灵气自聚</div>';
+    return '<div class="arraybig"><div class="core"><b>+'+(lvl*2)+'</b><span>每日修炼</span></div></div><div class="viscap">阵盘缓缓转动 · 修炼加成已计入宿主结算</div>';
+  }
+  if(k==="garden"){
+    var grow=["","🌱","🌿","🌾"];
+    var filled=[0,2,4,6][lvl];
+    var h='<div class="plots">';
+    for(var i=0;i<6;i++){
+      var e=i<filled?grow[lvl]:"";
+      if(lvl===3&&i===5)e="🍑";
+      h+='<div class="plot">'+e+"</div>";
+    }
+    h+='</div><div class="viscap">'+(lvl===0?"田垄已整好，建成药园就能种灵药":(play.gardenDone?"今日已晨收 · 灵药在架上晾着":"晨光正好 · 点下方按钮晨收"))+"</div>";
+    return h;
+  }
+  if(k==="danfang"){
+    return '<div class="furn2"><div class="pot">⚗️</div><div><span class="flk">🔥</span><span class="flk" style="animation-delay:.2s">🔥</span><span class="flk" style="animation-delay:.45s">🔥</span></div></div><div class="viscap">'+(lvl===0?"炉子是冷的 · 建成丹房后炼丹绿区变宽":"炉火正旺 · 炼丹绿区加宽，成丹（良品以上）额外得灵石")+"</div>";
+  }
+  if(k==="jingshi"){
+    return '<div class="breath'+(lvl===0?" off":"")+'">🧘</div><div class="viscap">'+(lvl===0?"静室未建 · 只是一块空蒲团":"呼吸之间灵台清明 · 每日奇遇 +1 次，修炼 +2")+"</div>";
+  }
+  if(k==="decor"){
+    var it=[["🪑","石桌"],["🏺","玉案香炉"],["🖼️","夜明珠字画"]];
+    var h='<div class="showcase">';
+    it.forEach(function(x,i){h+='<div class="showitem'+(i<lvl?"":(i===lvl?" on":" lock"))+'"><span class="pic">'+x[0]+"</span>"+x[1]+(i<lvl?" ✓":(i===lvl?"":" 🔒"))+"</div>"});
+    return h+'</div><div class="viscap">陈设撑起洞府评级 · 草庐→石室→洞府→福地→洞天</div>';
+  }
+  return "";
+}
 function renderCaveSheet(){
   var fc=null;FACS.forEach(function(x){if(x.key===caveSel)fc=x});
   if(!fc)return;
@@ -1109,7 +1177,7 @@ function renderCaveSheet(){
   var cost=maxed?null:fc.costs[lvl];
   var eff=FAC_EFF[fc.key]||[];
   var segs="";for(var di=0;di<fc.max;di++)segs+='<i class="'+(di<lvl?"on":"")+'"></i>';
-  var html='<div class="fac-desc">'+fc.desc+'</div>';
+  var html='<div class="fac-desc">'+fc.desc+'</div><div class="facvis">'+facVisual(fc,lvl)+'</div>';
   html+='<div class="segbar">'+segs+'</div><div class="segtext">当前 <b>'+(lvl===0?"未建":"第 "+lvl+" 级")+'</b>（'+lvl+" / "+fc.max+'）'+(fc.key!=="space"?' · 设施等级上限 = 扩建空间 +1（现 '+(f.space+1)+'）':'')+'</div>';
   html+='<div class="infogrid"><div class="infocard"><div class="info-k">当前效果</div><div class="info-v">'+(eff[lvl]||"—")+'</div></div><div class="infocard"><div class="info-k">'+(maxed?"已达顶峰":"下一级")+'</div><div class="info-v">'+(maxed?"这一处已经建到头了":(eff[lvl+1]||"—"))+'</div></div></div>';
   if(fc.key==="garden"&&lvl>0){
