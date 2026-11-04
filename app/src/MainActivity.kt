@@ -29,7 +29,11 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +41,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.fragment.app.FragmentActivity
@@ -71,6 +78,51 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.qualifier.named
 import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+/** 高武门派七道氛围色（与插件页 SECTS 的 accent/accent2 一致）：种子色管全局配色，氛围管主界面的道统味。 */
+private val sectAuraColors: Map<String, Pair<Color, Color>> =
+    mapOf(
+        "jian" to (Color(0xFF0284C7) to Color(0xFF38BDF8)),
+        "fu" to (Color(0xFFD97706) to Color(0xFFF59E0B)),
+        "zhen" to (Color(0xFF6366F1) to Color(0xFFA5B4FC)),
+        "ti" to (Color(0xFFEA580C) to Color(0xFFFBBF24)),
+        "kuilei" to (Color(0xFF0F766E) to Color(0xFF2DD4BF)),
+        "gui" to (Color(0xFF16A34A) to Color(0xFF4ADE80)),
+        "mo" to (Color(0xFFDC2626) to Color(0xFFA855F7)),
+    )
+
+/** 两团径向辉光：左上主色、右侧副色，只染界面边缘，alpha 压得很低不挡内容；Canvas 默认不拦截触摸。 */
+@Composable
+private fun SectAuraOverlay(colorA: Color, colorB: Color, dark: Boolean) {
+    val a1 = if (dark) 0.15f else 0.10f
+    val a2 = if (dark) 0.10f else 0.06f
+    Canvas(Modifier.fillMaxSize()) {
+        val c1 = Offset(size.width * 0.12f, -size.height * 0.05f)
+        val r1 = size.width * 0.85f
+        drawCircle(
+            brush =
+                Brush.radialGradient(
+                    colors = listOf(colorA.copy(alpha = a1), Color.Transparent),
+                    center = c1,
+                    radius = r1,
+                ),
+            center = c1,
+            radius = r1,
+        )
+        val c2 = Offset(size.width * 1.02f, size.height * 0.32f)
+        val r2 = size.width * 0.7f
+        drawCircle(
+            brush =
+                Brush.radialGradient(
+                    colors = listOf(colorB.copy(alpha = a2), Color.Transparent),
+                    center = c2,
+                    radius = r2,
+                ),
+            center = c2,
+            radius = r2,
+        )
+    }
+}
 
 class MainActivity : FragmentActivity() {
     companion object {
@@ -190,7 +242,19 @@ class MainActivity : FragmentActivity() {
                                 modifier = Modifier.fillMaxSize(),
                                 color = MiuixTheme.colorScheme.surface,
                             ) {
+                              Box(Modifier.fillMaxSize()) {
                                 AppNavContainer(navigationComponent)
+                                // 高武门派道统氛围：选道后主界面罩一层该道的双色辉光（插件页同款氛围带进本体）
+                                val aura = sectAuraColors[appSettingsStore.sectPathId.value]
+                                if (aura != null) {
+                                    val auraDark =
+                                        when (activitySettings.themeMode) {
+                                            com.suanran.dreambox.core.model.ThemeMode.Dark -> true
+                                            com.suanran.dreambox.core.model.ThemeMode.Light -> false
+                                            else -> isSystemInDarkTheme()
+                                        }
+                                    SectAuraOverlay(aura.first, aura.second, auraDark)
+                                }
                                 ToastDialogHost()
 
                                 var showHomeGuide by
@@ -199,6 +263,7 @@ class MainActivity : FragmentActivity() {
                                     show = showHomeGuide,
                                     onDismissRequest = { showHomeGuide = false },
                                 )
+                              }
                             }
                         }
                     }

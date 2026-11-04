@@ -105,16 +105,16 @@
   .layout-6 .core-orb{display:flex!important}
   /* —— 宗门品级：印、框、晋品梯（品级定名号/布局/资源） —— */
   .grade-seal{display:inline-block;vertical-align:middle;font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(120deg,#b8860b,#d4af37);border-radius:6px;padding:3px 9px;margin-left:8px;letter-spacing:2px}
-  .grade-0 .grade-seal{background:#6b7280}
+  .hall-frame.grade-0 .grade-seal{background:#6b7280}
   .sect-card .gd{font-size:11px;opacity:.7;margin-top:5px}
-  .grade-0{border:1.5px dashed var(--border);padding:10px}
-  .grade-1,.grade-2,.grade-3{border:1.5px solid var(--border);padding:10px}
-  .grade-4,.grade-5,.grade-6{border:1.5px solid var(--accent);padding:10px;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 22%,transparent)}
-  .grade-7,.grade-8{border:2px solid var(--accent);padding:11px;box-shadow:0 0 26px color-mix(in srgb,var(--accent) 35%,transparent)}
-  .grade-9{border:2px solid #d4af37;padding:11px;box-shadow:0 0 30px rgba(212,175,55,.35)}
-  .grade-10{border:2.5px solid #d4af37;padding:12px;box-shadow:0 0 44px rgba(212,175,55,.55),inset 0 0 30px rgba(212,175,55,.12)}
-  .grade-10 .hall-head{background:linear-gradient(120deg,#8a6d1f,#d4af37 55%,#8a6d1f);color:#fff}
-  .grade-10 .hall-head .desc,.grade-10 .hall-head .layout-note{color:rgba(255,255,255,.88)}
+  .hall-frame.grade-0{border:1.5px dashed var(--border);padding:10px}
+  .hall-frame.grade-1,.hall-frame.grade-2,.hall-frame.grade-3{border:1.5px solid var(--border);padding:10px}
+  .hall-frame.grade-4,.hall-frame.grade-5,.hall-frame.grade-6{border:1.5px solid var(--accent);padding:10px;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 22%,transparent)}
+  .hall-frame.grade-7,.hall-frame.grade-8{border:2px solid var(--accent);padding:11px;box-shadow:0 0 26px color-mix(in srgb,var(--accent) 35%,transparent)}
+  .hall-frame.grade-9{border:2px solid #d4af37;padding:11px;box-shadow:0 0 30px rgba(212,175,55,.35)}
+  .hall-frame.grade-10{border:2.5px solid #d4af37;padding:12px;box-shadow:0 0 44px rgba(212,175,55,.55),inset 0 0 30px rgba(212,175,55,.12)}
+  .hall-frame.grade-10 .hall-head{background:linear-gradient(120deg,#8a6d1f,#d4af37 55%,#8a6d1f);color:#fff}
+  .hall-frame.grade-10 .hall-head .desc,.hall-frame.grade-10 .hall-head .layout-note{color:rgba(255,255,255,.88)}
   .ladder{margin-top:8px}
   .ladder .lr{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
   .ladder .lr b{color:var(--text)}
@@ -126,6 +126,15 @@
   .core-orb{display:none;justify-content:center;margin:12px 0 2px}
   .core-orb i{width:86px;height:86px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--accent) 55%,var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;font-style:normal;color:#fff;box-shadow:0 0 34px var(--accent)}
   .hall-rail{display:none;writing-mode:vertical-rl;letter-spacing:6px;font-size:14px;font-weight:800;color:var(--accent);border:var(--bw) solid var(--border);border-radius:var(--radius);background:var(--card);align-items:center;justify-content:center;padding:14px 0}
+  /* —— 1.73 协调批 —— */
+  .layout-2 .core-orb,.layout-3 .core-orb,.layout-4 .core-orb,.layout-5 .core-orb,.layout-6 .core-orb{display:flex!important}
+  .layout-4 .panels .span-all,.layout-5 .panels .span-all,.layout-6 .panels .span-all{grid-column:1/-1}
+  .hall-frame.mode-light.grade-7,.hall-frame.mode-light.grade-8{box-shadow:0 0 14px color-mix(in srgb,var(--accent) 16%,transparent)}
+  .hall-frame.mode-light.grade-9{box-shadow:0 0 16px rgba(212,175,55,.20)}
+  .hall-frame.mode-light.grade-10{box-shadow:0 0 22px rgba(212,175,55,.28)}
+  .promo{display:none;margin-top:12px;border-radius:12px;padding:11px 13px;font-size:13.5px;font-weight:700;line-height:1.6;color:#fff;background:linear-gradient(120deg,#b8860b,#d4af37 55%,#b8860b)}
+  .promo.show{display:block;animation:promoIn 1.1s ease}
+  @keyframes promoIn{0%{opacity:0;transform:scale(.96)}55%{opacity:1;transform:scale(1.015)}100%{opacity:1;transform:scale(1)}}
   .hidden{display:none!important}
   .foot{color:var(--sub);font-size:11.5px;line-height:1.6;margin-top:18px;text-align:center}
 </style>
@@ -162,6 +171,7 @@
         <div class="card hall-head" style="margin-top:0">
           <div class="big" id="hallTitle">山门</div>
           <div class="desc" id="hallSub"></div>
+          <div class="promo" id="promoBanner"></div>
           <div class="core-orb"><i id="hallOrb">⚔️</i></div>
           <div class="desc" id="hallExpText" style="margin-top:8px"></div>
           <div class="rankbar"><i id="hallExpBar" style="width:0%"></i></div>
@@ -193,7 +203,7 @@
             <div class="desc" style="margin-top:10px">本门晋品之路（名字与资源随品级而变）：</div>
             <div class="ladder" id="hallLadder"></div>
           </div>
-          <div class="card">
+          <div class="card span-all">
             <h2>🏛️ 宗门架构</h2>
             <div class="desc" id="hallPosText"></div>
             <div id="hallOrg"></div>
@@ -413,7 +423,7 @@ function renderPreview(){
 function renderHall(){
   var s=sectById(state.sectId); if(!s)return;
   applySectTheme(s,state.themeMode);
-  var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex+" grade-"+state.gradeIndex;
+  var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex+" grade-"+state.gradeIndex+(state.themeMode==="Light"?" mode-light":" mode-dark");
   $("hallRail").textContent=state.title;
   $("hallTitle").innerHTML=s.icon+" "+s.names[state.gradeIndex]+'<span class="grade-seal">'+state.gradeName+'</span>';
   $("hallSub").textContent="道统："+s.name+"（"+s.xinfa+"）　境界："+state.rankName+"　身份："+state.title+"　宗门品级："+state.gradeName+"　座右铭：「"+s.motto+"」";
@@ -483,6 +493,18 @@ function renderHall(){
   $("postNote").textContent = state.postChoice>=5
     ? "当前职务："+state.title+"（自选在任；修为已解锁到 "+IDENTITIES[state.eligibleIndex].name+"，随时可改）"
     : "当前职务："+state.title+"（自动随修为晋升；点上面任意已解锁职务即可改任）";
+  try{
+    var prev=JSON.parse(localStorage.getItem("sectPromo")||"null");
+    var cur={sect:state.sectId,rank:state.rankIndex,grade:state.gradeIndex,elig:state.eligibleIndex};
+    if(prev && prev.sect===state.sectId){
+      var msgs=[];
+      if(cur.grade>prev.grade)msgs.push("🎉 晋品！"+GRADES[prev.grade].name+" → "+GRADES[cur.grade].name+"，本门更名「"+s.names[cur.grade]+"」");
+      if(cur.rank>prev.rank)msgs.push("🎉 破境！"+RANKS[prev.rank].name+" → "+RANKS[cur.rank].name);
+      if(cur.elig>prev.elig && IDENTITIES[cur.elig])msgs.push("🎉 新位解锁："+IDENTITIES[cur.elig].name+"（可在下方自选就任）");
+      if(msgs.length){var pb=$("promoBanner");pb.innerHTML=msgs.join("<br>");pb.classList.add("show")}
+    }
+    localStorage.setItem("sectPromo",JSON.stringify(cur));
+  }catch(e){}
   $("hallPosText").innerHTML="你在宗门架构里的位置：<b>"+state.title+"</b> · "+POSITIONS[state.identityIndex];
   $("hallOrg").innerHTML=HALLS.map(function(h){
     var st = state.identityIndex>=h.headIdx ? "✅ 你已可主事" : ("主事："+h.head+"（"+IDENTITIES[h.headIdx].need+" 修为起）");

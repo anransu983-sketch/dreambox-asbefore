@@ -348,8 +348,8 @@ class PackHostActivity : Activity() {
         s.bottomBarAutoHide.set(rank < 4)
         s.pageScale.set(
             when {
-                rank <= 0 -> 0.96f
-                rank >= 6 -> 1.04f
+                rank <= 0 -> 0.98f
+                rank >= 6 -> 1.03f
                 rank >= 4 -> 1.02f
                 else -> 1.0f
             }
