@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":locale"))
     implementation(project(":ui"))
     implementation(project(":runtime:api"))
+    implementation(project(":feature:settings"))
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)

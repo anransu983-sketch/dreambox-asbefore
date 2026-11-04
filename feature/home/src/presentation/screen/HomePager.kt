@@ -59,7 +59,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import android.content.Intent
 import com.suanran.dreambox.core.contract.AppSettingsReader
+import com.suanran.dreambox.feature.settings.presentation.pack.PackStore
 import com.suanran.dreambox.core.util.format.formatBytesForDisplay
 import com.suanran.dreambox.core.model.profile.Profile
 import com.suanran.dreambox.core.model.traffic.TrafficData
@@ -207,6 +209,35 @@ private fun HomeSkyScene(
     fun speed(b: Long): String? =
         if (!isRunning || b <= 0) null else formatBytesForDisplay(b).let { (v, u) -> "$v $u/s" }
 
+    // 插件上岛：只列已安装的包，锚点在 SkyIslandScene.skyPackAnchor；点开走功能包页同一条路
+    val context = LocalContext.current
+    val packStore = remember { PackStore(context) }
+    val packSpots =
+        remember(isActive) {
+            PackStore.REGISTRY.filter { packStore.isInstalled(it) }.map { def ->
+                SkyPackSpot(def.id, def.name, skyPackAnchor(def.id))
+            }
+        }
+    val onOpenPack: (String) -> Unit =
+        remember {
+            { id ->
+                PackStore.REGISTRY.firstOrNull { it.id == id }?.let { def ->
+                    val intent =
+                        Intent().apply {
+                            setClassName(
+                                context.packageName,
+                                "com.suanran.dreambox.presentation.pack.PackHostActivity",
+                            )
+                            putExtra("pack_id", def.id)
+                            putExtra("pack_name", def.name)
+                            putExtra("pack_dir", packStore.dirOf(def.id).absolutePath)
+                            putExtra("pack_entry_class", def.entryClass)
+                        }
+                    context.startActivity(intent)
+                }
+            }
+        }
+
     SkyIslandScene(
         state =
             SkyHomeState(
@@ -224,5 +255,7 @@ private fun HomeSkyScene(
             ),
         art = remember { skyNightArt("file:///android_asset/sky_island_night.webp") },
         onHomeClick = onHomeClick,
+        packSpots = packSpots,
+        onOpenPack = onOpenPack,
     )
 }
