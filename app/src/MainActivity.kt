@@ -62,6 +62,8 @@ import com.suanran.dreambox.presentation.navigation.AppNavContainer
 import com.suanran.dreambox.presentation.navigation.AppNavigationComponent
 import com.suanran.dreambox.presentation.theme.ProvideAndroidPlatformTheme
 import com.suanran.dreambox.presentation.theme.FlyTheme
+import com.suanran.dreambox.presentation.theme.Radii
+import com.suanran.dreambox.presentation.theme.Spacing
 import com.suanran.dreambox.runtime.client.util.IntentController
 import com.suanran.dreambox.runtime.client.util.extractPendingImportUrl
 import com.tencent.mmkv.MMKV
@@ -207,6 +209,9 @@ class MainActivity : FragmentActivity() {
         setContent {
             val appSettingsViewModel = koinViewModel<AppSettingsViewModel>()
             val activitySettings by appSettingsViewModel.activitySettings.collectAsStateWithLifecycle()
+            // 门派主题实时订阅：选道/叛门后主界面立刻换装，不用重启
+            val sectId by appSettingsStore.sectPathId.state.collectAsStateWithLifecycle()
+            val sectSpec = sectThemeSpecs[sectId]
             LaunchedEffect(activitySettings.excludeFromRecents) {
                 this@MainActivity.applyExcludeFromRecents(activitySettings.excludeFromRecents)
             }
@@ -219,9 +224,11 @@ class MainActivity : FragmentActivity() {
                     }
                 CompositionLocalProvider(LocalDensity provides scaledDensity) {
                     FlyTheme(
-                        themeMode = activitySettings.themeMode,
-                        themeSeedColorArgb = activitySettings.themeSeedColorArgb,
+                        themeMode = sectSpec?.mode ?: activitySettings.themeMode,
+                        themeSeedColorArgb = sectSpec?.seedArgb ?: activitySettings.themeSeedColorArgb,
                         invertOnPrimaryColors = activitySettings.invertOnPrimaryColors,
+                        radii = sectSpec?.radii ?: Radii(),
+                        spacing = sectSpec?.spacing ?: Spacing(),
                     ) {
                         val topBarHazeState = remember { HazeState() }
                         val topBarBackground = MiuixTheme.colorScheme.surface
@@ -245,10 +252,10 @@ class MainActivity : FragmentActivity() {
                               Box(Modifier.fillMaxSize()) {
                                 AppNavContainer(navigationComponent)
                                 // 高武门派道统氛围：选道后主界面罩一层该道的双色辉光（插件页同款氛围带进本体）
-                                val aura = sectAuraColors[appSettingsStore.sectPathId.value]
+                                val aura = sectAuraColors[sectId]
                                 if (aura != null) {
                                     val auraDark =
-                                        when (activitySettings.themeMode) {
+                                        when (sectSpec?.mode ?: activitySettings.themeMode) {
                                             com.suanran.dreambox.core.model.ThemeMode.Dark -> true
                                             com.suanran.dreambox.core.model.ThemeMode.Light -> false
                                             else -> isSystemInDarkTheme()
