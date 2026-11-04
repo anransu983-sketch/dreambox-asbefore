@@ -99,6 +99,10 @@ class App : Application() {
         instance = this
         // 持久化日志先行：后续所有初始化错误都能落盘（filesDir/logs/app-diagnostic.log）。
         AppPersistentLog.init(this)
+        // 加固：签名自校验，被换签/二次打包直接拒绝启动（DEBUG 包不查）
+        if (!BuildConfig.DEBUG && !com.suanran.dreambox.security.IntegrityGuard.verify(this)) {
+            throw IllegalStateException("签名校验失败：请安装官方版本")
+        }
         if (BuildConfig.DEBUG && Timber.forest().isEmpty()) {
             Timber.plant(Timber.DebugTree())
         }
