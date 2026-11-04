@@ -202,7 +202,7 @@
         <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
         <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
         <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
-        <div class="foot">境界管你的身份（杂役→外门→内门→核心→真传→道子→门主）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div>
+        <div class="foot">境界与修为管你的身份（杂役→外门→内门→核心→真传→执事→长老→峰主→道子→门主→掌门老祖，执事起职务自选）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div>
       </div>
     </div>
   </div>
@@ -278,17 +278,17 @@ var HALLS=[
  {icon:"⚖️",name:"执法堂",duty:"戒律执法、赏罚分明",head:"长老",headIdx:6},
  {icon:"📚",name:"藏经阁",duty:"典籍收藏、功法兑换",head:"长老",headIdx:6}];
 var POSITIONS=[
- "杂役弟子：在各堂各峰打杂轮差，哪儿缺人去哪儿",
- "外门弟子：在外门听差，还没入堂口编制",
- "内门弟子：可入一堂听用，在传功、演武诸堂轮值",
- "核心弟子：堂口重点培养，常驻一堂修行",
- "真传弟子：亲传一脉，不受堂口差遣",
- "执事：执掌一堂日常事务，堂里大小事先过你的手",
- "长老：主事一堂，这一堂的兴废系于你身",
- "峰主：执掌器峰，一峰上下皆听你号令",
- "道子：诸堂诸峰见你都要礼让三分",
- "门主：全宗堂口峰头，尽归你调度",
- "掌门老祖：超然物外，堂口自有后辈打理"];
+ "在各堂各峰打杂轮差，哪儿缺人去哪儿",
+ "在外门听差，还没入堂口编制",
+ "可入一堂听用，在传功、演武诸堂轮值",
+ "堂口重点培养，常驻一堂修行",
+ "亲传一脉，不受堂口差遣",
+ "执掌一堂日常事务，堂里大小事先过你的手",
+ "主事一堂，这一堂的兴废系于你身",
+ "执掌器峰，一峰上下皆听你号令",
+ "诸堂诸峰见你都要礼让三分",
+ "全宗堂口峰头，尽归你调度",
+ "超然物外，堂口自有后辈打理"];
 function identityAt(exp){var ii=0;for(var k=0;k<IDENTITIES.length;k++)if(exp>=IDENTITIES[k].need)ii=k;return IDENTITIES[ii]}
 function gradeSalary(g){return g*4}
 function gradeGain(g){return 20+g}
@@ -304,12 +304,24 @@ var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp
 var hasBridge = !!(window.Capacitor && window.Capacitor.toNative);
 
 function sectById(id){for(var i=0;i<SECTS.length;i++)if(SECTS[i].id===id)return SECTS[i];return null}
-function applySectTheme(s){
+function applySectTheme(s,mode){
   if(!s)return;
+  var c={};for(var k in s.c)c[k]=s.c[k];
+  var nativeLight = s.id==="fu";
+  /* 明暗翻转要当场看得见：山门页按本体 themeMode 出变体——要浅色而本派原生深色时换浅色纸面（保留道统强调色），反之亦然 */
+  if(mode==="Light" && !nativeLight){
+    c.bg="#f7f3ea";c.bg2="#efe9d8";c.card="#fffaf0";c.text="#262019";c.sub="#7a6f5c";c.border=s.c.accent+"59";
+    document.documentElement.style.colorScheme="light";
+  }else if(mode==="Dark" && nativeLight){
+    c.bg="#171208";c.bg2="#1e180b";c.card="#271d0e";c.text="#f5ead2";c.sub="#b39d72";c.border="#6b5518";c.accent="#ea580c";
+    document.documentElement.style.colorScheme="dark";
+  }else{
+    document.documentElement.style.colorScheme=nativeLight?"light":"dark";
+  }
   var r=document.documentElement.style;
-  r.setProperty("--bg",s.c.bg);r.setProperty("--bg2",s.c.bg2);r.setProperty("--card",s.c.card);
-  r.setProperty("--border",s.c.border);r.setProperty("--accent",s.c.accent);r.setProperty("--accent2",s.c.accent2);
-  r.setProperty("--text",s.c.text);r.setProperty("--sub",s.c.sub);r.setProperty("--radius",s.c.radius);r.setProperty("--bw",s.c.bw);
+  r.setProperty("--bg",c.bg);r.setProperty("--bg2",c.bg2);r.setProperty("--card",c.card);
+  r.setProperty("--border",c.border);r.setProperty("--accent",c.accent);r.setProperty("--accent2",c.accent2);
+  r.setProperty("--text",c.text);r.setProperty("--sub",c.sub);r.setProperty("--radius",c.radius);r.setProperty("--bw",c.bw);
   document.body.setAttribute("data-sect",s.id);
 }
 function callNative(method,options){
@@ -400,7 +412,7 @@ function renderPreview(){
 /* —— 山门页 —— */
 function renderHall(){
   var s=sectById(state.sectId); if(!s)return;
-  applySectTheme(s);
+  applySectTheme(s,state.themeMode);
   var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex+" grade-"+state.gradeIndex;
   $("hallRail").textContent=state.title;
   $("hallTitle").innerHTML=s.icon+" "+s.names[state.gradeIndex]+'<span class="grade-seal">'+state.gradeName+'</span>';
