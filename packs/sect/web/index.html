@@ -1731,6 +1731,22 @@ function npcById(id){var n=null;NPCS.forEach(function(x){if(x.id===id)n=x});retu
 
 /* ══ NPC 回话引擎：你说话，NPC 接话（v38）══ */
 var __npcLast="",__npcLoveId="",__npcLoveN=0;
+function npcMemSave(n){
+  if(!play)return;
+  if(!play.npcMem)play.npcMem={};
+  var m=play.npcMem[n.id]||(play.npcMem[n.id]={log:[]});
+  m.last=__npcLast;m.love=(__npcLoveId===n.id?__npcLoveN:(m.love||0));
+  playSave();
+}
+function npcLogPush(id,who,txt){
+  if(!play)return;
+  if(!play.npcMem)play.npcMem={};
+  var m=play.npcMem[id]||(play.npcMem[id]={log:[]});
+  if(!m.log)m.log=[];
+  m.log.push({w:who,t:txt});
+  if(m.log.length>20)m.log=m.log.slice(m.log.length-20);
+  playSave();
+}
 function npcLoveReply(n){
   function pk(a){return a[Math.floor(Math.random()*a.length)]}
   if(__npcLoveId!==n.id){__npcLoveId=n.id;__npcLoveN=0}
@@ -1777,7 +1793,8 @@ function npcReply(n,text){
 }
 function openNpc(id){
   var n=npcById(id);if(!n)return;
-  __npcLast="";
+  var __m=(play&&play.npcMem&&play.npcMem[id])||{};
+  __npcLast=__m.last||"";__npcLoveId=id;__npcLoveN=__m.love||0;
   var box=$("npcBox");
   var mood=npcMoodOf(id);
   var moodTxt=mood===0?" · 今日心情欠佳":(mood===2?" · 今日心情大好":"");
@@ -1785,16 +1802,19 @@ function openNpc(id){
     var gifted=play&&play.npcGift[id]===play.day;
     box.innerHTML='<div class="npchead"><div class="nava">'+n.icon+'</div><div><div style="font-weight:800">'+n.name+'</div><div class="desc">'+n.role+moodTxt+'</div></div></div><div class="npclog" id="npcLog"></div><div class="mkchips" style="margin-top:8px"><button class="mkchip" data-tk="chat">💬 闲聊</button><button class="mkchip" data-tk="market">📈 问行情</button><button class="mkchip" data-tk="advice">🧭 求指点</button><button class="mkchip" data-tk="secret">🔮 打听秘闻</button></div><div class="npcinputrow"><input id="npcInput" placeholder="跟 '+n.name+' 说点什么…" maxlength="60"><button class="pbtn" id="npcSend">发送</button></div><div class="cheatrow"><button class="pbtn" id="npcGift"'+(gifted?" disabled":"")+'>'+(gifted?"今日已唠过":"🍵 唠唠家常（+2 修为）")+'</button><button class="pbtn" id="npcBye">告辞</button></div>';
     var log=$("npcLog");
-    function say(who,txt){var d=document.createElement("div");d.className="bub "+who;d.textContent=txt;log.appendChild(d);log.scrollTop=log.scrollHeight}
+    var __replay=false;
+    function say(who,txt){var d=document.createElement("div");d.className="bub "+who;d.textContent=txt;log.appendChild(d);log.scrollTop=log.scrollHeight;if(!__replay)npcLogPush(id,who,txt)}
     function ask(q,r){say("me",q);setTimeout(function(){say("npc","「"+r+"」");SFX.tap()},420)}
-    say("npc","「"+line+"」");
+    var __savedLog=(play&&play.npcMem&&play.npcMem[id]&&play.npcMem[id].log)||[];
+    if(__savedLog.length){__replay=true;__savedLog.forEach(function(m){say(m.w,m.t)});__replay=false;log.scrollTop=log.scrollHeight}
+    else say("npc","「"+line+"」");
     var TKQ={chat:"咱们聊聊近况。",market:"最近行情怎么样？",advice:"给我指点指点呗。",secret:"有没有什么秘闻，说来听听？"};
     Array.prototype.forEach.call(box.querySelectorAll("[data-tk]"),function(b){b.addEventListener("click",function(){
       var tk=b.getAttribute("data-tk");
-      ask(TKQ[tk]||"……",tk==="chat"?genLine(n):genLine(n,tk));
+      __npcLast=(tk==="chat"?"topic":tk);ask(TKQ[tk]||"……",tk==="chat"?genLine(n):genLine(n,tk));npcMemSave(n);
     })});
     var inp=$("npcInput");
-    function doSend(){var v=(inp.value||"").trim();if(!v)return;inp.value="";ask(v,npcReply(n,v))}
+    function doSend(){var v=(inp.value||"").trim();if(!v)return;inp.value="";ask(v,npcReply(n,v));npcMemSave(n)}
     var sb=$("npcSend");if(sb)sb.addEventListener("click",doSend);
     if(inp)inp.addEventListener("keydown",function(e){if(e.key==="Enter")doSend()});
     $("npcBye").addEventListener("click",function(){box.classList.remove("show")});
@@ -3964,6 +3984,7 @@ if(!play.jidao)play.jidao={pts:0,stage:0,day:"",yingDay:"",claimed:0};
 if(!play.shen)play.shen={div:0,tier:0,titanDay:"",claimed:0};
 if(!play.academy)play.academy={merit:0,hide:0,hideDay:"",examDay:"",examStep:0,examRight:0,claimed:0};
 if(!play.s01)play.s01={ch:0,day:"",end:0};
+if(!play.npcMem)play.npcMem={};
 if(play.chengxian===undefined)play.chengxian=0;
 if(!play.wiz)play.wiz={med:0,models:{},medDay:""};
 if(!play.potion)play.potion={};
