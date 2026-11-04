@@ -563,6 +563,17 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 .dinode.dl{font-size:10.5px;color:var(--sub);margin-top:4px;line-height:1.3}
 .dinode::before{content:"";position:absolute;top:20px;left:-14px;width:14px;height:2px;background:var(--border)}
 .dinode:first-child::before{display:none}
+
+/* ══ v36：封面与互动热点 ══ */
+.wcover{position:relative;height:210px;border-radius:18px;overflow:hidden;background-size:cover;background-position:center;background-color:#1e293b;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.wcover .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.16),transparent 42%,rgba(0,0,0,.42))}
+.wtitle{position:absolute;left:13px;bottom:9px;color:#fff;font-size:18px;font-weight:800;text-shadow:0 1px 8px rgba(0,0,0,.65);letter-spacing:.5px}
+.wbanner{height:106px;border-radius:13px;background-size:cover;background-position:center;background-color:#1e293b;position:relative;overflow:hidden;margin-bottom:8px}
+.wbanner .shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.38))}
+.hotspot{position:absolute;display:flex;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;background:rgba(12,12,24,.58);color:#fff;font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,.5);backdrop-filter:blur(4px);cursor:pointer;animation:hotPulse 2.2s ease-in-out infinite;font-family:inherit;z-index:3}
+@keyframes hotPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}50%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
+.hotspot.off{opacity:.6;animation:none;cursor:default}
+.wstrip{height:62px;border-radius:12px;background-size:cover;background-position:center;margin-bottom:10px}
 </style>
 
 </head>
@@ -2410,13 +2421,13 @@ function renderWorlds(){
   html+='<div class="card"><div style="font-weight:800">🗺️ 万界图</div><div class="desc" style="margin-top:4px">已开界门：炼虚通二界，大乘通五界。你的战力约 '+playerPower().toFixed(1)+'。</div></div>';
   html+=WORLDS.map(function(w){
     var open=rank>=w.need;
-    return '<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:3px">'+w.desc+'</div><div class="desc" style="margin-top:3px">界主：'+w.boss.emoji+' '+w.boss.name+' · 特产：'+wareById(w.ware).name+(play.bossKills[w.id]?' · <span style="color:#4ade80">已镇压</span>':'')+'</div>'
+    return '<div class="wcard" style="--wc:'+w.color+'44"><div class="wbanner" style="background-image:url(world-'+w.id+'.jpg)"><div class="shade"></div><div class="wtitle">'+w.icon+' '+w.name+'</div></div><div class="desc" style="margin-top:3px">'+w.desc+'</div><div class="desc" style="margin-top:3px">界主：'+w.boss.emoji+' '+w.boss.name+' · 特产：'+wareById(w.ware).name+(play.bossKills[w.id]?' · <span style="color:#4ade80">已镇压</span>':'')+'</div>'
       +(open?'<button class="pbtn" data-world="'+w.id+'" style="margin-top:7px">进入 '+w.name+'</button>':'<div class="desc" style="margin-top:7px">🔒 需'+(w.need===5?"炼虚":"大乘")+'期开启</div>')
       +'</div>';
   }).join("");
   /* 成仙路 */
   var L=ladderState();var foes=ladderFoes();
-  html+='<div class="card" style="margin-top:12px"><div style="font-weight:800">🏆 成仙路 · 登仙榜（本周赛季）</div><div class="desc" style="margin-top:4px">你位列第 <b style="color:#fbbf24">'+(L.rank>30?"—（未入榜）":L.rank)+'</b> · 今日挑战剩 '+L.left+' 次 · 只能挑战高于你 5 名内的对手。冲进前十/前三/登顶，各得一次永久 +2；登顶即<b>羽化成仙</b>。</div><div id="ladBox" style="margin-top:6px"></div>';
+  html+='<div class="card" style="margin-top:12px"><div class="wstrip" style="background-image:url(room-palace.jpg)"></div><div style="font-weight:800">🏆 成仙路 · 登仙榜（本周赛季）</div><div class="desc" style="margin-top:4px">你位列第 <b style="color:#fbbf24">'+(L.rank>30?"—（未入榜）":L.rank)+'</b> · 今日挑战剩 '+L.left+' 次 · 只能挑战高于你 5 名内的对手。冲进前十/前三/登顶，各得一次永久 +2；登顶即<b>羽化成仙</b>。</div><div id="ladBox" style="margin-top:6px"></div>';
   var rows="";
   foes.forEach(function(f){
     if(f.rank===L.rank)return;
@@ -2476,7 +2487,7 @@ var rank=state.rankIndex;
 var html='<div class="card"><div style="font-weight:800">🗺️ 万界图</div><div class="desc" style="margin-top:4px">炼虚通二界，大乘通五界。你的战力约 '+playerPower().toFixed(1)+'。</div></div>';
 html+=WORLDS.map(function(w){
 var open=rank>=w.need;
-return '<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:3px">'+w.desc+'</div><div class="desc" style="margin-top:3px">界主：'+w.boss.emoji+' '+w.boss.name+' · 特产：'+wareById(w.ware).name+(play.bossKills[w.id]?' · <span style="color:#4ade80">已镇压</span>':'')+'</div>'
+return '<div class="wcard" style="--wc:'+w.color+'44"><div class="wbanner" style="background-image:url(world-'+w.id+'.jpg)"><div class="shade"></div><div class="wtitle">'+w.icon+' '+w.name+'</div></div><div class="desc" style="margin-top:3px">'+w.desc+'</div><div class="desc" style="margin-top:3px">界主：'+w.boss.emoji+' '+w.boss.name+' · 特产：'+wareById(w.ware).name+(play.bossKills[w.id]?' · <span style="color:#4ade80">已镇压</span>':'')+'</div>'
 +(open?'<button class="pbtn" data-world="'+w.id+'" style="margin-top:7px">进入 '+w.name+'</button>':'<div class="desc" style="margin-top:7px">🔒 需'+(w.need===5?"炼虚":"大乘")+'期开启</div>')
 +'</div>';
 }).join("");
@@ -2485,7 +2496,7 @@ return html;
 }
 function renderLadderSec(){
 var L=ladderState();var foes=ladderFoes();
-var html='<div class="card"><div style="font-weight:800">🏆 成仙路 · 登仙榜（本周赛季）</div><div class="desc" style="margin-top:4px">你位列第 <b style="color:#fbbf24">'+(L.rank>30?"—（未入榜）":L.rank)+'</b> · 今日挑战剩 '+L.left+' 次 · 只能挑战高于你 5 名内的对手。冲进前十/前三/登顶，各得一次永久 +2；登顶即<b>羽化成仙</b>。</div><div id="ladBox" style="margin-top:6px"></div>';
+var html='<div class="card"><div class="wstrip" style="background-image:url(room-palace.jpg)"></div><div style="font-weight:800">🏆 成仙路 · 登仙榜（本周赛季）</div><div class="desc" style="margin-top:4px">你位列第 <b style="color:#fbbf24">'+(L.rank>30?"—（未入榜）":L.rank)+'</b> · 今日挑战剩 '+L.left+' 次 · 只能挑战高于你 5 名内的对手。冲进前十/前三/登顶，各得一次永久 +2；登顶即<b>羽化成仙</b>。</div><div id="ladBox" style="margin-top:6px"></div>';
 var rows="";
 foes.forEach(function(f){
 if(f.rank===L.rank)return;
@@ -2501,7 +2512,7 @@ var rank=state.rankIndex;
 if(rank<6)return '<div class="card"><div style="font-size:16px;font-weight:800">👑 帝路未启</div><div class="desc" style="margin-top:5px;line-height:1.8">帝路争锋，是大乘者的路。万族天骄同行，只有一人能走到尽头。你现在是'+state.rankName+'，大乘门槛 2200 修为。</div></div>';
 var D=play.dilu;
 if(D.day!==play.day){D.day=play.day;D.left=3;playSave()}
-var html='<div class="card"><div style="font-weight:800">👑 帝路争锋 · 十八关</div><div class="desc" style="margin-top:4px">一关一守将，胜者前进，每日 3 次挑战（剩 '+D.left+'）。过关赏灵石，逢六关开帝关宝箱（永久 +2）。走完十八关，成仙路现。</div>';
+var html='<div class="card"><div class="wstrip" style="background-image:url(scene-night.jpg)"></div><div style="font-weight:800">👑 帝路争锋 · 十八关</div><div class="desc" style="margin-top:4px">一关一守将，胜者前进，每日 3 次挑战（剩 '+D.left+'）。过关赏灵石，逢六关开帝关宝箱（永久 +2）。走完十八关，成仙路现。</div>';
 html+='<div class="dilurail">'+DILU_STAGES.map(function(nm,i){
 var cls=i<D.stage?"done":(i===D.stage?"now":"");
 return '<div class="dinode '+cls+'"><div class="dot">'+(i<D.stage?"✓":(i+1))+'</div><div class="dl">'+nm+'</div></div>';
@@ -2568,7 +2579,13 @@ var w=worldById(__worldSel);if(!w){__worldSel=null;renderWorlds();return}
 var ware=wareById(w.ware);
 var fought=play.bossDay[w.id]===play.day;
 var html='<button class="pbtn" id="btnWorldBack">← 回万界图</button>';
-html+='<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:4px;line-height:1.7">'+w.desc+'</div></div>';
+html+='<div class="wcover" style="background-image:url(world-'+w.id+'.jpg)"><div class="shade"></div><div class="wtitle">'+w.icon+' '+w.name+'</div>'
++'<button class="hotspot" data-hot="ware" style="left:12px;bottom:46px">'+ware.icon+' '+ware.name+' · '+ware.price+' 灵石</button>'
++(fought?'<span class="hotspot off" style="right:12px;top:12px">'+w.boss.emoji+' 界主 · 今日已战</span>':'<button class="hotspot" data-hot="boss" style="right:12px;top:12px">'+w.boss.emoji+' 挑战界主 · '+w.boss.name+'</button>')
++'<button class="hotspot" data-hot="cal" style="right:12px;bottom:46px">☠️ 讨伐灾厄</button>'
++(w.id==="xueyue"?'<button class="hotspot" data-hot="vamp" style="left:12px;top:12px">🧛 血族古堡 · 交易</button>':'')
++(w.id==="xueyue"&&moonPhase()===2?'<button class="hotspot" data-hot="wolf" style="left:50%;bottom:46px;transform:translateX(-50%)">🐺 血月荒原 · 夜猎</button>':'')
++'</div><div class="desc" style="margin:7px 2px 0;line-height:1.7">'+w.desc+' 封面上的光点都可以点：买特产、战界主、讨灾厄，都在画里办。</div>';
 html+='<div class="waregrid"><div class="ware"><div class="wic">'+ware.icon+'</div><div class="wname">'+ware.name+' <span class="haggle">界市特产</span></div><div class="wdesc">'+ware.desc+'</div><button class="pbtn wbuy" data-buy="'+ware.id+'" data-price="'+ware.price+'"'+((play.stones<ware.price||!wareUsable(ware))?" disabled":"")+'>💰 '+ware.price+' 灵石</button></div></div>';
 html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">'+w.boss.emoji+' 界主 · '+w.boss.name+'（战力 '+w.boss.power.toFixed(1)+'）</div><div class="desc" style="margin-top:4px">每日可挑战一次。胜：+8 修为（走奇遇额度）；首胜永久 +2。</div>'
 +(fought?'<div class="ok" style="margin-top:6px">今日已挑战过这位界主。</div>':'<button class="bigbtn" id="btnBoss">⚔️ 挑战界主</button>')
@@ -2576,6 +2593,17 @@ html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">'+
 html+=renderCalamityCard(w);if(w.id==="xueyue")html+=renderMoonCard();
 el.innerHTML=html;
 Array.prototype.forEach.call(el.querySelectorAll("[data-buy]"),function(b){b.addEventListener("click",function(){buyWare(b.getAttribute("data-buy"),+b.getAttribute("data-price"),b);setTimeout(renderWorlds,300)})});
+Array.prototype.forEach.call(el.querySelectorAll("[data-hot]"),function(h){h.addEventListener("click",function(){
+var k=h.getAttribute("data-hot");var t=null;
+if(k==="ware")t=el.querySelector("[data-buy]");
+if(k==="boss")t=$("btnBoss");
+if(k==="cal")t=$("btnCalamity");
+if(k==="vamp")t=$("btnVampTrade");
+if(k==="wolf")t=$("btnMoonDuel");
+if(!t){breakthroughLite("这个点今天已经办过了");return}
+if(t.disabled){breakthroughLite("暂时点不动：灵石不足，或条件未到");return}
+t.scrollIntoView({block:"center"});setTimeout(function(){t.click()},260);
+})});
 var bb=$("btnWorldBack");if(bb)bb.addEventListener("click",function(){__worldSel=null;renderWorlds()});
 var bcal=$("btnCalamity");
 if(bcal)bcal.addEventListener("click",function(){
@@ -2754,7 +2782,7 @@ var _fusionHtml=renderFusionCard();
 var mid=genTierWorlds("mid",6,"mid:"+weekKey(),6,9.5);
 var small=genTierWorlds("small",6,"small:"+play.day,3.5,7);
 var conq=Object.keys(T.conquered).length;
-var html=_fusionHtml+'<div class="card" style="margin-top:10px"><div style="font-weight:800">🌐 无数中世界 · 本周疆域（已纳入 '+conq+' 界）</div><div class="desc" style="margin-top:4px">每周刷新一批中世界。击败守界者即纳入疆域：得赏灵石，并获赠该界特产一份。</div><div id="midBox" style="margin-top:6px"></div>'
+var html=_fusionHtml+'<div class="card" style="margin-top:10px"><div class="wstrip" style="background-image:url(scene-day.jpg)"></div><div style="font-weight:800">🌐 无数中世界 · 本周疆域（已纳入 '+conq+' 界）</div><div class="desc" style="margin-top:4px">每周刷新一批中世界。击败守界者即纳入疆域：得赏灵石，并获赠该界特产一份。</div><div id="midBox" style="margin-top:6px"></div>'
 +mid.map(function(w){
 var done=!!T.conquered[w.id];
 return '<div class="ladrow"><span style="font-size:19px">'+w.icon+'</span><span style="flex:1"><b>'+w.name+'</b><span class="desc"> · 守界者 '+w.foe.emoji+" "+w.foe.name+' · 战力 '+w.foe.power.toFixed(1)+' · 特产 '+wareById(w.ware).name+'</span></span>'
