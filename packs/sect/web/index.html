@@ -130,17 +130,17 @@
   .rchip{font-size:11.5px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--sub);background:var(--bg2)}
   .rchip.done{border-color:var(--accent);color:var(--accent)}
   .rchip.cur{background:var(--accent);color:#fff;border-color:transparent;font-weight:700}
-  .steps{margin-top:4px}
-  .step{display:flex;gap:10px;position:relative;padding:5px 0}
-  .step::before{content:"";position:absolute;left:8px;top:24px;bottom:-3px;width:2px;background:var(--border)}
-  .step:last-child::before{display:none}
-  .snode{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--border);background:var(--bg2);margin-top:1px;z-index:1;box-sizing:border-box}
-  .step.done .snode{background:var(--accent);border-color:var(--accent)}
-  .step.cur .snode{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent),0 0 12px var(--accent)}
-  .step.lock{opacity:.55}
-  .step .sbody{font-size:12.5px;line-height:1.45;color:var(--sub)}
-  .step .sbody b{color:var(--text);font-size:13px}
-  .step.cur .sbody b{color:var(--accent)}
+  .trk{margin-top:4px}
+  .trk-step{display:flex;gap:10px;position:relative;padding:5px 0}
+  .trk-step::before{content:"";position:absolute;left:8px;top:24px;bottom:-3px;width:2px;background:var(--border)}
+  .trk-step:last-child::before{display:none}
+  .trk-node{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--border);background:var(--bg2);margin-top:1px;z-index:1;box-sizing:border-box}
+  .trk-step.done .trk-node{background:var(--accent);border-color:var(--accent)}
+  .trk-step.cur .trk-node{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent),0 0 12px var(--accent)}
+  .trk-step.lock{opacity:.55}
+  .trk-step .trk-body{font-size:12.5px;line-height:1.45;color:var(--sub)}
+  .trk-step .trk-body b{color:var(--text);font-size:13px}
+  .trk-step.cur .trk-body b{color:var(--accent)}
   .srcwrap{margin-top:14px}
   .srcbar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
   .srcbar i{display:block;height:100%}
@@ -347,7 +347,7 @@ function crestUri(s){
   return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';
 }
 function stepRow(t,st,tag){
-  return '<div class="step '+st+'"><span class="snode"></span><div class="sbody"><b>'+t.name+'</b>（'+t.need+' 修为） · '+t.duty+(tag?' <span style="color:var(--accent);font-weight:700">'+tag+'</span>':'')+'</div></div>';
+  return '<div class="trk-step '+st+'"><span class="trk-node"></span><div class="trk-body"><b>'+t.name+'</b>（'+t.need+' 修为） · '+t.duty+(tag?' <span style="color:var(--accent);font-weight:700">'+tag+'</span>':'')+'</div></div>';
 }
 function gradeSalary(g){return g*4}
 function gradeGain(g){return 20+g}
@@ -520,8 +520,8 @@ function renderHall(){
     return stepRow(t, i===state.postIndex?"cur":(i<=state.postEligibleIndex?"done":"lock"), i===state.postIndex?"在任":(i<=state.postEligibleIndex?"可任":""));
   }).join("");
   $("hallRankList").innerHTML='<div class="rankchips">'+realmChips+'</div>'
-    +'<div style="margin-top:6px">身份阶梯（弟子辈辈分，随修为自动晋升）：</div><div class="steps">'+idSteps+'</div>'
-    +'<div style="margin-top:8px">职位（任职差事，修为解锁后自选，可任低不任高）：</div><div class="steps">'+postSteps+'</div>';
+    +'<div style="margin-top:6px">身份阶梯（弟子辈辈分，随修为自动晋升）：</div><div class="trk">'+idSteps+'</div>'
+    +'<div style="margin-top:8px">职位（任职差事，修为解锁后自选，可任低不任高）：</div><div class="trk">'+postSteps+'</div>';
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
   $("cultDesc").innerHTML="运功一周天，修为 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+"）。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界与品级越高。";
