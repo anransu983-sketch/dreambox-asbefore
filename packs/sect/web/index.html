@@ -419,6 +419,27 @@ button.pbtn:disabled{opacity:.5}
 .forgeitem.owned{border-color:rgba(251,191,36,.55)}
 .forgeitem.active{border-color:#fbbf24;box-shadow:0 0 12px rgba(251,191,36,.45)}
 .forgeitem .fs2.gd{font-weight:700}
+
+.book .bgd{display:block;font-size:9px;letter-spacing:1px;margin-bottom:3px}
+.bcard .bstar2{font-size:10.5px;color:var(--sub)}
+
+/* ── 功法封面与特效（v22）：系列色封面＋品阶金带＋流光 ── */
+#tomeShelf{position:relative}
+.shelf{position:relative}
+.book{flex-direction:column;writing-mode:horizontal-tb;letter-spacing:0;min-height:88px;border-radius:5px 5px 2px 2px;padding:5px 2px 7px;position:relative;overflow:hidden;background:linear-gradient(165deg,color-mix(in srgb,var(--sc,#6366f1) 28%,#141126),color-mix(in srgb,var(--sc,#6366f1) 10%,#0c0a1e));border:1px solid color-mix(in srgb,var(--sc,#6366f1) 45%,transparent);justify-content:flex-start;gap:1px}
+.book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--gc,#9ca3af),color-mix(in srgb,var(--gc,#9ca3af) 35%,transparent))}
+.book .bgd{font-size:9px;font-weight:800;color:var(--gc,#9ca3af);letter-spacing:1px;margin:0}
+.book .bicon{font-size:15px;line-height:1.15;opacity:.92}
+.book .bt{writing-mode:vertical-rl;font-size:10.5px;letter-spacing:2px;color:var(--sub)}
+.book.owned{background:linear-gradient(165deg,color-mix(in srgb,var(--sc,#6366f1) 62%,#05040f),color-mix(in srgb,var(--sc,#6366f1) 32%,#05040f));border-color:var(--gc,#9ca3af)}
+.book.owned .bt{color:#fff}
+.book.owned::after{content:"";position:absolute;top:-30%;bottom:-30%;width:34%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.32),transparent);transform:rotate(8deg);animation:bookshine 3.8s ease-in-out infinite}
+@keyframes bookshine{0%,55%{left:-60%}88%,100%{left:135%}}
+.shelfbar{height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:6px;overflow:hidden}
+.shelfbar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),#fbbf24)}
+.bcard{position:relative;overflow:hidden}
+.bcard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--gc,#6366f1);opacity:.9}
+.bcard.on{border-color:var(--gc,#fbbf24);box-shadow:0 0 10px var(--gc,#fbbf24)}
 </style>
 
 </head>
@@ -938,14 +959,17 @@ function updatePatrol(){
 function updateTomeShelf(){
   if(!play)return;
   $("tomeShelf").innerHTML=TOME_SERIES.map(function(sr){
-    var books=sr.tomes.map(function(t){
+    var books=sr.tomes.map(function(t,bi){
       var owned=play.tomes.indexOf(sr.id+":"+t)>=0;
-      return '<div class="book'+(owned?" owned":"")+((play.lastDrawn===sr.id+":"+t)?" pop":"")+'">'+t+"</div>";
+      var g=(sr.grades&&sr.grades[bi])||0;
+      return '<div class="book'+(owned?" owned":"")+((play.lastDrawn===sr.id+":"+t)?" pop":"")+'" style="--sc:'+(sr.color||"#6366f1")+';--gc:'+GD_COLORS[g]+'"><span class="bgd">'+GD[g]+'</span><span class="bicon">'+(sr.icon||"📖")+'</span><span class="bt">'+t+"</span></div>";
     }).join("");
     var cnt=play.tomes.filter(function(k){return k.split(":")[0]===sr.id}).length;
-    return '<div class="shelf"><div class="shelf-name">'+sr.name+" · "+cnt+" / "+sr.tomes.length+(cnt===sr.tomes.length?" · 已集齐":"")+'</div><div class="shelfrow">'+books+"</div></div>";
+    return '<div class="shelf"><div class="shelf-name">'+(sr.icon||"")+" "+sr.name+" · "+cnt+" / "+sr.tomes.length+(cnt===sr.tomes.length?" · 已集齐 ✦":"")+'</div><div class="shelfbar"><i style="width:'+Math.round(cnt/sr.tomes.length*100)+'%"></i></div><div class="shelfrow">'+books+"</div></div>";
   }).join("");
 }
+var GD=["凡阶","黄阶","玄阶","地阶","天阶","圣阶","帝阶"];
+var GD_COLORS=["#9ca3af","#a3e635","#38bdf8","#a78bfa","#fbbf24","#e879f9","#fb7185"];
 var FABAO_GRADES=["凡器","法器","灵器","宝器","道器","帝器"];
 var FABAO_COLORS=["#9ca3af","#4ade80","#38bdf8","#a78bfa","#fbbf24","#fb7185"];
 var ARTIFACTS=[
@@ -1137,9 +1161,12 @@ var EVENTS=[
  {t:"雨夜顿悟",d:"夜里雨打芭蕉，你睡不着，披衣坐在洞口看雨。",a:{x:"顺势打坐",r:"雨声渐远，心里那层窗户纸捅破了。",amt:19},b:{x:"回屋睡觉",r:"一夜好睡，第二天神清气爽。",amt:5}},
  {t:"秘境传闻",d:"茶摊上听人说，百里外的枯井夜里会冒宝光，已有散修赶去。",a:{x:"记下方位",r:"你把方位默记在心，谁知道哪天用得上。",amt:9},b:{x:"听个热闹",r:"宝光真假难辨，你喝完茶就回了山门。",amt:3}}];
 var TOME_SERIES=[
- {id:"jianjue",name:"剑诀",tomes:["破云剑式","流风回雪","寒潭照月","一线天"]},
- {id:"shenfa",name:"身法",tomes:["踏雪无痕","缩地成寸","云龙三折","鬼影迷踪"]},
- {id:"xinfa",name:"心法",tomes:["抱元守一","沧海潮生","太虚引气","焚心诀"]}];
+ {id:"jianjue",name:"剑诀",icon:"⚔️",color:"#38bdf8",grades:[0,1,2,3,4,5],tomes:["破云剑式","流风回雪","寒潭照月","一线天","裂穹剑罡","无名剑经"]},
+ {id:"shenfa",name:"身法",icon:"👣",color:"#4ade80",grades:[0,1,2,3,4,5],tomes:["踏雪无痕","咫尺天涯","云龙三折","鬼影迷踪","鹏程万里","虚空漫步"]},
+ {id:"xinfa",name:"心法",icon:"🧘",color:"#a78bfa",grades:[0,1,2,3,4,5],tomes:["抱元守一","沧海潮生","太虚引气","焚心诀","冰心玉壶","大自在观想法"]},
+ {id:"daojue",name:"刀诀",icon:"🗡️",color:"#fb7185",grades:[0,1,2,3,4,5],tomes:["断江刀","裂空斩","饮血狂刀","归海一刀","天刀九问","无间刀狱"]},
+ {id:"quanzhang",name:"拳掌",icon:"👊",color:"#fbbf24",grades:[0,1,2,3,4,5],tomes:["崩山拳","绵掌","开碑手","千叠浪掌","昊阳神掌","覆海印"]},
+ {id:"zhenjue",name:"阵诀",icon:"♟️",color:"#22d3ee",grades:[0,1,2,3,4,5],tomes:["小周天阵图","迷踪阵解","聚灵锁关","八门金锁","星罗棋布","九宫绝杀阵"]}];
 var FEED_T=[
  "{n} 昨日闭关出来，气息又厚了一层",
  "{n} 在演武堂连胜三场，名声渐起",
@@ -1362,14 +1389,22 @@ function doCastDivine(d){
   }
 }
 var SPELLS=[
- {id:"fire",icon:"🔥",name:"火球术",cost:10,desc:"掌心凝火，轰然而出"},
- {id:"ice",icon:"❄️",name:"冰封术",cost:12,desc:"寒气凝霜，封冻千里"},
- {id:"thunder",icon:"⚡",name:"雷击术",cost:15,desc:"引雷入掌，霹雳惊魂"},
- {id:"sword",icon:"🗡️",name:"御剑术",cost:18,desc:"以气御剑，千里取首"},
- {id:"heal",icon:"💚",name:"回春术",cost:12,desc:"生机流转，伤势尽复"},
- {id:"earth",icon:"🪨",name:"土墙术",cost:10,desc:"拔地成墙，固若金汤"},
- {id:"wind",icon:"🌪️",name:"风刃术",cost:14,desc:"风凝为刃，无形杀人"},
- {id:"water",icon:"💧",name:"水幕术",cost:11,desc:"水幕天华，卸力无形"}];
+ {id:"earth",icon:"🪨",name:"土墙术",grade:0,cost:10,desc:"拔地成墙，固若金汤"},
+ {id:"fire",icon:"🔥",name:"火球术",grade:1,cost:10,desc:"掌心凝火，轰然而出"},
+ {id:"water",icon:"💧",name:"水幕术",grade:1,cost:11,desc:"水幕天华，卸力无形"},
+ {id:"vine",icon:"🌿",name:"藤缚术",grade:1,cost:13,desc:"青藤破土，缠缚千钧"},
+ {id:"wind",icon:"🌪️",name:"风刃术",grade:2,cost:14,desc:"风凝为刃，无形杀人"},
+ {id:"ice",icon:"❄️",name:"冰封术",grade:2,cost:12,desc:"寒气凝霜，封冻千里"},
+ {id:"heal",icon:"💚",name:"回春术",grade:2,cost:12,desc:"生机流转，伤势尽复"},
+ {id:"cone",icon:"🧊",name:"冰锥术",grade:2,cost:14,desc:"冰锥如雨，透骨生寒"},
+ {id:"spike",icon:"🗻",name:"地刺术",grade:2,cost:15,desc:"地刺突起，破土穿云"},
+ {id:"thunder",icon:"⚡",name:"雷击术",grade:3,cost:15,desc:"引雷入掌，霹雳惊魂"},
+ {id:"sword",icon:"🗡️",name:"御剑术",grade:3,cost:18,desc:"以气御剑，千里取首"},
+ {id:"net",icon:"🕸️",name:"雷网术",grade:3,cost:18,desc:"雷光成网，疏而不漏"},
+ {id:"phantom",icon:"🌫️",name:"幻影术",grade:3,cost:19,desc:"幻影重重，真假莫辨"},
+ {id:"gale",icon:"🍃",name:"御风术",grade:1,cost:12,desc:"御风而行，身轻如燕"},
+ {id:"gold",icon:"✨",name:"金光咒",grade:4,cost:26,desc:"金光护体，万邪不侵"},
+ {id:"fentian",icon:"☄️",name:"焚天煮海",grade:6,cost:60,desc:"帝阶禁术 · 焚天煮海，万物成灰"}];
 var spellSel=null;
 function castInto(stageId,fxId,icon,mode){
   var fx=$(fxId);if(!fx)return;
@@ -1380,11 +1415,11 @@ function castInto(stageId,fxId,icon,mode){
 function renderSpells(){
   var el=$("spellsBody");if(!el||!play)return;
   var html='<div class="caststage" id="castStage"><div class="castfx" id="castFx"></div><div class="casthint">反复施放精进：初学→小成→精通→大成→圆满→超脱</div></div>';
-  html+='<div class="bgrid" style="grid-template-columns:repeat(4,1fr);margin-top:0">'+SPELLS.map(function(sp){var owned=play.spells.indexOf(sp.id)>=0;var sxp=(play.spellXp[sp.id]||0);var st2=tierOf(sxp);return '<button class="bcard'+(spellSel===sp.id?" on":"")+'" data-spell="'+sp.id+'"><span class="bic">'+sp.icon+'</span><span class="bname">'+sp.name+'</span><span class="bstar">'+(owned?('<b style="color:'+TIERS[st2].color+'">'+TIERS[st2].name+'</b>'):"💰"+sp.cost)+'</span></button>'}).join("")+'</div>';
+  html+='<div class="bgrid" style="grid-template-columns:repeat(4,1fr);margin-top:0">'+SPELLS.map(function(sp){var owned=play.spells.indexOf(sp.id)>=0;var sxp=(play.spellXp[sp.id]||0);var st2=tierOf(sxp);return '<button class="bcard'+(spellSel===sp.id?" on":"")+'" style="--gc:'+GD_COLORS[sp.grade]+'" data-spell="'+sp.id+'"><span class="bic">'+sp.icon+'</span><span class="bname">'+sp.name+'</span><span class="bstar" style="color:'+GD_COLORS[sp.grade]+'">'+GD[sp.grade]+'</span><span class="bstar2">'+(owned?('<b style="color:'+TIERS[st2].color+'">'+TIERS[st2].name+'</b>'):"💰"+sp.cost)+'</span></button>'}).join("")+'</div>';
   var sel=null;SPELLS.forEach(function(x){if(x.id===spellSel)sel=x});
   if(sel){
     var owned2=play.spells.indexOf(sel.id)>=0;
-    html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · '+sel.desc+'</div>';
+    html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · <b style="color:'+GD_COLORS[sel.grade]+'">'+GD[sel.grade]+'</b> · '+sel.desc+'</div>';
     if(owned2)html+=tierSeg(play.spellXp[sel.id]||0);
     if(!owned2)html+='<button class="bigbtn" id="btnLearnSpell"'+(play.stones<sel.cost?" disabled":"")+'>📜 学习 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
     else html+='<button class="bigbtn" id="btnCastSpell">✨ 施放'+sel.name+'（熟练 +1）</button>';
@@ -1396,27 +1431,30 @@ function renderSpells(){
   var bc=$("btnCastSpell");if(bc)bc.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(sp)doCastSpell(sp)});
 }
 var DIVINE_BASE=[
- {id:"suodi",icon:"👣",name:"缩地成寸",cost:80,desc:"一步千里，遁法大成"},
- {id:"tianyan",icon:"👁️",name:"天眼通",cost:80,desc:"洞悉虚妄，看破隐匿"}];
+ {id:"suodi",icon:"👣",name:"缩地成寸",grade:2,cost:80,desc:"一步千里，遁法大成"},
+ {id:"tianyan",icon:"👁️",name:"天眼通",grade:3,cost:80,desc:"洞悉虚妄，看破隐匿"},
+ {id:"sadou",icon:"🌟",name:"撒豆成兵",grade:4,cost:120,desc:"一把灵豆撒出，千军万马听令"},
+ {id:"santou",icon:"👹",name:"三头六臂",grade:5,cost:150,desc:"三头六臂齐出，战力翻倍"},
+ {id:"fatian",icon:"⛰️",name:"法天象地",grade:6,cost:200,desc:"帝阶神通 · 身化巨岳，顶天立地"}];
 var SECT_DIVINE={
- jian:{id:"wanjian",icon:"⚔️",name:"万剑归宗",cost:100,desc:"万剑齐发，剑意冲霄"},
- fu:{id:"wulei",icon:"⚡",name:"五雷正法",cost:100,desc:"引九天神雷，涤荡妖氛"},
- zhen:{id:"xingdou",icon:"🌌",name:"周天星斗",cost:100,desc:"引星斗之力，布绝世大阵"},
- ti:{id:"jingang",icon:"🛡️",name:"金刚不坏",cost:100,desc:"肉身成圣，万法不侵"},
- kui:{id:"qianji",icon:"🎭",name:"千机百变",cost:100,desc:"傀儡千变，真假难辨"},
- gui:{id:"youming",icon:"💀",name:"幽冥召唤",cost:100,desc:"唤幽冥之众，号令阴兵"},
- mo:{id:"xuehai",icon:"🩸",name:"血海滔天",cost:100,desc:"血海翻涌，吞天噬地"}};
+ jian:[{id:"wanjian",icon:"⚔️",name:"万剑归宗",grade:4,cost:100,desc:"万剑齐发，剑意冲霄"},{id:"jianxin",icon:"💎",name:"剑心通明",grade:5,cost:150,desc:"剑心如镜，照破一切虚妄剑招"}],
+ fu:[{id:"wulei",icon:"⚡",name:"五雷正法",grade:4,cost:100,desc:"引九天神雷，涤荡妖氛"},{id:"wanfu",icon:"🔯",name:"万符归宗",grade:5,cost:150,desc:"万符同源，一符出而万法随"}],
+ zhen:[{id:"xingdou",icon:"🌌",name:"周天星斗",grade:4,cost:100,desc:"引星斗之力，布绝世大阵"},{id:"qipan",icon:"♟️",name:"棋定乾坤",grade:5,cost:150,desc:"以天地为棋盘，众生为棋子，落子定乾坤"}],
+ ti:[{id:"jingang",icon:"🛡️",name:"金刚不坏",grade:4,cost:100,desc:"肉身成圣，万法不侵"},{id:"bashan",icon:"💪",name:"力拔山河",grade:5,cost:150,desc:"一力降十会，山河亦可拔"}],
+ kui:[{id:"qianji",icon:"🎭",name:"千机百变",grade:4,cost:100,desc:"傀儡千变，真假难辨"},{id:"tishen",icon:"🪆",name:"替身傀儡",grade:5,cost:150,desc:"以傀替身，死劫之中留一线生机"}],
+ gui:[{id:"youming",icon:"💀",name:"幽冥召唤",grade:4,cost:100,desc:"唤幽冥之众，号令阴兵"},{id:"huangquan",icon:"🏮",name:"黄泉引路",grade:5,cost:150,desc:"黄泉路上点灯，亡魂见之俯首"}],
+ mo:[{id:"xuehai",icon:"🩸",name:"血海滔天",grade:4,cost:100,desc:"血海翻涌，吞天噬地"},{id:"tianmo",icon:"🌑",name:"天魔解体",grade:5,cost:150,desc:"解体燃血，刹那换绝巅之力"}]};
 var divineSel=null;
-function divineList(){var l=DIVINE_BASE.slice();var sd=SECT_DIVINE[state.sectId];if(sd)l.push(sd);return l}
+function divineList(){var l=DIVINE_BASE.slice();var sd=SECT_DIVINE[state.sectId];if(sd)l=l.concat(sd);return l}
 function renderDivine(){
   var el=$("divineBody");if(!el||!play)return;
   var list=divineList();
   var html='<div class="caststage" id="divineStage"><div class="castfx" id="divineFx"></div><div class="casthint">习成 +2 · 大成再 +2 · 超脱再 +2（永久修炼，宿主结算）</div></div>';
-  html+='<div class="bgrid" style="grid-template-columns:repeat(3,1fr);margin-top:0">'+list.map(function(d){var owned=play.divines.indexOf(d.id)>=0;var dxp=(play.divineXp[d.id]||0);var dt2=tierOf(dxp);return '<button class="bcard'+(divineSel===d.id?" on":"")+'" data-divine="'+d.id+'"><span class="bic">'+d.icon+'</span><span class="bname">'+d.name+'</span><span class="bstar">'+(owned?('<b style="color:'+TIERS[dt2].color+'">'+TIERS[dt2].name+'</b>'):"💰"+d.cost)+'</span></button>'}).join("")+'</div>';
+  html+='<div class="bgrid" style="grid-template-columns:repeat(4,1fr);margin-top:0">'+list.map(function(d){var owned=play.divines.indexOf(d.id)>=0;var dxp=(play.divineXp[d.id]||0);var dt2=tierOf(dxp);return '<button class="bcard'+(divineSel===d.id?" on":"")+'" style="--gc:'+GD_COLORS[d.grade]+'" data-divine="'+d.id+'"><span class="bic">'+d.icon+'</span><span class="bname">'+d.name+'</span><span class="bstar" style="color:'+GD_COLORS[d.grade]+'">'+GD[d.grade]+'</span><span class="bstar2">'+(owned?('<b style="color:'+TIERS[dt2].color+'">'+TIERS[dt2].name+'</b>'):"💰"+d.cost)+'</span></button>'}).join("")+'</div>';
   var sel=null;list.forEach(function(x){if(x.id===divineSel)sel=x});
   if(sel){
     var owned2=play.divines.indexOf(sel.id)>=0;
-    html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · '+sel.desc+'</div>';
+    html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · <b style="color:'+GD_COLORS[sel.grade]+'">'+GD[sel.grade]+'</b> · '+sel.desc+'</div>';
     if(owned2)html+=tierSeg(play.divineXp[sel.id]||0);
     if(!owned2)html+='<button class="bigbtn" id="btnLearnDivine"'+(play.stones<sel.cost?" disabled":"")+'>🌌 参悟神通 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
     else html+='<button class="bigbtn" id="btnCastDivine">✨ 施展'+sel.name+'（熟练 +1）</button>';
@@ -1590,8 +1628,19 @@ function startAlchemy(){
     });
   });
 }
+
+function tomeDrawFx(completed,srName){
+  setTimeout(function(){
+    var pb=document.querySelector(".book.pop");
+    var host=pb?pb.closest(".shelf"):null;
+    if(!host)host=$("tomeShelf");
+    if(!host)return;
+    burstFx(host,["✨","📖","🌟"],completed?13:7);
+    if(completed)floatFx(host,srName+"集齐 ✦");
+  },70);
+}
 function doDraw(){
-  var all=[];TOME_SERIES.forEach(function(sr){sr.tomes.forEach(function(t){all.push({sid:sr.id,sname:sr.name,t:t})})});
+  var all=[];TOME_SERIES.forEach(function(sr){sr.tomes.forEach(function(t,bi){var g=(sr.grades&&sr.grades[bi])||0;var w=7-g;for(var wi=0;wi<w;wi++)all.push({sid:sr.id,sname:sr.name,t:t,g:g})})});
   var pick=all[Math.floor(Math.random()*all.length)];
   var key=pick.sid+":"+pick.t;
   if(play.tomes.indexOf(key)>=0){
@@ -1606,14 +1655,14 @@ function doDraw(){
   var sr=null;TOME_SERIES.forEach(function(x){if(x.id===pick.sid)sr=x});
   var ownedIn=play.tomes.filter(function(k){return k.split(":")[0]===pick.sid}).length;
   var justCompleted=ownedIn===sr.tomes.length&&!play.seriesClaimed[pick.sid];
-  play.lastDrawn=key;play.drawText="《"+pick.t+"》（"+sr.name+" "+ownedIn+"/"+sr.tomes.length+"）";
+  play.lastDrawn=key;play.drawText="《"+pick.t+"》（"+sr.name+" · "+GD[pick.g||0]+" "+ownedIn+"/"+sr.tomes.length+"）";
   playSave();
   if(justCompleted){
     claimReward("series",{series:pick.sid},function(err){
       if(!err){play.seriesClaimed[pick.sid]=1;play.drawText+="——"+sr.name+"集齐！永久修炼 +2";playSave()}
-      render();
+      render();tomeDrawFx(true,sr.name);
     });
-  }else render();
+  }else{render();tomeDrawFx(false,"")}
 }
 
 function playFix(){
