@@ -493,6 +493,18 @@ class PackHostActivity : Activity() {
                         s.sectPostMigrated.set(true)
                         sectStateJson()
                     }
+                    "cheat" -> {
+                        // 修改器（用户自备面板）：直接设定修为加成，境界/品级/身份随总修为自动重算
+                        if (options.has("expBonus")) {
+                            s.sectExpBonus.set(options.optInt("expBonus").coerceIn(0, 999999))
+                        }
+                        if (options.has("expDelta")) {
+                            s.sectExpBonus.set((s.sectExpBonus.value + options.optInt("expDelta")).coerceIn(0, 999999))
+                        }
+                        val st = JSONObject(sectStateJson())
+                        applySectRankLayout(st.optInt("rankIndex", 0))
+                        sectStateJson()
+                    }
                     "reward" -> {
                         // 互动奖励（1.77）：数额与每日上限由宿主定版，插件只报 kind/result，防刷靠宿主台账
                         if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派")

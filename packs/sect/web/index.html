@@ -385,6 +385,35 @@ button.pbtn:disabled{opacity:.5}
 .fxtext{position:absolute;left:50%;top:34%;transform:translateX(-50%);font-size:19px;font-weight:800;color:#fbbf24;text-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none;animation:fxup 1.3s ease-out forwards;z-index:6}
 .segbar i.on.pop{animation:segpop .5s cubic-bezier(.3,.9,.3,1.5)}
 @keyframes segpop{0%{transform:scaleY(1)}40%{transform:scaleY(2.1)}100%{transform:scaleY(1)}}
+
+/* ── 修改器（v18）── */
+.cheatrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.cheatrow input{flex:1;min-width:120px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px}
+
+/* ── 血脉 / 灵兽（v19）── */
+.bloodhero{text-align:center;padding:16px 12px;border-radius:16px;background:radial-gradient(circle at 50% 28%,rgba(99,102,241,.18),transparent 72%);border:1px solid var(--border);position:relative;overflow:hidden}
+.bloodemblem{font-size:54px;width:96px;height:96px;margin:0 auto 8px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bc,#6366f1);box-shadow:0 0 26px var(--bc,#6366f1);animation:emblempulse 2.6s ease-in-out infinite;cursor:pointer;position:relative}
+@keyframes emblempulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.bloodname{font-size:17px;font-weight:800;color:var(--text)}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.bcard{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:13px;background:var(--card);border:1px solid var(--border);color:var(--text);cursor:pointer}
+.bcard.on{border-color:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.3)}
+.bcard .bic{font-size:25px;line-height:1.15}
+.bcard .bname{font-size:12.5px;font-weight:700}
+.bcard .bstar{font-size:10.5px;color:var(--sub)}
+.petstage{position:relative;text-align:center;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);overflow:hidden}
+.sheet .petstage{background:rgba(255,255,255,.05)}
+.petbig{display:inline-block;animation:petbounce 2.2s ease-in-out infinite;cursor:pointer;line-height:1.25}
+@keyframes petbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* ── 法术 / 神通（v19）── */
+.caststage{position:relative;height:118px;border-radius:14px;background:radial-gradient(circle at 50% 62%,rgba(99,102,241,.28),rgba(10,10,26,.35) 72%);border:1px solid rgba(255,255,255,.12);overflow:hidden;margin-bottom:10px}
+.castfx{position:absolute;left:6%;top:34%;font-size:38px;opacity:0;pointer-events:none}
+.castfx.fly{animation:castfly .8s ease-out forwards}
+@keyframes castfly{0%{opacity:0;transform:translateX(0) scale(.6)}15%{opacity:1}70%{opacity:1;transform:translateX(190px) scale(1.15) rotate(14deg)}100%{opacity:0;transform:translateX(240px) scale(1.35)}}
+.castfx.zoom{left:50%;top:22%;animation:divinezoom 1.05s ease-out forwards}
+@keyframes divinezoom{0%{opacity:0;transform:translateX(-50%) scale(.4)}40%{opacity:1;transform:translateX(-50%) scale(1.3)}100%{opacity:0;transform:translateX(-50%) scale(1.7)}}
+.casthint{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:12px;color:#a5b4fc;pointer-events:none}
 </style>
 
 </head>
@@ -483,6 +512,8 @@ button.pbtn:disabled{opacity:.5}
       <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
       <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
       <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
+      <button class="ghost" id="btnCheat">🛠️ 修改器（灵石 / 修为）</button>
+      <button class="ghost" id="btnBlood">🩸 血脉觉醒</button>
       <div class="foot">境界与修为管你的身份（杂役→外门→内门→核心→亲传→道子，随修为自动晋升）与职位（执事→长老→峰主→太上长老→掌门→老祖，解锁后自选任职）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div></div></div>
   </div>
   <div class="room sroom" id="room-cave">
@@ -535,8 +566,11 @@ button.pbtn:disabled{opacity:.5}
     <div class="sshade"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">📚 藏经阁</div><div class="sroom-sub">点书架抽功法、查图鉴</div></div></div>
 <button class="obj" data-sheet="sheet-tome" style="left:24%;top:50%"><span class="otag">📚 剑诀架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-tome" style="left:53%;top:44%"><span class="otag">📚 心法架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-tome" style="left:80%;top:58%"><span class="otag">🪜 登楼</span><span class="opin"></span></button>
+    <button class="obj" data-sheet="sheet-spells" style="left:36%;top:71%"><span class="otag">📜 法术架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-divine" style="left:66%;top:26%"><span class="otag">🌌 神通碑</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-tome"><div class="sheet-hd"><div class="sheet-title">📚 藏经阁</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div id="tomeShelf"></div>
       <div id="tomeAct"></div></div></div>
+    <div class="sheet" id="sheet-spells"><div class="sheet-hd"><div class="sheet-title">📜 法术</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body" id="spellsBody"></div></div>
+    <div class="sheet" id="sheet-divine"><div class="sheet-hd"><div class="sheet-title">🌌 神通</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body" id="divineBody"></div></div>
   </div>
   <div class="room sroom" id="room-forge">
     <img class="sbg" id="forgeBg" src="room-forge.jpg" alt="">
@@ -545,6 +579,30 @@ button.pbtn:disabled{opacity:.5}
 <button class="obj" data-sheet="sheet-forge" style="left:46%;top:54%"><span class="otag">🔥 熔炉</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-forge" style="left:77%;top:50%"><span class="otag">🗡️ 法宝架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-forge" style="left:20%;top:68%"><span class="otag">⚒️ 铁砧</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-forge"><div class="sheet-hd"><div class="sheet-title">🔨 器峰</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="forgegrid" id="forgeGrid"></div>
       <div class="card"><div class="desc" id="forgeDetail">点一件法宝看它的来历。图鉴随宗门品级解锁，只是观瞻，不占差事次数。</div></div></div></div>
+  </div>
+  <div class="room" id="room-cheat">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🛠️ 修改器</div><div class="room-sub">自家后院 · 改完即时生效</div></div></div>
+    <div class="room-body">
+      <div class="card">
+        <h2>💰 灵石</h2>
+        <div class="desc">当前：<b id="cheatStones" style="color:#fbbf24">0</b> 枚（灵石存在插件本地）</div>
+        <div class="cheatrow"><input id="inStones" type="number" placeholder="输入数量"><button class="pbtn" id="btnStonesSet">设为此数</button></div>
+        <div class="cheatrow"><button class="pbtn" data-stones="100">+100</button><button class="pbtn" data-stones="1000">+1000</button><button class="pbtn" data-stones="10000">+1万</button><button class="pbtn" id="btnStonesZero">清零</button></div>
+      </div>
+      <div class="card">
+        <h2>✦ 修为</h2>
+        <div class="desc" id="cheatExpText"></div>
+        <div class="cheatrow"><input id="inExp" type="number" placeholder="输入加成值"><button class="pbtn" id="btnExpSet">设定加成</button></div>
+        <div class="cheatrow"><button class="pbtn" data-exp="100">+100</button><button class="pbtn" data-exp="500">+500</button><button class="pbtn" data-exp="2000">+2000</button></div>
+        <div class="cheatrow"><button class="pbtn" id="btnExpTop">一键圣地 · 大乘（总修为 4500）</button><button class="pbtn" id="btnExpZero">加成清零</button></div>
+        <div class="desc" style="margin-top:8px">修为 = 入门天数×10 + 配置×25 + 插件×20 + 修为加成，改的是「加成」这一项。境界、品级、身份、职位都按总修为当场重算，本体布局（顶栏毛玻璃、氛围动画、底栏自动隐藏、页面缩放）也会跟着境界变。</div>
+        <div class="err" id="cheatErr"></div>
+      </div>
+    </div>
+  </div>
+  <div class="room" id="room-blood">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🩸 血脉</div><div class="room-sub">觉醒一脉 · 血脉之力随阶而涨</div></div></div>
+    <div class="room-body" id="bloodBody"></div>
   </div>
   <div class="room" id="room-events">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🎲 今日奇遇</div><div class="room-sub">每日刷新 · 选择决定收获</div></div></div>
@@ -1011,8 +1069,7 @@ function renderHall(){
   updateScripture(s);
   updatePatrol();
   updateTomeShelf();
-  renderForge();
-}
+  renderForge(); renderCheat(); renderSpells(); renderDivine(); renderBlood(); }
 Array.prototype.forEach.call(document.querySelectorAll("[data-close]"),function(el){
   el.addEventListener("click",closeRoomsUI);
 });
@@ -1147,7 +1204,7 @@ function renderCave(){
     var avail=(fc.key==="garden"&&lvl>0&&!play.gardenDone)||(!maxed&&capOk&&cost!==null&&play.stones>=cost);
     var pips="";for(var di=0;di<fc.max;di++)pips+=di<lvl?"●":"○";
     return '<button class="obj'+(avail?" avail":"")+'" data-fac="'+fc.key+'" style="left:'+pos[fc.key][0]+'%;top:'+pos[fc.key][1]+'%"><span class="otag">'+fc.icon+" "+fc.name+' <span class="opips">'+pips+'</span></span><span class="opin"></span></button>';
-  }).join("");
+  }).join("")+'<button class="obj" data-fac="pet" style="left:62%;top:31%"><span class="otag">🐾 灵兽园</span><span class="opin"></span></button>';
   Array.prototype.forEach.call(document.querySelectorAll("#caveObjs .obj"),function(el){
     el.addEventListener("click",function(){caveSel=el.getAttribute("data-fac");renderCaveSheet();$("sheet-cave").classList.add("show")});
   });
@@ -1192,7 +1249,87 @@ function facVisual(fc,lvl){
   }
   return "";
 }
+
+function renderCheat(){
+  var cs=$("cheatStones");if(!cs)return;
+  cs.textContent=play?play.stones:0;
+  var base=(state.days||0)*10+(state.profileCount||0)*25+(state.packCount||0)*20;
+  $("cheatExpText").innerHTML="总修为 <b style='color:#fbbf24'>"+state.exp+"</b>（基础 "+base+" ＋ 加成 "+(state.expBonus||0)+"） · "+state.rankName+" · "+state.gradeName+" · "+state.title;
+}
+function cheatExpSet(v){
+  v=Math.max(0,Math.min(999999,v|0));
+  if(hasBridge){
+    callNative("cheat",{expBonus:v}).then(function(s){state=Object.assign(state,s);render()}).catch(function(e){var ce=$("cheatErr");if(ce)ce.textContent="改修为失败："+e.message});
+  }else{state.expBonus=v;mockDerive();mockSave();render()}
+}
+function cheatExpAdd(d){cheatExpSet((state.expBonus||0)+d)}
+
+var SPELLS=[
+ {id:"fire",icon:"🔥",name:"火球术",cost:10,desc:"掌心凝火，轰然而出"},
+ {id:"ice",icon:"❄️",name:"冰封术",cost:12,desc:"寒气凝霜，封冻千里"},
+ {id:"thunder",icon:"⚡",name:"雷击术",cost:15,desc:"引雷入掌，霹雳惊魂"},
+ {id:"sword",icon:"🗡️",name:"御剑术",cost:18,desc:"以气御剑，千里取首"},
+ {id:"heal",icon:"💚",name:"回春术",cost:12,desc:"生机流转，伤势尽复"},
+ {id:"earth",icon:"🪨",name:"土墙术",cost:10,desc:"拔地成墙，固若金汤"},
+ {id:"wind",icon:"🌪️",name:"风刃术",cost:14,desc:"风凝为刃，无形杀人"},
+ {id:"water",icon:"💧",name:"水幕术",cost:11,desc:"水幕天华，卸力无形"}];
+var spellSel=null;
+function castInto(stageId,fxId,icon,mode){
+  var fx=$(fxId);if(!fx)return;
+  fx.textContent=icon;fx.classList.remove("fly","zoom");void fx.offsetWidth;fx.classList.add(mode);
+  var stage=$(stageId);
+  setTimeout(function(){burstFx(stage,[icon,"✨"],6)},mode==="fly"?430:300);
+}
+function renderSpells(){
+  var el=$("spellsBody");if(!el||!play)return;
+  var html='<div class="caststage" id="castStage"><div class="castfx" id="castFx"></div><div class="casthint">点已学法术直接施放 · 点未学的查看学习</div></div>';
+  html+='<div class="bgrid" style="grid-template-columns:repeat(4,1fr);margin-top:0">'+SPELLS.map(function(sp){var owned=play.spells.indexOf(sp.id)>=0;return '<button class="bcard'+(spellSel===sp.id?" on":"")+'" data-spell="'+sp.id+'"><span class="bic">'+sp.icon+'</span><span class="bname">'+sp.name+'</span><span class="bstar">'+(owned?"已学":"💰"+sp.cost)+'</span></button>'}).join("")+'</div>';
+  var sel=null;SPELLS.forEach(function(x){if(x.id===spellSel)sel=x});
+  if(sel){
+    var owned2=play.spells.indexOf(sel.id)>=0;
+    html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · '+sel.desc+'</div>';
+    if(!owned2)html+='<button class="bigbtn" id="btnLearnSpell"'+(play.stones<sel.cost?" disabled":"")+'>📜 学习 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
+    else html+='<button class="bigbtn" id="btnCastSpell">✨ 施放'+sel.name+'</button>';
+  }
+  html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>已学 '+play.spells.length+' / '+SPELLS.length+' 门 · 学成一门 +3 修为</span></div>';
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll("[data-spell]"),function(b){b.addEventListener("click",function(){spellSel=b.getAttribute("data-spell");renderSpells();if(play.spells.indexOf(spellSel)>=0){var sp2=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp2=x});if(sp2)castInto("castStage","castFx",sp2.icon,"fly")}})});
+  var bl=$("btnLearnSpell");if(bl)bl.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(!sp||play.stones<sp.cost)return;play.stones-=sp.cost;play.spells.push(sp.id);playSave();claimReward("event",{amount:3},function(){render()});renderSpells();castInto("castStage","castFx",sp.icon,"fly")});
+  var bc=$("btnCastSpell");if(bc)bc.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(sp)castInto("castStage","castFx",sp.icon,"fly")});
+}
+var DIVINE_BASE=[
+ {id:"suodi",icon:"👣",name:"缩地成寸",cost:80,desc:"一步千里，遁法大成"},
+ {id:"tianyan",icon:"👁️",name:"天眼通",cost:80,desc:"洞悉虚妄，看破隐匿"}];
+var SECT_DIVINE={
+ jian:{id:"wanjian",icon:"⚔️",name:"万剑归宗",cost:100,desc:"万剑齐发，剑意冲霄"},
+ fu:{id:"wulei",icon:"⚡",name:"五雷正法",cost:100,desc:"引九天神雷，涤荡妖氛"},
+ zhen:{id:"xingdou",icon:"🌌",name:"周天星斗",cost:100,desc:"引星斗之力，布绝世大阵"},
+ ti:{id:"jingang",icon:"🛡️",name:"金刚不坏",cost:100,desc:"肉身成圣，万法不侵"},
+ kui:{id:"qianji",icon:"🎭",name:"千机百变",cost:100,desc:"傀儡千变，真假难辨"},
+ gui:{id:"youming",icon:"💀",name:"幽冥召唤",cost:100,desc:"唤幽冥之众，号令阴兵"},
+ mo:{id:"xuehai",icon:"🩸",name:"血海滔天",cost:100,desc:"血海翻涌，吞天噬地"}};
+var divineSel=null;
+function divineList(){var l=DIVINE_BASE.slice();var sd=SECT_DIVINE[state.sectId];if(sd)l.push(sd);return l}
+function renderDivine(){
+  var el=$("divineBody");if(!el||!play)return;
+  var list=divineList();
+  var html='<div class="caststage" id="divineStage"><div class="castfx" id="divineFx"></div><div class="casthint">神通大成者 · 习成一门永久修炼 +2（宿主结算）</div></div>';
+  html+='<div class="bgrid" style="grid-template-columns:repeat(3,1fr);margin-top:0">'+list.map(function(d){var owned=play.divines.indexOf(d.id)>=0;return '<button class="bcard'+(divineSel===d.id?" on":"")+'" data-divine="'+d.id+'"><span class="bic">'+d.icon+'</span><span class="bname">'+d.name+'</span><span class="bstar">'+(owned?"已习成":"💰"+d.cost)+'</span></button>'}).join("")+'</div>';
+  var sel=null;list.forEach(function(x){if(x.id===divineSel)sel=x});
+  if(sel){
+    var owned2=play.divines.indexOf(sel.id)>=0;
+    html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · '+sel.desc+'</div>';
+    if(!owned2)html+='<button class="bigbtn" id="btnLearnDivine"'+(play.stones<sel.cost?" disabled":"")+'>🌌 参悟神通 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
+    else html+='<button class="bigbtn" id="btnCastDivine">✨ 施展'+sel.name+'</button>';
+  }
+  html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>已习成 '+play.divines.length+' 门神通</span></div>';
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll("[data-divine]"),function(b){b.addEventListener("click",function(){divineSel=b.getAttribute("data-divine");renderDivine();if(play.divines.indexOf(divineSel)>=0){var d2=null;list.forEach(function(x){if(x.id===divineSel)d2=x});if(d2)castInto("divineStage","divineFx",d2.icon,"zoom")}})});
+  var bl=$("btnLearnDivine");if(bl)bl.addEventListener("click",function(){var d=null;list.forEach(function(x){if(x.id===divineSel)d=x});if(!d||play.stones<d.cost)return;play.stones-=d.cost;play.divines.push(d.id);playSave();claimReward("series",{series:"divine-"+d.id},function(){render()});renderDivine();castInto("divineStage","divineFx",d.icon,"zoom")});
+  var bc=$("btnCastDivine");if(bc)bc.addEventListener("click",function(){var d=null;list.forEach(function(x){if(x.id===divineSel)d=x});if(d)castInto("divineStage","divineFx",d.icon,"zoom")});
+}
 function renderCaveSheet(){
+  if(caveSel==="pet"){renderPetSheet();return}
   var fc=null;FACS.forEach(function(x){if(x.key===caveSel)fc=x});
   if(!fc)return;
   var f=play.fac;var lvl=f[fc.key];var maxed=lvl>=fc.max;
@@ -1379,8 +1516,90 @@ function doDraw(){
     });
   }else render();
 }
+
+function playFix(){
+  if(!play)return;
+  if(!play.bloods)play.bloods={};
+  if(play.bloodActive===undefined)play.bloodActive=null;
+  if(!play.spells)play.spells=[];
+  if(!play.divines)play.divines=[];
+  if(play.pet===undefined)play.pet=null;
+}
+var BLOODS=[
+ {id:"long",icon:"🐉",name:"青龙血脉",color:"#22c55e",desc:"东方青龙 · 生生不息，修炼如沐春风"},
+ {id:"que",icon:"🦩",name:"朱雀血脉",color:"#ef4444",desc:"南方朱雀 · 离火燎原，攻势凌厉"},
+ {id:"wu",icon:"🐢",name:"玄武血脉",color:"#38bdf8",desc:"北方玄武 · 厚重绵长，守如山岳"},
+ {id:"hu",icon:"🐅",name:"白虎血脉",color:"#e5e7eb",desc:"西方白虎 · 肃杀果决，出手见血"},
+ {id:"lin",icon:"🦄",name:"麒麟血脉",color:"#f59e0b",desc:"中央麒麟 · 祥瑞加身，福缘深厚"},
+ {id:"peng",icon:"🐳",name:"鲲鹏血脉",color:"#22d3ee",desc:"北冥鲲鹏 · 扶摇直上，遁速无双"}];
+var bloodSel=null;
+function renderBlood(){
+  var bw=$("bloodBody");if(!bw||!play)return;
+  var act=null;BLOODS.forEach(function(x){if(x.id===play.bloodActive)act=x});
+  var sel=null;BLOODS.forEach(function(x){if(x.id===(bloodSel||play.bloodActive))sel=x});
+  var html='<div class="bloodhero"><div class="bloodemblem" id="bloodEmblem" style="--bc:'+(act?act.color:"#6366f1")+'">'+(act?act.icon:"🩸")+'</div><div class="bloodname">'+(act?act.name+" · "+["","一阶","二阶","三阶"][play.bloods[act.id]||0]:"尚未觉醒血脉")+'</div><div class="desc">'+(act?act.desc:"选下方一脉觉醒：觉醒与三阶圆满各触发一次永久修炼 +2（宿主结算）。")+'</div></div>';
+  html+='<div class="bgrid">'+BLOODS.map(function(b){
+    var lv=play.bloods[b.id]||0;
+    var stars=lv?("★".repeat(lv)+"☆".repeat(3-lv)):"未觉醒";
+    return '<button class="bcard'+(sel&&sel.id===b.id?" on":"")+'" data-blood="'+b.id+'"><span class="bic">'+b.icon+'</span><span class="bname">'+b.name+'</span><span class="bstar">'+stars+(play.bloodActive===b.id?" · 当前":"")+'</span></button>';
+  }).join("")+'</div>';
+  if(sel){
+    var lv2=play.bloods[sel.id]||0;
+    var cost=lv2===0?30:(lv2===1?60:120);
+    html+='<div class="card" style="margin-top:10px"><div class="desc"><b>'+sel.icon+" "+sel.name+'</b> · '+sel.desc+'</div>';
+    if(lv2>=3)html+='<div class="desc" style="margin-top:6px">血脉已至三阶圆满。</div>';
+    else html+='<button class="pbtn" id="btnBloodUp" style="margin-top:8px"'+(play.stones<cost?" disabled":"")+'>'+(lv2===0?"🩸 觉醒":"⬆ 升阶")+" · "+cost+" 灵石"+(play.stones<cost?"（灵石不足）":"")+'</button>';
+    html+='<div class="desc" style="margin-top:8px">💰 灵石 '+play.stones+' 枚 · 觉醒后此脉为当前血脉</div></div>';
+  }
+  bw.innerHTML=html;
+  Array.prototype.forEach.call(bw.querySelectorAll("[data-blood]"),function(el){el.addEventListener("click",function(){bloodSel=el.getAttribute("data-blood");renderBlood()})});
+  var em=$("bloodEmblem");if(em)em.addEventListener("click",function(){burstFx(em.parentElement,["✨","💠"],6)});
+  var bu=$("btnBloodUp");
+  if(bu)bu.addEventListener("click",function(){
+    var b=null;BLOODS.forEach(function(x){if(x.id===bloodSel)b=x});if(!b)return;
+    var lv=play.bloods[b.id]||0;var cost=lv===0?30:(lv===1?60:120);
+    if(play.stones<cost)return;
+    play.stones-=cost;play.bloods[b.id]=lv+1;play.bloodActive=b.id;playSave();
+    var after=function(){render();renderBlood();var em2=$("bloodEmblem");if(em2)burstFx(em2.parentElement,["🩸","✨"],9)};
+    if(lv===0)claimReward("series",{series:"blood-awaken"},after);
+    else if(lv===2)claimReward("series",{series:"blood-max"},after);
+    else after();
+  });
+}
+var PETS=[{id:"fox",icon:"🦊",name:"雪狐"},{id:"crane",icon:"🕊️",name:"仙鹤"},{id:"turtle",icon:"🐢",name:"灵龟"},{id:"dragon",icon:"🐉",name:"蛟龙崽"}];
+var petSel=null;
+function petStageOf(feeds){return feeds>=15?2:(feeds>=5?1:0)}
+function renderPetSheet(){
+  $("caveSheetTitle").textContent="🐾 灵兽园";
+  var body=$("caveSheetBody");
+  if(!play.pet){
+    var html='<div class="fac-desc">洞外灵兽闻香而来，挑一只结契带回洞府。</div><div class="bgrid" style="grid-template-columns:repeat(2,1fr);margin-top:10px">'+PETS.map(function(p){return '<button class="bcard'+(petSel===p.id?" on":"")+'" data-petpick="'+p.id+'"><span class="bic">'+p.icon+'</span><span class="bname">'+p.name+'</span></button>'}).join("")+'</div>';
+    html+='<button class="bigbtn" id="btnAdopt"'+((!petSel||play.stones<20)?" disabled":"")+'>🐾 结契领养 · 20 灵石'+(play.stones<20?"（灵石不足）":"")+'</button><div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>喂食长大 · 每日抚摸 +3 修为</span></div>';
+    body.innerHTML=html;
+    Array.prototype.forEach.call(body.querySelectorAll("[data-petpick]"),function(el){el.addEventListener("click",function(){petSel=el.getAttribute("data-petpick");renderPetSheet()})});
+    var ba=$("btnAdopt");if(ba)ba.addEventListener("click",function(){if(!petSel||play.stones<20)return;play.stones-=20;play.pet={id:petSel,feeds:0,lastTouch:""};playSave();render();var st=$("caveSheetBody .petstage");if(st)burstFx(st,["💖","✨"],8)});
+    return;
+  }
+  var pet=PETS[0];PETS.forEach(function(x){if(x.id===play.pet.id)pet=x});
+  var st=petStageOf(play.pet.feeds);
+  var stName=["幼崽","灵兽","神兽"][st];
+  var next=st===0?5:(st===1?15:null);
+  var html='<div class="petstage"><div class="petbig" id="petBig" style="font-size:'+(46+st*14)+'px">'+pet.icon+'</div><div class="viscap" data-viscap="1">'+pet.name+" · "+stName+'（喂食 '+play.pet.feeds+' 次'+(next?" · 再喂 "+(next-play.pet.feeds)+" 次进化":" · 已是完全体")+'）</div></div>';
+  html+='<div class="cheatrow"><button class="pbtn" id="btnFeed"'+(play.stones<3?" disabled":"")+'>🍖 喂食 · 3 灵石</button><button class="pbtn" id="btnTouch">'+(play.pet.lastTouch===play.day?"💖 今日已亲近":"🤲 抚摸（每日 +3 修为）")+'</button></div>';
+  html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>点灵兽本体也能抚摸</span></div>';
+  body.innerHTML=html;
+  var feed=$("btnFeed");if(feed)feed.addEventListener("click",function(){if(play.stones<3)return;play.stones-=3;play.pet.feeds++;playSave();render();var stg=$("caveSheetBody .petstage");if(stg)burstFx(stg,["🍖","✨"],7)});
+  var touch=function(){
+    var stg=$("caveSheetBody .petstage");
+    if(play.pet.lastTouch===play.day){if(stg)burstFx(stg,["💖"],5);return}
+    play.pet.lastTouch=play.day;playSave();
+    claimReward("event",{amount:3},function(){render();var st2=$("caveSheetBody .petstage");if(st2){burstFx(st2,["💖","✨"],9);floatFx(st2,"亲近 +3 修为")}});
+  };
+  var bt=$("btnTouch");if(bt)bt.addEventListener("click",touch);
+  var pb=$("petBig");if(pb)pb.addEventListener("click",touch);
+}
 function renderPlay(s){
-  playLoad();
+  playLoad(); playFix();
   var evHtml="",doneCount=0;
   play.evList.forEach(function(ei,pos){
     var ev=EVENTS[ei];var dn=play.evDone[pos];
@@ -1477,6 +1696,15 @@ $("btnSwitch").addEventListener("click",function(){
   renderGrid();renderPreview();
   window.scrollTo(0,0);
 });
+$("btnCheat").addEventListener("click",function(){openRoom("room-cheat")});
+$("btnBlood").addEventListener("click",function(){renderBlood();openRoom("room-blood")});
+Array.prototype.forEach.call(document.querySelectorAll("[data-stones]"),function(el){el.addEventListener("click",function(){if(!play)return;play.stones=Math.max(0,(play.stones||0)+(+el.getAttribute("data-stones")));playSave();render()})});
+$("btnStonesSet").addEventListener("click",function(){if(!play)return;var v=parseInt($("inStones").value,10);if(isNaN(v))return;play.stones=Math.max(0,Math.min(999999999,v));playSave();render()});
+$("btnStonesZero").addEventListener("click",function(){if(!play)return;play.stones=0;playSave();render()});
+Array.prototype.forEach.call(document.querySelectorAll("[data-exp]"),function(el){el.addEventListener("click",function(){cheatExpAdd(+el.getAttribute("data-exp"))})});
+$("btnExpSet").addEventListener("click",function(){var v=parseInt($("inExp").value,10);if(isNaN(v))return;cheatExpSet(v)});
+$("btnExpZero").addEventListener("click",function(){cheatExpSet(0)});
+$("btnExpTop").addEventListener("click",function(){var base=(state.days||0)*10+(state.profileCount||0)*25+(state.packCount||0)*20;cheatExpSet(Math.max(0,4500-base))});
 $("btnFlip").addEventListener("click",function(){
   var toDark = state.themeMode==="Light";
   $("hallErr").textContent="";
