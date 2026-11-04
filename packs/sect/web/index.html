@@ -541,6 +541,28 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 @keyframes breathpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}
 #retreatFx .rtxt{position:relative;margin-top:20px;color:#e0e7ff;font-size:15px;letter-spacing:2px}
 .menugrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}
+
+/* ── 诸天万界与成仙路（v27）── */
+#btnWorlds{position:absolute;right:14px;z-index:26;border:1px solid rgba(167,139,250,.55);background:rgba(20,12,44,.6);color:#ddd6fe;border-radius:999px;padding:8px 13px;font-size:13px;backdrop-filter:blur(6px);cursor:pointer}
+.wcard{border:1px solid var(--border);border-radius:16px;padding:13px;margin-top:10px;background:linear-gradient(130deg,var(--wc,rgba(99,102,241,.16)),transparent 62%)}
+.wcard .wname{font-size:17px;font-weight:900}
+.ladrow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;margin-top:7px;background:var(--card)}
+.ladrow.me{border-color:rgba(251,191,36,.6);background:linear-gradient(120deg,rgba(251,191,36,.13),transparent 65%)}
+.ladrow .rk{font-weight:900;width:34px;text-align:center;color:#fbbf24}
+
+/* ── 帝路争锋（v28）── */
+.wtabs{display:flex;gap:7px;margin-bottom:4px}
+.wtab{flex:1;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:12px;padding:9px 4px;font-size:13.5px;cursor:pointer}
+.wtab.on{background:linear-gradient(120deg,#7c3aed,#6366f1);color:#fff;border-color:transparent;font-weight:800}
+.dilurail{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 2px;scrollbar-width:none}
+.dilurail::-webkit-scrollbar{display:none}
+.dinode{flex:0 0 auto;width:64px;text-align:center;position:relative}
+.dinode.dot{width:40px;height:40px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--card);border:2px solid var(--border)}
+.dinode.done.dot{border-color:#4ade80;background:rgba(74,222,128,.15)}
+.dinode.now.dot{border-color:#fbbf24;box-shadow:0 0 14px rgba(251,191,36,.55);animation:emblempulse 2.4s infinite}
+.dinode.dl{font-size:10.5px;color:var(--sub);margin-top:4px;line-height:1.3}
+.dinode::before{content:"";position:absolute;top:20px;left:-14px;width:14px;height:2px;background:var(--border)}
+.dinode:first-child::before{display:none}
 </style>
 
 </head>
@@ -599,6 +621,7 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
   </div>
 
   <div id="spots"></div>
+  <button id="btnWorlds" style="display:none">🌌 诸天万界<small style="display:block;font-size:10px;opacity:.8">成仙路</small></button>
   <button class="evbubble" id="evBubble">✦ 今日奇遇<small id="evBubbleSub">剩 2 次</small></button>
   <button class="scenetoggle" id="sceneToggle" style="bottom:158px">🌗 景 · 自动</button>
 
@@ -643,6 +666,7 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
       <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
       <button class="ghost" id="btnCheat">🛠️ 修改器（灵石 / 修为）</button>
       <button class="ghost" id="btnBlood">🩸 血脉觉醒</button>
+       <button class="ghost" id="btnWorlds2">🌌 诸天万界 · 成仙路（炼虚开启）</button>
       <div class="foot">境界与修为管你的身份（杂役→外门→内门→核心→亲传→道子，随修为自动晋升）与职位（执事→长老→峰主→太上长老→掌门→老祖，解锁后自选任职）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div></div></div>
   </div>
   <div class="room sroom" id="room-cave">
@@ -732,6 +756,10 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
   <div class="room" id="room-blood">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🩸 血脉</div><div class="room-sub">觉醒一脉 · 血脉之力随阶而涨</div></div></div>
     <div class="room-body" id="bloodBody"></div>
+  </div>
+  <div class="room" id="room-worlds">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🌌 诸天万界</div><div class="room-sub">炼虚开界 · 成仙路争霸</div></div></div>
+    <div class="room-body" id="worldsBody"></div>
   </div>
   <div class="room" id="room-market">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏮 山门集市</div><div class="room-sub">坊市烟火 · 每日新货</div></div></div>
@@ -1260,7 +1288,7 @@ function renderHall(){
   updateScripture(s);
   updatePatrol();
   updateTomeShelf();
-  renderForge(); renderCheat(); renderSpells(); renderDivine(); renderBlood(); renderMarket(); if(window.__sectCgHook)window.__sectCgHook(); }
+  renderForge(); renderCheat(); renderSpells(); renderDivine(); renderBlood();renderGrowth(); renderMarket(); renderWorlds(); if(window.__sectCgHook)window.__sectCgHook(); }
 
 (function(){
   var lastRank=-1;
@@ -1278,10 +1306,13 @@ function renderHall(){
     }
     var rt=$("room-tome");if(rt&&rt.classList.contains("open"))motes(rt,7);
     var rf=$("room-forge");if(rf&&rf.classList.contains("open"))motes(rf,8);
+    var bw=$("btnWorlds");if(bw)bw.style.display=(vh&&!vh.classList.contains("hidden")&&state&&state.rankIndex>=5)?"block":"none";if(bw)bw.style.bottom="268px";
     var bm=$("btnMute");
     if(bm){var inHall=vh&&!vh.classList.contains("hidden");bm.style.display=inHall?"block":"none";if(inHall)bm.style.bottom="212px";bm.textContent=SFX.isMuted()?"🔇":"🔊"}
   };
   var bm0=$("btnMute");if(bm0)bm0.addEventListener("click",function(){SFX.toggle();bm0.textContent=SFX.isMuted()?"🔇":"🔊"});
+  var bw1=$("btnWorlds");if(bw1)bw1.addEventListener("click",function(){openRoom("room-worlds")});
+  var bw2=$("btnWorlds2");if(bw2)bw2.addEventListener("click",function(){openRoom("room-worlds")});
 })();
 
 Array.prototype.forEach.call(document.querySelectorAll("[data-close]"),function(el){
@@ -1600,6 +1631,7 @@ function renderSpells(){
   Array.prototype.forEach.call(el.querySelectorAll("[data-spell]"),function(b){b.addEventListener("click",function(){spellSel=b.getAttribute("data-spell");renderSpells();if(play.spells.indexOf(spellSel)>=0){var sp2=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp2=x});if(sp2)doCastSpell(sp2)}})});
   var bl=$("btnLearnSpell");if(bl)bl.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(!sp||play.stones<sp.cost)return;play.stones-=sp.cost;play.spells.push(sp.id);playSave();claimReward("event",{amount:3},function(){render()});renderSpells();doCastSpell(sp)});
   var bc=$("btnCastSpell");if(bc)bc.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(sp)doCastSpell(sp)});
+ renderWizard();
 }
 var DIVINE_BASE=[
  {id:"suodi",icon:"👣",name:"缩地成寸",grade:2,cost:80,desc:"一步千里，遁法大成"},
@@ -1764,9 +1796,18 @@ function genLine(npc,topic){
 var NEWS_FRAMES=["📜 {who}在决斗场连赢三场，赔率跌穿地板。","📜 {where}今晨灵气异动，聚灵阵出租价小涨。","📜 有散修在地摊上淘到{thing}，转手翻了五倍。","📜 醉仙楼新到一批灵酒，限量供应。","📜 {who}放话：下月论道大会，他要挑战{who2}。","📜 拍卖场今晚有压轴宝物，聚宝楼门口已经排起队。","📜 今年灵草收成不好，丹药铺全线涨价。","📜 一只来历不明的灵兽在{where}出没，守阁老人说别惹它。"];
 function worldNews(){
   var rnd=seedRand("news:"+play.day);
+  if(play&&play.chengxian){
+    var legend=["📜 有修士在"+tkPick(TK_WHERE)+"见到一道映照横空，疑似那位新晋仙人。","📜 渡界列车上，S01 号乘客望着窗外说了句：他来了。【异常名录 · 03】","📜 各界都在传：有一位的名字，已经写进了诸天名录。"];
+    var base=worldNewsBase(rnd);
+    base[0]=legend[Math.floor(rnd()*legend.length)];
+    return base;
+  }
+  return worldNewsBase(rnd);
+}
+function worldNewsBase(rnd){
   var out=[];
   for(var i=0;i<3;i++){
-    var f=NEWS_FRAMES[Math.floor(rnd()*NEWS_FRAMES.length)];
+    var f=NEWS_FRAMES.concat(["📜 渡界列车的乘客名单上，S01 号座位的主人，又一次没有下车。【异常名录 · 03】","📜 有人在界门处见到 S01 号乘客，他说：下一界，要变天了。"])[Math.floor(rnd()*(NEWS_FRAMES.length+2))];
     out.push(f.replace("{who}",TK_WHO[Math.floor(rnd()*TK_WHO.length)]).replace("{who2}",TK_WHO[Math.floor(rnd()*TK_WHO.length)]).replace("{where}",TK_WHERE[Math.floor(rnd()*TK_WHERE.length)]).replace("{thing}",TK_THING[Math.floor(rnd()*TK_THING.length)]));
   }
   return out;
@@ -1783,7 +1824,12 @@ var WARES=[
  {id:"dunwu",icon:"🌟",name:"顿悟丹",price:30,desc:"随机一门已学法术/神通，熟练 +15"},
  {id:"refinestone",icon:"💎",name:"祭炼石",price:55,desc:"随机一件已炼法宝，祭炼 +1 阶"},
  {id:"jingtie",icon:"🧱",name:"百炼精铁",price:20,desc:"器峰炼制半价券 ×2 次"},
- {id:"zhongzi",icon:"🌰",name:"灵草种子",price:10,desc:"下一次药园晨收，收获翻倍"}];
+ {id:"zhongzi",icon:"🌰",name:"灵草种子",price:10,desc:"下一次药园晨收，收获翻倍"},
+ {id:"tear",icon:"🪸",name:"珊瑚泪",price:30,desc:"沧澜界特产：随机一门法术熟练 +15"},
+ {id:"huosui",icon:"🔥",name:"焚天火髓",price:45,desc:"焚天界特产：随机一件法宝祭炼 +1 阶"},
+ {id:"yaodan",icon:"🟢",name:"万妖妖丹",price:35,desc:"万妖界特产：灵兽喂食 +5 次"},
+ {id:"xingsha",icon:"✨",name:"星尘砂",price:45,desc:"星尘界特产：随机一门神通熟练 +15"},
+ {id:"minghe",icon:"🌊",name:"冥河水",price:50,desc:"幽冥界特产：当前血脉升一阶（未满阶时）"}];
 var WARES_RARE=[
  {id:"divinepage",icon:"🌌",name:"神通残卷",price:90,desc:"随机习成一门尚未参悟的神通（照样 +2）"},
  {id:"petegg",icon:"🥚",name:"灵兽蛋",price:80,desc:"灵兽直接长到下一进化阶段"}];
@@ -1805,7 +1851,11 @@ function wareUsable(w){
   if(w.id==="spellxp")return play.spells.length+play.divines.length>0;
   if(w.id==="blooddrop")return !!play.bloodActive&&(play.bloods[play.bloodActive]||0)<5;
   if(w.id==="divinepage")return divineList().some(function(d){return play.divines.indexOf(d.id)<0});
-  if(w.id==="refinestone")return play.fabaos.some(function(fid){return (play.fabaoLvl[fid]||0)<5});
+  if(w.id==="refinestone"||w.id==="huosui")return play.fabaos.some(function(fid){return (play.fabaoLvl[fid]||0)<5});
+  if(w.id==="tear")return play.spells.length>0;
+  if(w.id==="xingsha")return play.divines.length>0;
+  if(w.id==="yaodan")return !!play.pet;
+  if(w.id==="minghe")return !!play.bloodActive&&(play.bloods[play.bloodActive]||0)<5;
   if(w.id==="juqi")return true;
   if(w.id==="tomepage")return allSeries().some(function(sr){return sr.tomes.some(function(t){return play.tomes.indexOf(sr.id+":"+t)<0})});
   return true;
@@ -1814,8 +1864,26 @@ function buyWare(id,price,btn){
   var w=wareById(id);if(!w||play.stones<price)return;
   play.stones-=price;SFX.coin();
   applyWare(w);
+  if(TIER_WARES.indexOf(w.id)>=0)missionProgress("buy");
 }
 function applyWare(w){
+  if(w.id==="tear"){
+    var alls=play.spells.slice();
+    if(!alls.length){play.stones+=30;playSave();render();renderMarket("还没有法术，珊瑚泪退你灵石。");return}
+    var sp3=alls[Math.floor(Math.random()*alls.length)];play.spellXp[sp3]=(play.spellXp[sp3]||0)+15;playSave();render();renderMarket("珊瑚泪化开，法术熟练 +15。");return;
+  }
+  if(w.id==="huosui"){
+    var cand5=play.fabaos.filter(function(fid){return (play.fabaoLvl[fid]||0)<5});
+    if(!cand5.length){play.stones+=45;playSave();render();renderMarket("法宝都祭炼圆满了，火髓退你灵石。");return}
+    var fid5=cand5[Math.floor(Math.random()*cand5.length)];play.fabaoLvl[fid5]=(play.fabaoLvl[fid5]||0)+1;playSave();render();renderMarket("火髓入炉，法宝祭炼 +1 阶。");return;
+  }
+  if(w.id==="yaodan"){if(play.pet){play.pet.feeds+=5;playSave()}render();renderMarket("妖丹喂下，灵兽灵气大涨（喂食 +5）。");return}
+  if(w.id==="xingsha"){
+    var alld=play.divines.slice();
+    if(!alld.length){play.stones+=45;playSave();render();renderMarket("还没有神通，星尘砂退你灵石。");return}
+    var dv3=alld[Math.floor(Math.random()*alld.length)];play.divineXp[dv3]=(play.divineXp[dv3]||0)+15;playSave();render();renderMarket("星尘入眼，神通熟练 +15。");return;
+  }
+  if(w.id==="minghe"){play.bloods[play.bloodActive]=(play.bloods[play.bloodActive]||0)+1;playSave();render();renderMarket("冥河水入体，血脉升阶！");return}
   if(w.id==="juqi"){claimReward("event",{amount:6},function(err){render();renderMarket(err?"聚气丹的药力被今日额度挡下了（奇遇次数用满）。":"聚气丹化开，+6 修为。")});return}
   if(w.id==="dunwu"){
     var all2=[];play.spells.forEach(function(x){all2.push(["s",x])});play.divines.forEach(function(x){all2.push(["d",x])});
@@ -2048,6 +2116,13 @@ function playerPower(){
   if(play.bloodActive)p+=(play.bloods[play.bloodActive]||0)*0.5;
   if(play.fabaoActive){var f=null;ARTIFACTS.forEach(function(x){if(x.id===play.fabaoActive)f=x});if(f)p+=f.grade*0.55+(play.fabaoLvl[f.id]||0)*0.2}
   p+=Math.min(1.2,play.spells.length*0.08+play.divines.length*0.15);
+  var ph=physiqueDef();p+=ph.pow+(play.physique?play.physique.temper*0.12:0);
+  if(play.physique&&PHYS_SYNERGY[play.physique.id]&&play.bloodActive===PHYS_SYNERGY[play.physique.id])p+=0.3;
+  if(play.wiz){var _wm=0;for(var _k in play.wiz.models)_wm+=play.wiz.models[_k];p+=_wm*0.06+Math.min(0.8,play.wiz.med*0.02)}
+  if(play.potion){var _pp=0;for(var _k2 in play.potion)_pp+=play.potion[_k2];p+=_pp*0.12}
+  p+=play.abilities.length*0.25;
+  if(play.elements&&play.elements.length){var _ec=0;play.spells.forEach(function(sid){var _sp=null;spellList().forEach(function(x){if(x.id===sid)_sp=x});if(_sp&&play.elements.indexOf(spellElement(_sp))>=0)_ec++});p+=Math.min(0.5,_ec*0.08)}
+  p+=wudaoStage()*0.18;
   return p;
 }
 var __duelBusy=false;
@@ -2059,7 +2134,7 @@ function renderMkDuel(){
   html+=ds.map(function(d,i){
     var done=play.duelDone[i];
     var pv=d.power<playerPower()-1.5?"🌱 软柿子":(d.power>playerPower()+1.5?"🐯 硬茬子":"⚖️ 势均力敌");
-    return '<div class="ware" style="margin-top:9px"><div class="wic">'+d.emoji+'</div><div class="wname">'+d.name+' <span class="haggle">'+d.style+'</span></div><div class="wdesc">战力 '+d.power.toFixed(1)+' · '+pv+'</div>'
+    return '<div class="ware" style="margin-top:9px"><div class="wic">'+d.emoji+'</div><div class="wname">'+d.name+' <span class="haggle">'+d.style+'</span></div><div class="wdesc">战力 '+d.power.toFixed(1)+' · '+pv+'</div>'.replace('</div>',chipOddsText(d.power)+'</div>')
       +(done?'<div class="ok">今日已战：'+done+'</div>':'<div class="cheatrow"><button class="pbtn" data-duel="'+i+':10"'+(play.stones<10?" disabled":"")+'>押 10</button><button class="pbtn" data-duel="'+i+':30"'+(play.stones<30?" disabled":"")+'>押 30</button><button class="pbtn" data-duel="'+i+':80"'+(play.stones<80?" disabled":"")+'>押 80</button></div>')
       +'</div>';
   }).join("");
@@ -2227,6 +2302,613 @@ window.__bindFun=function(el){
     if(r)runRetreat(r);
   })});
 };
+
+/* ══ 诸天万界：五界 + 界主挑战 ══ */
+var WORLDS=[
+ {id:"canglan",icon:"🌊",name:"沧澜界",color:"#38bdf8",need:5,ware:"tear",desc:"无边沧海，水修圣地，珊瑚为林鲸为山。",boss:{name:"沧澜龙君",emoji:"🐲",power:9.5}},
+ {id:"fentian",icon:"🌋",name:"焚天界",color:"#f97316",need:5,ware:"huosui",desc:"火山千座，地火不熄，器修丹修的天堂。",boss:{name:"焚天炎魔",emoji:"👹",power:10.5}},
+ {id:"wanyao",icon:"🌲",name:"万妖界",color:"#4ade80",need:6,ware:"yaodan",desc:"万妖横行，灵兽遍地，弱肉强食最原始。",boss:{name:"九尾妖皇",emoji:"🦊",power:11.5}},
+ {id:"xingchen",icon:"🌌",name:"星尘界",color:"#a78bfa",need:6,ware:"xingsha",desc:"星尘为海，占星者在此聆听天外之音。",boss:{name:"星尘老祖",emoji:"🧙",power:12.5}},
+ {id:"youming",icon:"💀",name:"幽冥界",color:"#86efac",need:6,ware:"minghe",desc:"冥河横贯，生者死者在此擦肩而过。",boss:{name:"幽冥鬼帝",emoji:"👻",power:13.5}}];
+var __worldSel=null;
+function worldById(id){var w=null;WORLDS.forEach(function(x){if(x.id===id)w=x});return w}
+/* 通用决斗引擎（万界版）：往指定容器里打一场 */
+var __fightBusy=false;
+function runFight(box,foe,onDone){
+  if(__fightBusy||!box)return;
+  __fightBusy=true;
+  var myP=playerPower();
+  var winChance=1/(1+Math.exp(-(myP-foe.power)*0.55));
+  var willWin=Math.random()<winChance;
+  if(!foe.ability)foe.ability=ABILITIES[Math.floor(Math.random()*ABILITIES.length)].name;var view={myHp:100,foeHp:100,lines:["⚔️ 你 vs "+foe.name+"（战力 "+foe.power.toFixed(1)+" · 异能\u3010"+foe.ability+"\u3011）——开始！"]};
+  function paint(){
+    if(!document.body.contains(box)){return}
+    if(!box.querySelector("#wfLog")){
+      box.innerHTML='<div class="duelstage"><div class="hpwrap"><div class="hpbar"><div class="desc">你</div><div class="hpfill" id="wfMyHp"></div></div><div class="hpbar"><div class="desc" style="text-align:right">'+foe.name+'</div><div class="hpfill foe" id="wfFoeHp"></div></div></div><div class="df" style="left:12%">🧑</div><div class="df" style="left:74%;transform:scaleX(-1)">'+foe.emoji+'</div></div><div class="duellog" id="wfLog"></div>';
+    }
+    var mh=box.querySelector("#wfMyHp"),fh=box.querySelector("#wfFoeHp"),log=box.querySelector("#wfLog");
+    if(mh)mh.style.width=Math.max(0,view.myHp)+"%";
+    if(fh)fh.style.width=Math.max(0,view.foeHp)+"%";
+    if(log)log.innerHTML=view.lines.join("<br>");
+  }
+  paint();
+  var round=0;
+  var timer=setInterval(function(){
+    round++;
+    var mine=round%2===1;
+    var dmg=8+Math.random()*14;
+    if(mine)view.foeHp=Math.max(willWin?2:0,view.foeHp-dmg*(willWin?1.25:0.8));
+    else view.myHp=Math.max(willWin?18:0,view.myHp-dmg*(willWin?0.75:1.25));
+    view.lines.push(tkPick(DUEL_LINES).replace("{a}",mine?"你":foe.name)+"（-"+Math.round(dmg)+"）");
+    SFX.cast();paint();
+    if(round>=6){
+      clearInterval(timer);
+      if(willWin){view.foeHp=0;view.lines.push("🏆 胜！")}else{view.myHp=0;view.lines.push("💥 败北。")}
+      paint();
+      setTimeout(function(){__fightBusy=false;onDone(willWin)},1500);
+    }
+  },620);
+}
+/* ══ 成仙路：诸天修士天梯 ══ */
+function ladderSeason(){var d=new Date();return d.getFullYear()+"W"+Math.ceil(((d-new Date(d.getFullYear(),0,1))/86400000+1)/7)}
+function ladderFoes(){
+  var rnd=seedRand("ladder:"+ladderSeason());
+  var titles=["散人","真人","道君","老祖","圣子","仙子","魔君","妖王"];
+  var out=[];
+  for(var r=1;r<=30;r++){
+    out.push({rank:r,name:TK_WHO[Math.floor(rnd()*TK_WHO.length)]+"·"+titles[Math.floor(rnd()*titles.length)],emoji:DUEL_EMOJI[Math.floor(rnd()*DUEL_EMOJI.length)],power:6.3+(30-r)*0.34+rnd()*0.6});
+  }
+  return out;
+}
+function ladderState(){
+  if(!play.ladder||play.ladder.season!==ladderSeason())play.ladder={season:ladderSeason(),rank:31,day:"",left:3,top10:0,top3:0,top1:0};
+  if(play.ladder.day!==play.day){play.ladder.day=play.day;play.ladder.left=3}
+  return play.ladder;
+}
+function renderWorlds(){
+  var el=$("worldsBody");if(!el||!play||!state)return;
+  var rank=state.rankIndex;
+  if(rank<5){
+    el.innerHTML='<div class="card"><div style="font-size:17px;font-weight:800">🌌 界门未开</div><div class="desc" style="margin-top:6px;line-height:1.8">诸天万界的门，要到<b>炼虚期</b>才能推开。你现在是'+state.rankName+'（'+state.exp+' 修为），炼虚门槛 1400——修炼、领俸、集齐系列、决斗，都能攒修为。<br>（大殿面板底部有修改器，急着看的话你懂的。）</div></div>';
+    return;
+  }
+  var html="";
+  if(__worldSel){
+    var w=worldById(__worldSel);
+    var ware=wareById(w.ware);
+    var fought=play.bossDay[w.id]===play.day;
+    html+='<button class="pbtn" id="btnWorldBack">← 回万界图</button>';
+    html+='<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:4px;line-height:1.7">'+w.desc+'</div></div>';
+    html+='<div class="waregrid"><div class="ware"><div class="wic">'+ware.icon+'</div><div class="wname">'+ware.name+' <span class="haggle">界市特产</span></div><div class="wdesc">'+ware.desc+'</div><button class="pbtn wbuy" data-buy="'+ware.id+'" data-price="'+ware.price+'"'+((play.stones<ware.price||!wareUsable(ware))?" disabled":"")+'>💰 '+ware.price+' 灵石</button></div></div>';
+    html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">'+w.boss.emoji+' 界主 · '+w.boss.name+'（战力 '+w.boss.power.toFixed(1)+'）</div><div class="desc" style="margin-top:4px">每日可挑战一次。胜：+8 修为（走奇遇额度）；首胜永久 +2。'+chipOddsText(w.boss.power)+'</div>'
+      +(fought?'<div class="ok" style="margin-top:6px">今日已挑战过这位界主。</div>':'<button class="bigbtn" id="btnBoss">⚔️ 挑战界主</button>')
+      +'<div id="bossBox" style="margin-top:8px"></div></div>';
+    el.innerHTML=html;
+    Array.prototype.forEach.call(el.querySelectorAll("[data-buy]"),function(b){b.addEventListener("click",function(){buyWare(b.getAttribute("data-buy"),+b.getAttribute("data-price"),b);setTimeout(renderWorlds,300)})});
+    var bb=$("btnWorldBack");if(bb)bb.addEventListener("click",function(){__worldSel=null;renderWorlds()});
+    var bf=$("btnBoss");if(bf)bf.addEventListener("click",function(){
+      play.bossDay[w.id]=play.day;playSave();
+      runFight($("bossBox"),w.boss,function(win){
+        if(win){
+          var first=!play.bossKills[w.id];play.bossKills[w.id]=1;playSave();
+          if(first){claimReward("series",{series:"boss-"+w.id},function(){render();renderWorlds()});var _ab=grantAbilityRandom();if(_ab)setTimeout(function(){breakthroughLite("觉醒异能 · "+_ab.name)},700)}
+          claimReward("event",{amount:8},function(){render();renderWorlds()});
+          breakthroughLite(w.boss.name+" 已镇压！");
+        }else{renderWorlds()}
+      });
+    });
+    return;
+  }
+  html+='<div class="card"><div style="font-weight:800">🗺️ 万界图</div><div class="desc" style="margin-top:4px">已开界门：炼虚通二界，大乘通五界。你的战力约 '+playerPower().toFixed(1)+'。</div></div>';
+  html+=WORLDS.map(function(w){
+    var open=rank>=w.need;
+    return '<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:3px">'+w.desc+'</div><div class="desc" style="margin-top:3px">界主：'+w.boss.emoji+' '+w.boss.name+' · 特产：'+wareById(w.ware).name+(play.bossKills[w.id]?' · <span style="color:#4ade80">已镇压</span>':'')+'</div>'
+      +(open?'<button class="pbtn" data-world="'+w.id+'" style="margin-top:7px">进入 '+w.name+'</button>':'<div class="desc" style="margin-top:7px">🔒 需'+(w.need===5?"炼虚":"大乘")+'期开启</div>')
+      +'</div>';
+  }).join("");
+  /* 成仙路 */
+  var L=ladderState();var foes=ladderFoes();
+  html+='<div class="card" style="margin-top:12px"><div style="font-weight:800">🏆 成仙路 · 登仙榜（本周赛季）</div><div class="desc" style="margin-top:4px">你位列第 <b style="color:#fbbf24">'+(L.rank>30?"—（未入榜）":L.rank)+'</b> · 今日挑战剩 '+L.left+' 次 · 只能挑战高于你 5 名内的对手。冲进前十/前三/登顶，各得一次永久 +2；登顶即<b>羽化成仙</b>。</div><div id="ladBox" style="margin-top:6px"></div>';
+  var rows="";
+  foes.forEach(function(f){
+    if(f.rank===L.rank)return;
+    rows+='<div class="ladrow"><span class="rk">'+f.rank+'</span><span style="font-size:19px">'+f.emoji+'</span><span style="flex:1">'+f.name+'<span class="desc"> · 战力 '+f.power.toFixed(1)+'</span></span>'
+      +((L.rank-f.rank>=1&&L.rank-f.rank<=5&&L.left>0)?'<button class="pbtn" data-lad="'+f.rank+'">挑战</button>':"")+'</div>';
+    if(f.rank===L.rank-1&&L.rank<=30)rows+='<div class="ladrow me"><span class="rk">'+L.rank+'</span><span style="font-size:19px">🧑</span><span style="flex:1"><b>你</b><span class="desc"> · 战力 '+playerPower().toFixed(1)+'</span></span></div>';
+  });
+  if(L.rank>30)rows+='<div class="ladrow me"><span class="rk">—</span><span style="font-size:19px">🧑</span><span style="flex:1"><b>你</b><span class="desc"> · 未入榜 · 战力 '+playerPower().toFixed(1)+'</span></span></div>';
+  html+=rows+'</div>';
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll("[data-world]"),function(b){b.addEventListener("click",function(){__worldSel=b.getAttribute("data-world");renderWorlds()})});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-lad]"),function(b){b.addEventListener("click",function(){
+    var r=+b.getAttribute("data-lad");var foe=null;foes.forEach(function(f){if(f.rank===r)foe=f});
+    if(!foe||L.left<=0)return;
+    L.left--;playSave();
+    runFight($("ladBox"),foe,function(win){
+      if(win){
+        L.rank=r;playSave();
+        claimReward("event",{amount:3},function(){});
+        if(r<=10&&!L.top10){L.top10=1;playSave();claimReward("series",{series:"xianlu-top10"},function(){render()})}
+        if(r<=3&&!L.top3){L.top3=1;playSave();claimReward("series",{series:"xianlu-top3"},function(){render()})}
+        if(r===1&&!L.top1){L.top1=1;playSave();claimReward("series",{series:"chengxian"},function(){render()});breakthroughFx("羽化成仙")}
+        else breakthroughLite("登仙榜第 "+r+" 位！");
+      }
+      render();renderWorlds();
+    });
+  })});
+}
+
+/* ══ 帝路争锋：十八关长路，大乘方启 ══ */
+var DILU_STAGES=["葬星关","天渊城","断龙岭","星墟古道","万族战场","问道台","焚天门","沧澜渡","妖皇关","冥河桥","九天阙","无量海眼","太初原","混沌边关","仙陨坡","万古坟","成仙门前","帝路尽头"];
+var DILU_TITLES=["守关人","星骄","古族传人","万族天骄","少年至尊","问道者","绝代天骄","无敌者后裔","天命之子","帝子","古皇亲传","禁区来客","混沌体传人","万古第一梯队","准帝","将成道者","帝路守门人","他我化身"];
+function diluFoe(i){
+var rnd=seedRand("dilu:"+i);
+return {name:TK_WHO[Math.floor(rnd()*TK_WHO.length)]+"·"+DILU_TITLES[i],emoji:DUEL_EMOJI[Math.floor(rnd()*DUEL_EMOJI.length)],power:7+i*0.68+rnd()*0.8};
+}
+var __worldsView="map";
+function renderWorlds(){
+var el=$("worldsBody");if(!el||!play||!state)return;
+var rank=state.rankIndex;
+if(rank<5){
+el.innerHTML='<div class="card"><div style="font-size:17px;font-weight:800">🌌 界门未开</div><div class="desc" style="margin-top:6px;line-height:1.8">诸天万界的门，要到<b>炼虚期</b>才能推开。你现在是'+state.rankName+'（'+state.exp+' 修为），炼虚门槛 1400——修炼、领俸、集齐系列、决斗，都能攒修为。<br>（大殿面板底部有修改器，急着看的话你懂的。）</div></div>';
+return;
+}
+if(__worldSel){renderWorldDetail(el);return}
+var html='<div class="wtabs"><button class="wtab'+(__worldsView==="map"?" on":"")+'" data-wv="map">🗺️ 万界图</button><button class="wtab'+(__worldsView==="dilu"?" on":"")+'" data-wv="dilu">👑 帝路争锋</button><button class="wtab'+(__worldsView==="lad"?" on":"")+'" data-wv="lad">🏆 登仙榜</button><button class="wtab" data-wv="task">📜 任务墙</button></div>';
+if(__worldsView==="dilu")html+=renderDilu()+jinQuHtml();
+else if(__worldsView==="lad")html+=renderLadderSec();
+  else if(__worldsView==="task")html+=renderTaskWall();
+else html+=renderWorldMap();
+el.innerHTML=html;
+Array.prototype.forEach.call(el.querySelectorAll("[data-wv]"),function(b){b.addEventListener("click",function(){__worldsView=b.getAttribute("data-wv");renderWorlds()})});
+bindWorldsInner(el);bindTierWorlds(el);
+}
+function renderWorldMap(){
+var rank=state.rankIndex;
+var html='<div class="card"><div style="font-weight:800">🗺️ 万界图</div><div class="desc" style="margin-top:4px">炼虚通二界，大乘通五界。你的战力约 '+playerPower().toFixed(1)+'。</div></div>';
+html+=WORLDS.map(function(w){
+var open=rank>=w.need;
+return '<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:3px">'+w.desc+'</div><div class="desc" style="margin-top:3px">界主：'+w.boss.emoji+' '+w.boss.name+' · 特产：'+wareById(w.ware).name+(play.bossKills[w.id]?' · <span style="color:#4ade80">已镇压</span>':'')+'</div>'
++(open?'<button class="pbtn" data-world="'+w.id+'" style="margin-top:7px">进入 '+w.name+'</button>':'<div class="desc" style="margin-top:7px">🔒 需'+(w.need===5?"炼虚":"大乘")+'期开启</div>')
++'</div>';
+}).join("");
+html+=renderTierWorlds();
+return html;
+}
+function renderLadderSec(){
+var L=ladderState();var foes=ladderFoes();
+var html='<div class="card"><div style="font-weight:800">🏆 成仙路 · 登仙榜（本周赛季）</div><div class="desc" style="margin-top:4px">你位列第 <b style="color:#fbbf24">'+(L.rank>30?"—（未入榜）":L.rank)+'</b> · 今日挑战剩 '+L.left+' 次 · 只能挑战高于你 5 名内的对手。冲进前十/前三/登顶，各得一次永久 +2；登顶即<b>羽化成仙</b>。</div><div id="ladBox" style="margin-top:6px"></div>';
+var rows="";
+foes.forEach(function(f){
+if(f.rank===L.rank)return;
+rows+='<div class="ladrow"><span class="rk">'+f.rank+'</span><span style="font-size:19px">'+f.emoji+'</span><span style="flex:1">'+f.name+'<span class="desc"> · 战力 '+f.power.toFixed(1)+'</span></span>'
++((L.rank-f.rank>=1&&L.rank-f.rank<=5&&L.left>0)?'<button class="pbtn" data-lad="'+f.rank+'">挑战</button>':"")+'</div>';
+if(f.rank===L.rank-1&&L.rank<=30)rows+='<div class="ladrow me"><span class="rk">'+L.rank+'</span><span style="font-size:19px">🧑</span><span style="flex:1"><b>你</b><span class="desc"> · 战力 '+playerPower().toFixed(1)+'</span></span></div>';
+});
+if(L.rank>30)rows+='<div class="ladrow me"><span class="rk">—</span><span style="font-size:19px">🧑</span><span style="flex:1"><b>你</b><span class="desc"> · 未入榜 · 战力 '+playerPower().toFixed(1)+'</span></span></div>';
+return html+rows+'</div>';
+}
+function renderDilu(){
+var rank=state.rankIndex;
+if(rank<6)return '<div class="card"><div style="font-size:16px;font-weight:800">👑 帝路未启</div><div class="desc" style="margin-top:5px;line-height:1.8">帝路争锋，是大乘者的路。万族天骄同行，只有一人能走到尽头。你现在是'+state.rankName+'，大乘门槛 2200 修为。</div></div>';
+var D=play.dilu;
+if(D.day!==play.day){D.day=play.day;D.left=3;playSave()}
+var html='<div class="card"><div style="font-weight:800">👑 帝路争锋 · 十八关</div><div class="desc" style="margin-top:4px">一关一守将，胜者前进，每日 3 次挑战（剩 '+D.left+'）。过关赏灵石，逢六关开帝关宝箱（永久 +2）。走完十八关，成仙路现。</div>';
+html+='<div class="dilurail">'+DILU_STAGES.map(function(nm,i){
+var cls=i<D.stage?"done":(i===D.stage?"now":"");
+return '<div class="dinode '+cls+'"><div class="dot">'+(i<D.stage?"✓":(i+1))+'</div><div class="dl">'+nm+'</div></div>';
+}).join("")+'</div>';
+if(D.stage>=18){
+html+='<div class="desc" style="margin-top:6px">帝路已尽。</div></div>';
+if(!play.chengxian){
+html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">🌈 成仙路 · 已开启</div><div class="desc" style="margin-top:4px;line-height:1.8">帝路尽头，一道光门。门后是守路人——也是你自己。胜过他，羽化登仙。</div><button class="bigbtn" id="btnChengXian">🌈 踏上成仙路</button><div id="cxBox" style="margin-top:8px"></div></div>';
+}else{
+html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">✨ 你已成仙</div><div class="desc" style="margin-top:4px;line-height:1.8">仙路之上，尚有<b>祭道</b>；祭道之上，是连古史都不敢写下的一层。你的映照，已经开始出现在各界的传闻里了。</div><div class="desc" style="margin-top:4px">（祭道之上 · 映照诸天：后续开启）</div></div>';
+
+}
+return html;
+}
+var i=D.stage;var foe=diluFoe(i);
+html+='<div class="desc" style="margin-top:4px">第 '+(i+1)+' 关 · <b>'+DILU_STAGES[i]+'</b> —— 守关：'+foe.emoji+' '+foe.name+'（战力 '+foe.power.toFixed(1)+'）· 过关赏 '+(20+i*8)+' 灵石</div>';
+html+=(D.left>0?'<button class="bigbtn" id="btnDilu">⚔️ 叩关</button>':'<div class="ok" style="margin-top:6px">今日叩关次数已尽，明日再来。</div>');
+html+='<div id="diluBox" style="margin-top:8px"></div></div>';
+return html;
+}
+function bindWorldsInner(el){
+Array.prototype.forEach.call(el.querySelectorAll("[data-world]"),function(b){b.addEventListener("click",function(){__worldSel=b.getAttribute("data-world");renderWorlds()})});
+Array.prototype.forEach.call(el.querySelectorAll("[data-lad]"),function(b){b.addEventListener("click",function(){
+var foes=ladderFoes();var L=ladderState();
+var r=+b.getAttribute("data-lad");var foe=null;foes.forEach(function(f){if(f.rank===r)foe=f});
+if(!foe||L.left<=0)return;
+L.left--;playSave();
+runFight($("ladBox"),foe,function(win){
+if(win){
+L.rank=r;playSave();
+claimReward("event",{amount:3},function(){});
+if(r<=10&&!L.top10){L.top10=1;playSave();claimReward("series",{series:"xianlu-top10"},function(){render()})}
+if(r<=3&&!L.top3){L.top3=1;playSave();claimReward("series",{series:"xianlu-top3"},function(){render()})}
+if(r===1&&!L.top1){L.top1=1;playSave();claimReward("series",{series:"chengxian"},function(){render()});breakthroughFx("羽化成仙")}
+else breakthroughLite("登仙榜第 "+r+" 位！");
+}
+render();renderWorlds();
+});
+})});
+var bd=$("btnDilu");
+if(bd)bd.addEventListener("click",function(){
+var D=play.dilu;if(D.left<=0||D.stage>=18)return;
+D.left--;playSave();
+var i=D.stage;var foe=diluFoe(i);
+runFight($("diluBox"),foe,function(win){
+if(win){
+D.stage++;play.stones+=20+i*8;playSave();
+breakthroughLite("过关 · "+DILU_STAGES[i]);
+if(D.stage%6===0)claimReward("series",{series:"dilu-"+D.stage},function(){render()});
+}
+render();renderWorlds();
+});
+});
+var bc=$("btnChengXian");
+if(bc)bc.addEventListener("click",function(){
+runFight($("cxBox"),{name:"守路人 · 他我",emoji:"🪞",power:19.5},function(win){
+if(win){play.chengxian=1;playSave();claimReward("series",{series:"feixian"},function(){render()});breakthroughFx("羽化登仙")}
+render();renderWorlds();
+});
+});
+}
+function renderWorldDetail(el){
+var w=worldById(__worldSel);if(!w){__worldSel=null;renderWorlds();return}
+var ware=wareById(w.ware);
+var fought=play.bossDay[w.id]===play.day;
+var html='<button class="pbtn" id="btnWorldBack">← 回万界图</button>';
+html+='<div class="wcard" style="--wc:'+w.color+'44"><div class="wname">'+w.icon+' '+w.name+'</div><div class="desc" style="margin-top:4px;line-height:1.7">'+w.desc+'</div></div>';
+html+='<div class="waregrid"><div class="ware"><div class="wic">'+ware.icon+'</div><div class="wname">'+ware.name+' <span class="haggle">界市特产</span></div><div class="wdesc">'+ware.desc+'</div><button class="pbtn wbuy" data-buy="'+ware.id+'" data-price="'+ware.price+'"'+((play.stones<ware.price||!wareUsable(ware))?" disabled":"")+'>💰 '+ware.price+' 灵石</button></div></div>';
+html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">'+w.boss.emoji+' 界主 · '+w.boss.name+'（战力 '+w.boss.power.toFixed(1)+'）</div><div class="desc" style="margin-top:4px">每日可挑战一次。胜：+8 修为（走奇遇额度）；首胜永久 +2。</div>'
++(fought?'<div class="ok" style="margin-top:6px">今日已挑战过这位界主。</div>':'<button class="bigbtn" id="btnBoss">⚔️ 挑战界主</button>')
++'<div id="bossBox" style="margin-top:8px"></div></div>';
+html+=renderCalamityCard(w);
+el.innerHTML=html;
+Array.prototype.forEach.call(el.querySelectorAll("[data-buy]"),function(b){b.addEventListener("click",function(){buyWare(b.getAttribute("data-buy"),+b.getAttribute("data-price"),b);setTimeout(renderWorlds,300)})});
+var bb=$("btnWorldBack");if(bb)bb.addEventListener("click",function(){__worldSel=null;renderWorlds()});
+var bcal=$("btnCalamity");
+if(bcal)bcal.addEventListener("click",function(){
+var C=calamityState();C.attDay[w.id]=play.day;playSave();
+var cal=CALAMITIES[w.id];
+runFight($("calBox"),{name:cal.name,emoji:cal.icon,power:w.boss.power+2.5},function(win){
+var dealt=Math.round(playerPower()*(win?11:4.5)*(0.85+Math.random()*0.3));
+C.dmg[w.id]=(C.dmg[w.id]||0)+dealt;
+var max=calamityMaxHp(w);
+if(C.dmg[w.id]>=max&&!C.kills[w.id]){
+C.kills[w.id]=1;play.stones+=150;playSave();
+claimReward("series",{series:"calamity-"+w.id},function(){render()});
+claimReward("event",{amount:8},function(){render()});
+breakthroughFx("灾厄平息 · "+w.name);
+}else{breakthroughLite("对灾厄造成 "+dealt+" 点创伤")}
+playSave();render();renderWorlds();
+});
+});
+var bf=$("btnBoss");if(bf)bf.addEventListener("click",function(){
+play.bossDay[w.id]=play.day;playSave();
+runFight($("bossBox"),w.boss,function(win){
+if(win){
+var first=!play.bossKills[w.id];play.bossKills[w.id]=1;playSave();
+if(first){claimReward("series",{series:"boss-"+w.id},function(){render();renderWorlds()});var _ab=grantAbilityRandom();if(_ab)setTimeout(function(){breakthroughLite("觉醒异能 · "+_ab.name)},700)}
+claimReward("event",{amount:8},function(){render();renderWorlds()});
+breakthroughLite(w.boss.name+" 已镇压！");
+}else{renderWorlds()}
+});
+});
+}
+
+/* ══ 成长轴：体质 / 巫师 / 魔药 / 异能 / 进化分支（v29）══ */
+var PHYSIQUES=[
+{id:"fan",icon:"🧑",name:"凡体",desc:"无甚异象，胜在根基扎实——淬体之路为你敞开。",pow:0},
+{id:"xuanhuang",icon:"🟫",name:"玄黄战体",desc:"战意入骨，越战越勇。",pow:0.25},
+{id:"taichu",icon:"🌅",name:"太初灵体",desc:"与灵气天然亲近，吐纳如呼吸。",pow:0.25},
+{id:"linglong",icon:"💠",name:"九窍玲珑体",desc:"心有九窍，学什么都比旁人快三分。",pow:0.3},
+{id:"xinghe",icon:"🌌",name:"星河宝体",desc:"周身窍穴如星，夜引星辉自淬。",pow:0.35},
+{id:"leijie",icon:"⚡",name:"万劫雷体",desc:"雷霆洗髓，举手投足带电弧。",pow:0.45},
+{id:"changsheng",icon:"🌲",name:"长生青木体",desc:"生机如古木，伤愈极快，寿元绵长。",pow:0.5}];
+var PHYS_SYNERGY={leijie:"qinglong",linglong:"lingwen",xuanhuang:"manhuang",xinghe:"xingtong"};
+function physiqueDef(){var d=PHYSIQUES[0];if(play&&play.physique)PHYSIQUES.forEach(function(x){if(x.id===play.physique.id)d=x});return d}
+var ABILITIES=[{id:"duoxin",icon:"🔮",name:"读心术"},{id:"konghuo",icon:"🔥",name:"控火"},{id:"yingdun",icon:"🌑",name:"影遁"},{id:"shunyi",icon:"💨",name:"瞬移"},{id:"nianli",icon:"🌀",name:"念力"},{id:"leidian",icon:"⚡",name:"雷电掌控"},{id:"zhiyu",icon:"💚",name:"治愈因子"},{id:"chihuan",icon:"⏳",name:"时间迟缓"}];
+function abilityDef(id){var d=null;ABILITIES.forEach(function(x){if(x.id===id)d=x});return d}
+function grantAbilityRandom(){
+  var rest=ABILITIES.filter(function(a){return play.abilities.indexOf(a.id)<0});
+  if(!rest.length)return null;
+  var a=rest[Math.floor(Math.random()*rest.length)];
+  play.abilities.push(a.id);playSave();
+  return a;
+}
+function wizModelTotal(){var t=0;if(play.wiz)for(var k in play.wiz.models)t+=play.wiz.models[k];return t}
+function wizRank(){
+  var m=wizModelTotal(),med=play.wiz?play.wiz.med:0;
+  if(m>=14&&med>=40)return{idx:3,name:"真理巫师"};
+  if(m>=8)return{idx:2,name:"大巫师"};
+  if(m>=3)return{idx:1,name:"正式巫师"};
+  return{idx:0,name:"巫师学徒"};
+}
+function renderWizard(){
+  var wr=wizRank();
+  var html='<div class="card" style="margin-top:12px"><div style="font-weight:800">🔮 巫师塔 · '+wr.name+'</div>'
+  +'<div class="desc" style="margin-top:4px;line-height:1.7">巫师之道，<b>知识即力量</b>：没有神授，没有法术位。冥想涨精神力（现 '+play.wiz.med+'），给每一门法术<b>研习巫术模型</b>，模型越深、法术越强。模型总数决定巫师位阶：学徒→正式（3）→大巫师（8）→真理（14 且精神力 40）。</div>'
+  +'<div class="desc" style="margin-top:4px">精神力加成战力 +'+Math.min(0.8,play.wiz.med*0.02).toFixed(2)+' · 模型加成 +'+(wizModelTotal()*0.06).toFixed(2)+'</div>'
+  +(play.abilities.length?'<div class="desc" style="margin-top:4px">已觉醒异能：'+play.abilities.map(function(id){var a=abilityDef(id);return a?a.icon+" "+a.name:""}).join(" · ")+'（每项 +0.25 战力）</div>':"")
+  +(play.wiz.medDay===play.day?'<div class="ok" style="margin-top:6px">今日已冥想。</div>':'<button class="bigbtn" id="btnMeditate">🧘 冥想（精神力 +'+(2+(play.tomes.length>=18?1:0))+'）</button>');
+  if(play.spells.length){
+    html+='<div style="margin-top:8px">'+play.spells.map(function(sid){
+      var sp=null;spellList().forEach(function(x){if(x.id===sid)sp=x});if(!sp)return "";
+      var lv=play.wiz.models[sid]||0;var cost=12+lv*10;
+      return '<div class="ladrow"><span style="font-size:19px">'+sp.icon+'</span><span style="flex:1">'+sp.name+'<span class="desc"> · 模型 '+lv+' / 5 层</span></span>'+(lv>=5?'<span class="desc">模型圆满</span>':'<button class="pbtn" data-model="'+sid+'"'+(play.stones<cost?" disabled":"")+'>研习 · '+cost+' 灵石</button>')+'</div>';
+    }).join("")+'</div>';
+  }else html+='<div class="desc" style="margin-top:6px">先在上面学一门法术，才能给它建模。</div>';
+  html+='</div>';
+  if(play.wiz.chip===undefined){play.wiz.chip=0;play.wiz.parseDay="";play.wiz.parseCount=0}
+  var ex='<div class="card" style="margin-top:10px"><div style="font-weight:800">🧠 芯片 · 解析 · 觉醒</div>'
+  +(play.wiz.chip?'<div class="desc" style="margin-top:4px;line-height:1.7">辅助芯片运转中：冥想收益 +1；决斗/界主/帝路对手卡显示<b>芯片预演胜算</b>；可<b>解析</b>功法残页（每日 2 次，20 灵石）：随机一门已学法术模型 +1，无已学法术则精神力 +3。</div>'
+    +(play.wiz.parseDay===play.day&&play.wiz.parseCount>=2?'<div class="ok" style="margin-top:6px">今日解析已用完。</div>':'<button class="bigbtn" id="btnParse">🔬 解析残页 · 20 灵石</button>')
+   :'<div class="desc" style="margin-top:4px;line-height:1.7">巫师的老伙计：植入一枚辅助芯片——冥想更深、战前能预演胜算、还能解析残页反推模型。</div><button class="bigbtn" id="btnChip"'+(play.stones<150?" disabled":"")+'>🧠 植入芯片 · 150 灵石'+(play.stones<150?"（灵石不足）":"")+'</button>')
+  +'<div class="desc" style="margin-top:8px">多系觉醒：已觉醒 '+(play.elements.length?play.elements.map(function(e){var d=elementDef(e);return d.icon+d.name}).join("、"):"无")+'（同系法术每门 +0.08 战力）</div>'
+  +(play.elements.length>=3?'<div class="ok">三系已满，全能之姿。</div>':'<button class="bigbtn" id="btnAwaken"'+(play.stones<60?" disabled":"")+'>🌈 觉醒一系 · 60 灵石</button>')
+  +'</div>';
+  var anchor=$("spellsBody");
+  if(anchor)anchor.insertAdjacentHTML("beforeend",ex);
+  var bch=$("btnChip");if(bch)bch.addEventListener("click",function(){if(play.stones<150)return;play.stones-=150;play.wiz.chip=1;playSave();renderSpells()});
+  var bpa=$("btnParse");if(bpa)bpa.addEventListener("click",function(){
+    if(play.stones<20)return;
+    if(play.wiz.parseDay!==play.day){play.wiz.parseDay=play.day;play.wiz.parseCount=0}
+    if(play.wiz.parseCount>=2)return;
+    play.stones-=20;play.wiz.parseCount++;
+    if(play.spells.length){var sid=play.spells[Math.floor(Math.random()*play.spells.length)];var lv=play.wiz.models[sid]||0;if(lv<5)play.wiz.models[sid]=lv+1;else play.wiz.med+=2}
+    else play.wiz.med+=3;
+    playSave();renderSpells();
+  });
+  var baw=$("btnAwaken");if(baw)baw.addEventListener("click",function(){
+    if(play.stones<60||play.elements.length>=3)return;
+    var rest=ELEMENTS.filter(function(e){return play.elements.indexOf(e.id)<0});
+    var pick=rest[Math.floor(Math.random()*rest.length)];
+    play.stones-=60;play.elements.push(pick.id);playSave();renderSpells();breakthroughLite("觉醒 · "+pick.name);
+  });
+  if(anchor)anchor.insertAdjacentHTML("beforeend",html);
+  var bm=$("btnMeditate");
+  if(bm)bm.addEventListener("click",function(){play.wiz.medDay=play.day;play.wiz.med+=2+(play.tomes.length>=18?1:0);playSave();renderSpells();var fb=document.querySelector("#spellsBody .fac-foot");if(fb)floatFx(fb,"精神力提升")});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-model]"),function(b){b.addEventListener("click",function(){
+    var sid=b.getAttribute("data-model");var lv=play.wiz.models[sid]||0;var cost=12+lv*10;
+    if(play.stones<cost||lv>=5)return;
+    var before=wizRank().idx;
+    play.stones-=cost;play.wiz.models[sid]=lv+1;playSave();
+    var after=wizRank().idx;
+    if(after>before)claimReward("series",{series:"wiz-"+after},function(){render()});
+    renderSpells();
+  })});
+}
+var POTION_PATHS=[
+{id:"kuimi",icon:"👁️",name:"窥秘之径",stages:["启灵药剂","凝神药剂","窥真药剂","织梦药剂"],ability:"duoxin",desc:"看破虚妄，终至读心。"},
+{id:"liehuo",icon:"🔥",name:"烈火之径",stages:["燃血药剂","熔心药剂","炎魔药剂","焚天药剂"],ability:"konghuo",desc:"以血燃火，终至控火。"},
+{id:"yingxing",icon:"🌑",name:"影行之径",stages:["潜影药剂","无声药剂","夜行药剂","影遁药剂"],ability:"yingdun",desc:"行于影中，终至影遁。"}];
+var POTION_COSTS=[25,45,75,120];
+function renderGrowth(){
+  var body=$("bloodBody");if(!body||!play||body.querySelector("[data-potion]"))return;
+  var ph=physiqueDef();var syn=PHYS_SYNERGY[play.physique.id];
+  var html='<div class="fac-sec"><div class="fac-title">🧬 体质 · '+ph.icon+" "+ph.name+'</div><div class="fac-desc">'+ph.desc+'<br>淬体 '+(play.physique.temper)+' / 5 层（每层 +0.12 战力）'+(syn?' · 与「'+syn+'」血脉共鸣中/待激活（+0.3）':"")+'</div>'
+  +(play.physique.temper>=5?'<div class="ok">体质已淬炼圆满。</div>':'<button class="pbtn" id="btnTemper"'+(play.stones<20+play.physique.temper*25?" disabled":"")+'>🔨 淬体 · '+(20+play.physique.temper*25)+' 灵石</button>')
+  +'<span id="temperMsg" class="desc" style="margin-left:8px"></span></div>';
+  html+='<div class="fac-sec"><div class="fac-title">🧪 魔药柜</div><div class="fac-desc">三条魔药之径，逐阶服下。服药有小概率「失控」（赔点灵石，不挡晋升）；走完一径，觉醒对应异能。</div>'
+  +POTION_PATHS.map(function(pp){
+    var st=play.potion[pp.id]||0;var ab=abilityDef(pp.ability);
+    return '<div class="ladrow"><span style="font-size:19px">'+pp.icon+'</span><span style="flex:1"><b>'+pp.name+'</b><span class="desc"> · '+pp.desc+' 进度 '+st+' / 4'+(st>=4?' · 已觉醒 '+ab.icon+" "+ab.name:" · 下一阶："+pp.stages[st])+'</span></span>'
+    +(st>=4?'<span class="desc">已走完</span>':'<button class="pbtn" data-potion="'+pp.id+'"'+(play.stones<POTION_COSTS[st]?" disabled":"")+'>服下 · '+POTION_COSTS[st]+' 灵石</button>')+'</div>';
+  }).join("")+'<div class="desc" id="potionMsg"></div></div>';
+  html+=wudaoHtml();
+  body.insertAdjacentHTML("beforeend",html);
+  var bwd=$("btnWudao");if(bwd)bwd.addEventListener("click",function(){if(play.wudao.day===play.day)return;var before=wudaoStage();play.wudao.day=play.day;play.wudao.prog++;playSave();var after=wudaoStage();if(after>before){claimReward("series",{series:"wudao-"+after},function(){render()});breakthroughLite("武道入境 · "+WUDAO_STAGES[after])}render();renderBlood();renderGrowth()});
+  var bt=$("btnTemper");
+  if(bt)bt.addEventListener("click",function(){var cost=20+play.physique.temper*25;if(play.stones<cost||play.physique.temper>=5)return;play.stones-=cost;play.physique.temper++;playSave();renderActs();var m=$("temperMsg");if(m)m.textContent="淬体成功，体魄更坚。"});
+  Array.prototype.forEach.call(body.querySelectorAll("[data-potion]"),function(b){b.addEventListener("click",function(){
+    var pp=null;POTION_PATHS.forEach(function(x){if(x.id===b.getAttribute("data-potion"))pp=x});if(!pp)return;
+    var st=play.potion[pp.id]||0;if(st>=4||play.stones<POTION_COSTS[st])return;
+    play.stones-=POTION_COSTS[st];play.potion[pp.id]=st+1;
+    var msg="服下「"+pp.stages[st]+"」，药力在经脉里烧开。";
+    if(Math.random()<0.18){play.stones=Math.max(0,play.stones-8);msg="⚠️ 失控！药力反噬，眼前一黑，醒来时少了 8 枚灵石——好在这一阶还是成了。"}
+    if(st+1>=4){var ab2=abilityDef(pp.ability);if(play.abilities.indexOf(pp.ability)<0)play.abilities.push(pp.ability);claimReward("series",{series:"potion-"+pp.id},function(){render()});msg+=" 觉醒异能："+ab2.icon+" "+ab2.name+"！"}
+    playSave();renderActs();var m2=$("potionMsg");if(m2)m2.textContent=msg;
+  })});
+}
+var PET_BRANCHES={
+fox:{n2:"寒冰魔狐",d2:"尾尖凝霜，所过之处雪线低垂",n3:"极寒狐君化形",d3:"化形成功！一身寒气，靠近三尺就起白霜"},
+crane:{n2:"雷鹏",d2:"翼下生雷纹，振翅有闷雷声",n3:"鹏仙化形",d3:"化形成功！行踪如电，传信再没迟到过"},
+turtle:{n2:"沧海龙龟",d2:"甲生龙鳞，能潜深海不浮",n3:"龙龟化形",d3:"化形成功！开口就是海的年岁，喊你小友"},
+jiao:{n2:"烛龙苗裔",d2:"睁眼为昼，闭眼为夜的影子落在它身上",n3:"烛龙化形",d3:"化形成功！眸开眸阖间，洞府明暗随之交替"}};
+function petStageName(pet,st){
+  if(st>=2&&pet.branch==="b"){var br=PET_BRANCHES[pet.id];if(br)return st===2?br.n2:br.n3;return st===2?"凶萌形态":pet.stages[3]}
+  var p=petDefOf(pet.id);return p?p.stages[st]:"";
+}
+function petDefOf(id){var d=null;PETS.forEach(function(x){if(x.id===id)d=x});petList().forEach(function(x){if(x.id===id)d=x});return d}
+
+/* ══ 世界层级 ＋ 跨界任务墙（v30）══ */
+var TIER_PRE=["碧落","紫宸","寒渊","炎陵","雾海","星砂","枯荣","流光","沉渊","飞雪","雷泽","云梦","青丘","玄圃","沧海","金乌"];
+var TIER_SUF=["界","天","域","洲"];
+var TIER_ICONS=["🌊","🔥","🌲","❄️","⚡","🌫️","🏜️","🌋","🌙","☁️"];
+var TIER_WARES=["tear","huosui","yaodan","xingsha","minghe","blooddrop","refinestone"];
+function weekKey(){var d=new Date();var onejan=new Date(d.getFullYear(),0,1);return d.getFullYear()+"W"+Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7)}
+function genTierWorlds(kind,count,seedStr,pLo,pHi){
+var rnd=seedRand(seedStr);var out=[];
+for(var i=0;i<count;i++){
+var nm=TIER_PRE[Math.floor(rnd()*TIER_PRE.length)]+TIER_SUF[Math.floor(rnd()*TIER_SUF.length)];
+out.push({id:kind+"-"+seedStr+"-"+i,name:nm,icon:TIER_ICONS[Math.floor(rnd()*TIER_ICONS.length)],
+foe:{name:TK_WHO[Math.floor(rnd()*TK_WHO.length)]+"·守界者",emoji:DUEL_EMOJI[Math.floor(rnd()*DUEL_EMOJI.length)],power:pLo+rnd()*(pHi-pLo)},
+ware:TIER_WARES[Math.floor(rnd()*TIER_WARES.length)]});
+}
+return out;
+}
+function renderTierWorlds(){
+var T=play.tiers;
+var mid=genTierWorlds("mid",6,"mid:"+weekKey(),6,9.5);
+var small=genTierWorlds("small",6,"small:"+play.day,3.5,7);
+var conq=Object.keys(T.conquered).length;
+var html='<div class="card"><div style="font-weight:800">🌐 无数中世界 · 本周疆域（已纳入 '+conq+' 界）</div><div class="desc" style="margin-top:4px">每周刷新一批中世界。击败守界者即纳入疆域：得赏灵石，并获赠该界特产一份。</div><div id="midBox" style="margin-top:6px"></div>'
++mid.map(function(w){
+var done=!!T.conquered[w.id];
+return '<div class="ladrow"><span style="font-size:19px">'+w.icon+'</span><span style="flex:1"><b>'+w.name+'</b><span class="desc"> · 守界者 '+w.foe.emoji+" "+w.foe.name+' · 战力 '+w.foe.power.toFixed(1)+' · 特产 '+wareById(w.ware).name+'</span></span>'
++(done?'<span class="desc" style="color:#4ade80">已纳入疆域</span>':'<button class="pbtn" data-mid="'+w.id+'">征服</button>')+'</div>';
+}).join("")+'</div>';
+html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">✨ 恒沙小世界 · 今日</div><div class="desc" style="margin-top:4px">小世界一日一换，去讨伐守界者，赢了有赏；每个小世界今日只能去一次。</div><div id="smallBox" style="margin-top:6px"></div>'
++small.map(function(w){
+var done=!!T.smallDone[w.id];
+return '<div class="ladrow"><span style="font-size:19px">'+w.icon+'</span><span style="flex:1"><b>'+w.name+'</b><span class="desc"> · '+w.foe.emoji+" "+w.foe.name+' · 战力 '+w.foe.power.toFixed(1)+'</span></span>'
++(done?'<span class="desc">今日已去过</span>':'<button class="pbtn" data-small="'+w.id+'">前往讨伐</button>')+'</div>';
+}).join("")+'</div>';
+html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">🔹 微型世界 · 碎片奇遇</div><div class="desc" style="margin-top:4px">口袋大小的碎片世界，一日可探 '+(3-T.microDone)+' 次。S01 号乘客最爱在这种地方出现。</div><div id="microBox" style="margin-top:6px"></div><button class="bigbtn" id="btnMicro"'+(T.microDone>=3?" disabled":"")+'>🔹 探一个微型世界</button></div>';
+return html;
+}
+var MICRO_EVENTS=[
+{t:"碎片世界里只有一口井，井底有光。",c:["下井探看","绕井而行"],o:["井底沉着一小袋灵石，+25！","井边石碑写着：看的人多，敢下的少。"]},
+{t:"一位没有影子的老人请你喝茶。",c:["喝","婉拒"],o:["茶香入腹，神清气爽（奇遇额度 +4）。","老人笑笑，影子慢慢回到了他脚下。"]},
+{t:"渡界列车的影子从这片碎片上空掠过，S01 号乘客的脸在窗口一闪。",c:["挥手","记下车次"],o:["他似乎也看见了你，微微颔首。","车次是三个问号——这趟车，不在时刻表上。"]},
+{t:"整个世界只有一间小店，店主在打盹。",c:["买下镇店之宝","叫醒店主聊天"],o:["一枚旧玉佩，入手温润（+18 灵石等价的心意，店主抹了零）。","店主说：上一位客人，也没有影子。"]},
+{t:"天上下着金色的雨，每一滴都很慢。",c:["伸手接雨","撑伞看雨"],o:["掌心落了三滴，凝成小小的金珠，+20 灵石。","雨停时，天边挂着两道虹。"]},
+{t:"一座只有三级台阶的山，山顶插着一面小旗。",c:["登山拔旗","山下留名"],o:["旗上写着你的名字——在你出生之前。这事别深想（+15 灵石压惊）。","后来者会在山下看见你的名字。"]}];
+function microExplore(box){
+var T=play.tiers;if(T.microDone>=3)return;
+T.microDone++;playSave();
+var ev=MICRO_EVENTS[Math.floor(Math.random()*MICRO_EVENTS.length)];
+box.innerHTML='<div class="duellog"><div>'+ev.t+'</div></div><div class="cheatrow" style="margin-top:6px">'+ev.c.map(function(c,i){return '<button class="pbtn" data-micro="'+i+'">'+c+'</button>'}).join("")+'</div>';
+Array.prototype.forEach.call(box.querySelectorAll("[data-micro]"),function(b){b.addEventListener("click",function(){
+var i=+b.getAttribute("data-micro");
+var stones=[25,0,0,18,20,15][MICRO_EVENTS.indexOf(ev)]||0;
+if(i===0&&stones>0){play.stones+=stones;playSave()}
+if(i===0&&MICRO_EVENTS.indexOf(ev)===1)claimReward("event",{amount:4},function(){render()});
+box.innerHTML='<div class="duellog"><div>'+ev.o[i]+'</div></div>';
+missionProgress("explore");
+render();
+})});
+}
+function missionsState(){
+var T=play.tiers;
+if(!T.missions||T.missions.day!==play.day){
+var rnd=seedRand("missions:"+play.day);
+var small=genTierWorlds("small",6,"small:"+play.day,3.5,7);
+var list=[
+{id:"hunt",icon:"⚔️",text:"讨伐小世界「"+small[Math.floor(rnd()*small.length)].name+"」的守界者",target:small[Math.floor(rnd()*small.length)].id,reward:40,done:0},
+{id:"collect",icon:"📦",text:"入手一件界市特产（任意特产购买即可）",reward:35,done:0},
+{id:"explore",icon:"🔹",text:"探索一个微型世界",reward:30,done:0}];
+list[0].target=small[0].id;list[0].text="讨伐小世界「"+small[0].name+"」的守界者";
+T.missions={day:play.day,list:list,firstClaimed:0};playSave();
+}
+return T.missions;
+}
+function missionProgress(kind,target){
+var M=missionsState();var changed=false;
+M.list.forEach(function(m){
+if(m.done)return;
+if(m.id===kind&&(kind!=="hunt"||m.target===target)){
+m.done=1;play.stones+=m.reward;changed=true;
+breakthroughLite("跨界任务完成 · +"+m.reward+" 灵石");
+if(!M.firstClaimed){M.firstClaimed=1;claimReward("event",{amount:4},function(){render()})}
+}
+if(kind==="buy"&&m.id==="collect"){m.done=1;play.stones+=m.reward;changed=true;breakthroughLite("跨界任务完成 · +"+m.reward+" 灵石")}
+});
+if(changed)playSave();
+}
+function renderTaskWall(){
+var M=missionsState();
+var html='<div class="card"><div style="font-weight:800">📜 界门任务墙 · 今日跨界任务</div><div class="desc" style="margin-top:4px">任务每日刷新，奖励是灵石；今日首个完成的任务另有 +4 修为（走奇遇额度）。讨伐任务去万界图的「恒沙小世界」里完成。</div>'
++M.list.map(function(m){return '<div class="ladrow"><span style="font-size:19px">'+m.icon+'</span><span style="flex:1">'+m.text+'<span class="desc"> · 赏 '+m.reward+' 灵石</span></span>'+(m.done?'<span class="desc" style="color:#4ade80">已完成</span>':'<span class="desc">进行中</span>')+'</div>'}).join("")
++'</div>';
+return html;
+}
+function bindTierWorlds(el){
+var T=play.tiers;
+Array.prototype.forEach.call(el.querySelectorAll("[data-mid]"),function(b){b.addEventListener("click",function(){
+var mid=genTierWorlds("mid",6,"mid:"+weekKey(),6,9.5);var w=null;mid.forEach(function(x){if(x.id===b.getAttribute("data-mid"))w=x});if(!w||T.conquered[w.id])return;
+runFight($("midBox"),w.foe,function(win){
+if(win){T.conquered[w.id]=1;play.stones+=Math.round(w.foe.power*6);playSave();applyWare(wareById(w.ware));breakthroughLite(w.name+" 纳入疆域！")}
+render();renderWorlds();
+});
+})});
+Array.prototype.forEach.call(el.querySelectorAll("[data-small]"),function(b){b.addEventListener("click",function(){
+var small=genTierWorlds("small",6,"small:"+play.day,3.5,7);var w=null;small.forEach(function(x){if(x.id===b.getAttribute("data-small"))w=x});if(!w||T.smallDone[w.id])return;
+runFight($("smallBox"),w.foe,function(win){
+T.smallDone[w.id]=1;playSave();
+if(win){play.stones+=20;playSave();missionProgress("hunt",w.id)}
+render();renderWorlds();
+});
+})});
+var bj=$("btnJinQu");if(bj)bj.addEventListener("click",function(){play.jinQu=1;playSave();breakthroughFx("身化禁区");render();renderWorlds()});
+var bt2=$("btnTribute");if(bt2)bt2.addEventListener("click",function(){if(play.jinQuDay===play.day)return;play.jinQuDay=play.day;play.stones+=40;playSave();render();renderWorlds()});
+var bm=$("btnMicro");
+if(bm)bm.addEventListener("click",function(){microExplore($("microBox"))});
+}
+
+/* ══ 一界一灾厄（v31）：赛季性世界灾厄 ══ */
+var CALAMITIES={
+canglan:{name:"渊底巨鲲",icon:"🐋",desc:"覆海之灾。沧澜界深渊之下沉睡的巨鲲，醒时翻身，海啸吞没三千岛。"},
+fengtian:{name:"灭世炎灾",icon:"☀️",desc:"焚天界地心炎魔冲破封印，火雨连下七日，万物成灰。"},
+wanyao:{name:"血月兽潮",icon:"🌕",desc:"血月当空，万妖界群兽失智成潮，踏平一切活物之地。"},
+xingchen:{name:"星陨之灾",icon:"☄️",desc:"星尘界星轨崩坏，陨星如雨——每一颗，都是一座城的命。"},
+youming:{name:"冥河决堤",icon:"🌊",desc:"冥河改道，亡魂倒灌阳间，幽冥界与人间的界限只剩一线。"}};
+function calamityState(){
+  var C=play.calamity;var wk=weekKey();
+  if(C.week!==wk){if(C.week)C.era++;C.week=wk;C.dmg={};C.kills={};C.attDay={};playSave()}
+  return C;
+}
+function calamityMaxHp(w){
+  var C=calamityState();
+  return Math.round((800+w.boss.power*60)*(1+C.era*0.2));
+}
+function renderCalamityCard(w){
+  var cal=CALAMITIES[w.id];if(!cal)return "";
+  var C=calamityState();
+  var max=calamityMaxHp(w);var dmg=C.dmg[w.id]||0;var left=Math.max(0,max-dmg);
+  var killed=!!C.kills[w.id];var tried=C.attDay[w.id]===play.day;
+  var pct=Math.min(100,Math.round(dmg/max*100));
+  var html='<div class="card" style="margin-top:10px;border-color:rgba(220,38,38,.45)"><div style="font-weight:800">☠️ 本季灾厄 · '+cal.icon+" "+cal.name+'</div><div class="desc" style="margin-top:4px;line-height:1.7">'+cal.desc+'</div>'
+  +'<div class="desc" style="margin-top:5px">灾厄气血 <b style="color:#f87171">'+left+'</b> / '+max+'（本周赛季 · 第 '+(C.era+1)+' 纪）</div>'
+  +'<div style="height:9px;border-radius:6px;background:rgba(255,255,255,.08);margin-top:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#dc2626,#f97316)"></div></div>';
+  if(killed)html+='<div class="ok" style="margin-top:6px">本季灾厄已被讨伐平息，此界暂安。</div>';
+  else if(tried)html+='<div class="desc" style="margin-top:6px">今日已战过一场——灾厄不会一天倒下，靠的是日日磨它。明日再来。</div>';
+  else html+='<button class="bigbtn" id="btnCalamity">☠️ 讨伐灾厄（今日 1 次）</button>';
+  html+='<div id="calBox" style="margin-top:8px"></div></div>';
+  return html;
+}
+
+/* ══ v32：芯片/解析/多系觉醒/武道/身化禁区 ══ */
+var ELEMENTS=[{id:"huo",icon:"🔥",name:"火系"},{id:"lei",icon:"⚡",name:"雷系"},{id:"bing",icon:"❄️",name:"冰系"},{id:"feng",icon:"🌪️",name:"风系"},{id:"tu",icon:"⛰️",name:"土系"},{id:"guang",icon:"✨",name:"光系"},{id:"an",icon:"🌑",name:"暗系"}];
+function spellElement(sp){
+  var n=sp.name+sp.desc;
+  if(/雷|电/.test(n))return "lei";
+  if(/冰|霜|寒|雪/.test(n))return "bing";
+  if(/风|岚/.test(n))return "feng";
+  if(/火|炎|焚|焰/.test(n))return "huo";
+  if(/影|冥|幽|煞|血|魔/.test(n))return "an";
+  if(/光|阳|星|月/.test(n))return "guang";
+  return "tu";
+}
+function elementDef(id){var d=ELEMENTS[6];ELEMENTS.forEach(function(x){if(x.id===id)d=x});return d}
+function chipOddsText(foePower){
+  if(!play.wiz||!play.wiz.chip)return "";
+  var me=playerPower();var pc=Math.round(100/(1+Math.exp(-(me-foePower)*0.85)));
+  return " · 🧠 芯片预演胜算 "+pc+"%";
+}
+var WUDAO_STAGES=["明劲","暗劲","化劲","罡劲","见神不坏"];
+var WUDAO_NEED=[0,3,8,15,25];
+function wudaoStage(){var st=0;if(play&&play.wudao)WUDAO_NEED.forEach(function(n,i){if(play.wudao.prog>=n)st=i});return st}
+function wudaoHtml(){
+  var st=wudaoStage();
+  var next=st>=4?null:WUDAO_NEED[st+1];
+  return '<div class="fac-sec"><div class="fac-title">🥋 武道 · '+WUDAO_STAGES[st]+'</div><div class="fac-desc">民国武道一脉：明劲→暗劲→化劲→罡劲→见神不坏。演武进度 '+play.wudao.prog+(next?' · 再演武 '+(next-play.wudao.prog)+' 次入'+WUDAO_STAGES[st+1]:" · 已至绝巅")+'（每境 +0.18 战力）</div>'
+  +(play.wudao.day===play.day?'<span class="desc">今日已演武。</span>':'<button class="pbtn" id="btnWudao">🥋 每日演武</button>')+'</div>';
+}
+function jinQuHtml(){
+  if(!play.chengxian)return "";
+  if(!play.jinQu)return '<div class="card" style="margin-top:10px"><div style="font-weight:800">☠️ 身化禁区</div><div class="desc" style="margin-top:4px;line-height:1.8">仙人的一步棋：把你的洞府与道场化作一方<b>生命禁区</b>——自此各界修士绕道而行，提起你的名字先压低声音。</div><button class="bigbtn" id="btnJinQu">☠️ 身化禁区</button></div>';
+  return '<div class="card" style="margin-top:10px"><div style="font-weight:800">☠️ 禁区之主</div><div class="desc" style="margin-top:4px;line-height:1.8">你的道场已成禁区。各界敬畏，每日有供奉悄悄放在禁区之外。</div>'
+  +(play.jinQuDay===play.day?'<div class="ok">今日供奉已收。</div>':'<button class="bigbtn" id="btnTribute">🎁 收今日畏敬供奉（+40 灵石）</button>')+'</div>';
+}
+function breakthroughLite(txt){
+  var bf=$("breakFx");if(!bf)return;
+  $("breakText").textContent=txt;bf.style.display="flex";cgBars(1500);SFX.up();
+  setTimeout(function(){bf.style.display="none"},1500);
+}
 function renderCaveSheet(){
   if(caveSel==="pet"){renderPetSheet();return}
   var fc=null;FACS.forEach(function(x){if(x.key===caveSel)fc=x});
@@ -2562,6 +3244,21 @@ function playFix(){
   if(play.stalls===undefined)play.stalls=null;
   if(play.stallDay===undefined)play.stallDay="";
   if(!play.gardenBoost)play.gardenBoost=0;
+  if(!play.bossDay)play.bossDay={};
+  if(!play.bossKills)play.bossKills={};
+  if(play.ladder===undefined)play.ladder=null;
+if(!play.dilu)play.dilu={stage:0,day:"",left:3};
+if(!play.tiers)play.tiers={conquered:{},smallDone:{},microDone:0,microDay:"",missions:null};
+if(!play.calamity)play.calamity={week:"",era:0,dmg:{},kills:{},attDay:{}};
+if(!play.elements)play.elements=[];
+if(!play.wudao)play.wudao={prog:0,day:""};
+if(play.jinQu===undefined)play.jinQu=0;
+if(play.jinQuDay===undefined)play.jinQuDay="";
+if(play.chengxian===undefined)play.chengxian=0;
+if(!play.wiz)play.wiz={med:0,models:{},medDay:""};
+if(!play.potion)play.potion={};
+if(!play.abilities)play.abilities=[];
+if(!play.physique){var _pw=[["fan",50],["xuanhuang",14],["taichu",12],["linglong",8],["xinghe",8],["leijie",5],["changsheng",3]];var _rr=Math.random()*100,_pa="fan";for(var _i=0;_i<_pw.length;_i++){_rr-=_pw[_i][1];if(_rr<=0){_pa=_pw[_i][0];break}}play.physique={id:_pa,temper:0}}
 }
 var BLOODS=[
  {id:"long",icon:"🐉",name:"青龙血脉",color:"#22c55e",desc:"东方青龙 · 生生不息，修炼如沐春风"},
@@ -2641,13 +3338,14 @@ function renderPetSheet(){
   }
   var pet=PETS[0];PETS.forEach(function(x){if(x.id===play.pet.id)pet=x});
   var st=petStageOf(play.pet.feeds);
-  var stName=pet.stages[st];
+  var stName=petStageName(play.pet,st);var _pbr=PET_BRANCHES[play.pet.id];var sdescR=(st>=2&&play.pet.branch==='b'&&_pbr)?(st===2?_pbr.d2:_pbr.d3):pet.sdesc[st];
   var next=st===0?5:(st===1?15:(st===2?30:null));
-  var html='<div class="petstage"><div class="petbig" id="petBig" style="font-size:'+(46+st*14)+'px">'+pet.icon+'</div><div class="viscap" data-viscap="1">'+stName+' · '+pet.sdesc[st]+'（喂食 '+play.pet.feeds+' 次'+(next?" · 再喂 "+(next-play.pet.feeds)+" 次进化":" · 已是完全体")+'）</div></div>';
-  html+='<div class="cheatrow"><button class="pbtn" id="btnFeed"'+(play.stones<3?" disabled":"")+'>🍖 喂食 · 3 灵石</button><button class="pbtn" id="btnTouch">'+(play.pet.lastTouch===play.day?"💖 今日已亲近":"🤲 抚摸（每日 +3 修为）")+'</button></div>';
+  var html='<div class="petstage"><div class="petbig" id="petBig" style="font-size:'+(46+st*14)+'px">'+pet.icon+'</div><div class="viscap" data-viscap="1">'+stName+' · '+sdescR+'（喂食 '+play.pet.feeds+' 次'+(next?" · 再喂 "+(next-play.pet.feeds)+" 次进化":" · 已是完全体")+'）</div></div>';
+  if(st>=2&&!play.pet.branch){var _pb2=PET_BRANCHES[play.pet.id];html+='<div class="fac-desc" style="margin-top:8px">🌟 <b>进化岔路</b>：它到了抉择的关口——继续本形（'+pet.stages[3]+'），还是走分支（'+(_pb2?_pb2.n3:"荒古化形")+'）？选了不回头。</div><div class="cheatrow"><button class="pbtn" data-branch="a">本形之路</button><button class="pbtn" data-branch="b">分支进化</button></div>'}
+html+='<div class="cheatrow"><button class="pbtn" id="btnFeed"'+(play.stones<3?" disabled":"")+'>🍖 喂食 · 3 灵石</button><button class="pbtn" id="btnTouch">'+(play.pet.lastTouch===play.day?"💖 今日已亲近":"🤲 抚摸（每日 +3 修为）")+'</button></div>';
   html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>点灵兽本体也能抚摸</span></div>';
   body.innerHTML=html;
-  var feed=$("btnFeed");if(feed)feed.addEventListener("click",function(){if(play.stones<3)return;var stBefore=petStageOf(play.pet.feeds);play.stones-=3;play.pet.feeds++;playSave();render();var stg=$("caveSheetBody .petstage");if(!stg)return;if(petStageOf(play.pet.feeds)>stBefore){burstFx(stg,["✨","💠","🌟"],14);var pn=PETS[0];PETS.forEach(function(x){if(x.id===play.pet.id)pn=x});floatFx(stg,"进化 · "+pn.stages[petStageOf(play.pet.feeds)])}else burstFx(stg,["🍖","✨"],7)});
+  var feed=$("btnFeed");if(feed)feed.addEventListener("click",function(){if(play.stones<3)return;var stBefore=petStageOf(play.pet.feeds);play.stones-=3;play.pet.feeds++;playSave();render();var stg=$("caveSheetBody .petstage");if(!stg)return;if(petStageOf(play.pet.feeds)>stBefore){burstFx(stg,["✨","💠","🌟"],14);var pn=PETS[0];PETS.forEach(function(x){if(x.id===play.pet.id)pn=x});floatFx(stg,"进化 · "+petStageName(play.pet,petStageOf(play.pet.feeds)))}else burstFx(stg,["🍖","✨"],7)});
   var touch=function(){
     SFX.pet();
     var stg=$("caveSheetBody .petstage");
@@ -2655,7 +3353,8 @@ function renderPetSheet(){
     play.pet.lastTouch=play.day;playSave();
     claimReward("event",{amount:3},function(){render();var st2=$("caveSheetBody .petstage");if(st2){burstFx(st2,["💖","✨"],9);floatFx(st2,"亲近 +3 修为")}});
   };
-  var bt=$("btnTouch");if(bt)bt.addEventListener("click",touch);
+  Array.prototype.forEach.call(body.querySelectorAll("[data-branch]"),function(bb){bb.addEventListener("click",function(){play.pet.branch=bb.getAttribute("data-branch");playSave();renderPetSheet();render()})});
+ var bt=$("btnTouch");if(bt)bt.addEventListener("click",touch);
   var pb=$("petBig");if(pb)pb.addEventListener("click",touch);
 }
 function renderPlay(s){
@@ -2757,7 +3456,7 @@ $("btnSwitch").addEventListener("click",function(){
   window.scrollTo(0,0);
 });
 $("btnCheat").addEventListener("click",function(){openRoom("room-cheat")});
-$("btnBlood").addEventListener("click",function(){renderBlood();openRoom("room-blood")});
+$("btnBlood").addEventListener("click",function(){renderBlood();renderGrowth();openRoom("room-blood")});
 Array.prototype.forEach.call(document.querySelectorAll("[data-stones]"),function(el){el.addEventListener("click",function(){if(!play)return;play.stones=Math.max(0,(play.stones||0)+(+el.getAttribute("data-stones")));playSave();render()})});
 $("btnStonesSet").addEventListener("click",function(){if(!play)return;var v=parseInt($("inStones").value,10);if(isNaN(v))return;play.stones=Math.max(0,Math.min(999999999,v));playSave();render()});
 $("btnStonesZero").addEventListener("click",function(){if(!play)return;play.stones=0;playSave();render()});
