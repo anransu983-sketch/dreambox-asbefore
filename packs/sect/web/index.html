@@ -519,6 +519,28 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 @keyframes swaydrift{0%{transform:translate(0,0) rotate(-8deg);opacity:0}10%{opacity:.9}50%{transform:translate(30px,-46px) rotate(10deg)}90%{opacity:.8}100%{transform:translate(-14px,-96px) rotate(-6deg);opacity:0}}
 .flarefx{position:absolute;left:-20%;width:140%;height:4px;top:var(--fy,50%);background:linear-gradient(90deg,transparent,rgba(190,220,255,.95) 50%,transparent);box-shadow:0 0 22px 6px rgba(160,200,255,.5);animation:flareout .75s ease-out forwards;pointer-events:none;z-index:6}
 @keyframes flareout{from{opacity:0;transform:scaleX(.3)}25%{opacity:1}to{opacity:0;transform:scaleX(1.15)}}
+
+/* ── 坊市大世界（v26）：分区/摊位/拍卖/决斗/场馆 ── */
+.mkchips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.mkchips::-webkit-scrollbar{display:none}
+.mkchip{flex:0 0 auto;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer}
+.mkchip.on{background:linear-gradient(120deg,#b45309,#f59e0b);color:#fff;border-color:transparent;font-weight:700}
+.newsline{font-size:12.5px;color:var(--sub);line-height:1.75}
+.haggle{font-size:12px;color:#fbbf24}
+.duelstage{position:relative;height:180px;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#1e1b4b,#0f172a 70%);border:1px solid var(--border)}
+.duelstage .df{position:absolute;bottom:34px;font-size:56px;transition:left .3s ease,transform .15s ease;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.hpwrap{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;gap:20px}
+.hpbar{flex:1}
+.hpbar .hpfill{height:8px;border-radius:5px;background:linear-gradient(90deg,#22c55e,#84cc16);transition:width .3s ease}
+.hpbar .hpfill.foe{background:linear-gradient(90deg,#ef4444,#f97316)}
+.duellog{min-height:64px;font-size:13px;line-height:1.7;color:#dbeafe}
+.bidlog{font-size:12.5px;line-height:1.8;color:var(--sub);max-height:120px;overflow-y:auto}
+#retreatFx{position:fixed;inset:0;z-index:97;display:none;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(180deg,#0b1026,#1e1b4b 55%,#312e81)}
+#retreatFx .sky{position:absolute;inset:0;background:linear-gradient(180deg,#f59e0b,#ef4444 40%,#1e1b4b 75%);opacity:0;transition:opacity 2.2s ease}
+#retreatFx .breath2{width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:44px;animation:breathpulse 4s ease-in-out infinite;position:relative;background:rgba(255,255,255,.06)}
+@keyframes breathpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}
+#retreatFx .rtxt{position:relative;margin-top:20px;color:#e0e7ff;font-size:15px;letter-spacing:2px}
+.menugrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}
 </style>
 
 </head>
@@ -716,6 +738,7 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
     <div class="room-body" id="marketBody"></div>
   </div>
   <div id="npcBox"></div>
+  <div id="retreatFx"><div class="sky"></div><div class="breath2">🧘</div><div class="rtxt" id="retreatTxt">入定……</div></div>
   <div class="room" id="room-events">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🎲 今日奇遇</div><div class="room-sub">每日刷新 · 选择决定收获</div></div></div>
     <div class="room-body"><div id="hallEvents"></div></div>
@@ -1112,7 +1135,7 @@ function renderForge(){
   var bm=$("btnForgeMake");
   if(bm)bm.addEventListener("click",function(){
     if(play.stones<fcost)return;
-    play.stones-=fcost;if(play.forgeHalf)play.forgeHalf=0;
+    play.stones-=fcost;if(play.forgeHalf>0)play.forgeHalf--;
     var firstGrade=!ARTIFACTS.some(function(x){return x.grade===f.grade&&play.fabaos.indexOf(x.id)>=0});
     SFX.forge();play.fabaos.push(f.id);playSave();
     var after=function(){render();renderForge();castInto("forgeStage","forgeFx","🔥","zoom");var st=$("forgeStage");if(st)setTimeout(function(){burstFx(st,["🔨","✨","🔥"],10)},200)};
@@ -1624,28 +1647,50 @@ var NPCS=[
  {id:"zhujiu",icon:"🔨",name:"铸九",role:"器峰铸器师",room:"room-forge",lines:["好铁要千锤，废铁也一样，先锤再说。","法宝是有脾气的，你敬它三分，它护你七分。","老夫这锤子，比掌门年纪都大。","淬火听声，声脆则成。"]},
  {id:"xiaoshitou",icon:"🪨",name:"小石头",role:"守洞童子",room:"room-cave",lines:["我天天给各洞府扫落叶，什么秘密都听过一点。","你的灵兽昨天又去拱药园了，我可没告状。","洞府评级高了，连落叶都金贵些。","嘘——聚灵阵转的时候别大声说话。"]},
  {id:"qianduoduo",icon:"🧮",name:"钱多多",role:"集市掌柜",room:"room-market",lines:["灵石嘛，生不带来死不带去，花在刀刃上才是赚。","今日的新货，件件都是我亲自验过的。","熟客九八折——别跟别人说。","集市的规矩：一手交钱，一手交货，概不赊账。"]},
- {id:"jiayi",icon:"💰",name:"贾三",role:"云游行商",room:"room-market",lines:["我走过的地方比你读过的书多。","这件宝贝，来历说出来怕吓着你。","行商最忌心软，可我偏偏看你顺眼。","下次再见，不知又是哪年了。"]}];
+ {id:"jiayi",icon:"💰",name:"贾三",role:"云游行商",room:"room-market",lines:["我走过的地方比你读过的书多。","这件宝贝，来历说出来怕吓着你。","行商最忌心软，可我偏偏看你顺眼。","下次再见，不知又是哪年了。"]},
+ {id:"sunpopo",icon:"👵",name:"孙婆婆",role:"回春堂丹师",room:"room-market",lines:["是药三分毒，丹也一样，别贪。"]},
+ {id:"tiesuanpan",icon:"🧮",name:"铁算盘",role:"宝器阁掌柜",room:"room-market",lines:["我这算盘打了四十年，没错过一文。"]},
+ {id:"laochen",icon:"🧔",name:"老陈",role:"百工坊坊主",room:"room-market",lines:["材料这东西，差之毫厘，谬以千里。"]},
+ {id:"huxiaoer",icon:"🍶",name:"胡小二",role:"醉仙楼小二",room:"room-market",lines:["客官里面请——本店灵酒管够！"]},
+ {id:"chengbanzhu",icon:"🎭",name:"程班主",role:"梨园班主",room:"room-market",lines:["台上一分钟，台下十年功。"]},
+ {id:"huajie",icon:"🦶",name:"花姐",role:"仙足阁老板娘",room:"room-market",lines:["修仙先修脚，脚稳道才稳。"]},
+ {id:"leicaipan",icon:"🏆",name:"雷裁判",role:"决斗场裁判",room:"room-market",lines:["上了决斗场，生死各安天命——但点到为止。"]},
+ {id:"mayaren",icon:"🏠",name:"马牙人",role:"洞府牙行牙人",room:"room-market",lines:["好洞府不等人，看中就下手。"]},
+ {id:"zhaosi",icon:"🧓",name:"赵四",role:"散修 · 地摊",room:"none",lines:["我这摊子，件件是山里淘换的。"]},
+ {id:"huapo",icon:"👵",name:"花婆婆",role:"散修 · 地摊",room:"none",lines:["婆婆不坑人，坑人遭雷劈。"]},
+ {id:"duyan",icon:"🧑",name:"独眼龙",role:"散修 · 地摊",room:"none",lines:["一只眼看货，比两只眼还毒。"]},
+ {id:"xiaoman",icon:"👧",name:"小满",role:"散修 · 地摊",room:"none",lines:["我替我爹看摊，他猎妖去了。"]},
+ {id:"kusou",icon:"👴",name:"苦叟",role:"散修 · 地摊",room:"none",lines:["年轻时我也是个有故事的人。"]},
+ {id:"atie",icon:"🧑‍🏭",name:"阿铁",role:"散修 · 地摊",room:"none",lines:["打铁剩下的边角料，便宜处理。"]}];
 var npcTalkIdx={};
 function npcById(id){var n=null;NPCS.forEach(function(x){if(x.id===id)n=x});return n}
 function openNpc(id){
   var n=npcById(id);if(!n)return;
-  var idx=npcTalkIdx[id]||0;npcTalkIdx[id]=idx+1;
-  var line=n.lines[idx%n.lines.length];
-  var gifted=play&&play.npcGift[id]===play.day;
   var box=$("npcBox");
-  box.innerHTML='<div class="npchead"><div class="nava">'+n.icon+'</div><div><div style="font-weight:800">'+n.name+'</div><div class="desc">'+n.role+'</div></div></div><div class="npcline">「'+line+'」</div><div class="cheatrow"><button class="pbtn" id="npcGift"'+(gifted?" disabled":"")+'>'+(gifted?"今日已唠过":"🍵 唠唠家常（+2 修为）")+'</button><button class="pbtn" id="npcBye">告辞</button></div>';
+  var mood=npcMoodOf(id);
+  var moodTxt=mood===0?" · 今日心情欠佳":(mood===2?" · 今日心情大好":"");
+  function draw(line){
+    var gifted=play&&play.npcGift[id]===play.day;
+    box.innerHTML='<div class="npchead"><div class="nava">'+n.icon+'</div><div><div style="font-weight:800">'+n.name+'</div><div class="desc">'+n.role+moodTxt+'</div></div></div><div class="npcline" id="npcLine">「'+line+'」</div><div class="mkchips" style="margin-top:8px"><button class="mkchip" data-tk="chat">💬 闲聊</button><button class="mkchip" data-tk="market">📈 问行情</button><button class="mkchip" data-tk="advice">🧭 求指点</button><button class="mkchip" data-tk="secret">🔮 打听秘闻</button></div><div class="cheatrow"><button class="pbtn" id="npcGift"'+(gifted?" disabled":"")+'>'+(gifted?"今日已唠过":"🍵 唠唠家常（+2 修为）")+'</button><button class="pbtn" id="npcBye">告辞</button></div>';
+    Array.prototype.forEach.call(box.querySelectorAll("[data-tk]"),function(b){b.addEventListener("click",function(){
+      var tk=b.getAttribute("data-tk");
+      var nl=tk==="chat"?genLine(n):genLine(n,tk);
+      $("npcLine").textContent="「"+nl+"」";SFX.tap();
+    })});
+    $("npcBye").addEventListener("click",function(){box.classList.remove("show")});
+    var g=$("npcGift");
+    if(g&&!gifted)g.addEventListener("click",function(){
+      play.npcGift[id]=play.day;playSave();
+      claimReward("event",{amount:2},function(){render()});
+      box.classList.remove("show");
+    });
+  }
+  draw(Math.random()<0.25?n.lines[0]:genLine(n));
   box.classList.add("show");SFX.tap();
-  $("npcBye").addEventListener("click",function(){box.classList.remove("show")});
-  var g=$("npcGift");
-  if(g&&!gifted)g.addEventListener("click",function(){
-    play.npcGift[id]=play.day;playSave();
-    claimReward("event",{amount:2},function(){render()});
-    box.classList.remove("show");
-  });
 }
 (function(){
   var byRoom={};
-  NPCS.forEach(function(n){(byRoom[n.room]=byRoom[n.room]||[]).push(n)});
+  NPCS.forEach(function(n){if(n.room==="room-market"&&n.id!=="qianduoduo"&&n.id!=="jiayi")return;(byRoom[n.room]=byRoom[n.room]||[]).push(n)});
   Object.keys(byRoom).forEach(function(rid){
     var room=document.getElementById(rid);if(!room)return;
     var wrap=document.createElement("div");wrap.className="npcchips";
@@ -1654,6 +1699,78 @@ function openNpc(id){
     Array.prototype.forEach.call(wrap.querySelectorAll("[data-npc]"),function(el){el.addEventListener("click",function(){openNpc(el.getAttribute("data-npc"))})});
   });
 })();
+
+/* ══ 对白生成器：句式骨架 × 词库 × 你的真实状态，组合数以万计，每日尽量不重样 ══ */
+var TK_WHO=["沈砚","陆青禾","白芷","顾长风","唐烈","叶孤鸿","莫问天","楚南风","江雪","石敢当","温如玉","洛青衣","韩铁山","柳三变","钱串子","周慕云","林晚舟","徐长河","慕容雪","司徒明","何青山","方守朴","左寒舟","岳不群".replace("岳不群","岳停云"),"任盈盈".replace("任盈盈","任清欢"),"风清扬".replace("风清扬","风清尘")];
+var TK_WHERE=["后山","坊市东街","藏经阁三楼","演武台","丹房后院","山门牌坊下","剑坪","灵兽园","执法堂门口","聚灵阵旁","洗剑池","半山亭","任务墙前","老槐树下","溪水边","望云崖","听雨轩","醉仙楼二楼","梨园后台","决斗场看台"];
+var TK_THING=["一株三叶灵草","一柄断剑","半块灵玉","一坛埋了十年的酒","一本缺页的旧书","一只会学人说话的鹦鹉","一枚来历不明的令牌","一炉废丹","一张藏宝图残页","一颗鸽子蛋大的夜明珠","一尾金鳞鱼","一块星陨铁","一串沉香木念珠","一幅前朝的字画","一颗避水珠"];
+var TK_FRAMES={
+ greet:["今日{where}的风不错，适合论道。","刚从{where}过来，那边正热闹着呢。","你这身修为气息，又精进了？","我正要去{where}，同行？","方才{who}还念叨你来着。","修行之人也要晒太阳，走，去{where}坐坐。","看你气色，昨夜修炼到几更？","大道三千，你我同行一段。"],
+ job:["我这行当，靠的就是一个{thing}走天下。","今早在{where}收了{thing}，成色难得。","别看不起我这摊子，{who}当年也是从这儿起的家。","这一行水深，{thing}的真假，一眼十年功。","忙完这阵，我打算去{where}歇三天。","手艺这东西，骗不了人，也骗不了自己。","今日{thing}紧俏得很，手快有手慢无。","我师父说过：先做人，再做买卖。"],
+ sect:["听说{who}在{where}悟出了一式新招，围观的人挤满了。","{who}前日下山历练，据说在山外救了一村人。","藏经阁那位守阁的老人，年轻时也是个狠角色。","演武台新规矩出来了，切磋不许下死手。","今年开山收徒，听说有几个好苗子。","{who}的那只灵兽又把药园拱了，柳师姐脸都绿了。","执法堂最近在查内库失窃，风声有点紧。","丹堂新出了一炉好丹，还没上架就被订光了。","掌门的茶又喝完了，谁去后山采？","听说后山那眼灵泉，月圆夜会涨潮。"],
+ world:["山外不太平，听说两家商会在争一条矿脉。","北边有个散修，一夜之间连破两境，都传疯了。","最近{thing}在黑市上炒得火热，你懂的。","有位前辈在{where}摆摊算命，说的话十有八准。","今年的论道大会改地方了，好像定在云梦泽。","听说海市要开船了，去晚了连站票都没有。","{who}被仇家追了三千里，最后在{where}反杀，成了谈资。","灵气潮汐又要来了，各家都在囤符纸。","西边沙漠里现了一座古修洞府，地图都卖脱销了。","今年冬天冷得早，连灵兽都往南边挪窝。"],
+ mood_bad:["唉，别提了，今早丢了{thing}，心疼。","昨夜没睡好，梦见我师父骂我。","今日手气背，开炉就炸了一炉。","家里那口子又催我回乡下种地了。","被{who}坑了一把，这个月白干。"],
+ mood_good:["今儿天清气朗，我这心情啊，跟{where}的风一样。","早上捡了{thing}，运气来了挡不住！","刚谈成一笔大买卖，晚上醉仙楼我请——哦不，还是算了。","我家那小子昨日引气入体了！嘿嘿。"],
+ advice:["你眼下是{rank}，根基比招式重要，别贪快。","藏经阁你还有不少书没读透吧？书读百遍，其义自见。","灵石别乱花，留三成应急，这是我多年的血泪。","切磋多去演武台，闭门造车最忌讳。","你那灵兽喂得不错，灵兽通人性，别亏待它。","突破前先把状态养满，十次里九次栽在心浮气躁。","法宝不在多，趁手一件胜过十件。","多去坊市走走，行情就是修行的一部分。","交朋友要交{who}那样的，实在。"],
+ secret:["小声点——{where}那口井，子时三刻会自己冒泡。","我只告诉你：{who}的修为，是嗑药堆的，虚得很。","集市里有个摊主，卖的{thing}，十件里有三件是真的——已经算良心了。","山门大阵有个后门？……我可什么都没说。","听说掌门年轻时有个道侣，后来……算了，不提了。","{who}其实是女儿身，束发混进来的，嘘。","后山第七棵松树下，埋着上一任守阁人的酒。"]} ;
+function tkPick(a){return a[Math.floor(Math.random()*a.length)]}
+function tkFill(tpl,npc){
+  var mk=(play&&play.market&&play.market.stock&&play.market.stock[0])?wareById(play.market.stock[0].id):null;
+  return tpl.replace("{who}",tkPick(TK_WHO)).replace("{who}",tkPick(TK_WHO))
+    .replace("{where}",tkPick(TK_WHERE)).replace("{where}",tkPick(TK_WHERE))
+    .replace("{thing}",tkPick(TK_THING)).replace("{thing}",tkPick(TK_THING))
+    .replace("{rank}",state?state.rankName:"修士")
+    .replace("{ware}",mk?mk.name:"功法残页")
+    .replace("{price}",mk?(play.market.stock[0].price+""):"25");
+}
+function npcMoodOf(id){
+  if(!play.npcMood||play.npcMood.day!==play.day){
+    var m={day:play.day,map:{}};
+    NPCS.forEach(function(n){m.map[n.id]=Math.floor(seedRand("mood:"+play.day+":"+n.id)()*3)});
+    play.npcMood=m;playSave();
+  }
+  return play.npcMood.map[id]===undefined?1:play.npcMood.map[id];
+}
+function genLine(npc,topic){
+  if(play.talkDay!==play.day){play.talkSeen={};play.talkDay=play.day;playSave()}
+  var seen=play.talkSeen[npc.id]||(play.talkSeen[npc.id]=[]);
+  var pool=[];
+  if(topic==="secret")pool=TK_FRAMES.secret;
+  else if(topic==="advice")pool=TK_FRAMES.advice;
+  else if(topic==="market")pool=null;
+  else{
+    var mood=npcMoodOf(npc.id);
+    if(mood===0)pool=TK_FRAMES.mood_bad.concat(TK_FRAMES.job);
+    else if(mood===2)pool=TK_FRAMES.mood_good.concat(TK_FRAMES.greet);
+    else pool=TK_FRAMES.greet.concat(TK_FRAMES.job,TK_FRAMES.sect,TK_FRAMES.world);
+  }
+  if(topic==="market"){
+    if(play.market&&play.market.stock&&play.market.stock.length){
+      var lines=play.market.stock.map(function(st){var w=wareById(st.id);return "今日「"+w.name+"」"+st.price+"灵石，"+(st.price<w.price?"比平日便宜，手快有。":(st.price>w.price?"略涨了些，不急可以等等。":"价格公道。"))});
+      lines.push("坊市的价，一天三变，看准了就下手。");
+      lines.push("钱掌柜那摊是总店，我这儿是分号——价格嘛，你自己比。");
+      return lines[Math.floor(Math.random()*lines.length)];
+    }
+    return "今日货还没上全，你晚些再来。";
+  }
+  for(var t=0;t<10;t++){
+    var line=tkFill(tkPick(pool),npc);
+    var h=0;for(var i=0;i<line.length;i++)h=(h*31+line.charCodeAt(i))>>>0;
+    if(seen.indexOf(h)<0){seen.push(h);if(seen.length>80)seen.shift();playSave();return line}
+  }
+  return tkFill(tkPick(pool),npc);
+}
+/* ── 世界见闻（每日坊市快讯）── */
+var NEWS_FRAMES=["📜 {who}在决斗场连赢三场，赔率跌穿地板。","📜 {where}今晨灵气异动，聚灵阵出租价小涨。","📜 有散修在地摊上淘到{thing}，转手翻了五倍。","📜 醉仙楼新到一批灵酒，限量供应。","📜 {who}放话：下月论道大会，他要挑战{who2}。","📜 拍卖场今晚有压轴宝物，聚宝楼门口已经排起队。","📜 今年灵草收成不好，丹药铺全线涨价。","📜 一只来历不明的灵兽在{where}出没，守阁老人说别惹它。"];
+function worldNews(){
+  var rnd=seedRand("news:"+play.day);
+  var out=[];
+  for(var i=0;i<3;i++){
+    var f=NEWS_FRAMES[Math.floor(rnd()*NEWS_FRAMES.length)];
+    out.push(f.replace("{who}",TK_WHO[Math.floor(rnd()*TK_WHO.length)]).replace("{who2}",TK_WHO[Math.floor(rnd()*TK_WHO.length)]).replace("{where}",TK_WHERE[Math.floor(rnd()*TK_WHERE.length)]).replace("{thing}",TK_THING[Math.floor(rnd()*TK_THING.length)]));
+  }
+  return out;
+}
 /* ── 集市：每日货单（种子随机），行商贾三隔日才来 ── */
 var WARES=[
  {id:"tomepage",icon:"📜",name:"功法残页",price:25,desc:"随机补一本尚未收录的功法（集齐系列照样 +2）"},
@@ -1661,7 +1778,12 @@ var WARES=[
  {id:"spellxp",icon:"🌀",name:"感悟卷轴",price:20,desc:"随机一门已学的法术或神通，熟练 +10"},
  {id:"stonebag",icon:"💰",name:"开运福袋",price:30,desc:"开出 20 ~ 60 枚灵石，看脸"},
  {id:"forgechip",icon:"⚙️",name:"精炼器胚",price:35,desc:"下一件法宝炼制半价（器峰使用）"},
- {id:"blooddrop",icon:"🩸",name:"血脉精血",price:60,desc:"当前血脉直接升一阶（未满阶时）"}];
+ {id:"blooddrop",icon:"🩸",name:"血脉精血",price:60,desc:"当前血脉直接升一阶（未满阶时）"},
+ {id:"juqi",icon:"💊",name:"聚气丹",price:15,desc:"服下即炼：+6 修为（走每日奇遇额度）"},
+ {id:"dunwu",icon:"🌟",name:"顿悟丹",price:30,desc:"随机一门已学法术/神通，熟练 +15"},
+ {id:"refinestone",icon:"💎",name:"祭炼石",price:55,desc:"随机一件已炼法宝，祭炼 +1 阶"},
+ {id:"jingtie",icon:"🧱",name:"百炼精铁",price:20,desc:"器峰炼制半价券 ×2 次"},
+ {id:"zhongzi",icon:"🌰",name:"灵草种子",price:10,desc:"下一次药园晨收，收获翻倍"}];
 var WARES_RARE=[
  {id:"divinepage",icon:"🌌",name:"神通残卷",price:90,desc:"随机习成一门尚未参悟的神通（照样 +2）"},
  {id:"petegg",icon:"🥚",name:"灵兽蛋",price:80,desc:"灵兽直接长到下一进化阶段"}];
@@ -1683,12 +1805,36 @@ function wareUsable(w){
   if(w.id==="spellxp")return play.spells.length+play.divines.length>0;
   if(w.id==="blooddrop")return !!play.bloodActive&&(play.bloods[play.bloodActive]||0)<5;
   if(w.id==="divinepage")return divineList().some(function(d){return play.divines.indexOf(d.id)<0});
+  if(w.id==="refinestone")return play.fabaos.some(function(fid){return (play.fabaoLvl[fid]||0)<5});
+  if(w.id==="juqi")return true;
   if(w.id==="tomepage")return allSeries().some(function(sr){return sr.tomes.some(function(t){return play.tomes.indexOf(sr.id+":"+t)<0})});
   return true;
 }
 function buyWare(id,price,btn){
   var w=wareById(id);if(!w||play.stones<price)return;
   play.stones-=price;SFX.coin();
+  applyWare(w);
+}
+function applyWare(w){
+  if(w.id==="juqi"){claimReward("event",{amount:6},function(err){render();renderMarket(err?"聚气丹的药力被今日额度挡下了（奇遇次数用满）。":"聚气丹化开，+6 修为。")});return}
+  if(w.id==="dunwu"){
+    var all2=[];play.spells.forEach(function(x){all2.push(["s",x])});play.divines.forEach(function(x){all2.push(["d",x])});
+    if(!all2.length){play.stones+=30;playSave();render();renderMarket("还没学任何法术神通，顿悟丹退你灵石。");return}
+    var pk2=all2[Math.floor(Math.random()*all2.length)];
+    if(pk2[0]==="s")play.spellXp[pk2[1]]=(play.spellXp[pk2[1]]||0)+15;else play.divineXp[pk2[1]]=(play.divineXp[pk2[1]]||0)+15;
+    playSave();render();renderMarket("顿悟如潮，熟练 +15。");return;
+  }
+  if(w.id==="refinestone"){
+    var cand=play.fabaos.filter(function(fid){return (play.fabaoLvl[fid]||0)<5});
+    var fid2=cand[Math.floor(Math.random()*cand.length)];
+    play.fabaoLvl[fid2]=(play.fabaoLvl[fid2]||0)+1;playSave();
+    var fobj=null;ARTIFACTS.forEach(function(x){if(x.id===fid2)fobj=x});
+    if(play.fabaoLvl[fid2]===5){claimReward("series",{series:"fabao-max-"+fid2},function(){render();renderMarket("祭炼石生效：「"+fobj.name+"」祭炼圆满！")})}
+    else{render();renderMarket("祭炼石生效：「"+fobj.name+"」祭炼 +1 阶。")}
+    return;
+  }
+  if(w.id==="jingtie"){play.forgeHalf=(play.forgeHalf||0)+2;playSave();render();renderMarket("精铁入手：器峰半价券 +2 次。");return}
+  if(w.id==="zhongzi"){play.gardenBoost=1;playSave();render();renderMarket("种子撒下：下一次晨收翻倍。");return}
   if(w.id==="stonebag"){var gain=20+Math.floor(Math.random()*41);play.stones+=gain;playSave();render();renderMarket("福袋开出 "+gain+" 枚灵石！");return}
   if(w.id==="petfood"){play.pet.feeds+=3;playSave();render();renderMarket("灵兽饱餐一顿（喂食 +3）。");return}
   if(w.id==="petegg"){var st=petStageOf(play.pet.feeds);play.pet.feeds=st===0?5:(st===1?15:30);playSave();render();renderMarket("灵兽破壳而出，进化了！");return}
@@ -1720,33 +1866,367 @@ function buyWare(id,price,btn){
   }
   render();renderMarket("入手「"+w.name+"」。");
 }
+var __mkSection="street";
+var MK_SECTIONS=[["street","🏮 街市"],["fabao","🗡️ 宝器阁"],["dan","💊 回春堂"],["cailiao","🧱 百工坊"],["ditan","🧎 散修地摊"],["auction","🔨 拍卖场"],["eat","🍜 醉仙楼"],["theatre","🎭 梨园"],["foot","🦶 仙足阁"],["duel","⚔️ 决斗场"],["rent","🏠 洞府租赁"]];
+function mkVendor(id){
+  var n=npcById(id);
+  return '<div class="vendor"><div class="nava">'+n.icon+'</div><div style="flex:1"><b>'+n.name+'</b> · '+n.role+'<div class="desc">「'+genLine(n)+'」</div></div><button class="pbtn" data-talka="'+id+'">唠嗑</button></div>';
+}
+function mkWareCard(st,tag){
+  var w=wareById(st.id);var ok=wareUsable(w);
+  return '<div class="ware"><div class="wic">'+w.icon+'</div><div class="wname">'+w.name+(tag?' <span class="haggle">'+tag+'</span>':'')+'</div><div class="wdesc">'+w.desc+'</div><button class="pbtn wbuy" data-buy="'+w.id+'" data-price="'+st.price+'"'+((play.stones<st.price||!ok)?" disabled":"")+'>💰 '+st.price+' 灵石'+(ok?"":"（暂不可用）")+'</button></div>';
+}
+function stallsGen(){
+  if(play.stallDay===play.day&&play.stalls)return play.stalls;
+  var rnd=seedRand("stalls:"+play.day);
+  var keepers=["zhaosi","huapo","duyan","xiaoman","kusou","atie"];
+  var pool=WARES.slice();var out=[];
+  for(var i=0;i<3;i++){
+    var kid=keepers.splice(Math.floor(rnd()*keepers.length),1)[0];
+    var w=pool.splice(Math.floor(rnd()*pool.length),1)[0];
+    var off=0.55+rnd()*0.2;if(npcMoodOf(kid)===2)off-=0.05;
+    out.push({npc:kid,ware:w.id,price:Math.max(3,Math.round(w.price*off)),hag:0,sold:0});
+  }
+  play.stalls=out;play.stallDay=play.day;playSave();
+  return out;
+}
 function renderMarket(note){
   var el=$("marketBody");if(!el||!play)return;
   if(!play.market||play.market.day!==play.day)play.market=marketGen();
   var mk=play.market;
-  var qian=npcById("qianduoduo"),jia=npcById("jiayi");
-  var html='<div class="vendor"><div class="nava">'+qian.icon+'</div><div style="flex:1"><b>'+qian.name+'</b> · '+qian.role+'<div class="desc">「'+qian.lines[1]+'」</div></div><button class="pbtn" data-talka="qianduoduo">唠嗑</button></div>';
-  html+='<div class="waregrid">'+mk.stock.map(function(st){
-    var w=wareById(st.id);var ok=wareUsable(w);
-    return '<div class="ware"><div class="wic">'+w.icon+'</div><div class="wname">'+w.name+'</div><div class="wdesc">'+w.desc+'</div><button class="pbtn wbuy" data-buy="'+w.id+'" data-price="'+st.price+'"'+((play.stones<st.price||!ok)?" disabled":"")+'>💰 '+st.price+' 灵石'+(ok?"":"（暂不可用）")+'</button></div>';
-  }).join("")+'</div>';
-  if(mk.jia){
-    html+='<div class="vendor"><div class="nava">'+jia.icon+'</div><div style="flex:1"><b>'+jia.name+'</b> · '+jia.role+'<div class="desc">「'+jia.lines[1]+'」</div></div><button class="pbtn" data-talka="jiayi">唠嗑</button></div>';
-    html+='<div class="waregrid">'+mk.rare.map(function(st){
-      var w=wareById(st.id);var ok=wareUsable(w);
-      return '<div class="ware"><div class="wic">'+w.icon+'</div><div class="wname">'+w.name+' ✦行商珍品</div><div class="wdesc">'+w.desc+'</div><button class="pbtn wbuy" data-buy="'+w.id+'" data-price="'+st.price+'"'+((play.stones<st.price||!ok)?" disabled":"")+'>💰 '+st.price+' 灵石'+(ok?"":"（暂不可用）")+'</button></div>';
-    }).join("")+'</div>';
-  }else{
-    html+='<div class="card" style="margin-top:10px"><div class="desc">云游行商贾三今日未到——他隔三差五才来，珍品看缘分。</div></div>';
+  var sec=__mkSection;
+  var html='<div class="card"><div style="font-weight:800">🗞️ 坊市快讯</div>'+worldNews().map(function(n){return '<div class="newsline">'+n+'</div>'}).join("")+'</div>';
+  html+='<div class="mkchips">'+MK_SECTIONS.map(function(x){return '<button class="mkchip'+(sec===x[0]?" on":"")+'" data-mksec="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div>';
+  if(sec==="street"){
+    html+=mkVendor("qianduoduo");
+    html+='<div class="waregrid">'+mk.stock.map(function(st){return mkWareCard(st)}).join("")+'</div>';
+    if(mk.jia){
+      html+=mkVendor("jiayi");
+      html+='<div class="waregrid">'+mk.rare.map(function(st){return mkWareCard(st,"✦行商珍品")}).join("")+'</div>';
+    }else{
+      html+='<div class="card" style="margin-top:10px"><div class="desc">云游行商贾三今日未到——他隔三差五才来，珍品看缘分。</div></div>';
+    }
+    html+='<div class="cheatrow"><button class="pbtn" id="btnMarketRefresh"'+(play.stones<5?" disabled":"")+'>🔄 换一批货 · 5 灵石</button></div>';
   }
-  html+='<div class="cheatrow"><button class="pbtn" id="btnMarketRefresh"'+(play.stones<5?" disabled":"")+'>🔄 换一批货 · 5 灵石</button></div>';
-  html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>货单每日更新</span></div>';
+  else if(sec==="fabao"){
+    html+=mkVendor("tiesuanpan");
+    var unowned=ARTIFACTS.filter(function(f){return play.fabaos.indexOf(f.id)<0});
+    html+='<div class="waregrid">'+unowned.map(function(f){var pr=Math.ceil(f.cost*1.6);return '<div class="ware"><div class="wic">'+f.icon+'</div><div class="wname">'+f.name+'</div><div class="wdesc">'+FABAO_GRADES[f.grade]+' · 成品直购（器峰自炼 '+f.cost+'）</div><button class="pbtn wbuy" data-buyfabao="'+f.id+'" data-price="'+pr+'"'+(play.stones<pr?" disabled":"")+'>💰 '+pr+' 灵石</button></div>'}).join("")+'</div>';
+    if(!unowned.length)html+='<div class="card"><div class="desc">法宝已收全，宝器阁只剩掌柜的算盘声。</div></div>';
+    html+='<div class="waregrid">'+mkWareCard({id:"refinestone",price:55})+mkWareCard({id:"forgechip",price:35})+'</div>';
+  }
+  else if(sec==="dan"){
+    html+=mkVendor("sunpopo");
+    html+='<div class="waregrid">'+mkWareCard({id:"juqi",price:15})+mkWareCard({id:"dunwu",price:30})+mkWareCard({id:"petfood",price:12})+mkWareCard({id:"stonebag",price:30})+'</div>';
+    html+='<div class="desc" style="margin-top:8px">孙婆婆的丹都是当日现炼。聚气丹走每日奇遇额度，额度满了药力会被挡下。</div>';
+  }
+  else if(sec==="cailiao"){
+    html+=mkVendor("laochen");
+    html+='<div class="waregrid">'+mkWareCard({id:"jingtie",price:20})+mkWareCard({id:"zhongzi",price:10})+mkWareCard({id:"spellxp",price:20})+mkWareCard({id:"forgechip",price:35})+'</div>';
+  }
+  else if(sec==="ditan"){
+    var sts=stallsGen();
+    html+=sts.map(function(st){
+      var kn=npcById(st.npc);var w=wareById(st.ware);
+      if(st.sold)return '<div class="vendor"><div class="nava">'+kn.icon+'</div><div style="flex:1"><b>'+kn.name+'</b> · '+kn.role+'<div class="desc">今日的货卖空了，明天再来。</div></div><button class="pbtn" data-talka="'+st.npc+'">唠嗑</button></div>';
+      return '<div class="vendor"><div class="nava">'+kn.icon+'</div><div style="flex:1"><b>'+kn.name+'</b> · '+kn.role+'<div class="desc">「'+genLine(kn)+'」</div></div><button class="pbtn" data-talka="'+st.npc+'">唠嗑</button></div>'
+        +'<div class="waregrid" style="margin-top:6px"><div class="ware"><div class="wic">'+w.icon+'</div><div class="wname">'+w.name+' <span class="haggle">地摊价</span></div><div class="wdesc">'+w.desc+'</div><button class="pbtn wbuy" data-buystall="'+st.npc+'" data-price="'+st.price+'"'+((play.stones<st.price||!wareUsable(w))?" disabled":"")+'>💰 '+st.price+' 灵石</button>'
+        +(st.hag===0?'<button class="pbtn wbuy" data-haggle="'+st.npc+'">🗣️ 砍一刀</button>':(st.hag===1?'<div class="haggle">已砍成，再砍要翻脸了</div>':'<div class="haggle">砍价失败，摊主有点不高兴</div>'))
+        +'</div></div>';
+    }).join("");
+  }
+  else if(sec==="auction"&&typeof renderMkAuction==="function")html+=renderMkAuction();
+  else if(sec==="eat"&&typeof renderMkEat==="function")html+=renderMkEat();
+  else if(sec==="theatre"&&typeof renderMkTheatre==="function")html+=renderMkTheatre();
+  else if(sec==="foot"&&typeof renderMkFoot==="function")html+=renderMkFoot();
+  else if(sec==="duel"&&typeof renderMkDuel==="function")html+=renderMkDuel();
+  else if(sec==="rent"&&typeof renderMkRent==="function")html+=renderMkRent();
+  html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>坊市每日焕新</span></div>';
   if(note)html+='<div class="ok">'+note+'</div>';
   el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll("[data-mksec]"),function(b){b.addEventListener("click",function(){__mkSection=b.getAttribute("data-mksec");SFX.tap();renderMarket()})});
   Array.prototype.forEach.call(el.querySelectorAll("[data-buy]"),function(b){b.addEventListener("click",function(){buyWare(b.getAttribute("data-buy"),+b.getAttribute("data-price"),b)})});
   Array.prototype.forEach.call(el.querySelectorAll("[data-talka]"),function(b){b.addEventListener("click",function(){openNpc(b.getAttribute("data-talka"))})});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-buyfabao]"),function(b){b.addEventListener("click",function(){
+    var fid=b.getAttribute("data-buyfabao");var pr=+b.getAttribute("data-price");
+    var f=null;ARTIFACTS.forEach(function(x){if(x.id===fid)f=x});
+    if(!f||play.stones<pr)return;
+    var firstGrade=!ARTIFACTS.some(function(x){return x.grade===f.grade&&play.fabaos.indexOf(x.id)>=0});
+    play.stones-=pr;play.fabaos.push(f.id);playSave();SFX.coin();
+    if(firstGrade)claimReward("series",{series:"fabao-g"+f.grade},function(){render();renderMarket("宝器阁入手「"+f.name+"」！")});
+    else{render();renderMarket("宝器阁入手「"+f.name+"」。")}
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-buystall]"),function(b){b.addEventListener("click",function(){
+    var sts2=play.stalls||[];var st=null;sts2.forEach(function(x){if(x.npc===b.getAttribute("data-buystall"))st=x});
+    if(!st||st.sold)return;
+    var w=wareById(st.ware);if(play.stones<st.price)return;
+    play.stones-=st.price;st.sold=1;playSave();SFX.coin();applyWare(w);
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-haggle]"),function(b){b.addEventListener("click",function(){
+    var sts3=play.stalls||[];var st=null;sts3.forEach(function(x){if(x.npc===b.getAttribute("data-haggle"))st=x});
+    if(!st||st.hag!==0)return;
+    if(Math.random()<0.55){st.hag=1;st.price=Math.max(2,Math.round(st.price*0.8));playSave();renderMarket("砍成了！摊主肉痛地摆摆手。")}
+    else{st.hag=-1;st.price=Math.round(st.price*1.05);playSave();renderMarket("摊主脸一沉：爱买不买，涨了。")}
+  })});
   var rf=$("btnMarketRefresh");if(rf)rf.addEventListener("click",function(){if(play.stones<5)return;play.stones-=5;play.market.refresh=(play.market.refresh||0)+1;play.market=marketGen();playSave();renderMarket("新货上架。")});
+  if(typeof bindMkExtra==="function")bindMkExtra(el);
 }
+
+/* ── 拍卖场：与散修竞价，NPC 有心理价位 ── */
+function auctionGen(){
+  if(play.auction&&play.auction.day===play.day)return play.auction;
+  var rnd=seedRand("auction:"+play.day);
+  var pool=["divinepage","petegg","blooddrop","tomepage","refinestone"];
+  var lots=[];
+  for(var i=0;i<3;i++){
+    var wid=pool.splice(Math.floor(rnd()*pool.length),1)[0];
+    var w=wareById(wid);
+    lots.push({ware:wid,price:Math.round(w.price*0.6),ceiling:Math.round(w.price*(1.25+rnd()*1.1)),leader:"",done:0,winner:""});
+  }
+  play.auction={day:play.day,lots:lots};playSave();
+  return play.auction;
+}
+var __aucLog={};
+function renderMkAuction(){
+  var a=auctionGen();
+  var html='<div class="vendor"><div class="nava">🔨</div><div style="flex:1"><b>聚宝楼拍卖</b> · 今日三件拍品<div class="desc">出价后散修们会跟价，超过他们的心理价位就落锤归你；落锤才扣灵石。</div></div></div>';
+  html+=a.lots.map(function(lot,i){
+    var w=wareById(lot.ware);
+    var logs=(__aucLog[i]||[]).map(function(x){return '<div>'+x+'</div>'}).join("");
+    var btn="";
+    if(lot.done)btn='<div class="ok">'+(lot.winner==="你"?"🔨 已由你拍下！":"🔨 被「"+lot.winner+"」拍走")+'</div>';
+    else{
+      var step=Math.max(2,Math.round(lot.price*0.1));
+      btn='<button class="pbtn wbuy" data-aucbid="'+i+'"'+(play.stones<lot.price+step?" disabled":"")+'>✋ 出价 '+(lot.price+step)+' 灵石</button>'
+        +(lot.leader&&lot.leader!=="你"?'<button class="pbtn wbuy" data-aucgive="'+i+'">放弃</button>':"")
+        +(lot.leader==="你"?'<div class="haggle">你暂列最高，再无人跟价即可落锤（继续出价可逼退对手）</div>':"");
+    }
+    return '<div class="ware" style="margin-top:9px"><div class="wic">'+w.icon+'</div><div class="wname">'+w.name+' <span class="haggle">拍品 '+(i+1)+'</span></div><div class="wdesc">'+w.desc+'</div><div class="desc">当前价 <b style="color:#fbbf24">'+lot.price+'</b> 灵石'+(lot.leader?' · 最高：'+lot.leader:" · 尚未有人出价")+'</div>'+btn+'<div class="bidlog">'+logs+'</div></div>';
+  }).join("");
+  return html;
+}
+function aucBid(i){
+  var a=play.auction;if(!a)return;
+  var lot=a.lots[i];if(lot.done)return;
+  var step=Math.max(2,Math.round(lot.price*0.1));
+  var my=lot.price+step;
+  if(play.stones<my)return;
+  lot.price=my;lot.leader="你";playSave();
+  (__aucLog[i]=__aucLog[i]||[]).push("你出价 "+my+" 灵石。");
+  renderMarket();
+  setTimeout(function(){
+    var lot2=play.auction.lots[i];if(lot2.done||lot2.leader!=="你")return;
+    if(my>=lot2.ceiling){
+      lot2.done=1;lot2.winner="你";play.stones-=my;playSave();
+      (__aucLog[i]).push("🔨 三声落锤——成交！");
+      SFX.divine();
+      var w=wareById(lot2.ware);
+      renderMarket();
+      applyWare(w);
+    }else{
+      var npc=tkPick(TK_WHO);
+      var step2=Math.max(2,Math.round(lot2.price*0.1));
+      lot2.price+=step2;lot2.leader=npc;playSave();
+      (__aucLog[i]).push("「"+npc+"」跟价 "+lot2.price+" 灵石。");
+      SFX.coin();renderMarket();
+    }
+  },750);
+}
+/* ── 决斗场：押注对决，动画演武 ── */
+var DUEL_EMOJI=["🥷","🧙","🦸","🧛","🧝","🥋","🧞","🧟"];
+function duelistsGen(){
+  var rnd=seedRand("duel:"+play.day);
+  var styles=["野路子散修","前执法堂弟子","北地刀客","南疆蛊师","落魄剑修","横练莽夫","神秘蒙面人","酒馆拳师"];
+  var out=[];
+  for(var i=0;i<3;i++){
+    out.push({name:TK_WHO[Math.floor(rnd()*TK_WHO.length)],style:styles[Math.floor(rnd()*styles.length)],emoji:DUEL_EMOJI[Math.floor(rnd()*DUEL_EMOJI.length)],power:2+rnd()*6.5});
+  }
+  return out;
+}
+function playerPower(){
+  var p=(state?state.rankIndex:0)*1.6+0.8;
+  if(play.bloodActive)p+=(play.bloods[play.bloodActive]||0)*0.5;
+  if(play.fabaoActive){var f=null;ARTIFACTS.forEach(function(x){if(x.id===play.fabaoActive)f=x});if(f)p+=f.grade*0.55+(play.fabaoLvl[f.id]||0)*0.2}
+  p+=Math.min(1.2,play.spells.length*0.08+play.divines.length*0.15);
+  return p;
+}
+var __duelBusy=false;
+function renderMkDuel(){
+  if(play.duelDay!==play.day){play.duelDay=play.day;play.duelDone={};playSave()}
+  var ds=duelistsGen();
+  var html=mkVendor("leicaipan");
+  html+='<div class="desc" style="margin:6px 0">你的战力评级约 <b style="color:#fbbf24">'+playerPower().toFixed(1)+'</b>（境界/血脉/法宝/功法综合）。押注获胜赢回 1.8 倍，每位对手每日一场。</div>';
+  html+=ds.map(function(d,i){
+    var done=play.duelDone[i];
+    var pv=d.power<playerPower()-1.5?"🌱 软柿子":(d.power>playerPower()+1.5?"🐯 硬茬子":"⚖️ 势均力敌");
+    return '<div class="ware" style="margin-top:9px"><div class="wic">'+d.emoji+'</div><div class="wname">'+d.name+' <span class="haggle">'+d.style+'</span></div><div class="wdesc">战力 '+d.power.toFixed(1)+' · '+pv+'</div>'
+      +(done?'<div class="ok">今日已战：'+done+'</div>':'<div class="cheatrow"><button class="pbtn" data-duel="'+i+':10"'+(play.stones<10?" disabled":"")+'>押 10</button><button class="pbtn" data-duel="'+i+':30"'+(play.stones<30?" disabled":"")+'>押 30</button><button class="pbtn" data-duel="'+i+':80"'+(play.stones<80?" disabled":"")+'>押 80</button></div>')
+      +'</div>';
+  }).join("");
+  html+='<div id="duelBox" style="margin-top:10px"></div>';
+  return html;
+}
+var DUEL_LINES=["{a}踏前一步，拳风先到！","{a}袖中寒光一闪！","{a}借势腾空，一记鞭腿！","{a}低喝一声，气浪翻涌！","{a}虚晃一招，反手直取中门！","{a}脚步连环，攻势如雨！","{a}硬接一记，闷哼后退。","{a}眼中精光暴涨，绝招出手！"];
+var __duelView=null;
+function duelPaint(){
+  var v=__duelView;if(!v)return;
+  var box=$("duelBox");if(!box)return;
+  if(!$("duelLog")){
+    box.innerHTML='<div class="duelstage"><div class="hpwrap"><div class="hpbar"><div class="desc">你</div><div class="hpfill" id="duelMyHp"></div></div><div class="hpbar"><div class="desc" style="text-align:right">'+v.foeName+'</div><div class="hpfill foe" id="duelFoeHp"></div></div></div><div class="df" id="duelMe" style="left:12%">🧑</div><div class="df" id="duelFoe" style="left:74%;transform:scaleX(-1)">'+v.foeEmoji+'</div></div><div class="duellog" id="duelLog"></div>';
+  }
+  var mh=$("duelMyHp"),fh=$("duelFoeHp"),log=$("duelLog");
+  if(mh)mh.style.width=Math.max(0,v.myHp)+"%";
+  if(fh)fh.style.width=Math.max(0,v.foeHp)+"%";
+  if(log)log.innerHTML=v.lines.join("<br>");
+}
+function runDuel(idx,wager){
+  if(__duelBusy)return;
+  var d=duelistsGen()[idx];
+  if(play.stones<wager||play.duelDone[idx])return;
+  __duelBusy=true;
+  play.stones-=wager;playSave();
+  var myP=playerPower(),foeP=d.power;
+  var winChance=1/(1+Math.exp(-(myP-foeP)*0.55));
+  var willWin=Math.random()<winChance;
+  __duelView={myHp:100,foeHp:100,foeName:d.name,foeEmoji:d.emoji,lines:["⚔️ 决斗开始！你 vs "+d.name+"（"+d.style+"），押注 "+wager+" 灵石。"]};
+  duelPaint();
+  var round=0,total=6;
+  var timer=setInterval(function(){
+    if(!__duelView){clearInterval(timer);return}
+    round++;
+    var mine=round%2===1;
+    var line=tkPick(DUEL_LINES).replace("{a}",mine?"你":d.name);
+    var dmg=8+Math.random()*14;
+    if(mine){__duelView.foeHp=Math.max(willWin?2:0,__duelView.foeHp-dmg*(willWin?1.25:0.8));var me=$("duelMe");if(me){me.style.left="46%";setTimeout(function(){var m2=$("duelMe");if(m2)m2.style.left="12%"},220)}SFX.cast()}
+    else{__duelView.myHp=Math.max(willWin?18:0,__duelView.myHp-dmg*(willWin?0.75:1.25));var fe=$("duelFoe");if(fe){fe.style.left="42%";setTimeout(function(){var f2=$("duelFoe");if(f2)f2.style.left="74%"},220)}SFX.cast()}
+    __duelView.lines.push(line+"（-"+Math.round(dmg)+"）");
+    duelPaint();
+    if(round>=total){
+      clearInterval(timer);
+      if(willWin){__duelView.foeHp=0;var gain=Math.floor(wager*1.8);play.stones+=gain;__duelView.lines.push("🏆 你胜了！赢回 "+gain+" 灵石。");play.duelDone[idx]="胜";SFX.up()}
+      else{__duelView.myHp=0;__duelView.lines.push("💥 你败下阵来，押注 "+wager+" 灵石打了水漂。");play.duelDone[idx]="负";SFX.err()}
+      playSave();duelPaint();
+      setTimeout(function(){__duelBusy=false;__duelView=null;render();renderMarket()},1800);
+    }
+  },650);
+}
+function bindMkExtra(el){
+  if(window.__bindFun)window.__bindFun(el);
+  Array.prototype.forEach.call(el.querySelectorAll("[data-aucbid]"),function(b){b.addEventListener("click",function(){aucBid(+b.getAttribute("data-aucbid"))})});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-aucgive]"),function(b){b.addEventListener("click",function(){
+    var i=+b.getAttribute("data-aucgive");var lot=play.auction.lots[i];
+    lot.done=1;lot.winner=lot.leader;playSave();(__aucLog[i]=__aucLog[i]||[]).push("你放弃了，拍品归「"+lot.leader+"」。");renderMarket();
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-duel]"),function(b){b.addEventListener("click",function(){
+    var parts=b.getAttribute("data-duel").split(":");runDuel(+parts[0],+parts[1]);
+  })});
+}
+
+/* ── 醉仙楼：灵食入腹，修为自来 ── */
+var FOODS=[
+ {id:"fan",icon:"🍚",name:"灵米饭",price:5,amt:3,desc:"灵米蒸饭，香气三条街"},
+ {id:"rou",icon:"🍲",name:"灵兽肉煲",price:12,amt:5,desc:"文火慢煲，肉香化灵气"},
+ {id:"jiu",icon:"🍶",name:"醉仙酿",price:18,amt:0,desc:"三杯下肚，法术都通透（熟练 +8）"},
+ {id:"fotiao",icon:"🥘",name:"佛跳墙·灵",price:30,amt:8,desc:"镇店名菜，香得隔壁闭关的都出关了"}];
+function renderMkEat(){
+  if(play.foodDay!==play.day){play.foodDay=play.day;play.foodEaten={};playSave()}
+  var html=mkVendor("huxiaoer");
+  html+='<div class="menugrid">'+FOODS.map(function(f){
+    var eaten=play.foodEaten[f.id];
+    return '<div class="ware"><div class="wic">'+f.icon+'</div><div class="wname">'+f.name+'</div><div class="wdesc">'+f.desc+'</div><button class="pbtn wbuy" data-eat="'+f.id+'"'+((eaten||play.stones<f.price)?" disabled":"")+'>💰 '+f.price+' 灵石'+(eaten?"（今日已尝）":"")+'</button></div>';
+  }).join("")+'</div><div class="desc" style="margin-top:8px">灵食的修为走每日奇遇额度；醉仙酿不占额度，喝的是个通透。</div>';
+  return html;
+}
+/* ── 梨园：看戏听曲，悟在戏中 ── */
+var PLAY_TITLES=["《剑碎苍穹》","《狐仙夜嫁》","《老修士与海》","《丹炉奇缘》","《散修翻身记》","《鬼府夜行》","《掌门年轻的时候》","《灵兽打工记》","《拍卖场风云》","《后山有泉》","《符纸与剑》","《天劫相亲角》"];
+var PLAY_FRAMES=["讲一位{who}，为求{thing}，在{where}磨了三十年剑，最后剑没成，人先通透了。","讲{who}与{who2}本是死对头，在{where}被困三日，出来时勾肩搭背。","讲一只灵兽在{where}开了窍，非要考进山门当弟子，笑料百出。","讲{who}把{thing}看得比命重，最后为救人亲手摔了它——满场静默。","讲散修{who}在坊市摆摊三十年，攒够灵石买下整条街的故事，励志得很。"];
+function renderMkTheatre(){
+  var rnd=seedRand("play:"+play.day);
+  var title=PLAY_TITLES[Math.floor(rnd()*PLAY_TITLES.length)];
+  var desc=PLAY_FRAMES[Math.floor(rnd()*PLAY_FRAMES.length)].replace("{who}",tkPick(TK_WHO)).replace("{who2}",tkPick(TK_WHO)).replace("{where}",tkPick(TK_WHERE)).replace("{thing}",tkPick(TK_THING));
+  var seen=play.theatreDay===play.day;
+  var html=mkVendor("chengbanzhu");
+  html+='<div class="card" style="margin-top:10px"><div style="font-size:19px;font-weight:800">🎭 今日上演 '+title+'</div><div class="desc" style="margin-top:6px;line-height:1.8">'+desc+'</div>'
+    +(seen?'<div class="ok" style="margin-top:8px">今日已看过这出，戏里的道理，还在心里回荡。</div>':'<button class="bigbtn" data-watch="1"'+(play.stones<8?" disabled":"")+'>🎟️ 入场看戏 · 8 灵石</button>')
+    +'</div>';
+  return html;
+}
+/* ── 仙足阁：修仙先修脚 ── */
+var FOOT_FRAMES=["花姐手法一绝，泡完你感觉能再闭关三天。","热水里飘着灵草，你哼起了小曲，旁边的散修也跟着哼。","花姐说：你这脚底的茧，是走过三千里夜路的证明。","灵兽趴在桶边也想泡，花姐给它单开了一个小木盆。","泡到一半你睡着了，梦见自己在云上走路——那可不就是飞。","花姐捏了捏你的脚心：这穴位堵着，心事别太重。"];
+function renderMkFoot(){
+  var done=play.footDay===play.day;
+  var html=mkVendor("huajie");
+  html+='<div class="card" style="margin-top:10px"><div style="font-size:19px;font-weight:800">🦶 灵草汤泡脚</div><div class="desc" style="margin-top:6px;line-height:1.8">行路三千里，脚先知道。灵草汤泡脚一刻钟，乏气全消，身心舒畅（+2 修为，走奇遇额度）。</div>'
+    +(done?'<div class="ok" style="margin-top:8px">今日已泡过，脚底板还热乎着。</div>':'<button class="bigbtn" data-foot="1"'+(play.stones<10?" disabled":"")+'>🛁 泡一泡 · 10 灵石</button>')
+    +'</div>';
+  return html;
+}
+/* ── 洞府租赁：租间好洞府，闭一次关 ── */
+var RENTS=[
+ {id:"shi",icon:"🪨",name:"石府",price:10,amt:10,desc:"山腰石洞，清净干燥"},
+ {id:"ling",icon:"🌿",name:"灵府",price:25,amt:15,desc:"灵脉支眼，灵气盎然"},
+ {id:"xian",icon:"🏯",name:"仙府",price:50,amt:20,desc:"坊市后山顶级洞府，聚灵阵全开"}];
+function renderMkRent(){
+  var done=play.retreatDay===play.day;
+  var html=mkVendor("mayaren");
+  html+='<div class="waregrid">'+RENTS.map(function(r){
+    return '<div class="ware"><div class="wic">'+r.icon+'</div><div class="wname">'+r.name+'</div><div class="wdesc">'+r.desc+'<br>闭关一次 +'+r.amt+' 修为（走奇遇额度）</div><button class="pbtn wbuy" data-rent="'+r.id+'"'+((done||play.stones<r.price)?" disabled":"")+'>💰 '+r.price+' 灵石'+(done?"（今日已闭关）":"")+'</button></div>';
+  }).join("")+'</div>';
+  return html;
+}
+function runRetreat(r){
+  if(play.retreatDay===play.day||play.stones<r.price)return;
+  play.stones-=r.price;play.retreatDay=play.day;playSave();
+  var fx=$("retreatFx");fx.style.display="flex";
+  var sky=fx.querySelector(".sky");var txt=$("retreatTxt");
+  var steps=["入定……","灵气自四面汇聚","时光在指尖流淌","心湖不起波澜","……出关在即"];
+  var i=0;txt.textContent=steps[0];SFX.divine();
+  setTimeout(function(){sky.style.opacity="0.85"},600);
+  var timer=setInterval(function(){
+    i++;
+    if(i<steps.length){txt.textContent=steps[i]}
+    else{
+      clearInterval(timer);
+      fx.style.display="none";sky.style.opacity="0";
+      claimReward("event",{amount:r.amt},function(err){render();renderMarket(err?"闭关的感悟被今日额度挡下了（奇遇次数已满）。":"闭关结束，神清气爽：+"+r.amt+" 修为。")});
+    }
+  },1400);
+}
+window.__bindFun=function(el){
+  Array.prototype.forEach.call(el.querySelectorAll("[data-eat]"),function(b){b.addEventListener("click",function(){
+    var f=null;FOODS.forEach(function(x){if(x.id===b.getAttribute("data-eat"))f=x});
+    if(!f||play.foodEaten[f.id]||play.stones<f.price)return;
+    play.stones-=f.price;play.foodEaten[f.id]=1;playSave();SFX.coin();
+    if(f.id==="jiu"){
+      var all=[];play.spells.forEach(function(x){all.push(["s",x])});play.divines.forEach(function(x){all.push(["d",x])});
+      if(all.length){var pk=all[Math.floor(Math.random()*all.length)];if(pk[0]==="s")play.spellXp[pk[1]]=(play.spellXp[pk[1]]||0)+8;else play.divineXp[pk[1]]=(play.divineXp[pk[1]]||0)+8;playSave()}
+      render();renderMarket("三杯下肚，眼里的法术纹路都活了（熟练 +8）。");
+    }else{
+      claimReward("event",{amount:f.amt},function(err){render();renderMarket(err?"这顿的灵气被今日额度挡下了（奇遇次数已满）。":"「"+f.name+"」下肚，灵气游走四肢：+"+f.amt+" 修为。")});
+    }
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-watch]"),function(b){b.addEventListener("click",function(){
+    if(play.theatreDay===play.day||play.stones<8)return;
+    play.stones-=8;play.theatreDay=play.day;playSave();SFX.tap();
+    var gain=Math.random()<0.45;
+    if(gain){
+      var all=[];play.spells.forEach(function(x){all.push(["s",x])});play.divines.forEach(function(x){all.push(["d",x])});
+      if(all.length){var pk=all[Math.floor(Math.random()*all.length)];if(pk[0]==="s")play.spellXp[pk[1]]=(play.spellXp[pk[1]]||0)+8;else play.divineXp[pk[1]]=(play.divineXp[pk[1]]||0)+8;playSave()}
+      render();renderMarket("戏散场，你在台词里悟到了点什么（熟练 +8）。");
+    }else{
+      claimReward("event",{amount:3},function(err){render();renderMarket(err?"看完戏，心里满满当当（额度已满，明日再来）。":"戏散场，心有所感：+3 修为。")});
+    }
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-foot]"),function(b){b.addEventListener("click",function(){
+    if(play.footDay===play.day||play.stones<10)return;
+    play.stones-=10;play.footDay=play.day;playSave();SFX.pet();
+    claimReward("event",{amount:2},function(err){render();renderMarket(err?"泡是泡了，修为额度已满。":tkPick(FOOT_FRAMES)+"（+2 修为）")});
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-rent]"),function(b){b.addEventListener("click",function(){
+    var r=null;RENTS.forEach(function(x){if(x.id===b.getAttribute("data-rent"))r=x});
+    if(r)runRetreat(r);
+  })});
+};
 function renderCaveSheet(){
   if(caveSel==="pet"){renderPetSheet();return}
   var fc=null;FACS.forEach(function(x){if(x.key===caveSel)fc=x});
@@ -1950,7 +2430,7 @@ function doBuild(key){
   else render();
 }
 function doGarden(){
-  var y=[0,2,4,7,10][play.fac.garden];
+  var y=[0,2,4,7,10][play.fac.garden];if(play.gardenBoost){y*=2;play.gardenBoost=0}
   claimReward("garden",{amount:y},function(err){
     if(err){$("hallErr").textContent=err.message;render();return}
     play.gardenDone=1;playSave();render();
@@ -2068,6 +2548,20 @@ function playFix(){
   if(play.market===undefined)play.market=null;
   if(!play.forgeHalf)play.forgeHalf=0;
   if(!play.fabaoLvl)play.fabaoLvl={};
+  if(!play.talkSeen)play.talkSeen={};
+  if(play.talkDay===undefined)play.talkDay="";
+  if(play.npcMood===undefined)play.npcMood=null;
+  if(play.auction===undefined)play.auction=null;
+  if(play.duelDay===undefined)play.duelDay="";
+  if(!play.duelDone)play.duelDone={};
+  if(play.foodDay===undefined)play.foodDay="";
+  if(!play.foodEaten)play.foodEaten={};
+  if(play.retreatDay===undefined)play.retreatDay="";
+  if(play.footDay===undefined)play.footDay="";
+  if(play.theatreDay===undefined)play.theatreDay="";
+  if(play.stalls===undefined)play.stalls=null;
+  if(play.stallDay===undefined)play.stallDay="";
+  if(!play.gardenBoost)play.gardenBoost=0;
 }
 var BLOODS=[
  {id:"long",icon:"🐉",name:"青龙血脉",color:"#22c55e",desc:"东方青龙 · 生生不息，修炼如沐春风"},
