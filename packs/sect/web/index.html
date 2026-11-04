@@ -181,6 +181,33 @@ button.pbtn:disabled{opacity:.5}
 .forgeitem .fn2{font-size:12px;font-weight:600;margin-top:4px}
 .forgeitem .fs2{font-size:10px;color:var(--sub);margin-top:2px}
 .forgeitem.lock{opacity:.45}
+
+/* 房间插画横幅＋动效（v11） */
+.room-banner{position:relative;height:168px;border-radius:16px;overflow:hidden;margin:2px 0 4px;border:var(--bw) solid var(--border);flex:none}
+.room-banner img{width:100%;height:100%;object-fit:cover;display:block;animation:kenburns 18s ease-in-out infinite alternate}
+@keyframes kenburns{from{transform:scale(1.03)}to{transform:scale(1.15) translateX(-1.5%)}}
+.room-banner .rb-shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(5,6,24,.6))}
+.room-banner .rb-cap{position:absolute;left:12px;bottom:9px;color:#fff;font-size:12px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.8);z-index:2}
+.smoke{position:absolute;width:44%;height:56px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.45),transparent 70%);filter:blur(7px);animation:smokeup 7s ease-in-out infinite;pointer-events:none;z-index:1}
+@keyframes smokeup{0%{transform:translateY(18px);opacity:0}35%{opacity:.85}100%{transform:translateY(-34px);opacity:0}}
+.sparks i{position:absolute;bottom:10px;width:5px;height:5px;border-radius:50%;background:#fcd34d;box-shadow:0 0 9px #f59e0b;animation:sparkup 2.8s ease-in infinite;pointer-events:none;z-index:1}
+@keyframes sparkup{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-118px) translateX(9px);opacity:0}}
+.arrayfx{position:absolute;right:12px;bottom:12px;width:66px;height:66px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 40deg,var(--accent2) 40deg 62deg,transparent 62deg 130deg,var(--accent2) 130deg 152deg,transparent 152deg 230deg,var(--accent2) 230deg 252deg,transparent 252deg 360deg);-webkit-mask:radial-gradient(circle,transparent 54%,#000 55%);mask:radial-gradient(circle,transparent 54%,#000 55%);animation:spin 14s linear infinite;opacity:.9;pointer-events:none;z-index:1}
+@keyframes spin{to{transform:rotate(360deg)}}
+.shimmer{position:relative;overflow:hidden}
+.shimmer:after{content:"";position:absolute;top:0;bottom:0;width:64px;background:linear-gradient(100deg,transparent,rgba(255,215,130,.32),transparent);animation:shimmer 3.8s ease-in-out infinite;pointer-events:none}
+@keyframes shimmer{0%{left:-90px}55%,100%{left:112%}}
+.evcard{animation:slideup .45s cubic-bezier(.3,.8,.3,1) both}
+.evcard:nth-child(2){animation-delay:.08s}.evcard:nth-child(3){animation-delay:.16s}
+@keyframes slideup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.vsmid{animation:vspulse 1.6s ease-in-out infinite}
+@keyframes vspulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.book.owned{animation:bookglow 3s ease-in-out infinite alternate}
+@keyframes bookglow{from{box-shadow:0 0 0 rgba(0,0,0,0)}to{box-shadow:0 0 13px color-mix(in srgb,var(--accent) 65%,transparent)}}
+.dock button:active{transform:scale(.93)}
+.spot:active .tag{transform:scale(.92)}
+.sstar{position:absolute;top:8%;left:-14%;width:110px;height:2px;border-radius:99px;background:linear-gradient(90deg,#fff,transparent);transform:rotate(-18deg);opacity:0;animation:sstar 11s linear infinite;pointer-events:none;z-index:4}
+@keyframes sstar{0%,86%{opacity:0;transform:translateX(0) rotate(-18deg)}89%{opacity:.95}96%,100%{opacity:0;transform:translateX(135vw) rotate(-18deg)}}
 </style>
 
 </head>
@@ -215,6 +242,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="scene-shade"></div>
   <div class="stars" id="sceneStars"></div>
+  <div class="sstar"></div>
   <div class="cloud" style="top:56%"></div>
   <div class="cloud c2"></div>
 
@@ -252,7 +280,8 @@ button.pbtn:disabled{opacity:.5}
   <div class="room" id="room-palace">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏯 山门大殿</div><div class="room-sub">境界 · 身份 · 职位 · 品级</div></div></div>
     <div class="room-body">
-      <div class="card" style="margin-top:2px">
+      <div class="room-banner"><img src="room-palace.jpg" alt=""><div class="rb-cap">宗门议事 · 镇派大殿</div><div class="rb-shade"></div></div>
+      <div class="card shimmer" style="margin-top:2px">
         <h2>宗门品级</h2>
         <div class="desc" id="hallGradeText"></div>
         <div class="rankbar"><i id="hallGradeBar" style="width:0%"></i></div>
@@ -283,13 +312,15 @@ button.pbtn:disabled{opacity:.5}
   <!-- 洞府 -->
   <div class="room" id="room-cave">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title" id="hallCaveTitle">🏡 我的洞府</div><div class="room-sub">建设自己的洞府：扩建、聚灵阵、药园、丹房、静室</div></div></div>
-    <div class="room-body"><div id="hallCave"></div></div>
+    <div class="room-body">
+      <div class="room-banner"><img id="caveBanner" src="room-cave1.jpg" alt=""><div class="arrayfx" id="caveArray" style="display:none"></div><div class="rb-cap" id="caveCap">评级：草庐</div><div class="rb-shade"></div></div><div id="hallCave"></div></div>
   </div>
 
   <!-- 传功堂 -->
   <div class="room" id="room-lecture">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">📖 传功堂</div><div class="room-sub">长老讲经 · 坐下听完，修为自生</div></div></div>
     <div class="room-body">
+      <div class="room-banner"><img src="room-lecture.jpg" alt=""><div class="smoke" style="left:8%;bottom:6%"></div><div class="smoke" style="right:10%;bottom:2%;animation-delay:3s"></div><div class="rb-cap">传功授业 · 长老开讲</div><div class="rb-shade"></div></div>
       <div class="scripture" id="scripture"></div>
       <div id="lecAct"></div>
     </div>
@@ -299,6 +330,7 @@ button.pbtn:disabled{opacity:.5}
   <div class="room" id="room-spar">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">⚔️ 演武堂</div><div class="room-sub">与同门切磋 · 胜负都有收获</div></div></div>
     <div class="room-body">
+      <div class="room-banner"><img src="room-spar.jpg" alt=""><div class="rb-cap">演武较技 · 擂台</div><div class="rb-shade"></div></div>
       <div class="vsrow">
         <div class="vscard"><div class="av">🧑‍🎓</div><div class="vn">你</div><div class="vs2" id="sparMeRank">金丹 · 内门弟子</div></div>
         <div class="vsmid">VS</div>
@@ -312,6 +344,7 @@ button.pbtn:disabled{opacity:.5}
   <div class="room" id="room-alchemy">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🧪 丹堂</div><div class="room-sub">开炉炼丹 · 火候压中绿区出上品</div></div></div>
     <div class="room-body">
+      <div class="room-banner"><img src="room-alchemy.jpg" alt=""><div class="sparks"><i style="left:30%"></i><i style="left:44%;animation-delay:.7s"></i><i style="left:56%;animation-delay:1.3s"></i><i style="left:66%;animation-delay:1.9s"></i><i style="left:50%;animation-delay:2.4s"></i></div><div class="rb-cap">丹火正旺 · 开炉</div><div class="rb-shade"></div></div>
       <div class="furnace"><span class="flame">🔥</span><div style="font-size:52px;line-height:1">🫖</div><div class="desc">丹炉正温，药材已下。盯着火候条，指针进绿区时停火。</div></div>
       <div id="alcAct"></div>
     </div>
@@ -321,6 +354,7 @@ button.pbtn:disabled{opacity:.5}
   <div class="room" id="room-patrol">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">⚖️ 执法堂</div><div class="room-sub">巡山值守 · 沿山道走一圈</div></div></div>
     <div class="room-body">
+      <div class="room-banner"><img src="room-patrol.jpg" alt=""><div class="rb-cap">巡山值守 · 山道</div><div class="rb-shade"></div></div>
       <div class="patrolwrap"><div id="patrolSvg"></div><div class="desc" id="patrolNote" style="text-align:center;margin-top:4px">山门 → 后山 → 药园 → 演武场 → 藏经阁</div></div>
       <div id="patAct"></div>
     </div>
@@ -330,6 +364,7 @@ button.pbtn:disabled{opacity:.5}
   <div class="room" id="room-tome">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">📚 藏经阁</div><div class="room-sub">功法图鉴 · 集齐一个系列，永久修炼 +2</div></div></div>
     <div class="room-body">
+      <div class="room-banner"><img src="room-tome.jpg" alt=""><div class="rb-cap">藏经重地 · 塔内书库</div><div class="rb-shade"></div></div>
       <div id="tomeShelf"></div>
       <div id="tomeAct"></div>
     </div>
@@ -339,6 +374,7 @@ button.pbtn:disabled{opacity:.5}
   <div class="room" id="room-forge">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🔨 器峰</div><div class="room-sub">法宝图鉴 · 品级越高，库藏越丰</div></div></div>
     <div class="room-body">
+      <div class="room-banner"><img src="room-forge.jpg" alt=""><div class="sparks"><i style="left:24%"></i><i style="left:48%;animation-delay:1s"></i><i style="left:70%;animation-delay:1.8s"></i></div><div class="rb-cap">器峰炉火 · 法宝库</div><div class="rb-shade"></div></div>
       <div class="forgegrid" id="forgeGrid"></div>
       <div class="card"><div class="desc" id="forgeDetail">点一件法宝看它的来历。图鉴随宗门品级解锁，只是观瞻，不占差事次数。</div></div>
     </div>
@@ -666,7 +702,7 @@ function updatePatrol(){
     g+='<text x="'+p[0]+'" y="'+(p[1]+4)+'" font-size="10" text-anchor="middle" fill="'+(done?"#231a04":"var(--sub)")+'">'+(i+1)+"</text>";
     g+='<text x="'+p[0]+'" y="'+(p[1]+26)+'" font-size="10" text-anchor="middle" fill="var(--sub)">'+names[i]+"</text>";
   });
-  $("patrolSvg").innerHTML='<svg viewBox="0 0 312 84" style="width:100%;display:block">'+g+"</svg>";
+  $("patrolSvg").innerHTML='<svg viewBox="0 0 312 84" style="width:100%;display:block">'+g+'<circle r="5" fill="#f59e0b" stroke="#fff" stroke-width="1.5"><animateMotion dur="7s" repeatCount="indefinite" path="M30 58 Q60 18 92 26 T154 50 T216 22 T282 52"/></circle></svg>';
   $("patrolNote").textContent=done?"今日巡山已毕，五处哨位俱已点到。":"山门 → 后山 → 药园 → 演武场 → 藏经阁，五处哨位走一圈。";
 }
 function updateTomeShelf(){
@@ -921,8 +957,10 @@ function renderCave(){
   var f=play.fac;
   var total=f.space+f.juling+f.garden+f.decor+f.danfang+f.jingshi;
   $("hallCaveTitle").textContent="🏡 我的洞府 · "+caveTitle(total);
+  var cb=$("caveBanner");if(cb)cb.src=total>=6?"room-cave2.jpg":"room-cave1.jpg";
+  var cc=$("caveCap");if(cc)cc.textContent="评级："+caveTitle(total)+" · 建设 "+total+" 级"+(f.juling>0?" · 聚灵阵运转中":"");
+  var ca=$("caveArray");if(ca)ca.style.display=f.juling>0?"block":"none";
   var html='<div class="desc">灵石：<b style="color:var(--accent)">'+play.stones+'</b> 枚（切磋、炼丹、奇遇、领俸禄都能攒）　建设总计 '+total+' 级</div>'
-    +caveSvg()
     +(f.garden>0?(play.gardenDone?'<div class="desc" style="margin-top:6px">药园今日已晨收。</div>':'<button class="pbtn" id="btnGarden" style="margin-top:6px">🌱 药园晨收（+'+[0,2,4,7][f.garden]+' 修为）</button>'):"")
     +FACS.map(function(fc){
       var lvl=f[fc.key];var maxed=lvl>=fc.max;
