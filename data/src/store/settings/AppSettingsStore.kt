@@ -87,6 +87,7 @@ class AppSettingsStore(externalMmkv: MMKV) : MMKVPreference(externalMmkv = exter
     override val sectLastCultivateDay by strFlow("")
     override val sectLastSalaryDay by strFlow("")
     override val sectPostChoice by intFlow(-1)
+    override val sectPostMigrated by boolFlow(false)
 
     init { migrateLegacyHomeKeys() }
 

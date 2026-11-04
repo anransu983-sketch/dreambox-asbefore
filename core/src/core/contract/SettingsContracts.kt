@@ -129,6 +129,7 @@ interface AppSettingsReader {
     val sectLastCultivateDay: Preference<String>
     val sectLastSalaryDay: Preference<String>
     val sectPostChoice: Preference<Int>
+    val sectPostMigrated: Preference<Boolean>
 }
 
 /** Read/write contract for WebDAV backup settings. */

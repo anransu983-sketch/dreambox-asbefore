@@ -275,14 +275,26 @@ class PackHostActivity : Activity() {
         return g
     }
     private val sectRankNames = listOf("炼气", "筑基", "金丹", "元婴", "化神", "炼虚", "大乘")
-    // 身份阶梯（用户定版，独立于境界按修为晋升）
-    // 十一档：弟子线（杂役→外门→内门→核心→真传）→执事（管外门/内门）→长老（管杂役/外门/内门）→峰主（执掌一峰）→道子→门主→掌门老祖（4500，与圣地同期）
-    private val sectIdentityThresholds = intArrayOf(0, 60, 180, 400, 800, 1100, 1400, 1900, 2500, 3200, 4500)
-    private val sectIdentityNames = listOf("杂役弟子", "外门弟子", "内门弟子", "核心弟子", "真传弟子", "执事", "长老", "峰主", "道子", "门主", "掌门老祖")
+    // 身份与职位是两轨（1.74 用户定版）：身份＝弟子辈辈分，随修为自动晋升；
+    // 职位＝任职（执事/长老/峰主都是差事、不是身份），修为解锁后自选，可任低不任高，亦可不就任。
+    // 身份六档：杂役→外门→内门→核心→亲传（《弑天刃》弟子顶档是亲传）→道子（弟子辈顶点、宗门继承人）
+    private val sectIdentityThresholds = intArrayOf(0, 60, 180, 400, 800, 1400)
+    private val sectIdentityNames = listOf("杂役弟子", "外门弟子", "内门弟子", "核心弟子", "亲传弟子", "道子")
 
     private fun sectIdentityOf(exp: Int): Int {
         var g = 0
         for (i in sectIdentityThresholds.indices) if (exp >= sectIdentityThresholds[i]) g = i
+        return g
+    }
+
+    // 职位六档：执事（管外门/内门）→长老（管杂役/外门/内门）→峰主（执掌一峰）→太上长老→掌门→老祖（4500，与圣地同期）
+    private val sectPostThresholds = intArrayOf(1100, 1400, 1900, 2500, 3200, 4500)
+    private val sectPostNames = listOf("执事", "长老", "峰主", "太上长老", "掌门", "老祖")
+
+    /** 已解锁的最高职位下标，未解锁任何职位为 -1。 */
+    private fun sectPostEligibleOf(exp: Int): Int {
+        var g = -1
+        for (i in sectPostThresholds.indices) if (exp >= sectPostThresholds[i]) g = i
         return g
     }
 
@@ -317,14 +329,32 @@ class PackHostActivity : Activity() {
             put("exp", exp)
             put("rankIndex", rank)
             put("rankName", sectRankNames[rank])
-            // 职务自选：执事（下标5）起是职务，修为解锁后可自选（含选低不选高）；未选或所选未解锁时按最高解锁档
-            val eligible = sectIdentityOf(exp)
-            val choice = s.sectPostChoice.value
-            val identity = if (choice >= 5 && choice <= eligible) choice else eligible
+            // 身份随修为自动晋升；职位独立一轨：choice=-1 自动（取最高解锁）、-2 不就任、0..5 自选职位下标
+            val identity = sectIdentityOf(exp)
             put("identityIndex", identity)
-            put("eligibleIndex", eligible)
-            put("postChoice", choice)
             put("title", sectIdentityNames[identity])
+            // 1.73 及以前 sectPostChoice 存的是十一档阶梯下标（5=执事…10=掌门老祖），一次性换算成职位下标
+            var choice = s.sectPostChoice.value
+            if (!s.sectPostMigrated.value) {
+                val mapped = when (choice) {
+                    5 -> 0; 6 -> 1; 7 -> 2; 8 -> -1; 9 -> 4; 10 -> 5
+                    else -> choice
+                }
+                if (mapped != choice) s.sectPostChoice.set(mapped)
+                s.sectPostMigrated.set(true)
+                choice = mapped
+            }
+            val postEligible = sectPostEligibleOf(exp)
+            val post = when {
+                postEligible < 0 || choice == -2 -> -1
+                choice in 0..postEligible -> choice
+                else -> postEligible
+            }
+            put("postIndex", post)
+            put("postEligibleIndex", postEligible)
+            put("eligibleIndex", postEligible)
+            put("postChoice", choice)
+            put("postName", if (post >= 0) sectPostNames[post] else "")
             put("nextThreshold", next)
             val grade = sectGradeOf(exp)
             put("gradeIndex", grade)
@@ -424,16 +454,19 @@ class PackHostActivity : Activity() {
                         sectStateJson()
                     }
                     "choosePost" -> {
-                        // 自选职务：index=-1 回到自动（随修为）；5..10 须已解锁（门槛<=当前修为）
+                        // 自选职位：index=-1 自动（随修为取最高解锁）、-2 不就任、0..5 职位下标（须已解锁）
                         val idx = options.optInt("index", -1)
-                        if (idx == -1) {
-                            s.sectPostChoice.set(-1)
-                        } else {
-                            if (idx < 5 || idx >= sectIdentityNames.size) throw IllegalArgumentException("该档不是可选职务")
-                            val st0 = JSONObject(sectStateJson())
-                            if (idx > st0.optInt("eligibleIndex", 0)) throw IllegalStateException("修为未到，还当不了${sectIdentityNames[idx]}")
-                            s.sectPostChoice.set(idx)
+                        when {
+                            idx == -1 -> s.sectPostChoice.set(-1)
+                            idx == -2 -> s.sectPostChoice.set(-2)
+                            idx in sectPostNames.indices -> {
+                                val st0 = JSONObject(sectStateJson())
+                                if (idx > st0.optInt("postEligibleIndex", -1)) throw IllegalStateException("修为未到，还当不了${sectPostNames[idx]}")
+                                s.sectPostChoice.set(idx)
+                            }
+                            else -> throw IllegalArgumentException("未知职位")
                         }
+                        s.sectPostMigrated.set(true)
                         sectStateJson()
                     }
                     "leave" -> {
