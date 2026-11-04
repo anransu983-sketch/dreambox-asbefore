@@ -540,10 +540,10 @@ class PackHostActivity : Activity() {
                         val eventLimit = 2 +
                             if (s.sectSeriesClaimed.value.split(",").contains("jingshi1")) 1 else 0
                         val (amount, limit) = when (kind) {
-                            "spar" -> (if (result == "win") 20 else 6) to 1
+                            "spar" -> (if (result == "win") 20 else 6) to 3
                             "alchemy" -> (when (result) {
                                 "perfect" -> 18; "fine" -> 10; else -> 3
-                            }) to 1
+                            }) to 3
                             "event" -> options.optInt("amount", 0).coerceIn(0, 20) to eventLimit
                             "lecture" -> 10 to 1
                             "patrol" -> 8 to 1

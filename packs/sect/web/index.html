@@ -528,7 +528,7 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 .newsline{font-size:12.5px;color:var(--sub);line-height:1.75}
 .haggle{font-size:12px;color:#fbbf24}
 .duelstage{position:relative;height:180px;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#1e1b4b,#0f172a 70%);border:1px solid var(--border)}
-.duelstage .df{position:absolute;bottom:34px;font-size:56px;transition:left .3s ease,transform .15s ease;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.duelstage .df{position:absolute;bottom:30px;width:78px;height:78px;display:flex;align-items:center;justify-content:center;font-size:44px;border-radius:50%;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.30),rgba(10,10,30,.55) 70%);border:2px solid rgba(255,255,255,.42);box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 18px rgba(255,255,255,.12);transition:left .3s ease,transform .15s ease}
 .hpwrap{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;gap:20px}
 .hpbar{flex:1}
 .hpbar .hpfill{height:8px;border-radius:5px;background:linear-gradient(90deg,#22c55e,#84cc16);transition:width .3s ease}
@@ -574,6 +574,24 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 @keyframes hotPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}50%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
 .hotspot.off{opacity:.6;animation:none;cursor:default}
 .wstrip{height:62px;border-radius:12px;background-size:cover;background-position:center;margin-bottom:10px}
+
+/* ══ 斗法空间（v38）══ */
+#fightArena{position:fixed;inset:0;z-index:90;display:none}
+#fightArena.show{display:block}
+#fightArena .arena-bg{position:absolute;inset:0;background-size:cover;background-position:center}
+#fightArena .arena-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,4,16,.55),rgba(4,4,16,.82))}
+#fightArena .arena-in{position:relative;height:100%;overflow-y:auto;padding:52px 14px 30px}
+#fightArena .arena-title{color:#fff;font-weight:800;font-size:17px;text-shadow:0 2px 10px rgba(0,0,0,.7);margin-bottom:10px}
+#fightArena .arena-x{position:absolute;top:12px;right:12px;z-index:3;background:rgba(10,10,24,.65);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer}
+#fightArena .arena-back{display:none;width:100%;margin-top:12px;padding:13px;border-radius:13px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+
+/* ══ NPC 对话气泡（v38）══ */
+.npclog{max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;margin-top:10px;padding:2px}
+.bub{max-width:84%;padding:8px 11px;border-radius:13px;line-height:1.65;font-size:13.5px;word-break:break-word}
+.bub.npc{align-self:flex-start;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-bottom-left-radius:4px}
+.bub.me{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border-bottom-right-radius:4px}
+.npcinputrow{display:flex;gap:7px;margin-top:9px}
+.npcinputrow input{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:11px;color:inherit;padding:9px 11px;font-size:14px;outline:none}
 </style>
 
 </head>
@@ -1062,8 +1080,8 @@ function sceneIsDay(){
 function spotAvail(sp){
   if(!sp.play||!play)return false;
   if(sp.play==="lecture")return !play.lectureDone;
-  if(sp.play==="spar")return !play.sparText;
-  if(sp.play==="alchemy")return !play.alchemyText;
+  if(sp.play==="spar")return (play.sparN||0)<3;
+  if(sp.play==="alchemy")return (play.alcN||0)<3;
   if(sp.play==="patrol")return !play.patrolDone;
   if(sp.play==="cave")return play.fac.garden>0&&!play.gardenDone;
   return false;
@@ -1166,7 +1184,7 @@ function renderForge(){
   if(bup)bup.addEventListener("click",function(){
     var cl=play.fabaoLvl[f.id]||0;if(cl>=5)return;
     var cc=(cl+1)*(30+f.grade*15);if(play.stones<cc)return;
-    play.stones-=cc;SFX.forge();play.fabaoLvl[f.id]=cl+1;playSave();
+    play.stones-=cc;SFX.forge();play.fabaoLvl[f.id]=cl+1;jobGain("qi",1);playSave();
     if(cl+1===5){claimReward("series",{series:"fabao-max-"+f.id},function(){render();renderForge()})}
     else{render();renderForge()}
     setTimeout(function(){var st2=$("forgeStage");if(st2){burstFx(st2,["🔥","✨"],12);spawnRing(st2,50,60,"#fb7185")}},60);
@@ -1176,7 +1194,7 @@ function renderForge(){
     if(play.stones<fcost)return;
     play.stones-=fcost;if(play.forgeHalf>0)play.forgeHalf--;
     var firstGrade=!ARTIFACTS.some(function(x){return x.grade===f.grade&&play.fabaos.indexOf(x.id)>=0});
-    SFX.forge();play.fabaos.push(f.id);playSave();
+    SFX.forge();play.fabaos.push(f.id);jobGain("qi",2);playSave();
     var after=function(){render();renderForge();castInto("forgeStage","forgeFx","🔥","zoom");var st=$("forgeStage");if(st)setTimeout(function(){burstFx(st,["🔨","✨","🔥"],10)},200)};
     if(firstGrade)claimReward("series",{series:"fabao-g"+f.grade},after);else after();
   });
@@ -1317,7 +1335,7 @@ function renderHall(){
     }
     var rt=$("room-tome");if(rt&&rt.classList.contains("open"))motes(rt,7);
     var rf=$("room-forge");if(rf&&rf.classList.contains("open"))motes(rf,8);
-    var bw=$("btnWorlds");if(bw)bw.style.display=(vh&&!vh.classList.contains("hidden")&&state&&state.rankIndex>=5)?"block":"none";if(bw)bw.style.bottom="268px";
+    var bw=$("btnWorlds");if(bw)bw.style.display=(vh&&!vh.classList.contains("hidden")&&state&&state.rankIndex>=5&&!document.querySelector(".room.open"))?"block":"none";if(bw)bw.style.bottom="268px";
     var bm=$("btnMute");
     if(bm){var inHall=vh&&!vh.classList.contains("hidden");bm.style.display=inHall?"block":"none";if(inHall)bm.style.bottom="212px";bm.textContent=SFX.isMuted()?"🔇":"🔊"}
   };
@@ -1415,8 +1433,8 @@ function playLoad(){
   if(!play)play={stones:10,starter:true,fac:{space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0},tomes:[],seriesClaimed:{}};
   if(!play.fac)play.fac={space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0};
   if(play.day!==todayStr){
-    var keep={stones:play.stones,fac:play.fac,tomes:play.tomes||[],seriesClaimed:play.seriesClaimed||{},starter:play.starter};
-    play=keep;play.day=todayStr;
+    play.day=todayStr;
+    play.sparText="";play.alchemyText="";play.lectureDone=0;play.patrolDone=0;play.drawText="";play.gardenDone=0;play.sparN=0;play.alcN=0;
     var lim=2+(play.fac.jingshi?1:0);
     var rnd=seedRand(todayStr+state.sectId+"ev");
     var pool=EVENTS.map(function(_,i){return i});
@@ -1633,7 +1651,7 @@ function renderSpells(){
   if(sel){
     var owned2=play.spells.indexOf(sel.id)>=0;
     html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · <b style="color:'+GD_COLORS[sel.grade]+'">'+GD[sel.grade]+'</b> · '+sel.desc+'</div>';
-    if(owned2)html+=tierSeg(play.spellXp[sel.id]||0);
+    if(owned2){html+=tierSeg(play.spellXp[sel.id]||0);html+=buyXpHtml("s",sel)}
     if(!owned2)html+='<button class="bigbtn" id="btnLearnSpell"'+(play.stones<sel.cost?" disabled":"")+'>📜 学习 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
     else html+='<button class="bigbtn" id="btnCastSpell">✨ 施放'+sel.name+'（熟练 +1）</button>';
   }
@@ -1641,6 +1659,7 @@ function renderSpells(){
   el.innerHTML=html;
   Array.prototype.forEach.call(el.querySelectorAll("[data-spell]"),function(b){b.addEventListener("click",function(){spellSel=b.getAttribute("data-spell");renderSpells();if(play.spells.indexOf(spellSel)>=0){var sp2=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp2=x});if(sp2)doCastSpell(sp2)}})});
   var bl=$("btnLearnSpell");if(bl)bl.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(!sp||play.stones<sp.cost)return;play.stones-=sp.cost;play.spells.push(sp.id);playSave();claimReward("event",{amount:3},function(){render()});renderSpells();doCastSpell(sp)});
+  bindBuyXp(el);
   var bc=$("btnCastSpell");if(bc)bc.addEventListener("click",function(){var sp=null;SPELLS.forEach(function(x){if(x.id===spellSel)sp=x});if(sp)doCastSpell(sp)});
  renderWizard();
 }
@@ -1669,7 +1688,7 @@ function renderDivine(){
   if(sel){
     var owned2=play.divines.indexOf(sel.id)>=0;
     html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · <b style="color:'+GD_COLORS[sel.grade]+'">'+GD[sel.grade]+'</b> · '+sel.desc+'</div>';
-    if(owned2)html+=tierSeg(play.divineXp[sel.id]||0);
+    if(owned2){html+=tierSeg(play.divineXp[sel.id]||0);html+=buyXpHtml("d",sel)}
     if(!owned2)html+='<button class="bigbtn" id="btnLearnDivine"'+(play.stones<sel.cost?" disabled":"")+'>🌌 参悟神通 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
     else html+='<button class="bigbtn" id="btnCastDivine">✨ 施展'+sel.name+'（熟练 +1）</button>';
   }
@@ -1677,6 +1696,7 @@ function renderDivine(){
   el.innerHTML=html;
   Array.prototype.forEach.call(el.querySelectorAll("[data-divine]"),function(b){b.addEventListener("click",function(){divineSel=b.getAttribute("data-divine");renderDivine();if(play.divines.indexOf(divineSel)>=0){var d2=null;list.forEach(function(x){if(x.id===divineSel)d2=x});if(d2)doCastDivine(d2)}})});
   var bl=$("btnLearnDivine");if(bl)bl.addEventListener("click",function(){var d=null;list.forEach(function(x){if(x.id===divineSel)d=x});if(!d||play.stones<d.cost)return;play.stones-=d.cost;play.divines.push(d.id);playSave();claimReward("series",{series:"divine-"+d.id},function(){render()});renderDivine();doCastDivine(d)});
+  bindBuyXp(el);
   var bc=$("btnCastDivine");if(bc)bc.addEventListener("click",function(){var d=null;list.forEach(function(x){if(x.id===divineSel)d=x});if(d)doCastDivine(d)});
 }
 
@@ -1707,6 +1727,34 @@ var NPCS=[
  {id:"atie",icon:"🧑‍🏭",name:"阿铁",role:"散修 · 地摊",room:"none",lines:["打铁剩下的边角料，便宜处理。"]}];
 var npcTalkIdx={};
 function npcById(id){var n=null;NPCS.forEach(function(x){if(x.id===id)n=x});return n}
+
+/* ══ NPC 回话引擎：你说话，NPC 接话（v38）══ */
+function npcReply(n,text){
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  var stones=play?play.stones:0;
+  var sect="本门";
+  try{sect=sectName()}catch(e){}
+  var t=text||"";
+  if(/你好|您好|hi|hello|在吗/.test(t))return pick(["哟，来了。今天"+sect+"的风不错，坐会儿？","正巧，我刚想找人说话，你就来了。","来了啊。看你气色，又精进了？"]);
+  if(/再见|告辞|拜拜|走了/.test(t))return pick(["慢走，路上当心。","回见。下次带故事来换茶。","去吧去吧，"+sect+"还指望你呢。"]);
+  if(/谢谢|多谢/.test(t))return pick(["跟我还客气什么。","小事。下次有好东西，先想着我就行。","记心里就好，不必挂嘴上。"]);
+  if(/名字|你是谁|叫什么/.test(t))return "我？"+n.name+"，"+n.role+"。在"+sect+"这一亩三分地，认得我的人不少。";
+  if(/灵石|钱|穷|贵|便宜|价格|行情|买|卖/.test(t))return pick(["灵石这东西……你现在揣着 "+stones+" 枚，花起来别手软，也别乱花。","行情我天天盯着。真要出手，先来问我一句，不吃亏。","钱财乃身外物——但没它，丹炉都点不着火。你说是不是？","最近"+pick(["珊瑚泪紧俏","百炼精铁走俏","符纸涨了价","灵草跌了些"])+"，心里有个数。"]);
+  if(/修为|突破|境界|修炼|瓶颈|卡住/.test(t))return pick(["修行如逆水行舟。你眼下这一步，稳比快重要。","瓶颈这东西，十有八九是心先卡住了。出去走走，看看万界，再回来闭关。","我看你气息浮动——快了。别贪功，突破前先把根基压瓷实。",genLine(n,"advice")]);
+  if(/蛊|虫/.test(t))return pick(["蛊道？万妖界深处有个蛊窟，听说以蛊入道，别有洞天。","虫豸之道，最忌心浮。养蛊如养心，你喂它，它才认你。","嘘——蛊这东西，养好了是臂助，养不好……先备好解药。"]);
+  if(/法宝|炼器|附魔|武器/.test(t))return pick(["器峰铸九的手艺没得说，就是脾气臭。带壶好酒去，能多听三句真话。","法宝讲究个缘分。附魔别贪层数，合用最重要。","我年轻时也有一件趁手的宝贝……唉，不提了。"]);
+  if(/丹|药|炼丹/.test(t))return pick(["丹堂的炉火三天没熄过。孙婆婆说，是药三分毒，别贪多。","炼丹先炼心。火候到了，丹自然成。","你要是开炉，记得盯紧指针——绿区停火，这话我说过八百遍了。"]);
+  if(/符/.test(t))return pick(["符修落笔如落印，心不静，符不灵。","我这儿有张平安符……算了，你的本事，用不上这个。","画符先画气。一笔下去，别回头。"]);
+  if(/阵/.test(t))return pick(["阵法一道，算的是天地。我算术不好，所以只敢看别人布。","聚灵阵转起来的时候，整个"+sect+"的灵气都往这边偏。","别小看一面小旗——阵眼错一寸，全盘皆输。"]);
+  if(/机械|机关|傀儡/.test(t))return pick(["机关核心那玩意儿，喂灵兽咔咔响，挺有意思。","听说有位机械师，能让铁疙瘩自己打仗。你信吗？我反正半信半疑。","傀儡再巧，也巧不过人心。"]);
+  if(/秘闻|秘密|听说|八卦|消息/.test(t))return genLine(n,"secret");
+  if(/决斗|打架|切磋|比斗|打|战/.test(t))return pick(["演武堂的铁牛教头，拳头硬，嘴更硬。","想打架去决斗场，押注赢了还有灵石赚——输了别哭。","动手之前先看看对方战力，这叫知己知彼。",genLine(n,"advice")]);
+  if(/灵兽|宠物/.test(t))return pick(["你的灵兽养得怎么样了？喂食别断，进化就看你勤不勤快。","灵兽通人性。你对它好，它在万界里能替你挡刀。","血月界的血酿喂下去，灵兽眼睛都映着月亮，邪性得很。"]);
+  if(/弟子|徒弟|收徒/.test(t))return pick(["收徒弟是结因果。资质好的，先看人品。","我看你门下那几个，假以时日，能成气候。","当师父的，最怕的不是徒弟笨，是徒弟跑了。"]);
+  if(/喜欢|爱|好看|漂亮|美/.test(t))return pick(["……你这话，我可就当真了啊。","修道之人，少动凡心——不过你这句，我收下了。","咳，正经说话。……耳朵有点热是怎么回事。"]);
+  if(/为什么|怎么|如何|哪里|哪儿|谁|什么|\?|？/.test(t))return pick(["这事啊，说来话长。你先坐，我慢慢跟你讲——"+genLine(n),"你问我，我问谁去？不过我可以帮你打听打听。","容我想想……嗯，我觉得吧，"+genLine(n,"advice")]);
+  return pick([genLine(n),genLine(n),"你这话……有点意思。接着说，我听着呢。","嗯，我记下了。"+pick(["对了，","说起来，"])+genLine(n),n.lines[Math.floor(Math.random()*n.lines.length)]]);
+}
 function openNpc(id){
   var n=npcById(id);if(!n)return;
   var box=$("npcBox");
@@ -1714,12 +1762,20 @@ function openNpc(id){
   var moodTxt=mood===0?" · 今日心情欠佳":(mood===2?" · 今日心情大好":"");
   function draw(line){
     var gifted=play&&play.npcGift[id]===play.day;
-    box.innerHTML='<div class="npchead"><div class="nava">'+n.icon+'</div><div><div style="font-weight:800">'+n.name+'</div><div class="desc">'+n.role+moodTxt+'</div></div></div><div class="npcline" id="npcLine">「'+line+'」</div><div class="mkchips" style="margin-top:8px"><button class="mkchip" data-tk="chat">💬 闲聊</button><button class="mkchip" data-tk="market">📈 问行情</button><button class="mkchip" data-tk="advice">🧭 求指点</button><button class="mkchip" data-tk="secret">🔮 打听秘闻</button></div><div class="cheatrow"><button class="pbtn" id="npcGift"'+(gifted?" disabled":"")+'>'+(gifted?"今日已唠过":"🍵 唠唠家常（+2 修为）")+'</button><button class="pbtn" id="npcBye">告辞</button></div>';
+    box.innerHTML='<div class="npchead"><div class="nava">'+n.icon+'</div><div><div style="font-weight:800">'+n.name+'</div><div class="desc">'+n.role+moodTxt+'</div></div></div><div class="npclog" id="npcLog"></div><div class="mkchips" style="margin-top:8px"><button class="mkchip" data-tk="chat">💬 闲聊</button><button class="mkchip" data-tk="market">📈 问行情</button><button class="mkchip" data-tk="advice">🧭 求指点</button><button class="mkchip" data-tk="secret">🔮 打听秘闻</button></div><div class="npcinputrow"><input id="npcInput" placeholder="跟 '+n.name+' 说点什么…" maxlength="60"><button class="pbtn" id="npcSend">发送</button></div><div class="cheatrow"><button class="pbtn" id="npcGift"'+(gifted?" disabled":"")+'>'+(gifted?"今日已唠过":"🍵 唠唠家常（+2 修为）")+'</button><button class="pbtn" id="npcBye">告辞</button></div>';
+    var log=$("npcLog");
+    function say(who,txt){var d=document.createElement("div");d.className="bub "+who;d.textContent=txt;log.appendChild(d);log.scrollTop=log.scrollHeight}
+    function ask(q,r){say("me",q);setTimeout(function(){say("npc","「"+r+"」");SFX.tap()},420)}
+    say("npc","「"+line+"」");
+    var TKQ={chat:"咱们聊聊近况。",market:"最近行情怎么样？",advice:"给我指点指点呗。",secret:"有没有什么秘闻，说来听听？"};
     Array.prototype.forEach.call(box.querySelectorAll("[data-tk]"),function(b){b.addEventListener("click",function(){
       var tk=b.getAttribute("data-tk");
-      var nl=tk==="chat"?genLine(n):genLine(n,tk);
-      $("npcLine").textContent="「"+nl+"」";SFX.tap();
+      ask(TKQ[tk]||"……",tk==="chat"?genLine(n):genLine(n,tk));
     })});
+    var inp=$("npcInput");
+    function doSend(){var v=(inp.value||"").trim();if(!v)return;inp.value="";ask(v,npcReply(n,v))}
+    var sb=$("npcSend");if(sb)sb.addEventListener("click",doSend);
+    if(inp)inp.addEventListener("keydown",function(e){if(e.key==="Enter")doSend()});
     $("npcBye").addEventListener("click",function(){box.classList.remove("show")});
     var g=$("npcGift");
     if(g&&!gifted)g.addEventListener("click",function(){
@@ -1840,7 +1896,7 @@ var WARES=[
  {id:"huosui",icon:"🔥",name:"焚天火髓",price:45,desc:"焚天界特产：随机一件法宝祭炼 +1 阶"},
  {id:"yaodan",icon:"🟢",name:"万妖妖丹",price:35,desc:"万妖界特产：灵兽喂食 +5 次"},
  {id:"xingsha",icon:"✨",name:"星尘砂",price:45,desc:"星尘界特产：随机一门神通熟练 +15"},
- {id:"minghe",icon:"🌊",name:"冥河水",price:50,desc:"幽冥界特产：当前血脉升一阶（未满阶时）"},{id:"xueniang",icon:"🍷",name:"血酿",price:55,desc:"血月界特产：喂灵兽，喂食 +4，眼中映血月"}];
+ {id:"minghe",icon:"🌊",name:"冥河水",price:50,desc:"幽冥界特产：当前血脉升一阶（未满阶时）"},{id:"xueniang",icon:"🍷",name:"血酿",price:55,desc:"血月界特产：喂灵兽，喂食 +4，眼中映血月"},{id:"fulu",icon:"🖌️",name:"符箓",price:12,desc:"符师手绘：使用后随机一门已学法术熟练 +5"},{id:"core",icon:"⚙️",name:"机关核心",price:30,desc:"机械师组装：喂灵兽 +3 次；没有灵兽时卖给百工坊 +30 灵石"}];
 var WARES_RARE=[
  {id:"divinepage",icon:"🌌",name:"神通残卷",price:90,desc:"随机习成一门尚未参悟的神通（照样 +2）"},
  {id:"petegg",icon:"🥚",name:"灵兽蛋",price:80,desc:"灵兽直接长到下一进化阶段"}];
@@ -1895,11 +1951,19 @@ function applyWare(w){
     if(!alld.length){play.stones+=45;playSave();render();renderMarket("还没有神通，星尘砂退你灵石。");return}
     var dv3=alld[Math.floor(Math.random()*alld.length)];play.divineXp[dv3]=(play.divineXp[dv3]||0)+15;playSave();render();renderMarket("星尘入眼，神通熟练 +15。");return;
   }
+  if(w.id==="fulu"){
+    if(!play.spells.length){play.stones+=12;playSave();render();renderMarket("还没学法术，符箓退你灵石。");return}
+    var spf=play.spells[Math.floor(Math.random()*play.spells.length)];play.spellXp[spf]=(play.spellXp[spf]||0)+5;playSave();render();renderMarket("符箓燃尽，法术熟练 +5。");return;
+  }
+  if(w.id==="core"){
+    if(!play.pet){play.stones+=30;playSave();render();renderMarket("机关核心卖给百工坊，+30 灵石。");return}
+    play.pet.feeds+=3;playSave();render();renderMarket("机关核心喂下，灵兽咔咔作响（喂食 +3）。");return;
+  }
   if(w.id==="xueniang"){
     if(!play.pet){play.stones+=55;playSave();render();renderMarket("没有灵兽，血酿退你灵石。");return}
     play.pet.feeds+=4;playSave();render();renderMarket("血酿喂下，灵兽眼中闪过一丝血月光华（喂食 +4）。");return;
   }
-  if(w.id==="minghe"){play.bloods[play.bloodActive]=(play.bloods[play.bloodActive]||0)+1;playSave();render();renderMarket("冥河水入体，血脉升阶！");return}
+  if(w.id==="minghe"){if(!play.bloodActive||(play.bloods[play.bloodActive]||0)>=5){play.stones+=45;playSave();render();renderMarket("血脉已至五阶圆满，冥河水退你灵石。");return}play.bloods[play.bloodActive]=(play.bloods[play.bloodActive]||0)+1;playSave();render();renderMarket("冥河水入体，血脉升阶！");return}
   if(w.id==="juqi"){claimReward("event",{amount:6},function(err){render();renderMarket(err?"聚气丹的药力被今日额度挡下了（奇遇次数用满）。":"聚气丹化开，+6 修为。")});return}
   if(w.id==="dunwu"){
     var all2=[];play.spells.forEach(function(x){all2.push(["s",x])});play.divines.forEach(function(x){all2.push(["d",x])});
@@ -1929,7 +1993,7 @@ function applyWare(w){
     playSave();render();renderMarket("卷轴化光，熟练大涨（+10）。");return;
   }
   if(w.id==="forgechip"){play.forgeHalf=1;playSave();render();renderMarket("器胚入手：下一件法宝炼制半价。");return}
-  if(w.id==="blooddrop"){play.bloods[play.bloodActive]=(play.bloods[play.bloodActive]||0)+1;playSave();render();renderMarket("精血入体，血脉升阶！");return}
+  if(w.id==="blooddrop"){if(!play.bloodActive||(play.bloods[play.bloodActive]||0)>=5){play.stones+=50;playSave();render();renderMarket("血脉已至五阶圆满，精血退你灵石。");return}play.bloods[play.bloodActive]=(play.bloods[play.bloodActive]||0)+1;playSave();render();renderMarket("精血入体，血脉升阶！");return}
   if(w.id==="tomepage"){
     var poolT=[];allSeries().forEach(function(sr){sr.tomes.forEach(function(t){if(play.tomes.indexOf(sr.id+":"+t)<0)poolT.push({sid:sr.id,t:t})})});
     var pk=poolT[Math.floor(Math.random()*poolT.length)];
@@ -2141,6 +2205,9 @@ function playerPower(){
   p+=play.abilities.length*0.25;
   if(play.elements&&play.elements.length){var _ec=0;play.spells.forEach(function(sid){var _sp=null;spellList().forEach(function(x){if(x.id===sid)_sp=x});if(_sp&&play.elements.indexOf(spellElement(_sp))>=0)_ec++});p+=Math.min(0.5,_ec*0.08)}
   p+=wudaoStage()*0.18;
+  var _jt=0;for(var _jk in play.jobs)_jt+=jobTier(_jk);p+=Math.min(1.2,_jt*0.04);
+  var _et=0;for(var _ek in play.enchants)_et+=play.enchants[_ek];p+=Math.min(0.9,_et*0.06);
+  p+=guPower();
   return p;
 }
 var __duelBusy=false;
@@ -2165,7 +2232,7 @@ function duelPaint(){
   var v=__duelView;if(!v)return;
   var box=$("duelBox");if(!box)return;
   if(!$("duelLog")){
-    box.innerHTML='<div class="duelstage"><div class="hpwrap"><div class="hpbar"><div class="desc">你</div><div class="hpfill" id="duelMyHp"></div></div><div class="hpbar"><div class="desc" style="text-align:right">'+v.foeName+'</div><div class="hpfill foe" id="duelFoeHp"></div></div></div><div class="df" id="duelMe" style="left:12%">🧑</div><div class="df" id="duelFoe" style="left:74%;transform:scaleX(-1)">'+v.foeEmoji+'</div></div><div class="duellog" id="duelLog"></div>';
+    box.innerHTML='<div class="duelstage"><div class="hpwrap"><div class="hpbar"><div class="desc">你</div><div class="hpfill" id="duelMyHp"></div></div><div class="hpbar"><div class="desc" style="text-align:right">'+v.foeName+'</div><div class="hpfill foe" id="duelFoeHp"></div></div></div><div class="df" id="duelMe" style="left:12%">🧑‍🎓</div><div class="df" id="duelFoe" style="left:74%;transform:scaleX(-1)">'+v.foeEmoji+'</div></div><div class="duellog" id="duelLog"></div>';
   }
   var mh=$("duelMyHp"),fh=$("duelFoeHp"),log=$("duelLog");
   if(mh)mh.style.width=Math.max(0,v.myHp)+"%";
@@ -2335,7 +2402,7 @@ function worldById(id){var w=null;WORLDS.forEach(function(x){if(x.id===id)w=x});
 var __fightBusy=false;
 function runFight(box,foe,onDone){
   if(__fightBusy||!box)return;
-  __fightBusy=true;
+  __fightBusy=true;box.innerHTML="";
   var myP=playerPower();
   var winChance=1/(1+Math.exp(-(myP-foe.power)*0.55));
   var willWin=Math.random()<winChance;
@@ -2343,7 +2410,7 @@ function runFight(box,foe,onDone){
   function paint(){
     if(!document.body.contains(box)){return}
     if(!box.querySelector("#wfLog")){
-      box.innerHTML='<div class="duelstage"><div class="hpwrap"><div class="hpbar"><div class="desc">你</div><div class="hpfill" id="wfMyHp"></div></div><div class="hpbar"><div class="desc" style="text-align:right">'+foe.name+'</div><div class="hpfill foe" id="wfFoeHp"></div></div></div><div class="df" style="left:12%">🧑</div><div class="df" style="left:74%;transform:scaleX(-1)">'+foe.emoji+'</div></div><div class="duellog" id="wfLog"></div>';
+      box.innerHTML='<div class="duelstage"><div class="hpwrap"><div class="hpbar"><div class="desc">你</div><div class="hpfill" id="wfMyHp"></div></div><div class="hpbar"><div class="desc" style="text-align:right">'+foe.name+'</div><div class="hpfill foe" id="wfFoeHp"></div></div></div><div class="df" style="left:12%">🧑‍🎓</div><div class="df" style="left:74%;transform:scaleX(-1)">'+foe.emoji+'</div></div><div class="duellog" id="wfLog"></div>';
     }
     var mh=box.querySelector("#wfMyHp"),fh=box.querySelector("#wfFoeHp"),log=box.querySelector("#wfLog");
     if(mh)mh.style.width=Math.max(0,view.myHp)+"%";
@@ -2407,7 +2474,7 @@ function renderWorlds(){
     var bb=$("btnWorldBack");if(bb)bb.addEventListener("click",function(){__worldSel=null;renderWorlds()});
     var bf=$("btnBoss");if(bf)bf.addEventListener("click",function(){
       play.bossDay[w.id]=play.day;playSave();
-      runFight($("bossBox"),w.boss,function(win){
+      fightInArena(w.boss,function(win){
         if(win){
           var first=!play.bossKills[w.id];play.bossKills[w.id]=1;playSave();
           if(first){claimReward("series",{series:"boss-"+w.id},function(){render();renderWorlds()});var _ab=grantAbilityRandom();if(_ab)setTimeout(function(){breakthroughLite("觉醒异能 · "+_ab.name)},700)}
@@ -2443,7 +2510,7 @@ function renderWorlds(){
     var r=+b.getAttribute("data-lad");var foe=null;foes.forEach(function(f){if(f.rank===r)foe=f});
     if(!foe||L.left<=0)return;
     L.left--;playSave();
-    runFight($("ladBox"),foe,function(win){
+    fightInArena(foe,function(win){
       if(win){
         L.rank=r;playSave();
         claimReward("event",{amount:3},function(){});
@@ -2460,9 +2527,10 @@ function renderWorlds(){
 /* ══ 帝路争锋：十八关长路，大乘方启 ══ */
 var DILU_STAGES=["葬星关","天渊城","断龙岭","星墟古道","万族战场","问道台","焚天门","沧澜渡","妖皇关","冥河桥","九天阙","无量海眼","太初原","混沌边关","仙陨坡","万古坟","成仙门前","帝路尽头"];
 var DILU_TITLES=["守关人","星骄","古族传人","万族天骄","少年至尊","问道者","绝代天骄","无敌者后裔","天命之子","帝子","古皇亲传","禁区来客","混沌体传人","万古第一梯队","准帝","将成道者","帝路守门人","他我化身"];
+var DILU_GUARDS=[["烬海星君","🌋"],["渊瞳魔君","👁️"],["断龙老人","🐉"],["星陨剑痴","☄️"],["万族战王","🦁"],["青冥鬼母","🧟"],["焚天童子","🔥"],["沧澜鲛皇","🧜"],["九幽骨皇","💀"],["太初雷灵","⚡"],["混沌魔猿","🦍"],["血河老祖","🧛"],["金乌妖帝","🦅"],["玄冰仙子","❄️"],["瘟癀毒君","🦂"],["无量寿佛","🧘"],["虚空行者","🌀"],["无名守望者","👑"]];
 function diluFoe(i){
-var rnd=seedRand("dilu:"+i);
-return {name:TK_WHO[Math.floor(rnd()*TK_WHO.length)]+"·"+DILU_TITLES[i],emoji:DUEL_EMOJI[Math.floor(rnd()*DUEL_EMOJI.length)],power:7+i*0.68+rnd()*0.8};
+var g=DILU_GUARDS[i];
+return {name:g[0]+" · "+DILU_TITLES[i],emoji:g[1],power:7+i*0.68};
 }
 var __worldsView="map";
 function renderWorlds(){
@@ -2540,7 +2608,7 @@ var foes=ladderFoes();var L=ladderState();
 var r=+b.getAttribute("data-lad");var foe=null;foes.forEach(function(f){if(f.rank===r)foe=f});
 if(!foe||L.left<=0)return;
 L.left--;playSave();
-runFight($("ladBox"),foe,function(win){
+fightInArena(foe,function(win){
 if(win){
 L.rank=r;playSave();
 claimReward("event",{amount:3},function(){});
@@ -2557,7 +2625,7 @@ if(bd)bd.addEventListener("click",function(){
 var D=play.dilu;if(D.left<=0||D.stage>=18)return;
 D.left--;playSave();
 var i=D.stage;var foe=diluFoe(i);
-runFight($("diluBox"),foe,function(win){
+fightInArena(foe,function(win){
 if(win){
 D.stage++;play.stones+=20+i*8;playSave();
 breakthroughLite("过关 · "+DILU_STAGES[i]);
@@ -2568,7 +2636,7 @@ render();renderWorlds();
 });
 var bc=$("btnChengXian");
 if(bc)bc.addEventListener("click",function(){
-runFight($("cxBox"),{name:"守路人 · 他我",emoji:"🪞",power:19.5},function(win){
+fightInArena({name:"守路人 · 他我",emoji:"🪞",power:19.5},function(win){
 if(win){play.chengxian=1;playSave();claimReward("series",{series:"feixian"},function(){render()});breakthroughFx("羽化登仙")}
 render();renderWorlds();
 });
@@ -2590,7 +2658,7 @@ html+='<div class="waregrid"><div class="ware"><div class="wic">'+ware.icon+'</d
 html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">'+w.boss.emoji+' 界主 · '+w.boss.name+'（战力 '+w.boss.power.toFixed(1)+'）</div><div class="desc" style="margin-top:4px">每日可挑战一次。胜：+8 修为（走奇遇额度）；首胜永久 +2。</div>'
 +(fought?'<div class="ok" style="margin-top:6px">今日已挑战过这位界主。</div>':'<button class="bigbtn" id="btnBoss">⚔️ 挑战界主</button>')
 +'<div id="bossBox" style="margin-top:8px"></div></div>';
-html+=renderCalamityCard(w);if(w.id==="xueyue")html+=renderMoonCard();
+html+=renderCalamityCard(w);if(w.id==="xueyue")html+=renderMoonCard();if(w.id==="wanyao")html+=renderGuCave();
 el.innerHTML=html;
 Array.prototype.forEach.call(el.querySelectorAll("[data-buy]"),function(b){b.addEventListener("click",function(){buyWare(b.getAttribute("data-buy"),+b.getAttribute("data-price"),b);setTimeout(renderWorlds,300)})});
 Array.prototype.forEach.call(el.querySelectorAll("[data-hot]"),function(h){h.addEventListener("click",function(){
@@ -2604,12 +2672,13 @@ if(!t){breakthroughLite("这个点今天已经办过了");return}
 if(t.disabled){breakthroughLite("暂时点不动：灵石不足，或条件未到");return}
 t.scrollIntoView({block:"center"});setTimeout(function(){t.click()},260);
 })});
+if(w.id=="wanyao")bindGu(el);
 var bb=$("btnWorldBack");if(bb)bb.addEventListener("click",function(){__worldSel=null;renderWorlds()});
 var bcal=$("btnCalamity");
 if(bcal)bcal.addEventListener("click",function(){
 var C=calamityState();C.attDay[w.id]=play.day;playSave();
 var cal=CALAMITIES[w.id];
-runFight($("calBox"),{name:cal.name,emoji:cal.icon,power:w.boss.power+2.5},function(win){
+fightInArena({name:cal.name,emoji:cal.icon,power:w.boss.power+2.5},function(win){
 var dealt=Math.round(playerPower()*(win?11:4.5)*(0.85+Math.random()*0.3));
 C.dmg[w.id]=(C.dmg[w.id]||0)+dealt;
 var max=calamityMaxHp(w);
@@ -2624,7 +2693,7 @@ playSave();render();renderWorlds();
 });
 var bf=$("btnBoss");if(bf)bf.addEventListener("click",function(){
 play.bossDay[w.id]=play.day;playSave();
-runFight($("bossBox"),w.boss,function(win){
+fightInArena(w.boss,function(win){
 if(win){
 var first=!play.bossKills[w.id];play.bossKills[w.id]=1;playSave();
 if(first){claimReward("series",{series:"boss-"+w.id},function(){render();renderWorlds()});var _ab=grantAbilityRandom();if(_ab)setTimeout(function(){breakthroughLite("觉醒异能 · "+_ab.name)},700)}
@@ -2857,14 +2926,14 @@ function bindTierWorlds(el){
 var T=play.tiers;
 Array.prototype.forEach.call(el.querySelectorAll("[data-mid]"),function(b){b.addEventListener("click",function(){
 var mid=genTierWorlds("mid",6,"mid:"+weekKey(),6,9.5);var w=null;mid.forEach(function(x){if(x.id===b.getAttribute("data-mid"))w=x});if(!w||T.conquered[w.id])return;
-runFight($("midBox"),w.foe,function(win){
+fightInArena(w.foe,function(win){
 if(win){T.conquered[w.id]=1;play.stones+=Math.round(w.foe.power*6);playSave();applyWare(wareById(w.ware));breakthroughLite(w.name+" 纳入疆域！")}
 render();renderWorlds();
 });
 })});
 Array.prototype.forEach.call(el.querySelectorAll("[data-small]"),function(b){b.addEventListener("click",function(){
 var small=genTierWorlds("small",6,"small:"+play.day,3.5,7);var w=null;small.forEach(function(x){if(x.id===b.getAttribute("data-small"))w=x});if(!w||T.smallDone[w.id])return;
-runFight($("smallBox"),w.foe,function(win){
+fightInArena(w.foe,function(win){
 T.smallDone[w.id]=1;playSave();
 if(win){play.stones+=20;playSave();missionProgress("hunt",w.id)}
 render();renderWorlds();
@@ -2875,7 +2944,7 @@ var bt2=$("btnTribute");if(bt2)bt2.addEventListener("click",function(){if(play.j
 var bv=$("btnVampTrade");if(bv)bv.addEventListener("click",function(){if(play.stones<40||play.vampDay===play.day)return;play.stones-=40;play.vampDay=play.day;play.bag["xueniang"]=(play.bag["xueniang"]||0)+1;playSave();breakthroughLite("血酿 +1（已入储物戒）");render();renderWorlds()});
 var bmd=$("btnMoonDuel");if(bmd)bmd.addEventListener("click",function(){
   if(play.moonDay===play.day)return;play.moonDay=play.day;playSave();
-  runFight($("moonBox"),{name:"狼王亲卫",emoji:"🐺",power:11.2},function(win){
+  fightInArena({name:"狼王亲卫",emoji:"🐺",power:11.2},function(win){
     if(win){play.bag["xueniang"]=(play.bag["xueniang"]||0)+1;playSave();breakthroughLite("夺得血月精华 · 血酿（已入储物戒）")}
     render();renderWorlds();
   });
@@ -2883,7 +2952,7 @@ var bmd=$("btnMoonDuel");if(bmd)bmd.addEventListener("click",function(){
 var bf2=$("btnFusion");if(bf2)bf2.addEventListener("click",function(){
   var F=fusionState();if(F.merged||F.fightDay===play.day)return;
   F.fightDay=play.day;playSave();
-  runFight($("fusionBox"),{name:"裂隙守卫",emoji:"🌀",power:9.0},function(win){
+  fightInArena({name:"裂隙守卫",emoji:"🌀",power:9.0},function(win){
     if(win){
       F.prog++;playSave();
       if(F.prog>=3&&!F.merged){
@@ -2999,7 +3068,7 @@ function settleDisciples(){
   play.discDay=play.day;play.discLog=[];
   play.disciples.forEach(function(d){
     if(!d.job)return;
-    var j=DISC_JOBS[d.job];var gain=j.per(d.talent);
+    var j=DISC_JOBS[d.job];var gain=j.per(d.talent);if(play.gu&&play.gu.active==="tongxin")gain=Math.round(gain*1.25);
     play.stones+=gain;d.exp+=d.talent;
     var line=d.name+"（"+j.name+"）带回 "+gain+" 灵石";
     if(d.job==="explore"&&Math.random()<0.25){
@@ -3054,7 +3123,16 @@ function renderPalaceExtra(){
     }).join("");
   }
   html+='</div></div>';
+  html+=renderJobsHtml();
   body.insertAdjacentHTML("beforeend",html);
+  Array.prototype.forEach.call(body.querySelectorAll("[data-jobact]"),function(b){b.addEventListener("click",function(){doJob(b.getAttribute("data-jobact"))})});
+  Array.prototype.forEach.call(body.querySelectorAll("[data-jobclaim]"),function(b){b.addEventListener("click",function(){
+    var jid=b.getAttribute("data-jobclaim");var t=jobTier(jid);
+    if(play.jobClaim[jid]===t||t<=0)return;
+    play.jobClaim[jid]=t;play.stones+=20+t*15;playSave();
+    claimReward("series",{series:"job-"+jid+"-"+t},function(){render()});
+    renderPalaceExtra();render();
+  })});
   Array.prototype.forEach.call(body.querySelectorAll("[data-ach]"),function(b){b.addEventListener("click",function(){
     var a=null;ACHS.forEach(function(x){if(x.id===b.getAttribute("data-ach"))a=x});
     if(!a||play.achClaimed[a.id]||!a.test())return;
@@ -3114,6 +3192,189 @@ function renderFusionCard(){
   }
   html+='</div>';
   return html;
+}
+
+/* ══ 灵石顿悟：熟练一键升阶（v37）══ */
+function xpRate(grade){return 3+grade*2}
+function buyXpHtml(kind,sel){
+  var xp=kind==="s"?(play.spellXp[sel.id]||0):(play.divineXp[sel.id]||0);
+  var cur=tierOf(xp);if(cur>=5)return "";
+  var rate=xpRate(sel.grade);
+  var out='<div style="margin-top:8px"><span class="desc">💰 灵石顿悟（选升到哪一阶，一次到位）：</span><div class="cheatrow" style="margin-top:5px;flex-wrap:wrap;gap:6px">';
+  for(var t=cur+1;t<TIERS.length;t++){
+    var cost=(TIERS[t].need-xp)*rate;
+    out+='<button class="pbtn" data-buyxp="'+kind+':'+sel.id+':'+t+'"'+(play.stones<cost?" disabled":"")+'>'+TIERS[t].name+' · '+cost+' 灵石</button>';
+  }
+  return out+'</div></div>';
+}
+function doBuyXp(kind,id,tierIdx){
+  var sel=null;var list=kind==="s"?SPELLS:divineList();
+  list.forEach(function(x){if(x.id===id)sel=x});if(!sel)return;
+  var store=kind==="s"?play.spellXp:play.divineXp;
+  var cur=store[id]||0;var before=tierOf(cur);
+  var cost=(TIERS[tierIdx].need-cur)*xpRate(sel.grade);
+  if(cost<=0||play.stones<cost)return;
+  play.stones-=cost;store[id]=TIERS[tierIdx].need;playSave();
+  if(kind==="d"){
+    if(before<3&&tierIdx>=3)claimReward("series",{series:"divine-gc-"+id},function(){render()});
+    if(before<5&&tierIdx>=5)claimReward("series",{series:"divine-ct-"+id},function(){render()});
+  }else{
+    claimReward("event",{amount:4},function(){render()});
+  }
+  breakthroughLite(sel.name+" · 灵石顿悟 → "+TIERS[tierIdx].name);
+  if(kind==="s")renderSpells();else renderDivine();
+  render();
+}
+function bindBuyXp(el){
+  Array.prototype.forEach.call(el.querySelectorAll("[data-buyxp]"),function(b){b.addEventListener("click",function(){var p=b.getAttribute("data-buyxp").split(":");doBuyXp(p[0],p[1],+p[2])})});
+}
+
+/* ══ 斗法空间：点挑战进入随机竞技场（v38）══ */
+var ARENAS=["scene-day.jpg","scene-night.jpg","world-canglan.jpg","world-fentian.jpg","world-wanyao.jpg","world-xingchen.jpg","world-youming.jpg","world-xueyue.jpg","room-spar.jpg"];
+function fightInArena(foe,onDone){
+  var ar=$("fightArena");
+  if(!ar){
+    ar=document.createElement("div");ar.id="fightArena";
+    ar.innerHTML='<div class="arena-bg"></div><div class="arena-shade"></div><button class="arena-x">✕ 离开</button><div class="arena-in"><div class="arena-title"></div><div class="arena-box"></div><button class="arena-back">⚔️ 战罢 · 返回</button></div>';
+    document.body.appendChild(ar);
+    ar.querySelector(".arena-x").addEventListener("click",function(){ar.classList.remove("show")});
+    ar.querySelector(".arena-back").addEventListener("click",function(){ar.classList.remove("show")});
+  }
+  ar.querySelector(".arena-bg").style.backgroundImage="url("+ARENAS[Math.floor(Math.random()*ARENAS.length)]+")";
+  ar.querySelector(".arena-title").textContent="⚔️ 斗法空间 · "+foe.name;
+  ar.querySelector(".arena-back").style.display="none";
+  ar.classList.add("show");
+  runFight(ar.querySelector(".arena-box"),foe,function(win){
+    ar.querySelector(".arena-back").style.display="block";
+    if(onDone)onDone(win);
+  });
+}
+/* ══ 副职业：七行百工（v38）══ */
+var JOB_DEFS=[
+ {id:"dan",icon:"🧪",name:"炼丹师",act:"开炉",note:"丹成卖回春堂，品阶越高出丹越贵"},
+ {id:"qi",icon:"🔨",name:"炼器师",act:"淬器",note:"成器卖宝器阁；炼制/祭炼法宝也涨心得"},
+ {id:"fu",icon:"🖌️", name:"符师",act:"画符",note:"符箓入储物戒：用后随机法术熟练 +5"},
+ {id:"zhen",icon:"🧭",name:"阵法师",act:"推演",note:"阵图卖灵石，偶得阵盘灵光"},
+ {id:"fumo",icon:"✨",name:"附魔师",act:"附魔",note:"耗 15 灵石给法宝附魔，每层 +0.06 战力"},
+ {id:"jin",icon:"⚗️",name:"炼金师",act:"点金",note:"押 10 灵石：成则回 26，败则石沉炉底"},
+ {id:"ji",icon:"🤖",name:"机械师",act:"组装",note:"机关核心入袋：喂灵兽 +3 或卖 30 灵石"}];
+var JOB_RANKS=[{n:"学徒",need:0},{n:"一品",need:4},{n:"二品",need:10},{n:"三品",need:20},{n:"四品",need:35},{n:"五品",need:55},{n:"六品",need:80},{n:"宗师",need:110},{n:"大宗师",need:150},{n:"匠圣",need:200}];
+var JOB_COLORS=["#9ca3af","#a3a380","#84cc16","#22c55e","#38bdf8","#818cf8","#c084fc","#f472b6","#fb923c","#fbbf24"];
+function jobTier(id){var xp=(play.jobs&&play.jobs[id])||0;var t=0;JOB_RANKS.forEach(function(r,i){if(xp>=r.need)t=i});return t}
+function jobGain(id,n){
+  if(play.gu&&play.gu.active==="shijin"&&(id==="qi"||id==="jin"))n+=1;
+  play.jobs[id]=(play.jobs[id]||0)+n;
+}
+function jobLeft(id){
+  if(play.jobDayKey!==play.day){play.jobDayKey=play.day;play.jobDay={}}
+  return 3-(play.jobDay[id]||0);
+}
+var __jobMsg={};
+function doJob(id){
+  if(jobLeft(id)<=0)return;
+  var t=jobTier(id);var used=false;var msg="";
+  function done(xp,st,txt){jobGain(id,xp);if(st)play.stones+=st;used=true;msg=txt}
+  if(id==="dan"){var perf=Math.random()<0.25+t*0.03;var g=6+t*2+(perf?10:0);done(perf?2:1,g,perf?"🔥 丹成上品！卖 "+g+" 灵石，心得 +2":"丹成，卖 "+g+" 灵石，心得 +1")}
+  else if(id==="qi"){var fine=Math.random()<0.22+t*0.03;var g2=5+t*2+(fine?9:0);done(fine?2:1,g2,fine?"🔨 精品出炉！卖 "+g2+" 灵石，心得 +2":"成器，卖 "+g2+" 灵石，心得 +1")}
+  else if(id==="fu"){play.bag["fulu"]=(play.bag["fulu"]||0)+1;done(1,0,"🖌️ 一符落成，已入储物戒，心得 +1")}
+  else if(id==="zhen"){var glow=Math.random()<0.15;var g3=4+t*2+(glow?10:0);done(1,g3,glow?"🧭 阵盘灵光乍现！卖 "+g3+" 灵石，心得 +1":"阵图推演成，卖 "+g3+" 灵石，心得 +1")}
+  else if(id==="fumo"){
+    if(!play.fabaos.length){breakthroughLite("先去器峰炼一件法宝，才能附魔");return}
+    if(play.stones<15){breakthroughLite("附魔要 15 灵石");return}
+    var tgt=null;play.fabaos.forEach(function(f){if(tgt===null||(play.enchants[f]||0)<(play.enchants[tgt]||0))tgt=f});
+    var cap=3+t;
+    if((play.enchants[tgt]||0)>=cap){breakthroughLite("这件法宝的附魔到你当前品阶上限了");return}
+    play.stones-=15;play.enchants[tgt]=(play.enchants[tgt]||0)+1;
+    var fd=null;ARTIFACTS.forEach(function(x){if(x.id===tgt)fd=x});
+    done(1,0,"✨ 「"+(fd?fd.name:tgt)+"」附魔 +1（现 "+play.enchants[tgt]+" 层），心得 +1");
+  }
+  else if(id==="jin"){
+    if(play.stones<10){breakthroughLite("点金要押 10 灵石");return}
+    play.stones-=10;var win=Math.random()<Math.min(0.75,0.5+t*0.02);
+    if(win)done(1,26,"⚗️ 金光迸溅！点金成，回 26 灵石，心得 +1");
+    else done(1,0,"⚗️ 炉底一沉——押的 10 灵石没了，心得 +1");
+  }
+  else if(id==="ji"){play.bag["core"]=(play.bag["core"]||0)+1;var extra=t>=5&&Math.random()<0.3;if(extra)play.bag["core"]+=1;done(1,0,"🤖 机关核心组装完成"+(extra?"（大宗师手稳，一次两件）":"")+"，已入储物戒，心得 +1")}
+  if(!used)return;
+  play.jobDay[id]=(play.jobDay[id]||0)+1;playSave();
+  __jobMsg[id]=msg;
+  renderPalaceExtra();render();
+}
+function renderJobsHtml(){
+  if(play.jobDayKey!==play.day){play.jobDayKey=play.day;play.jobDay={}}
+  var best=null,bestT=-1;
+  JOB_DEFS.forEach(function(j){var t=jobTier(j.id);if(t>bestT){bestT=t;best=j}});
+  var html='<div class="card" style="margin-top:10px"><div style="font-weight:800">🛠️ 百工阁 · 副职业</div><div class="desc" style="margin-top:3px">修行之外，别有七行。品阶：学徒→一品→…→六品→宗师→大宗师→匠圣；品阶涨，产出涨，战力也跟着涨。'
+  +(best&&bestT>0?'你如今最拿得出手的是 <b style="color:'+JOB_COLORS[bestT]+'">'+JOB_RANKS[bestT].n+' · '+best.name+'</b>。':'')+'</div>';
+  html+=JOB_DEFS.map(function(j){
+    var xp=play.jobs[j.id]||0;var t=jobTier(j.id);
+    var nxt=t<JOB_RANKS.length-1?JOB_RANKS[t+1]:null;
+    var left=jobLeft(j.id);
+    var claimable=t>0&&(play.jobClaim[j.id]||0)<t;
+    return '<div class="ladrow"><span style="font-size:19px">'+j.icon+'</span><span style="flex:1"><b>'+j.name+'</b> <span class="pbtn" style="pointer-events:none;color:'+JOB_COLORS[t]+';border-color:'+JOB_COLORS[t]+'">'+JOB_RANKS[t].n+'</span><span class="desc"> · 心得 '+xp+(nxt?' / 下阶 '+nxt.need:' · 已至匠圣')+' · '+j.note+'</span>'+(__jobMsg[j.id]?'<div class="desc" style="margin-top:2px">'+__jobMsg[j.id]+'</div>':"")+'</span>'
+    +(claimable?'<button class="pbtn" data-jobclaim="'+j.id+'">晋升礼 · '+(20+t*15)+' 灵石</button>':'')
+    +'<button class="pbtn" data-jobact="'+j.id+'"'+(left<=0?" disabled":"")+'>'+j.act+'（'+left+'/3）</button></div>';
+  }).join("")+'</div>';
+  return html;
+}
+/* ══ 蛊道（v38 · 借《蛊真人》口径，名皆自创）══ */
+var GU_LIST=[
+ {id:"zhaoye",icon:"🌙",name:"照夜蛊",desc:"寄居：战力 +0.3",pow:0.3},
+ {id:"manli",icon:"💪",name:"蛮力蛊",desc:"寄居：战力 +0.45",pow:0.45},
+ {id:"jubao",icon:"🪙",name:"聚宝蛊",desc:"寄居：每日首次进蛊窟 +8 灵石",pow:0},
+ {id:"tongxin",icon:"💞",name:"同心蛊",desc:"寄居：弟子每日产出 +25%",pow:0},
+ {id:"shijin",icon:"🪲",name:"噬金蛊",desc:"寄居：炼器/炼金心得额外 +1",pow:0},
+ {id:"businu",icon:"🦋",name:"不死蝶蛊",desc:"寄居：战力 +0.35",pow:0.35},
+ {id:"yinlei",icon:"⛈️",name:"引雷蛊",desc:"寄居：战力 +0.5",pow:0.5},
+ {id:"tunling",icon:"🌀",name:"吞灵蛊",desc:"寄居：战力 +0.25，进蛊窟另得灵液 +5 灵石/日",pow:0.25}];
+function guDef(id){var g=null;GU_LIST.forEach(function(x){if(x.id===id)g=x});return g}
+function guTurn(id){var f=(play.gu&&play.gu.fed[id])||0;return f>=15?3:(f>=5?2:1)}
+function guPower(){
+  if(!play.gu||!play.gu.active)return 0;
+  var g=guDef(play.gu.active);if(!g)return 0;
+  var m=[1,1,1.5,2][guTurn(play.gu.active)];
+  return g.pow*m;
+}
+function renderGuCave(){
+  var G=play.gu;
+  if(G.active&&(G.active==="jubao"||G.active==="tunling")&&G.day!==play.day){
+    G.day=play.day;var drip=G.active==="jubao"?8:5;play.stones+=drip;playSave();
+    setTimeout(function(){breakthroughLite(guDef(G.active).name+" 产出 +"+drip+" 灵石")},300);
+  }
+  var html='<div class="card" style="margin-top:10px"><div style="font-weight:800">🪲 蛊窟 · 蛊道</div><div class="desc" style="margin-top:3px;line-height:1.7">万妖界深处有蛊窟。蛊之一道，养、炼、用皆在一虫：喂食进转（一转→二转→三转，效力翻倍），同时只能寄居一只本命蛊。虫族以蛊为兵，你以蛊入道。</div>';
+  html+='<div class="cheatrow" style="margin-top:7px"><button class="pbtn" id="btnGuEgg"'+(play.stones<60?" disabled":"")+'>🥚 孵化蛊卵 · 60 灵石'+(G.owned.length>=GU_LIST.length?"（蛊种已集齐，将喂食本命蛊）":"")+'</button></div>';
+  if(!G.owned.length)html+='<div class="desc" style="margin-top:5px">窟中空空，先孵一只蛊出来。</div>';
+  html+=G.owned.map(function(id){
+    var g=guDef(id);var turn=guTurn(id);var fed=G.fed[id]||0;var act=G.active===id;
+    return '<div class="ladrow"><span style="font-size:19px">'+g.icon+'</span><span style="flex:1"><b>'+g.name+'</b><span class="desc"> · '+["","一转","二转","三转"][turn]+' · 喂食 '+fed+' 次 · '+g.desc+'</span></span>'
+    +(act?'<span class="desc" style="color:#4ade80">寄居中</span>':'<button class="pbtn" data-guact="'+id+'">寄居</button>')
+    +'<button class="pbtn" data-gufeed="'+id+'"'+(play.stones<8?" disabled":"")+'>喂食 · 8 灵石</button></div>';
+  }).join("");
+  html+='</div>';
+  return html;
+}
+function bindGu(el){
+  var be=$("btnGuEgg");if(be)be.addEventListener("click",function(){
+    if(play.stones<60)return;
+    var pool=GU_LIST.filter(function(g){return play.gu.owned.indexOf(g.id)<0});
+    play.stones-=60;
+    if(!pool.length){
+      if(play.gu.active){play.gu.fed[play.gu.active]=(play.gu.fed[play.gu.active]||0)+3;playSave();breakthroughLite("蛊种集齐，卵液喂了本命蛊（喂食 +3）")}
+      else{play.stones+=60;breakthroughLite("蛊种已集齐，先寄居一只本命蛊")}
+      playSave();renderWorlds();return;
+    }
+    var g=pool[Math.floor(Math.random()*pool.length)];
+    play.gu.owned.push(g.id);play.gu.fed[g.id]=0;
+    if(!play.gu.active)play.gu.active=g.id;
+    playSave();breakthroughFx("蛊卵孵化 · "+g.name);renderWorlds();render();
+  });
+  Array.prototype.forEach.call(el.querySelectorAll("[data-guact]"),function(b){b.addEventListener("click",function(){play.gu.active=b.getAttribute("data-guact");playSave();renderWorlds();render()})});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-gufeed]"),function(b){b.addEventListener("click",function(){
+    if(play.stones<8)return;var id=b.getAttribute("data-gufeed");
+    play.stones-=8;play.gu.fed[id]=(play.gu.fed[id]||0)+1;playSave();
+    breakthroughLite(guDef(id).name+" 喂食 +1（"+["","一转","二转","三转"][guTurn(id)]+"）");
+    renderWorlds();render();
+  })});
 }
 function breakthroughLite(txt){
   var bf=$("breakFx");if(!bf)return;
@@ -3332,8 +3593,8 @@ function doGarden(){
 function renderActs(){
   var a0=$("lecAct"),a1=$("sparAct"),a2=$("alcAct"),a4=$("patAct"),a5=$("tomeAct");
   if(a0)a0.innerHTML=play.lectureDone?'<div class="desc">今日讲经已听（+10 修为）。</div>':'<button class="pbtn" id="btnLecture">📖 听今日讲经（+10）</button>';
-  if(a1)a1.innerHTML=play.sparText?'<div class="desc">今日切磋：'+play.sparText+'</div>':'<button class="pbtn" id="btnSpar">⚔️ 与同门切磋</button>';
-  if(a2)a2.innerHTML=play.alchemyText?'<div class="desc">今日炼丹：'+play.alchemyText+'</div>':'<button class="pbtn" id="btnAlchemy">🧪 开炉炼丹</button>';
+  if(a1)a1.innerHTML=(play.sparN||0)>=3?'<div class="desc">今日切磋（3/3）：'+play.sparText+'</div>':'<button class="pbtn" id="btnSpar">⚔️ 与同门切磋（今日 '+(play.sparN||0)+'/3）</button>'+(play.sparText?'<div class="desc" style="margin-top:3px">上一场：'+play.sparText+'</div>':"");
+  if(a2)a2.innerHTML=(play.alcN||0)>=3?'<div class="desc">今日炼丹（3/3）：'+play.alchemyText+'</div>':'<button class="pbtn" id="btnAlchemy">🧪 开炉炼丹（今日 '+(play.alcN||0)+'/3）</button>'+(play.alchemyText?'<div class="desc" style="margin-top:3px">上一炉：'+play.alchemyText+'</div>':"");
   if(a4)a4.innerHTML=play.patrolDone?'<div class="desc">今日已巡山（+8 修为）。</div>':'<button class="pbtn" id="btnPatrol">⚖️ 下山巡山（+8）</button>';
   if(a5){
     var owned=play.tomes.length;
@@ -3360,7 +3621,7 @@ function doSpar(){
       claimReward("spar",{result:win?"win":"lose"},function(err){
         if(err){$("hallErr").textContent=err.message;render();return}
         if(win)addStones(2);
-        play.sparText=(win?"胜 "+foe+"（+20 修为，灵石 +2）":"负于 "+foe+"（+6 修为，切磋而已，不记仇）");
+        play.sparText=(win?"胜 "+foe+"（+20 修为，灵石 +2）":"负于 "+foe+"（+6 修为，切磋而已，不记仇）");play.sparN=(play.sparN||0)+1;
         playSave();render();
       });
     }
@@ -3384,7 +3645,7 @@ function startAlchemy(){
     claimReward("alchemy",{result:res},function(err){
       if(err){$("hallErr").textContent=err.message;render();return}
       if(stGain)addStones(stGain);
-      play.alchemyText=label+"（修为已入账"+(stGain?"，灵石 +"+stGain:"")+"）";
+      play.alchemyText=label+"（修为已入账"+(stGain?"，灵石 +"+stGain:"")+"）";play.alcN=(play.alcN||0)+1;jobGain("dan",res==="perfect"?2:1);
       playSave();render();
     });
   });
@@ -3473,6 +3734,14 @@ if(!play.disciples)play.disciples=[];
 if(play.discDay===undefined)play.discDay="";
 if(!play.discLog)play.discLog=[];
 if(!play.achClaimed)play.achClaimed={};
+if(play.sparN===undefined)play.sparN=play.sparText?1:0;
+if(play.alcN===undefined)play.alcN=play.alchemyText?1:0;
+if(!play.enchants)play.enchants={};
+if(!play.jobs)play.jobs={};
+if(!play.jobDay)play.jobDay={};
+if(play.jobDayKey===undefined)play.jobDayKey="";
+if(!play.gu)play.gu={owned:[],fed:{},active:null,day:""};
+if(!play.jobClaim)play.jobClaim={};
 if(play.chengxian===undefined)play.chengxian=0;
 if(!play.wiz)play.wiz={med:0,models:{},medDay:""};
 if(!play.potion)play.potion={};
@@ -3499,10 +3768,10 @@ function renderBlood(){
   var bw=$("bloodBody");if(!bw||!play)return;
   var act=null;BLOODS.forEach(function(x){if(x.id===play.bloodActive)act=x});
   var sel=null;BLOODS.forEach(function(x){if(x.id===(bloodSel||play.bloodActive))sel=x});
-  var html='<div class="bloodhero"><div class="bloodemblem" id="bloodEmblem" style="--bc:'+(act?act.color:"#6366f1")+'">'+(act?act.icon:"🩸")+'</div><div class="bloodname">'+(act?act.name+" · "+["","一阶","二阶","三阶","四阶","五阶"][play.bloods[act.id]||0]:"尚未觉醒血脉")+'</div><div class="desc">'+(act?act.desc:"选下方一脉觉醒：觉醒、三阶、五阶各触发一次永久修炼 +2（宿主结算）。")+'</div></div>';
+  var html='<div class="bloodhero"><div class="bloodemblem" id="bloodEmblem" style="--bc:'+(act?act.color:"#6366f1")+'">'+(act?act.icon:"🩸")+'</div><div class="bloodname">'+(act?act.name+" · "+["","一阶","二阶","三阶","四阶","五阶"][Math.min(5,play.bloods[act.id]||0)]+((play.bloods[act.id]||0)>5?" · 溢阶 "+(play.bloods[act.id]-5):""):"尚未觉醒血脉")+'</div><div class="desc">'+(act?act.desc:"选下方一脉觉醒：觉醒、三阶、五阶各触发一次永久修炼 +2（宿主结算）。")+'</div></div>';
   html+='<div class="bgrid">'+bloodList().map(function(b){
     var lv=play.bloods[b.id]||0;
-    var stars=lv?("★".repeat(lv)+"☆".repeat(5-lv)):"未觉醒";
+    var stars=lv?("★".repeat(Math.min(5,lv))+(lv>5?"✦×"+(lv-5):"☆".repeat(5-Math.min(5,lv)))):"未觉醒";
     return '<button class="bcard'+(sel&&sel.id===b.id?" on":"")+'" data-blood="'+b.id+'"><span class="bic">'+b.icon+'</span><span class="bname">'+b.name+'</span><span class="bstar">'+stars+(play.bloodActive===b.id?" · 当前":"")+'</span></button>';
   }).join("")+'</div>';
   if(sel){
