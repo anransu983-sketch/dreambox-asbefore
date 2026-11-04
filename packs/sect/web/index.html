@@ -1730,15 +1730,34 @@ var npcTalkIdx={};
 function npcById(id){var n=null;NPCS.forEach(function(x){if(x.id===id)n=x});return n}
 
 /* ══ NPC 回话引擎：你说话，NPC 接话（v38）══ */
+var __npcLast="",__npcLoveId="",__npcLoveN=0;
+function npcLoveReply(n){
+  function pk(a){return a[Math.floor(Math.random()*a.length)]}
+  if(__npcLoveId!==n.id){__npcLoveId=n.id;__npcLoveN=0}
+  __npcLoveN++;
+  if(__npcLoveN===1)return pk(["……你这话，我可就当真了啊。","修道之人，少动凡心——不过你这句，我收下了。","咳，正经说话。……耳朵有点热是怎么回事。","（别开脸）……下次这种话，小声点说。"]);
+  if(__npcLoveN===2)return pk(["还来？你这人……真是。","（声音低了些）我听见了。……两遍都听见了。","你再这样，我值守都要分心了。","行了行了，知道你的心意了——别在大庭广众之下说。"]);
+  return pk(["第三遍了。我记在心里的账本上，一笔一笔，都算着呢。","你这张嘴啊……罢了，我认栽。晚上巡山，陪我走一段？","再说下去，我这「冷」字招牌可就挂不住了。","好好好，我信，我全信。你呀，就是吃准我拿你没办法。"]);
+}
+function npcFollowReply(n){
+  function pk(a){return a[Math.floor(Math.random()*a.length)]}
+  if(__npcLast==="love")return pk(["真的。我这人，不拿这种话开玩笑。","千真万确。……你的心意是真的，我的回答也是。","嗯，真的。（顿了顿）你要是敢反悔，我执法堂的板子可不认人。","比真金还真。你看我的眼睛，像说谎的样子吗？"]);
+  if(__npcLast==="bye")return pk(["嗯，去吧。……路上，慢些。","好。记得早点回来，"+n.name+"还在这儿。"]);
+  if(__npcLast==="thanks")return pk(["嗯，应该的。","咱们之间，不说这些。"]);
+  return pk(["真的，我还能骗你？","千真万确。这话我只跟你说，别外传。","嗯，就是这么回事。","可不是嘛。……对了，"+genLine(n),"接着刚才的说——"+genLine(n,"advice"),"嗯，我听着呢，你继续。","这事我门儿清，你放一百个心。"]);
+}
 function npcReply(n,text){
   function pick(a){return a[Math.floor(Math.random()*a.length)]}
   var stones=play?play.stones:0;
   var sect="本门";
   try{sect=sectName()}catch(e){}
   var t=text||"";
-  if(/你好|您好|hi|hello|在吗/.test(t))return pick(["哟，来了。今天"+sect+"的风不错，坐会儿？","正巧，我刚想找人说话，你就来了。","来了啊。看你气色，又精进了？"]);
-  if(/再见|告辞|拜拜|走了/.test(t))return pick(["慢走，路上当心。","回见。下次带故事来换茶。","去吧去吧，"+sect+"还指望你呢。"]);
-  if(/谢谢|多谢/.test(t))return pick(["跟我还客气什么。","小事。下次有好东西，先想着我就行。","记心里就好，不必挂嘴上。"]);
+  var tt=t.replace(/[\s。！!~～…·]+$/,"");
+  if(/^(真的吗|真的|是吗|是么|嗯+|哦+|噢+|啊|额|好|好的|行|对|没错|然后呢|继续|接着说|真的假的|不会吧|厉害|牛|哇|哈哈+|呵呵|这样啊|原来如此|明白了|懂了)$/.test(tt)&&__npcLast)return npcFollowReply(n);
+  __npcLast="topic";
+  if(/你好|您好|hi|hello|在吗/.test(t)){__npcLast="hi";return pick(["哟，来了。今天"+sect+"的风不错，坐会儿？","正巧，我刚想找人说话，你就来了。","来了啊。看你气色，又精进了？"])}
+  if(/再见|告辞|拜拜|走了/.test(t)){__npcLast="bye";return pick(["慢走，路上当心。","回见。下次带故事来换茶。","去吧去吧，"+sect+"还指望你呢。"])}
+  if(/谢谢|多谢/.test(t)){__npcLast="thanks";return pick(["跟我还客气什么。","小事。下次有好东西，先想着我就行。","记心里就好，不必挂嘴上。"])}
   if(/名字|你是谁|叫什么/.test(t))return "我？"+n.name+"，"+n.role+"。在"+sect+"这一亩三分地，认得我的人不少。";
   if(/灵石|钱|穷|贵|便宜|价格|行情|买|卖/.test(t))return pick(["灵石这东西……你现在揣着 "+stones+" 枚，花起来别手软，也别乱花。","行情我天天盯着。真要出手，先来问我一句，不吃亏。","钱财乃身外物——但没它，丹炉都点不着火。你说是不是？","最近"+pick(["珊瑚泪紧俏","百炼精铁走俏","符纸涨了价","灵草跌了些"])+"，心里有个数。"]);
   if(/修为|突破|境界|修炼|瓶颈|卡住/.test(t))return pick(["修行如逆水行舟。你眼下这一步，稳比快重要。","瓶颈这东西，十有八九是心先卡住了。出去走走，看看万界，再回来闭关。","我看你气息浮动——快了。别贪功，突破前先把根基压瓷实。",genLine(n,"advice")]);
@@ -1752,12 +1771,13 @@ function npcReply(n,text){
   if(/决斗|打架|切磋|比斗|打|战/.test(t))return pick(["演武堂的铁牛教头，拳头硬，嘴更硬。","想打架去决斗场，押注赢了还有灵石赚——输了别哭。","动手之前先看看对方战力，这叫知己知彼。",genLine(n,"advice")]);
   if(/灵兽|宠物/.test(t))return pick(["你的灵兽养得怎么样了？喂食别断，进化就看你勤不勤快。","灵兽通人性。你对它好，它在万界里能替你挡刀。","血月界的血酿喂下去，灵兽眼睛都映着月亮，邪性得很。"]);
   if(/弟子|徒弟|收徒/.test(t))return pick(["收徒弟是结因果。资质好的，先看人品。","我看你门下那几个，假以时日，能成气候。","当师父的，最怕的不是徒弟笨，是徒弟跑了。"]);
-  if(/喜欢|爱|好看|漂亮|美/.test(t))return pick(["……你这话，我可就当真了啊。","修道之人，少动凡心——不过你这句，我收下了。","咳，正经说话。……耳朵有点热是怎么回事。"]);
+  if(/抱抱|抱一下|抱我|亲亲|亲一下|亲我|想你|喜欢|心动|动心|娶我|娶你|嫁|道侣|双修|好看|漂亮/.test(t)){__npcLast="love";return npcLoveReply(n)}
   if(/为什么|怎么|如何|哪里|哪儿|谁|什么|\?|？/.test(t))return pick(["这事啊，说来话长。你先坐，我慢慢跟你讲——"+genLine(n),"你问我，我问谁去？不过我可以帮你打听打听。","容我想想……嗯，我觉得吧，"+genLine(n,"advice")]);
   return pick([genLine(n),genLine(n),"你这话……有点意思。接着说，我听着呢。","嗯，我记下了。"+pick(["对了，","说起来，"])+genLine(n),n.lines[Math.floor(Math.random()*n.lines.length)]]);
 }
 function openNpc(id){
   var n=npcById(id);if(!n)return;
+  __npcLast="";
   var box=$("npcBox");
   var mood=npcMoodOf(id);
   var moodTxt=mood===0?" · 今日心情欠佳":(mood===2?" · 今日心情大好":"");
