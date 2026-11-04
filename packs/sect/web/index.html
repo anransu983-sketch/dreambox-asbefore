@@ -440,6 +440,13 @@ button.pbtn:disabled{opacity:.5}
 .bcard{position:relative;overflow:hidden}
 .bcard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--gc,#6366f1);opacity:.9}
 .bcard.on{border-color:var(--gc,#fbbf24);box-shadow:0 0 10px var(--gc,#fbbf24)}
+
+/* ── 每本封面各异（v23）：本本独立色相渐变＋专属纹样 ── */
+.book{background:linear-gradient(160deg,hsl(var(--bh,260) 58% 23%),hsl(calc(var(--bh,260) + 38) 62% 12%))}
+.book.owned{background:linear-gradient(160deg,hsl(var(--bh,260) 64% 40%),hsl(calc(var(--bh,260) + 38) 68% 19%))}
+.book .bicon{font-size:17px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.book.flip{background:linear-gradient(205deg,hsl(var(--bh,260) 58% 23%),hsl(calc(var(--bh,260) + 38) 62% 12%))}
+.book.flip.owned{background:linear-gradient(205deg,hsl(var(--bh,260) 64% 40%),hsl(calc(var(--bh,260) + 38) 68% 19%))}
 </style>
 
 </head>
@@ -962,7 +969,9 @@ function updateTomeShelf(){
     var books=sr.tomes.map(function(t,bi){
       var owned=play.tomes.indexOf(sr.id+":"+t)>=0;
       var g=(sr.grades&&sr.grades[bi])||0;
-      return '<div class="book'+(owned?" owned":"")+((play.lastDrawn===sr.id+":"+t)?" pop":"")+'" style="--sc:'+(sr.color||"#6366f1")+';--gc:'+GD_COLORS[g]+'"><span class="bgd">'+GD[g]+'</span><span class="bicon">'+(sr.icon||"📖")+'</span><span class="bt">'+t+"</span></div>";
+      var bh=((sr.hue||260)+bi*27)%360;
+      var art=(sr.arts&&sr.arts[bi])||sr.icon||"📖";
+      return '<div class="book'+(owned?" owned":"")+(bi%2?" flip":"")+((play.lastDrawn===sr.id+":"+t)?" pop":"")+'" style="--sc:'+(sr.color||"#6366f1")+';--gc:'+GD_COLORS[g]+';--bh:'+bh+'"><span class="bgd">'+GD[g]+'</span><span class="bicon">'+art+'</span><span class="bt">'+t+"</span></div>";
     }).join("");
     var cnt=play.tomes.filter(function(k){return k.split(":")[0]===sr.id}).length;
     return '<div class="shelf"><div class="shelf-name">'+(sr.icon||"")+" "+sr.name+" · "+cnt+" / "+sr.tomes.length+(cnt===sr.tomes.length?" · 已集齐 ✦":"")+'</div><div class="shelfbar"><i style="width:'+Math.round(cnt/sr.tomes.length*100)+'%"></i></div><div class="shelfrow">'+books+"</div></div>";
@@ -1161,12 +1170,12 @@ var EVENTS=[
  {t:"雨夜顿悟",d:"夜里雨打芭蕉，你睡不着，披衣坐在洞口看雨。",a:{x:"顺势打坐",r:"雨声渐远，心里那层窗户纸捅破了。",amt:19},b:{x:"回屋睡觉",r:"一夜好睡，第二天神清气爽。",amt:5}},
  {t:"秘境传闻",d:"茶摊上听人说，百里外的枯井夜里会冒宝光，已有散修赶去。",a:{x:"记下方位",r:"你把方位默记在心，谁知道哪天用得上。",amt:9},b:{x:"听个热闹",r:"宝光真假难辨，你喝完茶就回了山门。",amt:3}}];
 var TOME_SERIES=[
- {id:"jianjue",name:"剑诀",icon:"⚔️",color:"#38bdf8",grades:[0,1,2,3,4,5],tomes:["破云剑式","流风回雪","寒潭照月","一线天","裂穹剑罡","无名剑经"]},
- {id:"shenfa",name:"身法",icon:"👣",color:"#4ade80",grades:[0,1,2,3,4,5],tomes:["踏雪无痕","咫尺天涯","云龙三折","鬼影迷踪","鹏程万里","虚空漫步"]},
- {id:"xinfa",name:"心法",icon:"🧘",color:"#a78bfa",grades:[0,1,2,3,4,5],tomes:["抱元守一","沧海潮生","太虚引气","焚心诀","冰心玉壶","大自在观想法"]},
- {id:"daojue",name:"刀诀",icon:"🗡️",color:"#fb7185",grades:[0,1,2,3,4,5],tomes:["断江刀","裂空斩","饮血狂刀","归海一刀","天刀九问","无间刀狱"]},
- {id:"quanzhang",name:"拳掌",icon:"👊",color:"#fbbf24",grades:[0,1,2,3,4,5],tomes:["崩山拳","绵掌","开碑手","千叠浪掌","昊阳神掌","覆海印"]},
- {id:"zhenjue",name:"阵诀",icon:"♟️",color:"#22d3ee",grades:[0,1,2,3,4,5],tomes:["小周天阵图","迷踪阵解","聚灵锁关","八门金锁","星罗棋布","九宫绝杀阵"]}];
+ {id:"jianjue",name:"剑诀",icon:"⚔️",color:"#38bdf8",hue:205,arts:["☁️","❄️","🌙","🌅","⚡","📜"],grades:[0,1,2,3,4,5],tomes:["破云剑式","流风回雪","寒潭照月","一线天","裂穹剑罡","无名剑经"]},
+ {id:"shenfa",name:"身法",icon:"👣",color:"#4ade80",hue:140,arts:["👣","🌪️","🐉","👻","🦅","🌀"],grades:[0,1,2,3,4,5],tomes:["踏雪无痕","咫尺天涯","云龙三折","鬼影迷踪","鹏程万里","虚空漫步"]},
+ {id:"xinfa",name:"心法",icon:"🧘",color:"#a78bfa",hue:265,arts:["🧘","🌊","🌀","🔥","🧊","🪷"],grades:[0,1,2,3,4,5],tomes:["抱元守一","沧海潮生","太虚引气","焚心诀","冰心玉壶","大自在观想法"]},
+ {id:"daojue",name:"刀诀",icon:"🗡️",color:"#fb7185",hue:345,arts:["🌊","💥","🩸","🏯","🌌","♾️"],grades:[0,1,2,3,4,5],tomes:["断江刀","裂空斩","饮血狂刀","归海一刀","天刀九问","无间刀狱"]},
+ {id:"quanzhang",name:"拳掌",icon:"👊",color:"#fbbf24",hue:35,arts:["⛰️","🌾","🪨","🌊","☀️","🌋"],grades:[0,1,2,3,4,5],tomes:["崩山拳","绵掌","开碑手","千叠浪掌","昊阳神掌","覆海印"]},
+ {id:"zhenjue",name:"阵诀",icon:"♟️",color:"#22d3ee",hue:185,arts:["🔯","🌀","🔒","⭐","♟️","💠"],grades:[0,1,2,3,4,5],tomes:["小周天阵图","迷踪阵解","聚灵锁关","八门金锁","星罗棋布","九宫绝杀阵"]}];
 var FEED_T=[
  "{n} 昨日闭关出来，气息又厚了一层",
  "{n} 在演武堂连胜三场，名声渐起",
