@@ -745,6 +745,16 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         }
     }
 
+    // 脚本日志带 ANSI 颜色码（融合怪/IP 体检尤其多），回给 WebView 前洗掉，
+    // 否则日志里满屏 [0;36m 之类的转义残片。顺带去掉回车。
+    private static String stripAnsi(String s) {
+        if (s == null) return "";
+        return s.replaceAll("\u001B\\[[0-9;?]*[ -/]*[@-~]", "")
+                .replaceAll("\u001B\\][^\u0007\u001B]*(?:\u0007|\u001B\\\\)", "")
+                .replaceAll("\u001B[@-Z\\\\-_]", "")
+                .replace("\r", "");
+    }
+
     private void doTqState(JSONObject opts, PackCallback callback) {
         try {
             JSONObject srv = credsFor(opts);
@@ -762,7 +772,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             while (m.find()) url = m.group();
             String tail = "";
             int idx = r.indexOf("__TAIL__");
-            if (idx >= 0) tail = r.substring(idx + "__TAIL__".length()).trim();
+            if (idx >= 0) tail = stripAnsi(r.substring(idx + "__TAIL__".length()).trim());
             callback.onResult(true, new JSONObject()
                     .put("running", running)
                     .put("url", url)
@@ -805,14 +815,24 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             JSONObject srv = credsFor(opts);
             String cmd = "if [ -f /tmp/sshtty-ecs/ecs.pid ] && kill -0 $(cat /tmp/sshtty-ecs/ecs.pid) 2>/dev/null; "
                     + "then echo RUNNING; else echo IDLE; fi; "
+                    + "grep -aoE '(h)?paste[.]spiritlhl[.]net/#/show/[A-Za-z0-9]+' "
+                    + "/tmp/sshtty-ecs/ecs.log 2>/dev/null | tail -1; "
                     + "echo __TAIL__; tail -c 1500 /tmp/sshtty-ecs/ecs.log 2>/dev/null";
             String r = runExec(srv, cmd, 30);
             boolean running = r.startsWith("RUNNING");
+            // 融合怪跑完默认生成分享短链（paste.spiritlhl.net/#/show/<id>，http/https
+            // 同 id）；从日志里提 id，统一拼 https 版回给页面做链接卡。
+            String url = "";
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("(?:h)?paste\\.spiritlhl\\.net/#/show/([A-Za-z0-9]+)")
+                    .matcher(r);
+            while (m.find()) url = "https://paste.spiritlhl.net/#/show/" + m.group(1);
             String tail = "";
             int idx = r.indexOf("__TAIL__");
-            if (idx >= 0) tail = r.substring(idx + "__TAIL__".length()).trim();
+            if (idx >= 0) tail = stripAnsi(r.substring(idx + "__TAIL__".length()).trim());
             callback.onResult(true, new JSONObject()
                     .put("running", running)
+                    .put("url", url)
                     .put("tail", tail)
                     .toString(), null);
         } catch (Exception e) {
@@ -852,14 +872,24 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             JSONObject srv = credsFor(opts);
             String cmd = "if [ -f /tmp/sshtty-ipq/ipq.pid ] && kill -0 $(cat /tmp/sshtty-ipq/ipq.pid) 2>/dev/null; "
                     + "then echo RUNNING; else echo IDLE; fi; "
+                    + "grep -aoE 'Report[.]Check[.]Place/ip/[A-Za-z0-9]+[.]svg' "
+                    + "/tmp/sshtty-ipq/ipq.log 2>/dev/null | tail -1; "
                     + "echo __TAIL__; tail -c 1500 /tmp/sshtty-ipq/ipq.log 2>/dev/null";
             String r = runExec(srv, cmd, 30);
             boolean running = r.startsWith("RUNNING");
+            // 体检跑完在日志尾打印报告链接（Report.Check.Place/ip/<id>.svg），
+            // 提出来回给页面做链接卡（复制/打开），与 TQ 同款。
+            String url = "";
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("Report\\.Check\\.Place/ip/[A-Za-z0-9]+\\.svg")
+                    .matcher(r);
+            while (m.find()) url = "https://" + m.group();
             String tail = "";
             int idx = r.indexOf("__TAIL__");
-            if (idx >= 0) tail = r.substring(idx + "__TAIL__".length()).trim();
+            if (idx >= 0) tail = stripAnsi(r.substring(idx + "__TAIL__".length()).trim());
             callback.onResult(true, new JSONObject()
                     .put("running", running)
+                    .put("url", url)
                     .put("tail", tail)
                     .toString(), null);
         } catch (Exception e) {
@@ -947,7 +977,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             int i1 = r.indexOf("__SYSCTL__");
             int i2 = r.indexOf("__TAIL__");
             if (i1 >= 0 && i2 > i1) sysctl = r.substring(i1 + "__SYSCTL__".length(), i2).trim();
-            if (i2 >= 0) tail = r.substring(i2 + "__TAIL__".length()).trim();
+            if (i2 >= 0) tail = stripAnsi(r.substring(i2 + "__TAIL__".length()).trim());
             callback.onResult(true, new JSONObject()
                     .put("running", running)
                     .put("sysctl", sysctl)

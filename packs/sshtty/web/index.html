@@ -147,6 +147,11 @@
   <p class="sub" id="test-sub"></p>
   <div class="card">
     <div id="test-status">准备中…</div>
+    <div id="test-link" class="linkbox hidden">
+      <div class="url" id="test-url"></div>
+      <button class="mini primary" id="btn-test-copy">复制链接</button>
+      <button class="mini" id="btn-test-open">打开报告</button>
+    </div>
     <pre class="log hidden" id="test-tail"></pre>
     <button class="mini primary" id="btn-test-start">开始跑</button>
     <button class="mini" id="btn-test-back">返回列表</button>
@@ -505,12 +510,14 @@
     ecs: { start: 'ecsStart', state: 'ecsState', title: '👹 一键融合怪', startLabel: '开始跑融合怪',
       sub: '融合怪完全体（顺序测试）：系统信息＋CPU/硬盘＋流媒体解锁＋三网回程，全套平均约 7 分钟。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「融合怪结果」继续看。',
       running: '⏳ 融合怪运行中…（完全体全套，约 7 分钟）',
-      done: '✅ 融合怪已跑完，结果在下面日志尾部（结果分享链接也在里面）。',
+      done: '✅ 融合怪已跑完，结果在下面日志尾部。',
+      doneUrl: '✅ 融合怪已跑完，分享链接：',
       idle: '还没有跑过融合怪，或上次的日志已被清理。回列表点「一键融合怪」开始。' },
     ipq: { start: 'ipqStart', state: 'ipqState', title: '🩺 一键 IP 体检', startLabel: '开始跑 IP 体检',
       sub: 'IP 质量体检（完整版）：IP 归属/风险评分/流媒体解锁/黑名单全测，约 2–3 分钟。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「IP 结果」继续看。',
       running: '⏳ IP 体检运行中…（约 2–3 分钟）',
       done: '✅ IP 体检已完成，结果在下面日志里。',
+      doneUrl: '✅ IP 体检已完成，报告链接：',
       idle: '还没有跑过 IP 体检，或上次的日志已被清理。回列表点「一键IP体检」开始。' }
   };
   var testKind = null, testSrv = null, testTimer = null;
@@ -521,6 +528,7 @@
     $('test-sub').textContent = cfg.sub;
     $('btn-test-start').textContent = cfg.startLabel;
     $('test-status').textContent = start ? '正在启动…' : '正在读取状态…';
+    $('test-link').classList.add('hidden');
     $('test-tail').textContent = '';
     $('test-tail').classList.add('hidden');
     show('view-test');
@@ -550,13 +558,21 @@
     if (!testSrv || !testKind) return;
     var cfg = TESTS[testKind];
     callNative(cfg.state, { id: testSrv.id }).then(function (r) {
-      if (r.running) {
+      if (r.url) {
+        $('test-status').textContent = r.running ? '还在跑，但报告链接已生成：' : cfg.doneUrl;
+        $('test-url').textContent = r.url;
+        $('test-link').classList.remove('hidden');
+        if (!r.running && testTimer) { clearInterval(testTimer); testTimer = null; }
+      } else if (r.running) {
         $('test-status').textContent = cfg.running;
+        $('test-link').classList.add('hidden');
       } else if (r.tail) {
         $('test-status').textContent = cfg.done;
+        $('test-link').classList.add('hidden');
         if (testTimer) { clearInterval(testTimer); testTimer = null; }
       } else {
         $('test-status').textContent = cfg.idle;
+        $('test-link').classList.add('hidden');
         if (testTimer) { clearInterval(testTimer); testTimer = null; }
       }
       if (r.tail) {
@@ -575,6 +591,8 @@
     show('view-list');
   };
   $('btn-test-refresh').onclick = pollTest;
+  $('btn-test-copy').onclick = function () { copyText($('test-url').textContent, this); };
+  $('btn-test-open').onclick = function () { window.open($('test-url').textContent, '_blank'); };
 
   // ── 调优 ─────────────────────────────────────
   var tuneSrv = null, tuneTimer = null;
