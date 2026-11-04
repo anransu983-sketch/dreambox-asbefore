@@ -38,6 +38,9 @@ Home = {
         Connecting = "连接中"
         Disconnecting = "断开中"
         Running = "运行中"
+        Connected = "已连接"
+        TapToConnect = "轻触城堡连接"
+        Disconnected = "未连接"
         Lost = "失联"
         TapToStart = "轻触启动"
     }

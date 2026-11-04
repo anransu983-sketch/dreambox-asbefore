@@ -38,6 +38,9 @@ Home = {
         Connecting = "Connecting"
         Disconnecting = "Disconnecting"
         Running = "Running"
+        Connected = "Connected"
+        TapToConnect = "Tap the castle to connect"
+        Disconnected = "Disconnected"
         Lost = "Lost"
         TapToStart = "Tap to start"
     }

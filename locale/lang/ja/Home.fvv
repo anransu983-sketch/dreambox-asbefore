@@ -38,6 +38,9 @@ Home = {
         Connecting = "接続中"
         Disconnecting = "切断中"
         Running = "実行中"
+        Connected = "接続済み"
+        TapToConnect = "城をタップして接続"
+        Disconnected = "未接続"
         Lost = "通信不可"
         TapToStart = "タップして開始"
     }

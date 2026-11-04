@@ -38,6 +38,9 @@ Home = {
         Connecting = "Подключение"
         Disconnecting = "Отключение"
         Running = "Работает"
+        Connected = "Подключено"
+        TapToConnect = "Нажмите на замок для подключения"
+        Disconnected = "Не подключено"
         Lost = "Потеряно"
         TapToStart = "Нажмите, чтобы запустить"
     }
