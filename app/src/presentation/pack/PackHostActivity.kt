@@ -3,6 +3,7 @@ package com.suanran.dreambox.presentation.pack
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -15,6 +16,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import android.util.Log
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import com.suanran.dreambox.data.logging.AppLogBuffer
 import com.suanran.dreambox.core.pack.PackBridgeDispatcher
 import com.suanran.dreambox.core.pack.PackCallback
@@ -114,9 +117,28 @@ class PackHostActivity : Activity() {
             }
         }
         webView.loadUrl("https://pack.local/index.html")
+        // 全面屏手势返回（预测性返回）走 OnBackInvoked 体系、不会调用旧 onBackPressed 覆写，
+        // 必须显式注册回调走同一套逻辑，否则手势一划就直接退出功能包（真机实测）。
+        if (Build.VERSION.SDK_INT >= 33) {
+            val cb = OnBackInvokedCallback { handleBack() }
+            backInvokedCallback = cb
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, cb
+            )
+        }
+    }
+
+    private var backInvokedCallback: OnBackInvokedCallback? = null
+
+    private fun handleBack() {
+        if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else finish()
     }
 
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            backInvokedCallback?.let { runCatching { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) } }
+            backInvokedCallback = null
+        }
         runCatching { dispatcher?.release() }
         io.shutdownNow()
         if (::webView.isInitialized) {
@@ -128,7 +150,7 @@ class PackHostActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else finish()
+        handleBack()
     }
 
     // ── 包元数据 ──────────────────────────────────────────────

@@ -313,6 +313,26 @@ button.pbtn:disabled{opacity:.5}
 @media (prefers-reduced-motion: reduce){
   .scene-bgwrap,.sbg,.spot,.obj,.cloud,.stars,.sstar,.flame,.dock button.p{animation:none!important}
 }
+
+/* ── 面板充实化（v15）：分段进度 / 效果对照 / 大按钮 / 统计脚 ── */
+.sheet{border:1px solid rgba(255,255,255,.13);border-bottom:none}
+.sheet:before{background:linear-gradient(90deg,transparent,var(--accent2, #a5b4fc),transparent);width:52px}
+.fac-desc{font-size:13.5px;color:#dfe4ff;line-height:1.65;border-left:3px solid var(--accent);padding-left:10px}
+.segbar{display:flex;gap:5px;margin:12px 0 5px}
+.segbar i{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.14)}
+.segbar i.on{background:linear-gradient(90deg,var(--accent),#fbbf24);box-shadow:0 0 8px rgba(251,191,36,.4)}
+.segtext{font-size:12px;color:#9aa3d9}
+.segtext b{color:#fbbf24}
+.infogrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+.infocard{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:9px 11px}
+.info-k{font-size:11px;color:#a5b4fc;letter-spacing:.1em}
+.info-v{font-size:13px;color:#fff;margin-top:3px;line-height:1.55}
+.bigbtn{display:block;width:100%;margin-top:13px;padding:13px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--accent),#b45309);color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:transform .15s}
+.bigbtn:active{transform:scale(.97)}
+.bigbtn:disabled{opacity:.45;box-shadow:none}
+.statusline{margin-top:11px;padding:10px 11px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:13px;color:#cbd2ff;line-height:1.55}
+.fac-foot{margin-top:11px;font-size:12.5px;color:#9aa3d9;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fac-foot b{color:#fbbf24}
 </style>
 
 </head>
@@ -990,6 +1010,13 @@ var FACS=[
  {key:"decor",icon:"🏮",name:"装修陈设",max:3,costs:[6,18,45],desc:"石桌→玉案香炉→夜明珠字画，洞府评级跟着涨"},
  {key:"danfang",icon:"🔥",name:"丹房",max:2,costs:[15,35],desc:"炼丹绿区变宽；成丹（良品以上且建了丹房）额外得灵石"},
  {key:"jingshi",icon:"🧘",name:"静室",max:1,costs:[25],desc:"每日奇遇 +1 次，并永久修炼 +2"}];
+var FAC_EFF={
+  space:["只是一方遮雨的草庐","石室成形，可容更多设施","两进院落，格局初成","小洞天自成一方天地"],
+  juling:["修炼无加成","每日修炼永久 +2","每日修炼永久 +4","每日修炼永久 +6"],
+  garden:["无晨收","每日晨收 +2 修为","每日晨收 +4 修为","每日晨收 +7 修为"],
+  decor:["洞里家徒四壁","添置石桌，评级小涨","玉案香炉，评级再涨","夜明珠配字画，评级大涨"],
+  danfang:["炼丹无加成","炼丹绿区变宽，成丹得灵石","炼丹绿区更宽，成丹灵石更多"],
+  jingshi:["静坐无加成","每日奇遇 +1 次，修炼 +2"]};
 function caveTitle(total){return total>=14?"洞天":total>=10?"福地":total>=6?"洞府":total>=3?"石室":"草庐"}
 function seedRand(seed){var h=2166136261;for(var i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619)}return function(){h=Math.imul(h^h>>>15,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^h>>>16)>>>0)/4294967296}}
 var play=null;
@@ -1080,14 +1107,18 @@ function renderCaveSheet(){
   var f=play.fac;var lvl=f[fc.key];var maxed=lvl>=fc.max;
   var capOk=fc.key==="space"||(lvl+1)<=f.space+1;
   var cost=maxed?null:fc.costs[lvl];
-  var dots="";for(var di=0;di<fc.max;di++)dots+=di<lvl?"●":"○";
-  var html='<div class="desc">'+fc.desc+'</div><div class="desc" style="margin-top:6px">当前等级 <b style="color:#fbbf24">'+dots+'</b>（'+lvl+" / "+fc.max+'）　灵石：<b style="color:#fbbf24">'+play.stones+'</b> 枚</div>';
+  var eff=FAC_EFF[fc.key]||[];
+  var segs="";for(var di=0;di<fc.max;di++)segs+='<i class="'+(di<lvl?"on":"")+'"></i>';
+  var html='<div class="fac-desc">'+fc.desc+'</div>';
+  html+='<div class="segbar">'+segs+'</div><div class="segtext">当前 <b>'+(lvl===0?"未建":"第 "+lvl+" 级")+'</b>（'+lvl+" / "+fc.max+'）'+(fc.key!=="space"?' · 设施等级上限 = 扩建空间 +1（现 '+(f.space+1)+'）':'')+'</div>';
+  html+='<div class="infogrid"><div class="infocard"><div class="info-k">当前效果</div><div class="info-v">'+(eff[lvl]||"—")+'</div></div><div class="infocard"><div class="info-k">'+(maxed?"已达顶峰":"下一级")+'</div><div class="info-v">'+(maxed?"这一处已经建到头了":(eff[lvl+1]||"—"))+'</div></div></div>';
   if(fc.key==="garden"&&lvl>0){
-    html+=play.gardenDone?'<div class="desc" style="margin-top:8px">药园今日已晨收，明日再来。</div>':'<button class="pbtn" id="btnGarden" style="margin-top:8px">🌱 药园晨收（+'+[0,2,4,7][lvl]+' 修为）</button>';
+    html+=play.gardenDone?'<div class="statusline">🌱 药园今日已晨收，明日再来。</div>':'<button class="bigbtn" id="btnGarden">🌱 药园晨收（+'+[0,2,4,7][lvl]+' 修为）</button>';
   }
-  if(maxed)html+='<div class="desc" style="margin-top:8px">已满级。</div>';
-  else if(!capOk)html+='<div class="desc" style="margin-top:8px">洞府空间不够，先点「扩建空间」升级。</div>';
-  else html+='<button class="pbtn" data-fac="'+fc.key+'" style="margin-top:8px"'+(play.stones<cost?' disabled':'')+'>'+(lvl===0?"建造":"升级")+" · "+cost+" 灵石"+(play.stones<cost?"（灵石不足）":"")+'</button>';
+  if(maxed)html+='<div class="statusline">✦ 已满级，这处设施建到头了。</div>';
+  else if(!capOk)html+='<div class="statusline">洞府空间不够：先点洞里的「扩建空间」把它升上去。</div>';
+  else html+='<button class="bigbtn" data-fac="'+fc.key+'"'+(play.stones<cost?' disabled':'')+'>'+(lvl===0?"🔨 建造":"⬆ 升级")+" · "+cost+" 灵石"+(play.stones<cost?"（灵石不足）":"")+'</button>';
+  html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>洞府总建设 '+(f.space+f.juling+f.garden+f.decor+f.danfang+f.jingshi)+' 级 · '+caveTitle(f.space+f.juling+f.garden+f.decor+f.danfang+f.jingshi)+'</span></div>';
   $("caveSheetTitle").textContent=fc.icon+" "+fc.name;
   $("caveSheetBody").innerHTML=html;
   Array.prototype.forEach.call(document.querySelectorAll("#caveSheetBody [data-fac]"),function(el){
