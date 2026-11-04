@@ -162,6 +162,18 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             case "tqState":
                 io.execute(() -> doTqState(opts, callback));
                 return true;
+            case "ecsStart":
+                io.execute(() -> doEcsStart(opts, callback));
+                return true;
+            case "ecsState":
+                io.execute(() -> doEcsState(opts, callback));
+                return true;
+            case "ipqStart":
+                io.execute(() -> doIpqStart(opts, callback));
+                return true;
+            case "ipqState":
+                io.execute(() -> doIpqState(opts, callback));
+                return true;
             case "tuneStart":
                 io.execute(() -> doTuneStart(opts, callback));
                 return true;
@@ -758,6 +770,100 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     .toString(), null);
         } catch (Exception e) {
             callback.onResult(false, null, "读取 TQ 状态失败：" + msg(e));
+        }
+    }
+
+    // ── 一键融合怪（ecs.sh，spiritysdx）────────────────────────
+    // 参数模式 -m 1 = 主菜单 1「顺序测试完全体」（全项目），参数模式下镜像询问
+    // 自动通过，全程无交互。与 TQ 同款：脱离会话跑（nohup 写日志）、pidfile 判
+    // 存活（不用 pgrep -f，防匹配到 exec 自身命令行）、状态从日志尾取。
+
+    private void doEcsStart(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "mkdir -p /tmp/sshtty-ecs && cd /tmp/sshtty-ecs && "
+                    + "if [ -f ecs.pid ] && kill -0 $(cat ecs.pid) 2>/dev/null; then echo ALREADY; "
+                    + "else (curl -fsSL -o ecs.sh "
+                    + "https://gitlab.com/spiritysdx/za/-/raw/main/ecs.sh "
+                    + "|| wget -qO ecs.sh https://gitlab.com/spiritysdx/za/-/raw/main/ecs.sh) && "
+                    + "mv -f ecs.log ecs-prev.log 2>/dev/null; "
+                    + "nohup env TERM=xterm-256color bash ecs.sh -m 1 "
+                    + "> ecs.log 2>&1 < /dev/null & echo $! > ecs.pid; echo STARTED; fi";
+            String r = runExec(srv, cmd, 90).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("started", r.contains("STARTED"))
+                    .put("alreadyRunning", r.contains("ALREADY"))
+                    .put("echo", r)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "启动融合怪失败：" + msg(e));
+        }
+    }
+
+    private void doEcsState(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "if [ -f /tmp/sshtty-ecs/ecs.pid ] && kill -0 $(cat /tmp/sshtty-ecs/ecs.pid) 2>/dev/null; "
+                    + "then echo RUNNING; else echo IDLE; fi; "
+                    + "echo __TAIL__; tail -c 1500 /tmp/sshtty-ecs/ecs.log 2>/dev/null";
+            String r = runExec(srv, cmd, 30);
+            boolean running = r.startsWith("RUNNING");
+            String tail = "";
+            int idx = r.indexOf("__TAIL__");
+            if (idx >= 0) tail = r.substring(idx + "__TAIL__".length()).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("running", running)
+                    .put("tail", tail)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "读取融合怪状态失败：" + msg(e));
+        }
+    }
+
+    // ── 一键 IP 体检（IPQuality，xykt）─────────────────────────
+    // -f 完整测试；-y 自动同意安装缺失依赖（脚本唯一的交互点）。IP.Check.Place
+    // 本身 302 跳到 xykt/IPQuality 的 ip.sh，这里直下 GitHub 原文件、短链兜底。
+    // 脱离会话与状态读取与 TQ 同款。
+
+    private void doIpqStart(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "mkdir -p /tmp/sshtty-ipq && cd /tmp/sshtty-ipq && "
+                    + "if [ -f ipq.pid ] && kill -0 $(cat ipq.pid) 2>/dev/null; then echo ALREADY; "
+                    + "else (curl -fsSL -o ipq.sh "
+                    + "https://raw.githubusercontent.com/xykt/IPQuality/main/ip.sh "
+                    + "|| curl -sL -o ipq.sh https://IP.Check.Place) && "
+                    + "mv -f ipq.log ipq-prev.log 2>/dev/null; "
+                    + "nohup env TERM=xterm-256color bash ipq.sh -f -y "
+                    + "> ipq.log 2>&1 < /dev/null & echo $! > ipq.pid; echo STARTED; fi";
+            String r = runExec(srv, cmd, 90).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("started", r.contains("STARTED"))
+                    .put("alreadyRunning", r.contains("ALREADY"))
+                    .put("echo", r)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "启动 IP 体检失败：" + msg(e));
+        }
+    }
+
+    private void doIpqState(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "if [ -f /tmp/sshtty-ipq/ipq.pid ] && kill -0 $(cat /tmp/sshtty-ipq/ipq.pid) 2>/dev/null; "
+                    + "then echo RUNNING; else echo IDLE; fi; "
+                    + "echo __TAIL__; tail -c 1500 /tmp/sshtty-ipq/ipq.log 2>/dev/null";
+            String r = runExec(srv, cmd, 30);
+            boolean running = r.startsWith("RUNNING");
+            String tail = "";
+            int idx = r.indexOf("__TAIL__");
+            if (idx >= 0) tail = r.substring(idx + "__TAIL__".length()).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("running", running)
+                    .put("tail", tail)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "读取 IP 体检状态失败：" + msg(e));
         }
     }
 

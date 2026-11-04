@@ -58,7 +58,7 @@
 <!-- ═══ 列表 ═══ -->
 <div id="view-list">
   <h1>🖥️ VPS 终端</h1>
-  <p class="sub">服务器只输一次：IP、端口、用户名、密码保存后（系统密钥加密），下次点「连接」直接进终端。另带一键 TQ 测速（报告链接自动提取可复制）与一键调优（Tcpfit 审计版，可回滚）。IP 默认打码，点上面按钮可切换显示。</p>
+  <p class="sub">服务器只输一次：IP、端口、用户名、密码保存后（系统密钥加密），下次点「连接」直接进终端。另带一键 TQ 测速（报告链接自动提取可复制）、一键融合怪、一键 IP 体检与一键调优（Tcpfit 审计版，可回滚）。IP 默认打码，点上面按钮可切换显示。</p>
   <div style="margin-bottom:12px">
     <button class="mini" id="btn-toggle-ip" style="margin:0">🙈 IP 已隐藏</button>
   </div>
@@ -141,6 +141,19 @@
   </div>
 </div>
 
+<!-- ═══ 通用测试（融合怪 / IP 体检共用视图） ═══ -->
+<div id="view-test" class="hidden">
+  <h1 id="test-title">🧪 测试</h1>
+  <p class="sub" id="test-sub"></p>
+  <div class="card">
+    <div id="test-status">准备中…</div>
+    <pre class="log hidden" id="test-tail"></pre>
+    <button class="mini primary" id="btn-test-start">开始跑</button>
+    <button class="mini" id="btn-test-back">返回列表</button>
+    <button class="mini" id="btn-test-refresh">刷新</button>
+  </div>
+</div>
+
 <!-- ═══ 调优 ═══ -->
 <div id="view-tune" class="hidden">
   <h1>🚀 一键调优</h1>
@@ -199,7 +212,7 @@
 
   function $(id) { return document.getElementById(id); }
   function show(id) {
-    ['view-list', 'view-form', 'view-tq', 'view-tune', 'view-term'].forEach(function (v) {
+    ['view-list', 'view-form', 'view-tq', 'view-test', 'view-tune', 'view-term'].forEach(function (v) {
       $(v).classList.toggle('hidden', v !== id);
     });
   }
@@ -305,6 +318,18 @@
       var bTqView = document.createElement('button');
       bTqView.className = 'mini'; bTqView.textContent = 'TQ结果';
       bTqView.onclick = function () { openTq(s, false); };
+      var bEcs = document.createElement('button');
+      bEcs.className = 'mini'; bEcs.textContent = '一键融合怪';
+      bEcs.onclick = function () { openTest('ecs', s, true); };
+      var bEcsView = document.createElement('button');
+      bEcsView.className = 'mini'; bEcsView.textContent = '融合怪结果';
+      bEcsView.onclick = function () { openTest('ecs', s, false); };
+      var bIpq = document.createElement('button');
+      bIpq.className = 'mini'; bIpq.textContent = '一键IP体检';
+      bIpq.onclick = function () { openTest('ipq', s, true); };
+      var bIpqView = document.createElement('button');
+      bIpqView.className = 'mini'; bIpqView.textContent = 'IP结果';
+      bIpqView.onclick = function () { openTest('ipq', s, false); };
       var bEdit = document.createElement('button');
       bEdit.className = 'mini'; bEdit.textContent = '编辑';
       bEdit.onclick = function () { openForm(s); };
@@ -317,6 +342,8 @@
         }).catch(function (e) { $('list-err').textContent = e.message; });
       };
       card.appendChild(bConn); card.appendChild(bTq); card.appendChild(bTqView);
+      card.appendChild(bEcs); card.appendChild(bEcsView);
+      card.appendChild(bIpq); card.appendChild(bIpqView);
       card.appendChild(bTune); card.appendChild(bEdit); card.appendChild(bDel);
       box.appendChild(card);
     });
@@ -472,6 +499,82 @@
   $('btn-tq-refresh').onclick = pollTq;
   $('btn-copy-url').onclick = function () { copyText($('tq-url').textContent, this); };
   $('btn-open-url').onclick = function () { window.open($('tq-url').textContent, '_blank'); };
+
+  // ── 融合怪 / IP 体检（通用测试视图，与 TQ 同款轮询） ──────
+  var TESTS = {
+    ecs: { start: 'ecsStart', state: 'ecsState', title: '👹 一键融合怪', startLabel: '开始跑融合怪',
+      sub: '融合怪完全体（顺序测试）：系统信息＋CPU/硬盘＋流媒体解锁＋三网回程，全套平均约 7 分钟。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「融合怪结果」继续看。',
+      running: '⏳ 融合怪运行中…（完全体全套，约 7 分钟）',
+      done: '✅ 融合怪已跑完，结果在下面日志尾部（结果分享链接也在里面）。',
+      idle: '还没有跑过融合怪，或上次的日志已被清理。回列表点「一键融合怪」开始。' },
+    ipq: { start: 'ipqStart', state: 'ipqState', title: '🩺 一键 IP 体检', startLabel: '开始跑 IP 体检',
+      sub: 'IP 质量体检（完整版）：IP 归属/风险评分/流媒体解锁/黑名单全测，约 2–3 分钟。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「IP 结果」继续看。',
+      running: '⏳ IP 体检运行中…（约 2–3 分钟）',
+      done: '✅ IP 体检已完成，结果在下面日志里。',
+      idle: '还没有跑过 IP 体检，或上次的日志已被清理。回列表点「一键IP体检」开始。' }
+  };
+  var testKind = null, testSrv = null, testTimer = null;
+  function openTest(kind, s, start) {
+    testKind = kind; testSrv = s;
+    var cfg = TESTS[kind];
+    $('test-title').textContent = cfg.title;
+    $('test-sub').textContent = cfg.sub;
+    $('btn-test-start').textContent = cfg.startLabel;
+    $('test-status').textContent = start ? '正在启动…' : '正在读取状态…';
+    $('test-tail').textContent = '';
+    $('test-tail').classList.add('hidden');
+    show('view-test');
+    if (testTimer) { clearInterval(testTimer); testTimer = null; }
+    var begin = start ? startTest() : Promise.resolve();
+    begin.then(function () {
+      pollTest();
+      testTimer = setInterval(pollTest, 5000);
+    });
+  }
+  function startTest() {
+    if (!testSrv || !testKind) return Promise.resolve();
+    var cfg = TESTS[testKind];
+    return callNative(cfg.start, { id: testSrv.id }).then(function (r) {
+      if (r && r.started) {
+        $('test-status').textContent = '已启动，' + cfg.running;
+      } else if (r && r.alreadyRunning) {
+        $('test-status').textContent = '⏳ 已经在跑了，看下面进度';
+      } else {
+        $('test-status').textContent = '启动命令没有生效（服务器回话：' + ((r && r.echo) || '空') + '）。可以再点一次开始按钮。';
+      }
+    }).catch(function (e) {
+      $('test-status').textContent = '启动失败：' + e.message;
+    });
+  }
+  function pollTest() {
+    if (!testSrv || !testKind) return;
+    var cfg = TESTS[testKind];
+    callNative(cfg.state, { id: testSrv.id }).then(function (r) {
+      if (r.running) {
+        $('test-status').textContent = cfg.running;
+      } else if (r.tail) {
+        $('test-status').textContent = cfg.done;
+        if (testTimer) { clearInterval(testTimer); testTimer = null; }
+      } else {
+        $('test-status').textContent = cfg.idle;
+        if (testTimer) { clearInterval(testTimer); testTimer = null; }
+      }
+      if (r.tail) {
+        $('test-tail').textContent = r.tail;
+        $('test-tail').classList.remove('hidden');
+      } else {
+        $('test-tail').classList.add('hidden');
+      }
+    }).catch(function (e) {
+      $('test-status').textContent = '读取失败：' + e.message;
+    });
+  }
+  $('btn-test-start').onclick = function () { startTest().then(pollTest); };
+  $('btn-test-back').onclick = function () {
+    if (testTimer) { clearInterval(testTimer); testTimer = null; }
+    show('view-list');
+  };
+  $('btn-test-refresh').onclick = pollTest;
 
   // ── 调优 ─────────────────────────────────────
   var tuneSrv = null, tuneTimer = null;
