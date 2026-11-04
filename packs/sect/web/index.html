@@ -1668,7 +1668,7 @@ var DIVINE_BASE=[
  {id:"tianyan",icon:"👁️",name:"天眼通",grade:3,cost:80,desc:"洞悉虚妄，看破隐匿"},
  {id:"sadou",icon:"🌟",name:"撒豆成兵",grade:4,cost:120,desc:"一把灵豆撒出，千军万马听令"},
  {id:"santou",icon:"👹",name:"三头六臂",grade:5,cost:150,desc:"三头六臂齐出，战力翻倍"},
- {id:"fatian",icon:"⛰️",name:"法天象地",grade:6,cost:200,desc:"帝阶神通 · 身化巨岳，顶天立地"}];
+ {id:"fatian",icon:"⛰️",name:"法天象地",grade:6,cost:200,desc:"帝阶神通 · 身化巨岳，顶天立地"},{id:"xinghuo",icon:"☀️",name:"群星之炎",grade:6,cost:300,desc:"炎系终极 · 一念起，群星燃（需三门火系法术大成）"}];
 var SECT_DIVINE={
  jian:[{id:"wanjian",icon:"⚔️",name:"万剑归宗",grade:4,cost:100,desc:"万剑齐发，剑意冲霄"},{id:"jianxin",icon:"💎",name:"剑心通明",grade:5,cost:150,desc:"剑心如镜，照破一切虚妄剑招"}],
  fu:[{id:"wulei",icon:"⚡",name:"五雷正法",grade:4,cost:100,desc:"引九天神雷，涤荡妖氛"},{id:"wanfu",icon:"🔯",name:"万符归宗",grade:5,cost:150,desc:"万符同源，一符出而万法随"}],
@@ -1689,7 +1689,8 @@ function renderDivine(){
     var owned2=play.divines.indexOf(sel.id)>=0;
     html+='<div class="statusline">'+sel.icon+' <b>'+sel.name+'</b> · <b style="color:'+GD_COLORS[sel.grade]+'">'+GD[sel.grade]+'</b> · '+sel.desc+'</div>';
     if(owned2){html+=tierSeg(play.divineXp[sel.id]||0);html+=buyXpHtml("d",sel)}
-    if(!owned2)html+='<button class="bigbtn" id="btnLearnDivine"'+(play.stones<sel.cost?" disabled":"")+'>🌌 参悟神通 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
+    if(!owned2&&sel.id==="xinghuo"&&fireMastered()<3)html+='<div class="ok" style="margin-top:6px">🔒 炎系终极未至：需三门火系法术修至大成（现 '+fireMastered()+' 门）</div>';
+    else if(!owned2)html+='<button class="bigbtn" id="btnLearnDivine"'+(play.stones<sel.cost?" disabled":"")+'>🌌 参悟神通 · '+sel.cost+' 灵石'+(play.stones<sel.cost?"（灵石不足）":"")+'</button>';
     else html+='<button class="bigbtn" id="btnCastDivine">✨ 施展'+sel.name+'（熟练 +1）</button>';
   }
   html+='<div class="fac-foot"><span>💰 灵石 <b>'+play.stones+'</b> 枚</span><span>已习成 '+play.divines.length+' 门神通</span></div>';
@@ -2208,6 +2209,9 @@ function playerPower(){
   var _jt=0;for(var _jk in play.jobs)_jt+=jobTier(_jk);p+=Math.min(1.2,_jt*0.04);
   var _et=0;for(var _ek in play.enchants)_et+=play.enchants[_ek];p+=Math.min(0.9,_et*0.06);
   p+=guPower();
+  p+=(play.jidao?play.jidao.stage*0.8:0)+(play.shen?play.shen.tier*0.4:0);
+  if(play.academy)p+=Math.min(1,play.academy.merit*0.004)+(play.academy.hide>=10?0.5:0);
+  if(play.s01&&play.s01.end===1)p+=0.3;
   return p;
 }
 var __duelBusy=false;
@@ -2542,12 +2546,13 @@ return;
 }
 if(__worldSel){renderWorldDetail(el);return}
 var html='<div class="wtabs"><button class="wtab'+(__worldsView==="map"?" on":"")+'" data-wv="map">🗺️ 万界图</button><button class="wtab'+(__worldsView==="dilu"?" on":"")+'" data-wv="dilu">👑 帝路争锋</button><button class="wtab'+(__worldsView==="lad"?" on":"")+'" data-wv="lad">🏆 登仙榜</button><button class="wtab" data-wv="task">📜 任务墙</button></div>';
-if(__worldsView==="dilu")html+=renderDilu()+jinQuHtml();
+if(__worldsView==="dilu")html+=renderDilu()+jinQuHtml()+renderJidao();
 else if(__worldsView==="lad")html+=renderLadderSec();
-  else if(__worldsView==="task")html+=renderTaskWall();
-else html+=renderWorldMap();
+  else if(__worldsView==="task")html+=renderS01Card()+renderTaskWall();
+else html+=renderWorldMap()+renderShen();
 el.innerHTML=html;
 Array.prototype.forEach.call(el.querySelectorAll("[data-wv]"),function(b){b.addEventListener("click",function(){__worldsView=b.getAttribute("data-wv");renderWorlds()})});
+bindEndgame(el);
 bindWorldsInner(el);bindTierWorlds(el);
 }
 function renderWorldMap(){
@@ -2683,7 +2688,7 @@ var dealt=Math.round(playerPower()*(win?11:4.5)*(0.85+Math.random()*0.3));
 C.dmg[w.id]=(C.dmg[w.id]||0)+dealt;
 var max=calamityMaxHp(w);
 if(C.dmg[w.id]>=max&&!C.kills[w.id]){
-C.kills[w.id]=1;play.stones+=150;playSave();
+C.kills[w.id]=1;play.stones+=150;play.shen.div+=2;playSave();
 claimReward("series",{series:"calamity-"+w.id},function(){render()});
 claimReward("event",{amount:8},function(){render()});
 breakthroughFx("灾厄平息 · "+w.name);
@@ -2694,7 +2699,7 @@ playSave();render();renderWorlds();
 var bf=$("btnBoss");if(bf)bf.addEventListener("click",function(){
 play.bossDay[w.id]=play.day;playSave();
 fightInArena(w.boss,function(win){
-if(win){
+if(win){play.shen.div+=1;playSave();
 var first=!play.bossKills[w.id];play.bossKills[w.id]=1;playSave();
 if(first){claimReward("series",{series:"boss-"+w.id},function(){render();renderWorlds()});var _ab=grantAbilityRandom();if(_ab)setTimeout(function(){breakthroughLite("觉醒异能 · "+_ab.name)},700)}
 claimReward("event",{amount:8},function(){render();renderWorlds()});
@@ -2747,6 +2752,7 @@ function renderWizard(){
     }).join("")+'</div>';
   }else html+='<div class="desc" style="margin-top:6px">先在上面学一门法术，才能给它建模。</div>';
   html+='</div>';
+  html+=renderAcademy();
   if(play.wiz.chip===undefined){play.wiz.chip=0;play.wiz.parseDay="";play.wiz.parseCount=0}
   var ex='<div class="card" style="margin-top:10px"><div style="font-weight:800">🧠 芯片 · 解析 · 觉醒</div>'
   +(play.wiz.chip?'<div class="desc" style="margin-top:4px;line-height:1.7">辅助芯片运转中：冥想收益 +1；决斗/界主/帝路对手卡显示<b>芯片预演胜算</b>；可<b>解析</b>功法残页（每日 2 次，20 灵石）：随机一门已学法术模型 +1，无已学法术则精神力 +3。</div>'
@@ -2775,16 +2781,17 @@ function renderWizard(){
   });
   if(anchor)anchor.insertAdjacentHTML("beforeend",html);
   var bm=$("btnMeditate");
-  if(bm)bm.addEventListener("click",function(){play.wiz.medDay=play.day;play.wiz.med+=2+(play.tomes.length>=18?1:0);playSave();renderSpells();var fb=document.querySelector("#spellsBody .fac-foot");if(fb)floatFx(fb,"精神力提升")});
+  if(bm)bm.addEventListener("click",function(){play.wiz.medDay=play.day;play.wiz.med+=2+(play.tomes.length>=18?1:0);play.academy.merit+=1;playSave();renderSpells();var fb=document.querySelector("#spellsBody .fac-foot");if(fb)floatFx(fb,"精神力提升")});
   Array.prototype.forEach.call(document.querySelectorAll("[data-model]"),function(b){b.addEventListener("click",function(){
     var sid=b.getAttribute("data-model");var lv=play.wiz.models[sid]||0;var cost=12+lv*10;
     if(play.stones<cost||lv>=5)return;
     var before=wizRank().idx;
-    play.stones-=cost;play.wiz.models[sid]=lv+1;playSave();
+    play.stones-=cost;play.wiz.models[sid]=lv+1;play.academy.merit+=2;playSave();
     var after=wizRank().idx;
     if(after>before)claimReward("series",{series:"wiz-"+after},function(){render()});
     renderSpells();
   })});
+  bindAcademy();
 }
 var POTION_PATHS=[
 {id:"kuimi",icon:"👁️",name:"窥秘之径",stages:["启灵药剂","凝神药剂","窥真药剂","织梦药剂"],ability:"duoxin",desc:"看破虚妄，终至读心。"},
@@ -3376,6 +3383,197 @@ function bindGu(el){
     renderWorlds();render();
   })});
 }
+
+/* ══ 祭道之上（v39）：成仙之后，祭掉自己的道 ══ */
+var JIDAO_STAGES=[{n:"未入祭道",need:0},{n:"祭道",need:100},{n:"祭道之上",need:250},{n:"超脱",need:450}];
+function fireMastered(){
+  var c=0;
+  play.spells.forEach(function(sid){var sp=null;spellList().forEach(function(x){if(x.id===sid)sp=x});if(sp&&spellElement(sp)==="huo"&&tierOf(play.spellXp[sid]||0)>=3)c++});
+  return c;
+}
+function renderJidao(){
+  if(!play.chengxian)return "";
+  var J=play.jidao;var st=JIDAO_STAGES[J.stage];var nxt=JIDAO_STAGES[J.stage+1];
+  var done=J.day===play.day;
+  var html='<div class="card" style="margin-top:12px"><div class="wstrip" style="background-image:url(scene-night.jpg)"><span>🕯️ 祭道 · 仙路之上</span></div>'
+  +'<div class="desc" style="margin-top:6px;line-height:1.8">成仙不是尽头。<b>祭道</b>者，祭掉自己的一部分道，换一条更高的路——祭过的法宝、灵石、神通都成薪柴。当前境界：<b>'+st.n+'</b> · 祭道值 '+J.pts+(nxt?' · 下境「'+nxt.n+'」需 '+nxt.need+'（每境 +0.8 战力）':' · 已立于绝巅，诸天俯首')+'。每日可祭一次：</div>'
+  +'<div class="cheatrow" style="margin-top:7px;flex-wrap:wrap;gap:6px">'
+  +'<button class="pbtn" data-jidao="bao"'+(done?" disabled":"")+'>🔥 祭法宝 · 祭炼 -1 换 30</button>'
+  +'<button class="pbtn" data-jidao="shi"'+(done||play.stones<500?" disabled":"")+'>💰 祭灵石 · 500 换 25</button>'
+  +'<button class="pbtn" data-jidao="shu"'+(done?" disabled":"")+'>🌌 祭神通 · 熟练 -20 换 35</button>'
+  +'</div>'
+  +(done?'<div class="desc" style="margin-top:5px">今日已祭，明日再来。</div>':"")
+  +(J.stage>=3?(J.yingDay===play.day?'<div class="ok" style="margin-top:6px">今日诸天供奉已收。</div>':'<button class="bigbtn" data-jidao="ying" style="margin-top:8px">🌌 映照诸天 · 收今日供奉（+60 灵石）</button>'):"")
+  +'</div>';
+  return html;
+}
+function doJidao(kind){
+  var J=play.jidao;if(!J||J.day===play.day&&kind!=="ying")return;
+  if(kind==="ying"){
+    if(J.stage<3||J.yingDay===play.day)return;
+    J.yingDay=play.day;play.stones+=60;playSave();breakthroughLite("诸天供奉 +60 灵石");renderWorlds();render();return;
+  }
+  var gain=0;
+  if(kind==="bao"){
+    var cand=play.fabaos.filter(function(f){return (play.fabaoLvl[f]||0)>=1});
+    if(!cand.length){breakthroughLite("没有祭炼过的法宝可祭");return}
+    var f=cand[Math.floor(Math.random()*cand.length)];play.fabaoLvl[f]--;gain=30;
+    var fd=null;ARTIFACTS.forEach(function(x){if(x.id===f)fd=x});
+    breakthroughLite("祭掉「"+(fd?fd.name:f)+"」一层祭炼");
+  }else if(kind==="shi"){
+    if(play.stones<500)return;play.stones-=500;gain=25;
+  }else if(kind==="shu"){
+    var cand2=play.divines.filter(function(d){return (play.divineXp[d]||0)>=20});
+    if(!cand2.length){breakthroughLite("没有熟练 ≥20 的神通可祭");return}
+    var d=cand2[Math.floor(Math.random()*cand2.length)];play.divineXp[d]-=20;gain=35;
+  }
+  if(!gain)return;
+  J.day=play.day;J.pts+=gain;
+  while(J.stage<3&&J.pts>=JIDAO_STAGES[J.stage+1].need)J.stage++;
+  playSave();
+  if(J.stage>J.claimed){J.claimed=J.stage;playSave();claimReward("series",{series:"jidao-"+J.stage},function(){render()});breakthroughFx("祭道入境 · "+JIDAO_STAGES[J.stage].n)}
+  else breakthroughLite("祭道值 +"+gain+"（现 "+J.pts+"）");
+  renderWorlds();render();
+}
+/* ══ 封神台（v39 · 希腊神话口径）：攒神性，登神位 ══ */
+var SHEN_TIERS=[{n:"半神",need:0},{n:"神使",need:3},{n:"属神",need:8},{n:"主神",need:16},{n:"神王",need:30}];
+function renderShen(){
+  if(!state||state.rankIndex<6)return "";
+  var S=play.shen;var nxt=SHEN_TIERS[S.tier+1];
+  var html='<div class="card" style="margin-top:12px"><div class="wstrip" style="background-image:url(scene-day.jpg)"><span>🏛️ 封神台 · 奥林匹斯之路</span></div>'
+  +'<div class="desc" style="margin-top:6px;line-height:1.8">另一条路不在东方。攒<b>神性</b>登神位：镇压界主 +1、平息灾厄 +2、猎杀泰坦残影 +1。你现有神性 <b>'+S.div+'</b>，神位 <b>'+SHEN_TIERS[S.tier].n+'</b>（每位 +0.4 战力）'+(nxt?' · 下一位「'+nxt.n+'」需 '+nxt.need+' 神性':' · 已是神王，奥林匹斯为你让座')+'。</div>'
+  +'<div class="cheatrow" style="margin-top:6px;flex-wrap:wrap;gap:5px">'+SHEN_TIERS.map(function(t,i){return '<span class="pbtn" style="pointer-events:none;'+(i<=S.tier?'color:#fbbf24;border-color:#fbbf24':'opacity:.55')+'">'+t.n+' · '+t.need+'</span>'}).join("")+'</div>'
+  +(nxt&&S.div>=nxt.need?'<button class="bigbtn" data-shen="claim" style="margin-top:8px">🏛️ 登临「'+nxt.n+'」· 领神恩 '+(50+(S.tier+1)*50)+' 灵石</button>':"")
+  +'<button class="bigbtn" data-shen="titan" style="margin-top:8px"'+(S.titanDay===play.day?" disabled":"")+'>⚡ 猎杀泰坦残影（战力 14.5 · 胜 +1 神性'+(S.titanDay===play.day?" · 今日已猎":" · 每日一次")+'）</button>'
+  +'</div>';
+  return html;
+}
+function bindEndgame(el){
+  Array.prototype.forEach.call(el.querySelectorAll("[data-jidao]"),function(b){b.addEventListener("click",function(){doJidao(b.getAttribute("data-jidao"))})});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-shen]"),function(b){b.addEventListener("click",function(){
+    var S=play.shen;var k=b.getAttribute("data-shen");
+    if(k==="claim"){
+      var nxt=SHEN_TIERS[S.tier+1];if(!nxt||S.div<nxt.need)return;
+      S.tier++;play.stones+=50+S.tier*50;playSave();
+      claimReward("series",{series:"shen-"+S.tier},function(){render()});
+      breakthroughFx("封神 · "+SHEN_TIERS[S.tier].n);renderWorlds();render();
+    }else if(k==="titan"){
+      if(S.titanDay===play.day)return;S.titanDay=play.day;playSave();
+      fightInArena({name:"泰坦残影",emoji:"🗿",power:14.5},function(win){
+        if(win){S.div+=1;playSave();breakthroughLite("泰坦残影崩散，神性 +1")}
+        renderWorlds();render();
+      });
+    }
+  })});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-s01]"),function(b){b.addEventListener("click",function(){doS01Choice(+b.getAttribute("data-s01"))})});
+}
+
+/* ══ 黑巫师学院（v39）：藏拙苟道 · 功绩晋升 · 每日考核 ══ */
+var ACA_RANKS=[{n:"游学者",need:0},{n:"学院学徒",need:10},{n:"助教",need:30},{n:"讲师",need:70},{n:"教授",need:130},{n:"黑巫师 · 院长",need:200}];
+var ACA_Q=[
+ {q:"巫师冥想时，最要紧的是什么？",opts:["精神力集中","灵石够多","法袍够黑"],right:0},
+ {q:"巫术模型的层数上限是？",opts:["三层","五层","九层"],right:1},
+ {q:"「藏拙」的真意是？",opts:["装弱挨打","深藏不露，待时而动","躺平摆烂"],right:1},
+ {q:"芯片解析，每日可做几次？",opts:["两次","五次","无限次"],right:0},
+ {q:"黑巫师行事第一条是？",opts:["出门先算一卦","苟住，别浪","声势要大"],right:1},
+ {q:"精神力主要靠什么增长？",opts:["冥想","砍价","睡懒觉"],right:0},
+ {q:"多系觉醒，最多可觉醒几系？",opts:["两系","三系","七系"],right:1},
+ {q:"学院功绩靠什么积累？",opts:["冥想、研习与解析","在门口站着","托关系"],right:0}];
+function acaRankIdx(){var t=0;ACA_RANKS.forEach(function(r,i){if(play.academy.merit>=r.need)t=i});return t}
+function acaExamSet(){
+  var rnd=seedRand(play.day+"aca");var pool=ACA_Q.map(function(_,i){return i});var out=[];
+  for(var k=0;k<3&&pool.length;k++)out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
+  return out;
+}
+function renderAcademy(){
+  var A=play.academy;var ri=acaRankIdx();var nxt=ACA_RANKS[ri+1];
+  var html='<div class="card" style="margin-top:12px"><div class="wstrip" style="background-image:url(room-lecture.jpg)"><span>🏴 黑巫师学院 · 藏拙之道</span></div>'
+  +'<div class="desc" style="margin-top:6px;line-height:1.8">学院不挂牌，知道的人自然知道。在这里，<b>强不是喊出来的，是藏出来的</b>：功绩靠冥想（+1）、研习模型（+2）、解析（+1）慢慢攒；藏拙攒满十次，深藏不露自成战力（+0.5）。你现居 <b>'+ACA_RANKS[ri].n+'</b> · 功绩 '+A.merit+(nxt?' · 下阶「'+nxt.n+'」需 '+nxt.need:' · 已至院长之位')+' · 藏拙 '+A.hide+' 次'+(A.hide>=10?'（藏拙大成）':'')+'。</div>';
+  if(nxt&&A.merit>=nxt.need&&(A.claimed||0)<ri)html+='<button class="bigbtn" data-aca="claim" style="margin-top:7px">🎓 晋升「'+ACA_RANKS[ri].n+'」· 领学院津贴 '+(30+ri*20)+' 灵石</button>';
+  html+='<div class="cheatrow" style="margin-top:7px;gap:6px"><button class="pbtn" data-aca="hide"'+(A.hideDay===play.day?" disabled":"")+'>🫥 今日藏拙'+(A.hideDay===play.day?"（已藏）":"（+藏拙 1）")+'</button></div>';
+  if(A.examDay===play.day){
+    html+='<div class="ok" style="margin-top:6px">今日考核已毕（答对 '+A.examRight+' / 3，功绩已入账）。</div>';
+  }else if(A.examStep>0&&A.examStep<3){
+    var set=acaExamSet();var q=ACA_Q[set[A.examStep]];
+    html+='<div style="margin-top:8px"><b>📝 考核 · 第 '+(A.examStep+1)+' 题：</b><span class="desc">'+q.q+'</span></div><div class="cheatrow" style="margin-top:5px;flex-wrap:wrap;gap:6px">'
+    +q.opts.map(function(o,i){return '<button class="pbtn" data-aca="opt:'+i+'">'+o+'</button>'}).join("")+'</div>';
+  }else{
+    html+='<button class="bigbtn" data-aca="start" style="margin-top:8px">📝 参加今日考核（三题 · 每题对 +3 功绩）</button>';
+  }
+  html+='</div>';
+  return html;
+}
+function bindAcademy(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-aca]"),function(b){
+    if(b.__acaBound)return;b.__acaBound=1;
+    b.addEventListener("click",function(){
+      var A=play.academy;var k=b.getAttribute("data-aca");
+      if(k==="hide"){
+        if(A.hideDay===play.day)return;A.hideDay=play.day;A.hide++;playSave();
+        breakthroughLite(A.hide>=10?"藏拙又深了一层（已大成）":"藏拙 +1（深藏不露）");renderSpells();render();
+      }else if(k==="claim"){
+        var ri=acaRankIdx();if((A.claimed||0)>=ri)return;A.claimed=ri;play.stones+=30+ri*20;playSave();
+        claimReward("series",{series:"aca-"+ri},function(){render()});
+        breakthroughFx("学院晋升 · "+ACA_RANKS[ri].n);renderSpells();render();
+      }else if(k==="start"){
+        if(A.examDay===play.day)return;A.examStep=1;A.examRight=0;playSave();renderSpells();
+      }else if(k.indexOf("opt:")===0){
+        var set=acaExamSet();var q=ACA_Q[set[A.examStep]];if(!q)return;
+        var pick=+k.split(":")[1];
+        if(pick===q.right){A.examRight++;A.merit+=3;breakthroughLite("答对了 · 功绩 +3")}
+        else breakthroughLite("答错了——藏拙之人，不争一时口快");
+        A.examStep++;
+        if(A.examStep>=3){A.examDay=play.day;A.examStep=0;if(A.examRight===3){A.merit+=4;breakthroughLite("三题全对 · 额外功绩 +4")}}
+        playSave();renderSpells();render();
+      }
+    });
+  });
+}
+/* ══ S01 号乘客 · 档案（v39 长线）══ */
+var __s01Out="";
+var S01_CHAPTERS=[
+ {title:"档案一 · 无票之客",text:"快讯里那个 S01 又出现了。这一次，他站在任务墙前，看的是你的名字。",choices:[
+   {t:"上前搭话",out:"他摘下帽子：『下一界，要变天了。你的名字，我先替你看着。』说完，退进界门的光里。"},
+   {t:"远远观察",out:"他像是察觉到了，回头冲你笑了一下——然后像退潮一样，从这界消失。"}]},
+ {title:"档案二 · 空座",text:"微世界里有一节悬浮的车厢，座位空着，票根上写着你的道号。",choices:[
+   {t:"坐上去",out:"车厢轻轻动了一瞬。你看见无数个自己，在别的世界里修行。回过神来，票根变成了 40 枚灵石。",stones:40},
+   {t:"烧掉票根",out:"火焰里浮出一行小字：『明智。这一趟，本来不是给你准备的。』"}]},
+ {title:"档案三 · 对赌",text:"S01 邀你赌一局：赌这一季的灾厄，平不平得下。他说他从不赌运气。",choices:[
+   {t:"押平得下",out:"他直接掏出 80 灵石推给你：『你赢了。我昨天就知道结果——所以才来找你。』",stones:80},
+   {t:"不赌",out:"他收起灵石，难得正经：『不赌的人，通常活得久。你比名单上大多数人聪明。』"}]},
+ {title:"档案四 · 名单",text:"他有一份名单，记着诸天里『被选中的人』。你的名字在最后一行，后面跟着一个问号。",choices:[
+   {t:"问问号是什么意思",out:"『还没定。』他说，『看你接下来的选择——比如，下一次见到我时，你站在哪一边。』"},
+   {t:"划掉自己的名字",out:"你划掉了。墨迹未干，那行字又自己浮了回来，只是问号变淡了一点。"}]},
+ {title:"档案五 · 下一站",text:"他要下车了。临别，他问你：愿不愿意替他跑一趟——一趟去『没有站名的站』的活。",choices:[
+   {t:"接下这趟活",out:"他把一枚没有刻度的令牌塞进你手里：『从今往后，你是我的线人。诸天的风吹草动，先过你的眼。』（结盟：战力 +0.3，诸天快讯将开始流传你的传说）",end:1},
+   {t:"目送他离开",out:"他也不勉强，付了你 200 灵石『车费』，背影没进光里。只是从此，快讯里偶尔还会提到那个空座。",stones:200,end:2}]}];
+function renderS01Card(){
+  var S=play.s01;
+  var head='<div class="card" style="margin-top:12px"><div class="wstrip" style="background-image:url(world-xingchen.jpg)"><span>🚏 S01 号乘客 · 档案</span></div>';
+  if(S.end){
+    return head+'<div class="desc" style="margin-top:6px;line-height:1.8">'+(S.end===1?'你接下了那趟活。如今诸天有个说法：S01 的线人，无处不在。':'档案封存。S01 下了车，故事停在第五页——只是那个空座，还在微世界里等下一班。')+'</div></div>';
+  }
+  var ch=S01_CHAPTERS[S.ch];
+  if(!ch)return head+'</div>';
+  if(S.day===play.day){
+    return head+'<div class="desc" style="margin-top:6px">今日的档案已经读完（进度 '+(S.ch)+' / 5）。S01 的故事不急——他说过，车有的是时间。明日再续。</div>'+(__s01Out?'<div class="ok" style="margin-top:6px">'+__s01Out+'</div>':'')+'</div>';
+  }
+  return head+'<div style="font-weight:800;margin-top:7px">'+ch.title+'</div><div class="desc" style="margin-top:4px;line-height:1.8">'+ch.text+'</div>'
+  +'<div class="cheatrow" style="margin-top:7px;flex-wrap:wrap;gap:6px">'+ch.choices.map(function(c,i){return '<button class="pbtn" data-s01="'+i+'">'+c.t+'</button>'}).join("")+'</div>'
+  
+  +'</div>';
+}
+function doS01Choice(i){
+  var S=play.s01;if(S.end||S.day===play.day)return;
+  var ch=S01_CHAPTERS[S.ch];if(!ch)return;
+  var c=ch.choices[i];if(!c)return;
+  if(c.stones)play.stones+=c.stones;
+  if(c.end)S.end=c.end;
+  S.ch++;S.day=play.day;playSave();
+  __s01Out=c.out;
+  breakthroughLite("S01 档案 · 已推进至 "+S.ch+" / 5");
+  renderWorlds();render();
+}
 function breakthroughLite(txt){
   var bf=$("breakFx");if(!bf)return;
   $("breakText").textContent=txt;bf.style.display="flex";cgBars(1500);SFX.up();
@@ -3742,6 +3940,10 @@ if(!play.jobDay)play.jobDay={};
 if(play.jobDayKey===undefined)play.jobDayKey="";
 if(!play.gu)play.gu={owned:[],fed:{},active:null,day:""};
 if(!play.jobClaim)play.jobClaim={};
+if(!play.jidao)play.jidao={pts:0,stage:0,day:"",yingDay:"",claimed:0};
+if(!play.shen)play.shen={div:0,tier:0,titanDay:"",claimed:0};
+if(!play.academy)play.academy={merit:0,hide:0,hideDay:"",examDay:"",examStep:0,examRight:0,claimed:0};
+if(!play.s01)play.s01={ch:0,day:"",end:0};
 if(play.chengxian===undefined)play.chengxian=0;
 if(!play.wiz)play.wiz={med:0,models:{},medDay:""};
 if(!play.potion)play.potion={};
