@@ -447,6 +447,47 @@ button.pbtn:disabled{opacity:.5}
 .book .bicon{font-size:17px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
 .book.flip{background:linear-gradient(205deg,hsl(var(--bh,260) 58% 23%),hsl(calc(var(--bh,260) + 38) 62% 12%))}
 .book.flip.owned{background:linear-gradient(205deg,hsl(var(--bh,260) 64% 40%),hsl(calc(var(--bh,260) + 38) 68% 19%))}
+
+/* ══ CG 级特效层（v24）：调色/暗角/胶片感/视差/光束/冲击波/黑边过场/合成音效 ══ */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:70;background:radial-gradient(ellipse at 50% 42%,transparent 58%,rgba(2,0,12,.42) 100%)}
+.grainfx{position:fixed;inset:-60px;pointer-events:none;z-index:71;opacity:.05;background-image:repeating-conic-gradient(rgba(255,255,255,.6) 0 .00007turn,transparent .00007turn .00014turn);background-size:170px 170px;animation:grainmove 1.1s steps(4) infinite}
+@keyframes grainmove{0%{transform:translate(0,0)}25%{transform:translate(-22px,14px)}50%{transform:translate(16px,-20px)}75%{transform:translate(-12px,-8px)}100%{transform:translate(0,0)}}
+.scene-bg{filter:saturate(1.22) contrast(1.07) brightness(1.03);animation:kenburns2 46s ease-in-out infinite alternate}
+@keyframes kenburns2{from{transform:scale(1.07) translate(0,0)}to{transform:scale(1.16) translate(-1.8%,1.6%)}}
+.sbg{filter:saturate(1.2) contrast(1.06)}
+.godrays{position:absolute;inset:0;pointer-events:none;z-index:2;background:linear-gradient(112deg,transparent 32%,rgba(255,236,190,.13) 45%,rgba(255,236,190,.02) 52%,transparent 63%,rgba(255,236,190,.09) 74%,transparent 86%);mix-blend-mode:screen;animation:raysway 11s ease-in-out infinite alternate}
+@keyframes raysway{from{opacity:.55;transform:translateX(-2.5%)}to{opacity:1;transform:translateX(2.5%)}}
+#cgfx{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.cgbar{position:fixed;left:0;right:0;height:6.5vh;background:#000;z-index:90;pointer-events:none;transition:transform .45s cubic-bezier(.6,0,.3,1)}
+#cgBarT{top:0;transform:translateY(-102%)}
+#cgBarB{bottom:0;transform:translateY(102%)}
+body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
+.ringfx{position:absolute;border-radius:50%;border:3px solid var(--rc,#fbbf24);transform:translate(-50%,-50%);animation:ringout .85s ease-out forwards;pointer-events:none;z-index:6}
+@keyframes ringout{from{width:26px;height:26px;opacity:.95}to{width:270px;height:270px;opacity:0}}
+.flashfx{position:absolute;inset:0;background:radial-gradient(circle at var(--fx,50%) var(--fy,50%),rgba(255,240,200,.5),transparent 62%);animation:flashout .5s ease-out forwards;pointer-events:none;z-index:5}
+@keyframes flashout{from{opacity:1}to{opacity:0}}
+.shake{animation:shk .45s ease}
+@keyframes shk{0%,100%{transform:translate(0,0)}18%{transform:translate(-5px,3px)}38%{transform:translate(5px,-3px)}58%{transform:translate(-4px,-2px)}78%{transform:translate(3px,2px)}}
+.mote{position:absolute;border-radius:50%;pointer-events:none;z-index:3;background:radial-gradient(circle,rgba(255,246,200,.95),rgba(255,246,200,0) 68%);animation:risemote linear infinite}
+@keyframes risemote{0%{transform:translateY(12px) translateX(0);opacity:0}12%{opacity:.85}88%{opacity:.6}100%{transform:translateY(-72vh) translateX(26px);opacity:0}}
+.mistfx{position:absolute;left:-25%;width:150%;height:120px;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 50% 50%,rgba(210,225,255,.14),transparent 65%);filter:blur(6px);animation:mistdrift 17s ease-in-out infinite alternate}
+@keyframes mistdrift{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
+#breakFx{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;pointer-events:none}
+#breakFx .pillar{position:absolute;left:50%;top:-12%;width:130px;height:124%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(255,224,138,0),rgba(255,224,138,.75) 45%,rgba(255,244,200,.95) 50%,rgba(255,224,138,.75) 55%,rgba(255,224,138,0));filter:blur(3px);animation:pillarin 1.7s ease-out forwards}
+@keyframes pillarin{0%{opacity:0;transform:translateX(-50%) scaleX(.2)}18%{opacity:1}70%{opacity:.9}100%{opacity:0;transform:translateX(-50%) scaleX(1.5)}}
+#breakFx .btext{position:relative;font-size:31px;font-weight:900;letter-spacing:7px;color:#ffe9a8;text-shadow:0 0 26px rgba(251,191,36,.9),0 3px 8px rgba(0,0,0,.65);animation:btin 1.7s cubic-bezier(.2,.8,.3,1) forwards;text-align:center}
+@keyframes btin{0%{opacity:0;transform:scale(2.3)}22%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(.96)}}
+#breakFx .bring{position:absolute;left:50%;top:50%;border:3px solid rgba(255,220,130,.85);border-radius:50%;transform:translate(-50%,-50%);animation:ringout 1.25s ease-out forwards}
+.sroom-sub,.room-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64vw}
+.obj .opin{animation:pinpulse 2.1s ease-out infinite}
+@keyframes pinpulse{0%{box-shadow:0 0 0 0 rgba(251,191,36,.45)}100%{box-shadow:0 0 0 13px rgba(251,191,36,0)}}
+.obj .otag{box-shadow:0 5px 16px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.15)}
+.pbtn:active,.bigbtn:active,.ghost:active{transform:scale(.965)}
+.bigbtn{background-size:180% 100%;animation:btnflow 5s ease infinite}
+@keyframes btnflow{0%,100%{background-position:0% 50%}50%{background-position:90% 50%}}
+#cavePetWander{position:absolute;z-index:3;pointer-events:none;font-size:30px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));animation:wander 27s linear infinite}
+@keyframes wander{0%{left:8%;bottom:16%;transform:scaleX(1)}44%{left:64%;bottom:19%;transform:scaleX(1)}50%{left:64%;bottom:19%;transform:scaleX(-1)}94%{left:8%;bottom:16%;transform:scaleX(-1)}100%{left:8%;bottom:16%;transform:scaleX(1)}}
+#btnMute{position:absolute;left:14px;z-index:26;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(10,10,26,.55);color:#fff;font-size:18px;backdrop-filter:blur(6px)}
 </style>
 
 </head>
@@ -474,7 +515,9 @@ button.pbtn:disabled{opacity:.5}
   </div>
 </div>
 
-<div id="view-hall" class="hidden">
+<div class="grainfx"></div><div id="cgfx"></div><div class="cgbar" id="cgBarT"></div><div class="cgbar" id="cgBarB"></div><div id="breakFx"><div class="pillar"></div><div class="bring" style="width:40px;height:40px"></div><div class="btext" id="breakText">突破</div></div>
+  <button id="btnMute" style="display:none">🔊</button>
+  <div id="view-hall" class="hidden">
   <div class="scene-bgwrap" id="sceneBgwrap">
     <img class="scene-bg" id="sceneBgDay" src="scene-day.jpg" alt="">
     <img class="scene-bg" id="sceneBgNight" src="scene-night.jpg" alt="">
@@ -518,7 +561,7 @@ button.pbtn:disabled{opacity:.5}
   <!-- 大殿 -->
   <div class="room sroom" id="room-palace">
     <img class="sbg" id="palaceBg" src="room-palace.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🏯 山门大殿</div><div class="sroom-sub">境界 · 身份 · 职位 · 品级</div></div></div>
 <button class="obj" data-sheet="sheet-palace" style="left:50%;top:46%"><span class="otag">🏯 宝座议事</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-palace" style="left:16%;top:62%"><span class="otag">📜 品级碑</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-palace"><div class="sheet-hd"><div class="sheet-title">🏯 山门大殿</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="card shimmer" style="margin-top:2px">
@@ -551,8 +594,8 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-cave">
     <img class="sbg" id="caveBg" src="room-cave1.jpg" alt="">
-    <div class="sshade"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🏡 我的洞府</div><div class="sroom-sub">点洞里的物件建设：扩建、聚灵阵、药园、丹房、静室</div></div></div>
+    <div class="sshade"></div><div class="godrays"></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🏡 我的洞府</div><div class="sroom-sub">点洞里的物件建设</div></div></div>
     <div class="hud" id="caveHud"></div>
     <div class="arrayfx" id="caveArray" style="display:none;position:absolute;z-index:4"></div>
     <div id="caveObjs"></div>
@@ -560,7 +603,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-lecture">
     <img class="sbg" id="lectureBg" src="room-lecture.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sparks lt"><i style="left:22%"></i><i style="left:38%;animation-delay:.8s"></i><i style="left:55%;animation-delay:1.5s"></i><i style="left:70%;animation-delay:2.1s"></i></div><div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">📖 传功堂</div><div class="sroom-sub">长老讲经 · 点蒲团入座听讲</div></div></div>
 <button class="obj" data-sheet="sheet-lecture" style="left:50%;top:48%"><span class="otag">📖 长老讲经</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-lecture" style="left:28%;top:74%"><span class="otag">🧘 蒲团</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-lecture"><div class="sheet-hd"><div class="sheet-title">📖 传功堂</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="scripture" id="scripture"></div>
@@ -568,7 +611,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-spar">
     <img class="sbg" id="sparBg" src="room-spar.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">⚔️ 演武堂</div><div class="sroom-sub">点擂台与同门切磋</div></div></div>
 <button class="obj" data-sheet="sheet-spar" style="left:50%;top:58%"><span class="otag">⚔️ 登台切磋</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-spar" style="left:14%;top:68%"><span class="otag">🗡️ 兵器架</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-spar"><div class="sheet-hd"><div class="sheet-title">⚔️ 演武堂</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="vsrow">
@@ -580,7 +623,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-alchemy">
     <img class="sbg" id="alchemyBg" src="room-alchemy.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🧪 丹堂</div><div class="sroom-sub">点丹炉开炉炼丹</div></div></div>
 <button class="obj" data-sheet="sheet-alchemy" style="left:42%;top:52%"><span class="otag">🧪 青铜丹炉</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-alchemy" style="left:12%;top:42%"><span class="otag">🌿 药架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-alchemy" style="left:83%;top:66%"><span class="otag">💧 灵泉池</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-alchemy"><div class="sheet-hd"><div class="sheet-title">🧪 丹堂</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="furnace"><span class="flame">🔥</span><div style="font-size:52px;line-height:1">🫖</div><div class="desc">丹炉正温，药材已下。盯着火候条，指针进绿区时停火。</div></div>
@@ -588,7 +631,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-patrol">
     <img class="sbg" src="room-patrol.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">⚖️ 执法堂</div><div class="sroom-sub">巡山值守 · 点值守亭领差事</div></div></div>
     <button class="obj" data-sheet="sheet-patrol" style="left:62%;top:42%"><span class="otag">⚖️ 值守亭</span><span class="opin"></span></button>
     <div class="glasspanel"><div id="patrolSvg"></div><div class="desc" id="patrolNote" style="text-align:center;margin-top:4px"></div></div>
@@ -596,7 +639,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-tome">
     <img class="sbg" id="tomeBg" src="room-tome.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">📚 藏经阁</div><div class="sroom-sub">点书架抽功法、查图鉴</div></div></div>
 <button class="obj" data-sheet="sheet-tome" style="left:24%;top:50%"><span class="otag">📚 剑诀架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-tome" style="left:53%;top:44%"><span class="otag">📚 心法架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-tome" style="left:80%;top:58%"><span class="otag">🪜 登楼</span><span class="opin"></span></button>
     <button class="obj" data-sheet="sheet-spells" style="left:36%;top:71%"><span class="otag">📜 法术架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-divine" style="left:66%;top:26%"><span class="otag">🌌 神通碑</span><span class="opin"></span></button>
@@ -607,7 +650,7 @@ button.pbtn:disabled{opacity:.5}
   </div>
   <div class="room sroom" id="room-forge">
     <img class="sbg" id="forgeBg" src="room-forge.jpg" alt="">
-    <div class="sshade"></div>
+    <div class="sshade"></div><div class="godrays"></div>
     <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🔨 器峰</div><div class="sroom-sub">点法宝架看图鉴</div></div></div>
 <button class="obj" data-sheet="sheet-forge" style="left:46%;top:54%"><span class="otag">🔥 熔炉</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-forge" style="left:77%;top:50%"><span class="otag">🗡️ 法宝架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-forge" style="left:20%;top:68%"><span class="otag">⚒️ 铁砧</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-forge"><div class="sheet-hd"><div class="sheet-title">🔨 器峰</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="forgegrid" id="forgeGrid"></div>
@@ -907,9 +950,9 @@ var FORGE=[
  {icon:"🪶",name:"鹤羽舟",grade:6,desc:"一羽化舟，载三五人横渡云海，峰主才配领用。"},
  {icon:"🗼",name:"镇山塔",grade:8,desc:"塔落之处，地脉自稳。一品宗门的脸面。"},
  {icon:"👑",name:"圣地道印",grade:10,desc:"圣地之主的印信，印落如天宪，万宗共遵。"}];
-function openRoom(id){Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0;try{if(!window.__sectRoomOpen){window.__sectRoomOpen=true;history.pushState({sectRoom:1},"")}}catch(e){}}
+function openRoom(id){SFX.open();cgBars(700);setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0;try{if(!window.__sectRoomOpen){window.__sectRoomOpen=true;history.pushState({sectRoom:1},"")}}catch(e){}}
 function closeRooms(){Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.remove("open")})}
-function closeRoomsUI(){closeRooms();if(window.__sectRoomOpen){window.__sectRoomOpen=false;try{history.back()}catch(e){}}}
+function closeRoomsUI(){SFX.close();setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);closeRooms();if(window.__sectRoomOpen){window.__sectRoomOpen=false;try{history.back()}catch(e){}}}
 window.addEventListener("popstate",function(){if(window.__sectRoomOpen){window.__sectRoomOpen=false;closeRooms()}});
 function scenePref(){try{return localStorage.getItem("sectScenePref")||"auto"}catch(e){return "auto"}}
 function sceneIsDay(){
@@ -1018,7 +1061,7 @@ function renderForge(){
     if(play.stones<f.cost)return;
     play.stones-=f.cost;
     var firstGrade=!ARTIFACTS.some(function(x){return x.grade===f.grade&&play.fabaos.indexOf(x.id)>=0});
-    play.fabaos.push(f.id);playSave();
+    SFX.forge();play.fabaos.push(f.id);playSave();
     var after=function(){render();renderForge();castInto("forgeStage","forgeFx","🔥","zoom");var st=$("forgeStage");if(st)setTimeout(function(){burstFx(st,["🔨","✨","🔥"],10)},200)};
     if(firstGrade)claimReward("series",{series:"fabao-g"+f.grade},after);else after();
   });
@@ -1141,7 +1184,30 @@ function renderHall(){
   updateScripture(s);
   updatePatrol();
   updateTomeShelf();
-  renderForge(); renderCheat(); renderSpells(); renderDivine(); renderBlood(); }
+  renderForge(); renderCheat(); renderSpells(); renderDivine(); renderBlood(); if(window.__sectCgHook)window.__sectCgHook(); }
+
+(function(){
+  var lastRank=-1;
+  window.__sectCgHook=function(){
+    if(lastRank>=0&&state.rankIndex>lastRank)breakthroughFx(state.rankName);
+    if(state.rankIndex>=0)lastRank=state.rankIndex;
+    var vh=$("view-hall");if(vh&&!vh.classList.contains("hidden"))motes($("sceneBgwrap"),9);
+    var rc=$("room-cave");if(rc&&rc.classList.contains("open")){
+      motes(rc,12,true);
+      var old=$("cavePetWander");
+      if(play&&play.pet){var pt=PETS[0];PETS.forEach(function(x){if(x.id===play.pet.id)pt=x});
+        if(!old){var w=document.createElement("div");w.id="cavePetWander";w.textContent=pt.icon;rc.appendChild(w)}
+        else old.textContent=pt.icon;
+      }else if(old)old.remove();
+    }
+    var rt=$("room-tome");if(rt&&rt.classList.contains("open"))motes(rt,7);
+    var rf=$("room-forge");if(rf&&rf.classList.contains("open"))motes(rf,8);
+    var bm=$("btnMute");
+    if(bm){var inHall=vh&&!vh.classList.contains("hidden");bm.style.display=inHall?"block":"none";if(inHall)bm.style.bottom="212px";bm.textContent=SFX.isMuted()?"🔇":"🔊"}
+  };
+  var bm0=$("btnMute");if(bm0)bm0.addEventListener("click",function(){SFX.toggle();bm0.textContent=SFX.isMuted()?"🔇":"🔊"});
+})();
+
 Array.prototype.forEach.call(document.querySelectorAll("[data-close]"),function(el){
   el.addEventListener("click",closeRoomsUI);
 });
@@ -1369,10 +1435,10 @@ function castSpellFx(sp){
       },kk*150);
     })(k);
   }
-  setTimeout(function(){burstFx(stage,[sp.icon,"✨"],4+t*2)},500);
+  setTimeout(function(){burstFx(stage,[sp.icon,"✨"],4+t*2);spawnFlash(stage,68,50);if(t>=2)spawnRing(stage,68,50,"#fbbf24");if(t>=4)shakeEl(stage)},500);
   if(t>=3)setTimeout(function(){floatFx(stage,sp.name+" · "+TIERS[t].name)},250);
 }
-function doCastSpell(sp){
+function doCastSpell(sp){SFX.cast();
   if(play.spells.indexOf(sp.id)<0)return;
   var before=tierOf(play.spellXp[sp.id]||0);
   play.spellXp[sp.id]=(play.spellXp[sp.id]||0)+1;playSave();
@@ -1383,7 +1449,7 @@ function doCastSpell(sp){
     claimReward("event",{amount:4},function(){render()});
   }else castSpellFx(sp);
 }
-function doCastDivine(d){
+function doCastDivine(d){SFX.divine();var dst=$("divineStage");if(dst){spawnRing(dst,50,50,"#a5b4fc");spawnFlash(dst,50,50)}
   if(play.divines.indexOf(d.id)<0)return;
   var before=tierOf(play.divineXp[d.id]||0);
   play.divineXp[d.id]=(play.divineXp[d.id]||0)+1;playSave();
@@ -1502,12 +1568,95 @@ function renderCaveSheet(){
   if(window.__caveFx){
     var fxk=window.__caveFx;window.__caveFx=null;
     var vis2=$("caveSheetBody").querySelector(".facvis");
-    if(fxk==="harvest"){burstFx(vis2,["🌾","✨","🍃"],9);floatFx(vis2,"晨收 +"+[0,2,4,7][play.fac.garden]+" 修为")}
+    if(fxk==="harvest"){SFX.coin();burstFx(vis2,["🌾","✨","🍃"],9);floatFx(vis2,"晨收 +"+[0,2,4,7][play.fac.garden]+" 修为")}
     else{burstFx(vis2,["🔨","✨","💠"],9);floatFx(vis2,"建成 ✦")}
     var onSeg=$("caveSheetBody").querySelector(".segbar i.on:last-of-type");
   }
 }
 
+
+/* ── 合成音效引擎（Web Audio 合成，无音频文件）── */
+var SFX=(function(){
+  var ctx=null,nb=null;
+  var muted=false;try{muted=localStorage.getItem("sectMute")==="1"}catch(e){}
+  function ac(){if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ctx&&ctx.state==="suspended")ctx.resume();return ctx}
+  function tone(f,d,type,g,slide,delay){
+    if(muted)return;var c=ac();if(!c)return;
+    var t0=c.currentTime+(delay||0);
+    var o=c.createOscillator(),gn=c.createGain();
+    o.type=type||"sine";o.frequency.setValueAtTime(f,t0);
+    if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,slide),t0+d);
+    gn.gain.setValueAtTime(0.0001,t0);
+    gn.gain.exponentialRampToValueAtTime(g||0.07,t0+0.02);
+    gn.gain.exponentialRampToValueAtTime(0.0001,t0+d);
+    o.connect(gn);gn.connect(c.destination);o.start(t0);o.stop(t0+d+0.05);
+  }
+  function noise(d,g,delay){
+    if(muted)return;var c=ac();if(!c)return;
+    if(!nb){nb=c.createBuffer(1,c.sampleRate*0.4,c.sampleRate);var ch=nb.getChannelData(0);for(var i=0;i<ch.length;i++)ch[i]=Math.random()*2-1}
+    var t0=c.currentTime+(delay||0);
+    var src=c.createBufferSource();src.buffer=nb;
+    var f=c.createBiquadFilter();f.type="lowpass";f.frequency.value=900;
+    var gn=c.createGain();gn.gain.setValueAtTime(g||0.03,t0);gn.gain.exponentialRampToValueAtTime(0.0001,t0+d);
+    src.connect(f);f.connect(gn);gn.connect(c.destination);src.start(t0);src.stop(t0+d+0.05);
+  }
+  return {
+    tap:function(){tone(640,0.06,"sine",0.04)},
+    open:function(){tone(300,0.28,"sine",0.05,680);noise(0.22,0.018)},
+    close:function(){tone(540,0.16,"sine",0.035,230)},
+    coin:function(){tone(1318,0.09,"square",0.035);tone(1760,0.15,"square",0.035,null,0.07)},
+    cast:function(){tone(210,0.32,"sawtooth",0.045,920);noise(0.26,0.028)},
+    divine:function(){tone(98,1.0,"sine",0.11);tone(147,0.95,"sine",0.07,null,0.02);tone(196,0.7,"triangle",0.05,null,0.06)},
+    forge:function(){tone(170,0.12,"square",0.08,85);noise(0.1,0.05);tone(1250,0.22,"triangle",0.028,null,0.03)},
+    pet:function(){tone(880,0.09,"sine",0.05,1174);tone(1174,0.13,"sine",0.045,1568,0.09)},
+    up:function(){var n=[523,659,784,1046];for(var i=0;i<n.length;i++)tone(n[i],0.17,"triangle",0.055,null,i*0.07)},
+    err:function(){tone(150,0.16,"square",0.04,110)},
+    isMuted:function(){return muted},
+    toggle:function(){muted=!muted;try{localStorage.setItem("sectMute",muted?"1":"0")}catch(e){}if(!muted)tone(880,0.08,"sine",0.05);return muted}
+  };
+})();
+/* ── CG 特效工具：冲击波/闪光/微粒/雾气/黑边/突破 ── */
+function spawnRing(host,x,y,color){
+  if(!host)return;
+  var r=document.createElement("div");r.className="ringfx";
+  r.style.left=x+"%";r.style.top=y+"%";r.style.setProperty("--rc",color||"#fbbf24");
+  host.appendChild(r);setTimeout(function(){r.remove()},900);
+}
+function spawnFlash(host,x,y){
+  if(!host)return;
+  var f=document.createElement("div");f.className="flashfx";
+  f.style.setProperty("--fx",x+"%");f.style.setProperty("--fy",y+"%");
+  host.appendChild(f);setTimeout(function(){f.remove()},550);
+}
+function shakeEl(el){if(!el)return;el.classList.remove("shake");void el.offsetWidth;el.classList.add("shake");setTimeout(function(){el.classList.remove("shake")},500)}
+function cgBars(ms){document.body.classList.add("cg");setTimeout(function(){document.body.classList.remove("cg")},ms||1200)}
+function motes(host,n,big){
+  if(!host||host.getAttribute("data-motes"))return;
+  host.setAttribute("data-motes","1");
+  for(var i=0;i<(n||10);i++){
+    var m=document.createElement("i");m.className="mote";
+    var sz=(big?5:3)+Math.random()*5;
+    m.style.width=sz+"px";m.style.height=sz+"px";
+    m.style.left=(4+Math.random()*92)+"%";m.style.bottom=(Math.random()*8)+"%";
+    m.style.animationDuration=(9+Math.random()*11)+"s";
+    m.style.animationDelay=(-Math.random()*14)+"s";
+    host.appendChild(m);
+  }
+  var mist=document.createElement("div");mist.className="mistfx";
+  mist.style.bottom=(6+Math.random()*10)+"%";
+  host.appendChild(mist);
+}
+function breakthroughFx(rankName){
+  var bf=$("breakFx");if(!bf)return;
+  $("breakText").textContent="突破 · "+rankName;
+  bf.style.display="flex";
+  cgBars(1750);
+  SFX.divine();SFX.up();
+  setTimeout(function(){bf.style.display="none"},1750);
+}
+document.addEventListener("click",function(e){
+  if(e.target.closest(".obj,.spot,.pbtn,.bigbtn,.bcard,.book,.forgeitem,.dock button,.evbubble"))SFX.tap();
+});
 function burstFx(host, chars, n){
   if(!host)return;
   for(var i=0;i<(n||7);i++){
@@ -1531,6 +1680,7 @@ document.addEventListener("click",function(e){
   var plot=e.target.closest("[data-plot]");
   if(plot){
     if(!plot.classList.contains("grown"))return;
+    SFX.pet();
     if(play.fac.garden>0&&!play.gardenDone){window.__caveFx="harvest";doGarden()}
     else burstFx(vis,["✨","🍃"],5);
     return;
@@ -1722,7 +1872,7 @@ function renderBlood(){
     if(play.stones<cost)return;
     play.stones-=cost;play.bloods[b.id]=lv+1;play.bloodActive=b.id;playSave();
     var after=function(){render();renderBlood();var em2=$("bloodEmblem");if(em2)burstFx(em2.parentElement,["🩸","✨"],9)};
-    if(lv===0)claimReward("series",{series:"blood-awaken"},after);
+    SFX.divine();if(lv===0)claimReward("series",{series:"blood-awaken"},after);
     else if(lv===2)claimReward("series",{series:"blood-max"},after);
     else after();
   });
@@ -1755,6 +1905,7 @@ function renderPetSheet(){
   body.innerHTML=html;
   var feed=$("btnFeed");if(feed)feed.addEventListener("click",function(){if(play.stones<3)return;var stBefore=petStageOf(play.pet.feeds);play.stones-=3;play.pet.feeds++;playSave();render();var stg=$("caveSheetBody .petstage");if(!stg)return;if(petStageOf(play.pet.feeds)>stBefore){burstFx(stg,["✨","💠","🌟"],14);var pn=PETS[0];PETS.forEach(function(x){if(x.id===play.pet.id)pn=x});floatFx(stg,"进化 · "+pn.stages[petStageOf(play.pet.feeds)])}else burstFx(stg,["🍖","✨"],7)});
   var touch=function(){
+    SFX.pet();
     var stg=$("caveSheetBody .petstage");
     if(play.pet.lastTouch===play.day){if(stg)burstFx(stg,["💖"],5);return}
     play.pet.lastTouch=play.day;playSave();
