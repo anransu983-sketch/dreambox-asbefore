@@ -1744,7 +1744,7 @@ function npcLogPush(id,who,txt){
   var m=play.npcMem[id]||(play.npcMem[id]={log:[]});
   if(!m.log)m.log=[];
   m.log.push({w:who,t:txt});
-  if(m.log.length>20)m.log=m.log.slice(m.log.length-20);
+  if(m.log.length>10000)m.log=m.log.slice(m.log.length-10000);
   playSave();
 }
 function npcLoveReply(n){
