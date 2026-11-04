@@ -362,6 +362,29 @@ button.pbtn:disabled{opacity:.5}
 .showitem .pic{font-size:21px;display:block;margin-bottom:3px}
 .showitem.lock{opacity:.42;filter:grayscale(.85);color:#9aa3d9}
 .showitem.on{border-color:#fbbf24;background:rgba(251,191,36,.12)}
+
+/* ── 洞府互动与特效（v17）：视觉区成主角、进度入图、点哪儿哪儿动 ── */
+.facvis{position:relative}
+.herostrip{margin-top:11px;padding:8px 10px 7px;border-radius:11px;background:rgba(10,10,26,.55);border:1px solid rgba(255,255,255,.09)}
+.herostrip .segbar{margin:0 0 5px}
+.plot{touch-action:manipulation;cursor:pointer;transition:transform .15s}
+.plot:active{transform:scale(.93)}
+.plot.grown{cursor:pointer}
+.plot.grown:active{animation:none}
+.arraybig{cursor:pointer}
+.arraybig.spinfast{animation:spinarray 1.1s cubic-bezier(.3,.7,.3,1)}
+.furn2 .pot{cursor:pointer;display:inline-block}
+.furn2 .pot.stoke{animation:potshake .45s ease}
+@keyframes potshake{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg) scale(1.05)}60%{transform:rotate(4deg)}}
+.breath{cursor:pointer}
+.pstage{cursor:pointer}
+.showitem{cursor:pointer;transition:transform .15s}
+.showitem:active{transform:scale(.94)}
+.fxp{position:absolute;font-size:15px;pointer-events:none;animation:fxup 1s ease-out forwards;z-index:5}
+@keyframes fxup{0%{opacity:0;transform:translateY(6px) scale(.7)}18%{opacity:1}100%{opacity:0;transform:translateY(-52px) scale(1.25)}}
+.fxtext{position:absolute;left:50%;top:34%;transform:translateX(-50%);font-size:19px;font-weight:800;color:#fbbf24;text-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none;animation:fxup 1.3s ease-out forwards;z-index:6}
+.segbar i.on.pop{animation:segpop .5s cubic-bezier(.3,.9,.3,1.5)}
+@keyframes segpop{0%{transform:scaleY(1)}40%{transform:scaleY(2.1)}100%{transform:scaleY(1)}}
 </style>
 
 </head>
@@ -1136,12 +1159,12 @@ function facVisual(fc,lvl){
   if(k==="space"){
     var st=[["🛖","草庐"],["🏠","石室"],["🏘️","两进"],["🏯","小洞天"]];
     var h='<div class="plan">';
-    st.forEach(function(x,i){h+='<div class="pstage'+(i===lvl?" on":(i<lvl?" done":""))+'"><span class="pic">'+x[0]+"</span>"+x[1]+"</div>"});
-    return h+'</div><div class="viscap">洞府格局 · 当前 <b>'+st[lvl][1]+'</b>，空间决定其他设施的等级上限</div>';
+    st.forEach(function(x,i){h+='<div class="pstage'+(i===lvl?" on":(i<lvl?" done":""))+'" data-stage="'+i+'"><span class="pic">'+x[0]+"</span>"+x[1]+"</div>"});
+    return h+'</div><div class="viscap" data-viscap="1">洞府格局 · 当前 <b>'+st[lvl][1]+'</b>，空间决定其他设施的等级上限</div>';
   }
   if(k==="juling"){
-    if(lvl===0)return '<div class="arraybig off"><div class="core"><b>未启</b><span>聚灵阵</span></div></div><div class="viscap">阵盘沉寂，建成后灵气自聚</div>';
-    return '<div class="arraybig"><div class="core"><b>+'+(lvl*2)+'</b><span>每日修炼</span></div></div><div class="viscap">阵盘缓缓转动 · 修炼加成已计入宿主结算</div>';
+    if(lvl===0)return '<div class="arraybig off" data-array="1"><div class="core"><b>未启</b><span>聚灵阵</span></div></div><div class="viscap" data-viscap="1">阵盘沉寂，建成后灵气自聚</div>';
+    return '<div class="arraybig" data-array="1"><div class="core"><b>+'+(lvl*2)+'</b><span>每日修炼</span></div></div><div class="viscap" data-viscap="1">点阵盘可运转一周天 · 修炼加成已计入宿主结算</div>';
   }
   if(k==="garden"){
     var grow=["","🌱","🌿","🌾"];
@@ -1150,22 +1173,22 @@ function facVisual(fc,lvl){
     for(var i=0;i<6;i++){
       var e=i<filled?grow[lvl]:"";
       if(lvl===3&&i===5)e="🍑";
-      h+='<div class="plot">'+e+"</div>";
+      h+='<div class="plot'+(e?" grown":"")+'" data-plot="1">'+e+"</div>";
     }
-    h+='</div><div class="viscap">'+(lvl===0?"田垄已整好，建成药园就能种灵药":(play.gardenDone?"今日已晨收 · 灵药在架上晾着":"晨光正好 · 点下方按钮晨收"))+"</div>";
+    h+='</div><div class="viscap" data-viscap="1">'+(lvl===0?"田垄已整好，建成药园就能种灵药":(play.gardenDone?"今日已晨收 · 灵药在架上晾着":"晨光正好 · 点下方按钮晨收"))+"</div>";
     return h;
   }
   if(k==="danfang"){
-    return '<div class="furn2"><div class="pot">⚗️</div><div><span class="flk">🔥</span><span class="flk" style="animation-delay:.2s">🔥</span><span class="flk" style="animation-delay:.45s">🔥</span></div></div><div class="viscap">'+(lvl===0?"炉子是冷的 · 建成丹房后炼丹绿区变宽":"炉火正旺 · 炼丹绿区加宽，成丹（良品以上）额外得灵石")+"</div>";
+    return '<div class="furn2"><div class="pot" data-pot="1">⚗️</div><div><span class="flk">🔥</span><span class="flk" style="animation-delay:.2s">🔥</span><span class="flk" style="animation-delay:.45s">🔥</span></div></div><div class="viscap" data-viscap="1">'+(lvl===0?"炉子是冷的 · 建成丹房后炼丹绿区变宽":"炉火正旺 · 炼丹绿区加宽，成丹（良品以上）额外得灵石")+"</div>";
   }
   if(k==="jingshi"){
-    return '<div class="breath'+(lvl===0?" off":"")+'">🧘</div><div class="viscap">'+(lvl===0?"静室未建 · 只是一块空蒲团":"呼吸之间灵台清明 · 每日奇遇 +1 次，修炼 +2")+"</div>";
+    return '<div class="breath'+(lvl===0?" off":"")+'" data-breath="1">🧘</div><div class="viscap" data-viscap="1">'+(lvl===0?"静室未建 · 只是一块空蒲团":"呼吸之间灵台清明 · 每日奇遇 +1 次，修炼 +2")+"</div>";
   }
   if(k==="decor"){
     var it=[["🪑","石桌"],["🏺","玉案香炉"],["🖼️","夜明珠字画"]];
     var h='<div class="showcase">';
-    it.forEach(function(x,i){h+='<div class="showitem'+(i<lvl?"":(i===lvl?" on":" lock"))+'"><span class="pic">'+x[0]+"</span>"+x[1]+(i<lvl?" ✓":(i===lvl?"":" 🔒"))+"</div>"});
-    return h+'</div><div class="viscap">陈设撑起洞府评级 · 草庐→石室→洞府→福地→洞天</div>';
+    it.forEach(function(x,i){h+='<div class="showitem'+(i<lvl?"":(i===lvl?" on":" lock"))+'" data-decor="'+i+'"><span class="pic">'+x[0]+"</span>"+x[1]+(i<lvl?" ✓":(i===lvl?"":" 🔒"))+"</div>"});
+    return h+'</div><div class="viscap" data-viscap="1">陈设撑起洞府评级 · 草庐→石室→洞府→福地→洞天</div>';
   }
   return "";
 }
@@ -1177,8 +1200,8 @@ function renderCaveSheet(){
   var cost=maxed?null:fc.costs[lvl];
   var eff=FAC_EFF[fc.key]||[];
   var segs="";for(var di=0;di<fc.max;di++)segs+='<i class="'+(di<lvl?"on":"")+'"></i>';
-  var html='<div class="fac-desc">'+fc.desc+'</div><div class="facvis">'+facVisual(fc,lvl)+'</div>';
-  html+='<div class="segbar">'+segs+'</div><div class="segtext">当前 <b>'+(lvl===0?"未建":"第 "+lvl+" 级")+'</b>（'+lvl+" / "+fc.max+'）'+(fc.key!=="space"?' · 设施等级上限 = 扩建空间 +1（现 '+(f.space+1)+'）':'')+'</div>';
+  var html='<div class="facvis">'+facVisual(fc,lvl)+'<div class="herostrip"><div class="segbar">'+segs+'</div><div class="segtext">当前 <b>'+(lvl===0?"未建":"第 "+lvl+" 级")+'</b>（'+lvl+" / "+fc.max+'）'+(fc.key!=="space"?' · 设施等级上限 = 扩建空间 +1（现 '+(f.space+1)+'）':'')+'</div></div></div>';
+  html+='<div class="fac-desc" style="margin-top:11px">'+fc.desc+'</div>';
   html+='<div class="infogrid"><div class="infocard"><div class="info-k">当前效果</div><div class="info-v">'+(eff[lvl]||"—")+'</div></div><div class="infocard"><div class="info-k">'+(maxed?"已达顶峰":"下一级")+'</div><div class="info-v">'+(maxed?"这一处已经建到头了":(eff[lvl+1]||"—"))+'</div></div></div>';
   if(fc.key==="garden"&&lvl>0){
     html+=play.gardenDone?'<div class="statusline">🌱 药园今日已晨收，明日再来。</div>':'<button class="bigbtn" id="btnGarden">🌱 药园晨收（+'+[0,2,4,7][lvl]+' 修为）</button>';
@@ -1190,10 +1213,71 @@ function renderCaveSheet(){
   $("caveSheetTitle").textContent=fc.icon+" "+fc.name;
   $("caveSheetBody").innerHTML=html;
   Array.prototype.forEach.call(document.querySelectorAll("#caveSheetBody [data-fac]"),function(el){
-    el.addEventListener("click",function(){doBuild(el.getAttribute("data-fac"))});
+    el.addEventListener("click",function(){window.__caveFx="build";doBuild(el.getAttribute("data-fac"))});
   });
-  var bg2=$("btnGarden");if(bg2)bg2.addEventListener("click",doGarden);
+  var bg2=$("btnGarden");if(bg2)bg2.addEventListener("click",function(){window.__caveFx="harvest";doGarden()});
+  if(window.__caveFx){
+    var fxk=window.__caveFx;window.__caveFx=null;
+    var vis2=$("caveSheetBody").querySelector(".facvis");
+    if(fxk==="harvest"){burstFx(vis2,["🌾","✨","🍃"],9);floatFx(vis2,"晨收 +"+[0,2,4,7][play.fac.garden]+" 修为")}
+    else{burstFx(vis2,["🔨","✨","💠"],9);floatFx(vis2,"建成 ✦")}
+    var onSeg=$("caveSheetBody").querySelector(".segbar i.on:last-of-type");
+  }
 }
+
+function burstFx(host, chars, n){
+  if(!host)return;
+  for(var i=0;i<(n||7);i++){
+    var sp=document.createElement("span");sp.className="fxp";sp.textContent=chars[i%chars.length];
+    sp.style.left=(12+Math.random()*72)+"%";sp.style.bottom=(14+Math.random()*30)+"%";
+    sp.style.animationDelay=(Math.random()*0.18)+"s";
+    host.appendChild(sp);
+    (function(el){setTimeout(function(){el.remove()},1500)})(sp);
+  }
+}
+function floatFx(host, text){
+  if(!host)return;
+  var sp=document.createElement("span");sp.className="fxtext";sp.textContent=text;
+  host.appendChild(sp);setTimeout(function(){sp.remove()},1500);
+}
+var STAGE_TXT=["草庐：茅顶土墙，遮风挡雨而已","石室：凿石为室，其他设施可到 2 级","两进院落：前后两进，其他设施可到 3 级","小洞天：自成格局，洞府评级直达洞天"];
+var DECOR_TXT=["石桌：一张青石桌，待客有了体面","玉案香炉：玉案焚香，洞府有了香火气","夜明珠字画：珠光映字画，评级大涨"];
+document.addEventListener("click",function(e){
+  var body=$("caveSheetBody");if(!body||!body.contains(e.target))return;
+  var vis=body.querySelector(".facvis");var cap=body.querySelector("[data-viscap]");
+  var plot=e.target.closest("[data-plot]");
+  if(plot){
+    if(!plot.classList.contains("grown"))return;
+    if(play.fac.garden>0&&!play.gardenDone){window.__caveFx="harvest";doGarden()}
+    else burstFx(vis,["✨","🍃"],5);
+    return;
+  }
+  var arr=e.target.closest("[data-array]");
+  if(arr){
+    if(play.fac.juling>0){arr.classList.remove("spinfast");void arr.offsetWidth;arr.classList.add("spinfast");burstFx(vis,["✨","💠","🌀"],8);if(cap)cap.innerHTML="阵盘轰鸣运转 · 灵气如潮汇聚"}
+    return;
+  }
+  var pot=e.target.closest("[data-pot]");
+  if(pot){
+    pot.classList.remove("stoke");void pot.offsetWidth;pot.classList.add("stoke");
+    burstFx(vis,["🔥","✨"],6);if(cap&&play.fac.danfang>0)cap.innerHTML="添了一把火 · 炉温正盛";
+    return;
+  }
+  var br=e.target.closest("[data-breath]");
+  if(br){
+    if(play.fac.jingshi<1||br.getAttribute("data-busy"))return;
+    br.setAttribute("data-busy","1");
+    var words=["一息 · 纳气","二息 · 凝神","三息 · 灵台清明 ✦"];
+    var wi=0;if(cap)cap.innerHTML=words[0];
+    burstFx(vis,["💠","✨"],5);
+    var timer=setInterval(function(){wi++;if(wi<words.length){if(cap)cap.innerHTML=words[wi];burstFx(vis,["💠"],3)}else{clearInterval(timer);br.removeAttribute("data-busy")}},1500);
+    return;
+  }
+  var stg=e.target.closest("[data-stage]");
+  if(stg){if(cap)cap.innerHTML=STAGE_TXT[+stg.getAttribute("data-stage")]||"";burstFx(vis,["✨"],4);return}
+  var dec=e.target.closest("[data-decor]");
+  if(dec){if(cap)cap.innerHTML=DECOR_TXT[+dec.getAttribute("data-decor")]||"";burstFx(vis,["✨","🏮"],4);return}
+});
 function doBuild(key){
   var fc=null;FACS.forEach(function(x){if(x.key===key)fc=x});
   var lvl=play.fac[key];var cost=fc.costs[lvl];
