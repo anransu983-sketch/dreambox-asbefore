@@ -121,6 +121,31 @@
   .ladder .lr.cur{border-color:#d4af37;color:var(--text);box-shadow:0 0 12px rgba(212,175,55,.25)}
   .ladder .lr .rs{white-space:nowrap}
   .orgrow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin-top:6px;background:var(--bg2);color:var(--sub)}
+  .orgrow.can{border-color:#d4af37;box-shadow:0 0 10px rgba(212,175,55,.22);color:var(--text)}
+  .orgrow.dim{opacity:.62}
+  .hall-head{position:relative;overflow:hidden}
+  .hall-head>*{position:relative;z-index:1}
+  .hall-head>.crest{position:absolute;z-index:0;right:-16px;top:-16px;width:158px;height:158px;opacity:.15;pointer-events:none;background-repeat:no-repeat;background-size:contain}
+  .rankchips{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px}
+  .rchip{font-size:11.5px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--sub);background:var(--bg2)}
+  .rchip.done{border-color:var(--accent);color:var(--accent)}
+  .rchip.cur{background:var(--accent);color:#fff;border-color:transparent;font-weight:700}
+  .steps{margin-top:4px}
+  .step{display:flex;gap:10px;position:relative;padding:5px 0}
+  .step::before{content:"";position:absolute;left:8px;top:24px;bottom:-3px;width:2px;background:var(--border)}
+  .step:last-child::before{display:none}
+  .snode{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--border);background:var(--bg2);margin-top:1px;z-index:1;box-sizing:border-box}
+  .step.done .snode{background:var(--accent);border-color:var(--accent)}
+  .step.cur .snode{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent),0 0 12px var(--accent)}
+  .step.lock{opacity:.55}
+  .step .sbody{font-size:12.5px;line-height:1.45;color:var(--sub)}
+  .step .sbody b{color:var(--text);font-size:13px}
+  .step.cur .sbody b{color:var(--accent)}
+  .srcwrap{margin-top:14px}
+  .srcbar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
+  .srcbar i{display:block;height:100%}
+  .srclegend{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--sub)}
+  .srclegend b{color:var(--text)}
   .orgrow b{color:var(--text)}
   .orgrow .rs{white-space:nowrap}
   .core-orb{display:none;justify-content:center;margin:12px 0 2px}
@@ -169,6 +194,7 @@
       <div class="hall-rail" id="hallRail">杂役弟子</div>
       <div>
         <div class="card hall-head" style="margin-top:0">
+          <div class="crest" id="hallCrest"></div>
           <div class="big" id="hallTitle">山门</div>
           <div class="desc" id="hallSub"></div>
           <div class="promo" id="promoBanner"></div>
@@ -306,6 +332,23 @@ var POST_POSITIONS=[
  "超然物外，堂口自有后辈打理"];
 function identityAt(exp){var ii=0;for(var k=0;k<IDENTITIES.length;k++)if(exp>=IDENTITIES[k].need)ii=k;return IDENTITIES[ii]}
 function postEligibleAt(exp){var pi=-1;for(var k=0;k<POSTS.length;k++)if(exp>=POSTS[k].need)pi=k;return pi}
+/* 七道纹章：纯几何 SVG，按道统种子色描边，作山门牌匾水印（静态绘制，无动画成本） */
+var CRESTS={
+ jian:'<path d="M50 6v56"/><path d="M31 68h38"/><path d="M42 82h16"/><circle cx="50" cy="90" r="4"/><path d="M50 6l-7 13h14z"/>',
+ fu:'<rect x="32" y="8" width="36" height="84" rx="4"/><path d="M40 24h20M40 38h20M50 38v18M40 68h20M44 80h12"/>',
+ zhen:'<circle cx="50" cy="50" r="40"/><rect x="29" y="29" width="42" height="42" transform="rotate(45 50 50)"/><circle cx="50" cy="50" r="6"/>',
+ ti:'<path d="M14 82L38 34l12 22 10-14 26 40z"/><path d="M14 82h72"/>',
+ kuilei:'<circle cx="50" cy="50" r="16"/><circle cx="50" cy="50" r="5"/><path d="M50 10v15M50 75v15M10 50h15M75 50h15M22 22l11 11M67 67l11 11M78 22L67 33M33 67L22 78"/>',
+ gui:'<path d="M50 8c10 16 22 24 22 42a22 22 0 1 1-44 0c0-8 4-14 8-20 2 6 5 9 9 11-2-12 0-24 5-33z"/>',
+ mo:'<path d="M64 12a38 38 0 1 0 24 56A30 30 0 0 1 64 12z"/><circle cx="66" cy="34" r="4"/>'};
+function crestUri(s){
+  var body=CRESTS[s.id]||CRESTS.jian;
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="'+s.c.accent+'" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">'+body+'</svg>';
+  return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';
+}
+function stepRow(t,st,tag){
+  return '<div class="step '+st+'"><span class="snode"></span><div class="sbody"><b>'+t.name+'</b>（'+t.need+' 修为） · '+t.duty+(tag?' <span style="color:var(--accent);font-weight:700">'+tag+'</span>':'')+'</div></div>';
+}
 function gradeSalary(g){return g*4}
 function gradeGain(g){return 20+g}
 function ladderHtml(s,cur){
@@ -434,6 +477,7 @@ function renderHall(){
   applySectTheme(s,state.themeMode);
   var frame=$("hallFrame"); frame.className="hall-frame layout-"+state.rankIndex+" grade-"+state.gradeIndex+(state.themeMode==="Light"?" mode-light":" mode-dark");
   $("hallRail").textContent=state.title;
+  $("hallCrest").style.backgroundImage=crestUri(s);
   $("hallTitle").innerHTML=s.icon+" "+s.names[state.gradeIndex]+'<span class="grade-seal">'+state.gradeName+'</span>';
   $("hallSub").textContent="道统："+s.name+"（"+s.xinfa+"）　境界："+state.rankName+"　身份："+state.title+"　职位："+(state.postName||"暂无")+"　宗门品级："+state.gradeName+"　座右铭：「"+s.motto+"」";
   $("hallOrb").textContent=s.icon;
@@ -454,27 +498,30 @@ function renderHall(){
   $("hallGradeText").textContent=gText;
   $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
   $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note+" 品级排面随品级而变：不入流是虚线陋框，晋品后边框渐盛，一品金框、圣地金辉全开。";
-  $("hallStats").innerHTML=
-    '<div class="stat"><b>'+state.days+' 天</b><div>入门时日（每日 +10 修为）</div></div>'+
-    '<div class="stat"><b>'+state.profileCount+' 份</b><div>已导入配置（每份 +25）</div></div>'+
-    '<div class="stat"><b>'+state.packCount+' 个</b><div>已装插件（每个 +20）</div></div>'+
-    '<div class="stat"><b>+'+state.expBonus+'</b><div>修炼攒下的修为</div></div>';
-  $("hallRankList").innerHTML=RANKS.map(function(r,i){
-    var mark=i<state.rankIndex?"✅":(i===state.rankIndex?"👉":"🔒");
-    return mark+" "+r.name+" · "+identityAt(r.need).name+"（"+r.need+" 修为）<br>";
-  }).join("")+"<br>身份阶梯（弟子辈辈分，随修为自动晋升）：<br>"+IDENTITIES.map(function(t,i){
-    var mark,tag="";
-    if(i===state.identityIndex){mark="👉";tag=" · 当前"}
-    else if(i<state.identityIndex){mark="✅"}
-    else{mark="🔒"}
-    return mark+" "+t.name+"（"+t.need+" 修为） · "+t.duty+tag+"<br>";
-  }).join("")+"<br>职位（任职差事，修为解锁后自选，可任低不任高）：<br>"+POSTS.map(function(t,i){
-    var mark,tag="";
-    if(i===state.postIndex){mark="👉";tag=" · 在任"}
-    else if(i<=state.postEligibleIndex){mark="✅";tag=" · 可任"}
-    else{mark="🔒"}
-    return mark+" "+t.name+"（"+t.need+" 修为） · "+t.duty+tag+"<br>";
+  var srcs=[
+    {label:"入门天数",val:state.days*10,note:state.days+" 天 · 每日 +10",color:"var(--accent)"},
+    {label:"导入配置",val:state.profileCount*25,note:state.profileCount+" 份 · 每份 +25",color:"var(--accent2)"},
+    {label:"已装插件",val:state.packCount*20,note:state.packCount+" 个 · 每个 +20",color:"color-mix(in srgb,var(--accent) 45%,#9ca3af)"},
+    {label:"修炼攒下",val:state.expBonus,note:"+"+state.expBonus+" · 修炼与俸禄",color:"#d4af37"}];
+  var srcTot=srcs.reduce(function(a,x){return a+x.val},0);
+  var hs=$("hallStats"); hs.className="srcwrap";
+  hs.innerHTML = srcTot>0
+    ? '<div class="srcbar">'+srcs.map(function(x){return x.val>0?'<i style="width:'+(x.val/srcTot*100)+'%;background:'+x.color+'"></i>':""}).join("")+'</div>'
+      +'<div class="srclegend">'+srcs.map(function(x){return '<span><b>'+x.label+' +'+x.val+'</b>（'+x.note+'）</span>'}).join("")+'</div>'
+    : '<div class="desc">修为来源：入门天数（每日 +10）、导入配置（每份 +25）、已装插件（每个 +20）、每日修炼与俸禄——用得越久，家底越厚。</div>';
+  var realmChips=RANKS.map(function(r,i){
+    var cls=i<state.rankIndex?"rchip done":(i===state.rankIndex?"rchip cur":"rchip");
+    return '<span class="'+cls+'">'+r.name+" · "+identityAt(r.need).name+'</span>';
   }).join("");
+  var idSteps=IDENTITIES.map(function(t,i){
+    return stepRow(t, i<state.identityIndex?"done":(i===state.identityIndex?"cur":"lock"), i===state.identityIndex?"当前":"");
+  }).join("");
+  var postSteps=POSTS.map(function(t,i){
+    return stepRow(t, i===state.postIndex?"cur":(i<=state.postEligibleIndex?"done":"lock"), i===state.postIndex?"在任":(i<=state.postEligibleIndex?"可任":""));
+  }).join("");
+  $("hallRankList").innerHTML='<div class="rankchips">'+realmChips+'</div>'
+    +'<div style="margin-top:6px">身份阶梯（弟子辈辈分，随修为自动晋升）：</div><div class="steps">'+idSteps+'</div>'
+    +'<div style="margin-top:8px">职位（任职差事，修为解锁后自选，可任低不任高）：</div><div class="steps">'+postSteps+'</div>';
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
   $("cultDesc").innerHTML="运功一周天，修为 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+"）。修为另有三源：入门天数（每日 +10）、导入的配置（每个 +25）、装下的插件（每个 +20）——用得越久、家底越厚，境界与品级越高。";
@@ -527,8 +574,9 @@ function renderHall(){
   }catch(e){}
   $("hallPosText").innerHTML="你在宗门架构里的位置：<b>"+state.title+"</b> · "+ID_POSITIONS[state.identityIndex]+(state.postIndex>=0?("<br>任职 <b>"+state.postName+"</b> · "+POST_POSITIONS[state.postIndex]):"<br>尚未就任职位（1100 修为起可任执事）");
   $("hallOrg").innerHTML=HALLS.map(function(h){
-    var st = state.postIndex>=h.headIdx ? "✅ 你已可主事" : ("主事："+h.head+"（职位解锁 "+POSTS[h.headIdx].need+" 修为起）");
-    return '<div class="orgrow"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+'</span></div>';
+    var can = state.postIndex>=h.headIdx;
+    var st = can ? "✅ 你已可主事" : ("主事："+h.head+"（职位解锁 "+POSTS[h.headIdx].need+" 修为起）");
+    return '<div class="orgrow'+(can?" can":" dim")+'"><span><b>'+h.icon+" "+h.name+'</b> · '+h.duty+'</span><span class="rs">'+st+'</span></div>';
   }).join("");
 }
 function render(){
