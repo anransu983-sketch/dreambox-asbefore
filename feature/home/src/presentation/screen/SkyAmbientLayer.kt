@@ -2,6 +2,8 @@
  * DreamBox home: ambient "life" layer over the sky-island painting.
  *
  * 只叠光与雾，不画形：灯火 / 炊烟 / 云雾横漂 / 瀑布微光 / 远空航灯。
+ * 1.112（声音已按用户口径整体删除，画面独挑大梁）：再加星光闪烁 / 瀑布双脉流光＋瀑脚水雾 /
+ * 云海五层翻涌 / 巨树树冠微光 / 城堡与市集暖晕 / 飞艇灯笼摇曳＋气囊月光 / 全场萤火光尘。
  * 全部坐标是图比例（同 SkyMap 的 Crop 映射）；一块 Canvas、约 80 次 draw、≤30fps，
  * 所有动画值只在 draw 阶段读取，零重组。时间 t 取值 0..120s 且所有周期都整除 120，
  * 所以 t 回绕处无接缝。
@@ -51,6 +53,9 @@ private val CoolUnit = unit(Color(0xFFB9C9EC)) // 云雾
 private val SheenUnit = unit(Color(0xFFDFEEFF)) // 瀑布光泽
 private val SmokeUnit = unit(Color(0xFFD7DEF0)) // 炊烟
 private val DimUnit = unit(Color(0xFF08102A)) // 压暗（雾斑，不是物体）：把画里烘焙的灯光「调暗」
+private val StarUnit = unit(Color(0xFFEAF2FF)) // 星光
+private val LeafUnit = unit(Color(0xFFCFEF9F)) // 树冠微光（青黄）
+private val MoteCoolUnit = unit(Color(0xFF9FE8FF)) // 青色光尘（同浮石）
 
 /** 以 c 为中心画一团 rx×ry 的柔光；blend 默认 Plus（叠光），压暗/炊烟用 SrcOver。 */
 private fun DrawScope.glow(
@@ -198,6 +203,8 @@ private val Mists =
         Mist(0.640f, 0.36f, 0.040f, 0.075f, 120f, 0.00f, +1f), // 崖底雾带
         Mist(0.780f, 0.44f, 0.050f, 0.060f, 120f, 0.38f, -1f), // 云海上层（反向，视差）
         Mist(0.880f, 0.50f, 0.055f, 0.050f, 120f, 0.70f, +1f), // 云海下层
+        Mist(0.845f, 0.52f, 0.052f, 0.052f, 120f, 0.52f, -1f), // 岛尖右下云层
+        Mist(0.945f, 0.60f, 0.058f, 0.048f, 120f, 0.85f, +1f), // 云海底层（最宽最慢）
     )
 
 private class Fall(
@@ -210,6 +217,73 @@ private val Falls =
         Fall(0.163f, 0.380f, 0.712f, 12f, 0.45f, 0.013f), // 左瀑布右缕
         Fall(0.862f, 0.380f, 0.672f, 12f, 0.20f, 0.011f), // 右瀑布左缕
         Fall(0.893f, 0.380f, 0.672f, 15f, 0.65f, 0.012f), // 右瀑布右缕
+    )
+
+// ───────────────────────────── 1.112 新元素表 ─────────────────────────────
+
+/** 星光：位置避开岛体，只落在夜空；周期全整除 120，相位按序号错开。 */
+@Immutable
+private class Star(val x: Float, val y: Float, val r: Float, val a: Float, val period: Float, val ph: Float)
+
+private val StarPeriods = floatArrayOf(6f, 8f, 10f, 12f, 15f, 20f, 24f, 30f)
+
+private fun star(i: Int, x: Float, y: Float, r: Float, a: Float): Star =
+    Star(x, y, r, a, StarPeriods[i % StarPeriods.size], (i * 0.618f) % 1f)
+
+private val Stars: List<Star> =
+    listOf(
+        star(0, 0.040f, 0.050f, 0.009f, 0.26f), star(1, 0.110f, 0.100f, 0.007f, 0.20f),
+        star(2, 0.170f, 0.040f, 0.010f, 0.30f), star(3, 0.240f, 0.120f, 0.006f, 0.18f),
+        star(4, 0.300f, 0.060f, 0.008f, 0.24f), star(5, 0.370f, 0.100f, 0.007f, 0.20f),
+        star(6, 0.430f, 0.030f, 0.009f, 0.28f), star(7, 0.500f, 0.080f, 0.006f, 0.18f),
+        star(8, 0.560f, 0.130f, 0.008f, 0.22f), star(9, 0.600f, 0.050f, 0.007f, 0.20f),
+        star(10, 0.680f, 0.090f, 0.010f, 0.30f), star(11, 0.740f, 0.040f, 0.007f, 0.20f),
+        star(12, 0.810f, 0.110f, 0.008f, 0.24f), star(13, 0.880f, 0.060f, 0.009f, 0.26f),
+        star(14, 0.950f, 0.100f, 0.007f, 0.20f), star(15, 0.030f, 0.200f, 0.008f, 0.22f),
+        star(16, 0.060f, 0.270f, 0.006f, 0.18f), star(17, 0.970f, 0.220f, 0.008f, 0.22f),
+        star(18, 0.990f, 0.300f, 0.006f, 0.18f), star(19, 0.960f, 0.360f, 0.007f, 0.20f),
+        star(20, 0.080f, 0.160f, 0.007f, 0.20f), star(21, 0.920f, 0.170f, 0.009f, 0.26f),
+        star(22, 0.360f, 0.160f, 0.006f, 0.16f), star(23, 0.640f, 0.160f, 0.006f, 0.16f),
+        star(24, 0.210f, 0.155f, 0.007f, 0.18f), star(25, 0.790f, 0.155f, 0.007f, 0.18f),
+    )
+
+/** 瀑脚水雾：瀑布砸进云海处的水汽团，循环胀大变淡。 */
+private class FallBase(val x: Float, val y: Float, val life: Float, val off: Float)
+
+private val FallBases =
+    listOf(
+        FallBase(0.140f, 0.716f, 12f, 0.00f), // 左瀑布脚
+        FallBase(0.878f, 0.676f, 15f, 0.40f), // 右瀑布脚
+    )
+
+/** 巨树树冠微光：青黄柔光在树冠里缓慢此明彼暗，像叶隙漏光又像萤火栖枝。 */
+private class Canopy(val x: Float, val y: Float, val r: Float, val period: Float, val ph: Float)
+
+private val Canopies =
+    listOf(
+        Canopy(0.205f, 0.172f, 0.075f, 15f, 0.00f),
+        Canopy(0.295f, 0.150f, 0.060f, 20f, 0.35f),
+        Canopy(0.140f, 0.215f, 0.055f, 12f, 0.62f),
+        Canopy(0.255f, 0.205f, 0.065f, 24f, 0.15f),
+    )
+
+/** 全场萤火光尘：暖青两色，在岛面上空缓慢兜圈明灭；周期全整除 120。 */
+@Immutable
+private class Mote(val x: Float, val y: Float, val warm: Boolean, val period: Float, val ph: Float, val amp: Float)
+
+private val MotePeriods = floatArrayOf(15f, 20f, 24f, 30f, 40f)
+
+private fun mote(i: Int, x: Float, y: Float, warm: Boolean): Mote =
+    Mote(x, y, warm, MotePeriods[i % MotePeriods.size], (i * 0.437f) % 1f, 0.008f + (i % 3) * 0.004f)
+
+private val Motes: List<Mote> =
+    listOf(
+        mote(0, 0.160f, 0.300f, true), mote(1, 0.340f, 0.260f, false),
+        mote(2, 0.440f, 0.330f, true), mote(3, 0.580f, 0.270f, true),
+        mote(4, 0.660f, 0.340f, false), mote(5, 0.800f, 0.330f, true),
+        mote(6, 0.880f, 0.420f, false), mote(7, 0.240f, 0.440f, true),
+        mote(8, 0.400f, 0.470f, false), mote(9, 0.700f, 0.470f, true),
+        mote(10, 0.520f, 0.420f, true), mote(11, 0.120f, 0.470f, false),
     )
 
 // ───────────────────────────── 合成 ─────────────────────────────
@@ -243,6 +317,15 @@ internal fun SkyAmbientOverlay(
         val w = map.iwS
         val h = map.ihS
 
+        // 0) 星光闪烁：每颗星自己的周期明灭，亮时带一粒芯
+        for (st in Stars) {
+            val tw = 0.5f + 0.5f * sin(TAU * (tt / st.period + st.ph))
+            val a = st.a * (0.22f + 0.78f * tw * tw) * f
+            val c = map.at(Offset(st.x, st.y))
+            glow(StarUnit, c, st.r * w, a)
+            drawCircle(Color(0xFFF4F8FF).copy(alpha = (a * 1.5f).coerceAtMost(0.85f)), 0.9.dp.toPx(), c, blendMode = BlendMode.Plus)
+        }
+
         // 1) 云雾横漂：整条漂过去要 120s；未连接时雾略重（×1.25）
         val mistK = f * (1.25f - 0.25f * lv)
         for (m in Mists) {
@@ -251,12 +334,25 @@ internal fun SkyAmbientOverlay(
             glow(CoolUnit, map.at(Offset(fx, m.y)), m.rx * w, m.a * mistK * sin(PIF * u).coerceAtLeast(0f), ry = m.ry * h)
         }
 
-        // 2) 瀑布微光：每缕一道淡光泽缓慢下淌
+        // 2) 瀑布流光：每缕两道光泽下淌（一道慢而宽、一道快而细），水是活的
         for (fl in Falls) {
             val u = (tt / fl.period + fl.off) % 1f
             val c = map.at(Offset(fl.x, fl.y0 + (fl.y1 - fl.y0) * u))
             val a = 0.13f * f * sin(PIF * u).coerceAtLeast(0f).pow(0.8f)
             glow(SheenUnit, c, fl.rx * w, a, ry = 0.045f * h)
+            val u2 = (tt / (fl.period * 0.5f) + fl.off * 1.7f) % 1f
+            val c2 = map.at(Offset(fl.x, fl.y0 + (fl.y1 - fl.y0) * u2))
+            val a2 = 0.10f * f * sin(PIF * u2).coerceAtLeast(0f)
+            glow(SheenUnit, c2, fl.rx * 0.55f * w, a2, ry = 0.028f * h)
+        }
+        // 瀑脚水雾：每处 3 团水汽轮流胀大、变淡、微微上抬
+        for (fb in FallBases) {
+            for (k in 0 until 3) {
+                val u = (tt / fb.life + k / 3f + fb.off) % 1f
+                val cc = map.at(Offset(fb.x + 0.006f * sin(TAU * (u + k * 0.31f)), fb.y - 0.012f * u))
+                val a = 0.11f * f * sin(PIF * u).coerceAtLeast(0f)
+                glow(SheenUnit, cc, (0.018f + 0.034f * u) * w, a, ry = (0.012f + 0.020f * u) * h)
+            }
         }
 
         // 3) 炊烟：每缕 6 团，循环上升、变大、变淡；未连接时只剩 35%（压着火）
@@ -272,17 +368,44 @@ internal fun SkyAmbientOverlay(
             }
         }
 
+        // 3.5) 巨树树冠微光：四团青黄柔光错相位呼吸
+        for (cp in Canopies) {
+            val a = (0.055f + 0.045f * sin(TAU * (tt / cp.period + cp.ph))) * (0.7f + 0.3f * lv) * f
+            glow(LeafUnit, map.at(Offset(cp.x, cp.y)), cp.r * w, a, ry = cp.r * 0.72f * w)
+        }
+
         // 4) 灯火：亮 = 在画里烘焙的灯上叠暖光；暗 = 在灯上叠一团暗雾把它「调暗」
         val bellV = bell()
         val chimeV = chime()
+        // 暖晕：城堡整片暖光随人气呼吸；市集暖光带细碎闪烁（人声鼎沸的视觉版）；气囊一层月光
+        glow(WarmUnit, map.at(Offset(0.500f, 0.306f)), 0.088f * w,
+            (0.045f + 0.028f * sin(TAU * (tt / 24f))) * warmth.coerceAtMost(1f) * f, ry = 0.052f * h)
+        glow(WarmUnit, map.at(Offset(0.500f, 0.380f)), 0.165f * w,
+            (0.030f + 0.045f * lv) * (0.8f + 0.2f * sin(TAU * (tt / 2.5f)) * sin(TAU * (tt / 3f + 0.4f))) * f,
+            ry = 0.030f * h)
+        glow(SheenUnit, map.at(Offset(0.770f, 0.180f)), 0.150f * w,
+            (0.035f + 0.020f * sin(TAU * (tt / 20f + 0.3f))) * f, ry = 0.070f * h)
         for (l in Lamps) {
             val pulse = when (l.group) { 0 -> bellV; 2 -> chimeV; else -> 0f }
             val a = level(l, tt, warmth, pulse)
-            val c = map.at(Offset(l.x, l.y))
+            // 飞艇灯笼随船轻轻摇曳：光晕中心小幅横摆（8s 一荡，与画里吊索同频感）
+            val sway = if (l.group == 2) 0.0035f * sin(TAU * (tt / 8f + l.ph)) else 0f
+            val c = map.at(Offset(l.x + sway, l.y))
             val r = l.r * w
             val dim = 1f - a.coerceAtMost(1f)
             glow(DimUnit, c, r * 0.9f, dim * dim * 0.60f * f, blend = BlendMode.SrcOver)
             glow(WarmUnit, c, r, l.a * a * f)
+        }
+
+        // 4.5) 全场萤火光尘：十几粒光尘在岛面上空兜圈明灭，未连接时只剩一半亮度
+        for (m in Motes) {
+            val px = m.x + m.amp * sin(TAU * (tt / m.period + m.ph))
+            val py = m.y + m.amp * 0.7f * sin(TAU * (tt / m.period + m.ph * 1.7f + 0.25f))
+            val tw = 0.5f + 0.5f * sin(TAU * (tt / 6f + m.ph * 2f))
+            val a = (0.10f + 0.16f * tw) * f * (0.55f + 0.45f * lv)
+            val c = map.at(Offset(px, py))
+            glow(if (m.warm) WarmUnit else MoteCoolUnit, c, 0.012f * w, a)
+            drawCircle(Color(0xFFFFF6E0).copy(alpha = (a * 1.6f).coerceAtMost(0.9f)), 1.0.dp.toPx(), c, blendMode = BlendMode.Plus)
         }
 
         // 5) 远空航灯：一粒暖白光点缓慢划过夜空，1.5s 一闪

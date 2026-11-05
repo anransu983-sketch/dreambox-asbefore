@@ -45,14 +45,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -303,11 +301,10 @@ fun SkyIslandScene(
     }
     val lively by
         animateFloatAsState(if (state.connected) 1f else 0f, tween(5000), label = "skyLively")
-    val audioDriven = remember { mutableStateOf(false) } // 声音引擎在跑时，钟/铃脉冲改由音频事件驱动
     val bellPulse = remember { Animatable(0f) }
     val chimePulse = remember { Animatable(0f) }
-    LaunchedEffect(active, state.connected, reduceMotion, audioDriven.value) {
-        if (active && state.connected && !reduceMotion && !audioDriven.value) {
+    LaunchedEffect(active, state.connected, reduceMotion) {
+        if (active && state.connected && !reduceMotion) {
             while (true) {
                 delay(kotlin.random.Random.nextLong(40_000, 75_000))
                 bellPulse.snapTo(1f)
@@ -315,8 +312,8 @@ fun SkyIslandScene(
             }
         }
     }
-    LaunchedEffect(active, state.connected, reduceMotion, audioDriven.value) {
-        if (active && state.connected && !reduceMotion && !audioDriven.value) {
+    LaunchedEffect(active, state.connected, reduceMotion) {
+        if (active && state.connected && !reduceMotion) {
             while (true) {
                 delay(kotlin.random.Random.nextLong(25_000, 50_000))
                 chimePulse.snapTo(0.8f)
@@ -346,30 +343,6 @@ fun SkyIslandScene(
     }
 
 
-    // 环境声（SkyAmbientAudio.kt）：开关存本地偏好、默认开；引擎不抢音频焦点，
-    // 启动时别的 App 在放音乐就不启动，此时钟/铃脉冲回退到上面的随机调度（audioDriven=false）。
-    val skyPrefs = remember { ctx.getSharedPreferences("sky_home", Context.MODE_PRIVATE) }
-    var soundOn by remember { mutableStateOf(skyPrefs.getBoolean("ambient_sound", true)) }
-    val pulseScope = rememberCoroutineScope()
-    val audioRunning =
-        rememberSkyAmbientSound(
-            enabled = soundOn,
-            active = active,
-            lively = { lively },
-            onBell = {
-                pulseScope.launch {
-                    bellPulse.snapTo(1f)
-                    bellPulse.animateTo(0f, tween(3000, easing = LinearEasing))
-                }
-            },
-            onChime = {
-                pulseScope.launch {
-                    chimePulse.snapTo(0.8f)
-                    chimePulse.animateTo(0f, tween(2200, easing = LinearEasing))
-                }
-            },
-        )
-    LaunchedEffect(audioRunning.value) { audioDriven.value = audioRunning.value }
 
     // debug：拖动后的光字位置（图比例），屏幕左上角实时读数，抄回 skyNightArt
     val overrides = remember { mutableStateMapOf<BottomBarDestination, Offset>() }
@@ -619,16 +592,6 @@ fun SkyIslandScene(
 
         flare?.let { shot -> FlareLayer(shot, map, reduceMotion) { if (flare?.id == shot.id) flare = null } }
 
-        // 环境声快捷开关：右上角一枚 ♪ 光字，跟题字同一时钟浮现，点按切换并持久化
-        SkySoundGlyph(
-            on = soundOn,
-            lit = captionOn,
-            onToggle = {
-                soundOn = !soundOn
-                skyPrefs.edit().putBoolean("ambient_sound", soundOn).apply()
-            },
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 46.dp, end = 10.dp),
-        )
 
         if (debug) {
             Column(
