@@ -329,9 +329,38 @@ class PackHostActivity : Activity() {
     private fun sectSettings() =
         org.koin.core.context.GlobalContext.get().get<com.suanran.dreambox.data.store.AppSettingsStore>()
 
-    /** 修为 = 入门天数×10 + 已导入配置×25 + 已装插件×20 + 插件内修炼加成。 */
-    private fun sectStateJson(): String {
-        val s = sectSettings()
+    // ── 轮回加点制（pack v35，用户 2026-11-05 定调：不要现在这套，完全按照轮回那种）──
+    // 点数只来自这一世的作为：成就（grant）、每日修炼、俸禄、互动奖励（reward）。
+    // 天数/配置/插件数的被动公式就此废除。境界靠花点突破（breakthrough），身份随境界，
+    // 宗门品级与职位资格看本世功绩（累计获得点数）；一世终结走 rebirth 结算 → allocate 配点定下一世开局。
+    private val sectBreakCosts = intArrayOf(60, 120, 220, 400, 600, 800)
+    private val sectAllocKeys = listOf("gengu", "wuxing", "qiyun", "linggen", "jiashi", "renyuan")
+
+    private fun sectAllocOf(s: com.suanran.dreambox.data.store.AppSettingsStore): JSONObject {
+        val out = JSONObject()
+        val saved = runCatching { JSONObject(s.sectAlloc.value.ifBlank { "{}" }) }.getOrNull()
+        for (k in sectAllocKeys) out.put(k, saved?.optInt(k, 0) ?: 0)
+        return out
+    }
+
+    /** 此世评价：功绩 + 境界 + 职位资格 → 档位与结算倍率。 */
+    private fun sectEvalOf(earned: Int, rank: Int, postEligible: Int): Pair<String, Double> {
+        val score = earned + rank * 300 + (postEligible + 1) * 200
+        return when {
+            score >= 6000 -> "S" to 1.5
+            score >= 4000 -> "A" to 1.3
+            score >= 2500 -> "B" to 1.15
+            score >= 1200 -> "C" to 1.0
+            else -> "D" to 0.8
+        }
+    }
+
+    private fun sectBreakCost(rank: Int, gengu: Int): Int =
+        if (rank >= 6) -1 else Math.round(sectBreakCosts[rank] * (1.0 - 0.03 * gengu)).toInt()
+
+    /** 旧公式最后运行一次：把存量修为换算成本世功绩与已解锁境界，之后旧公式永不启用。 */
+    private fun sectMigrateIfNeeded(s: com.suanran.dreambox.data.store.AppSettingsStore) {
+        if (s.sectRankIdx.value >= 0 && s.sectPtMigrated.value) return
         val joinedAt = s.sectJoinedAt.value
         val days = if (joinedAt <= 0L) 0 else
             ((System.currentTimeMillis() - joinedAt) / 86_400_000L).toInt().coerceAtLeast(0)
@@ -342,49 +371,84 @@ class PackHostActivity : Activity() {
             File(filesDir, "packs").listFiles()
                 ?.count { it.isDirectory && File(it, "pack.json").isFile } ?: 0
         }.getOrDefault(0)
-        val bonus = s.sectExpBonus.value
-        val exp = days * 10 + profileCount * 25 + packCount * 20 + bonus
-        var rank = 0
-        for (i in sectRankThresholds.indices) if (exp >= sectRankThresholds[i]) rank = i
-        val next = if (rank + 1 < sectRankThresholds.size) sectRankThresholds[rank + 1] else -1
+        val legacyExp = days * 10 + profileCount * 25 + packCount * 20 + s.sectExpBonus.value
+        if (s.sectRankIdx.value < 0) {
+            var r = 0
+            for (i in sectRankThresholds.indices) if (legacyExp >= sectRankThresholds[i]) r = i
+            s.sectRankIdx.set(r)
+        }
+        if (!s.sectPtMigrated.value) {
+            if (s.sectPtEarned.value == 0 && legacyExp > 0) s.sectPtEarned.set(legacyExp)
+            s.sectPtMigrated.set(true)
+        }
+    }
+
+    private fun sectStateJson(): String {
+        val s = sectSettings()
+        sectMigrateIfNeeded(s)
+        val joinedAt = s.sectJoinedAt.value
+        val days = if (joinedAt <= 0L) 0 else
+            ((System.currentTimeMillis() - joinedAt) / 86_400_000L).toInt().coerceAtLeast(0)
+        val profileCount = runCatching {
+            File(filesDir, "imported").listFiles()?.count { it.isDirectory } ?: 0
+        }.getOrDefault(0)
+        val packCount = runCatching {
+            File(filesDir, "packs").listFiles()
+                ?.count { it.isDirectory && File(it, "pack.json").isFile } ?: 0
+        }.getOrDefault(0)
+        val earned = s.sectPtEarned.value
+        val balance = s.sectPtBalance.value
+        val rank = s.sectRankIdx.value.coerceIn(0, 6)
+        val alloc = sectAllocOf(s)
+        // 身份随境界晋升；上一世配点里的家世给新一世一个出身下限（嫡系不至沦为杂役）
+        var identity = minOf(rank, 5)
+        val jiashi = alloc.optInt("jiashi", 0)
+        val identityFloor = when { jiashi >= 8 -> 2; jiashi >= 5 -> 1; else -> 0 }
+        if (identity < identityFloor) identity = identityFloor
+        // 职位独立一轨：choice=-1 自动（取最高解锁）、-2 不就任、0..5 自选职位下标
+        var choice = s.sectPostChoice.value
+        if (!s.sectPostMigrated.value) {
+            val mapped = when (choice) {
+                5 -> 0; 6 -> 1; 7 -> 2; 8 -> -1; 9 -> 4; 10 -> 5
+                else -> choice
+            }
+            if (mapped != choice) s.sectPostChoice.set(mapped)
+            s.sectPostMigrated.set(true)
+            choice = mapped
+        }
+        val postEligible = sectPostEligibleOf(earned)
+        val post = when {
+            postEligible < 0 || choice == -2 -> -1
+            choice in 0..postEligible -> choice
+            else -> postEligible
+        }
+        val grade = sectGradeOf(earned)
+        val (evalGrade, evalMult) = sectEvalOf(earned, rank, postEligible)
         return JSONObject().apply {
             put("sectId", s.sectPathId.value)
             put("joinedAt", joinedAt)
             put("days", days)
             put("profileCount", profileCount)
             put("packCount", packCount)
-            put("expBonus", bonus)
-            put("exp", exp)
+            put("expBonus", s.sectExpBonus.value)
+            put("exp", earned) // 兼容字段：现为本世功绩（累计获得轮回点）
+            put("points", balance)
+            put("earned", earned)
+            put("life", s.sectPtLife.value)
+            put("alloc", alloc)
+            put("pool", s.sectPtPool.value)
+            put("allocPending", s.sectAllocPending.value)
             put("rankIndex", rank)
             put("rankName", sectRankNames[rank])
-            // 身份随修为自动晋升；职位独立一轨：choice=-1 自动（取最高解锁）、-2 不就任、0..5 自选职位下标
-            val identity = sectIdentityOf(exp)
             put("identityIndex", identity)
             put("title", sectIdentityNames[identity])
-            // 1.73 及以前 sectPostChoice 存的是十一档阶梯下标（5=执事…10=掌门老祖），一次性换算成职位下标
-            var choice = s.sectPostChoice.value
-            if (!s.sectPostMigrated.value) {
-                val mapped = when (choice) {
-                    5 -> 0; 6 -> 1; 7 -> 2; 8 -> -1; 9 -> 4; 10 -> 5
-                    else -> choice
-                }
-                if (mapped != choice) s.sectPostChoice.set(mapped)
-                s.sectPostMigrated.set(true)
-                choice = mapped
-            }
-            val postEligible = sectPostEligibleOf(exp)
-            val post = when {
-                postEligible < 0 || choice == -2 -> -1
-                choice in 0..postEligible -> choice
-                else -> postEligible
-            }
             put("postIndex", post)
             put("postEligibleIndex", postEligible)
             put("eligibleIndex", postEligible)
             put("postChoice", choice)
             put("postName", if (post >= 0) sectPostNames[post] else "")
-            put("nextThreshold", next)
-            val grade = sectGradeOf(exp)
+            put("nextThreshold", if (rank + 1 < sectRankThresholds.size) sectRankThresholds[rank + 1] else -1)
+            put("nextBreakCost", sectBreakCost(rank, alloc.optInt("gengu", 0)))
             put("gradeIndex", grade)
             put("gradeName", sectGradeNames[grade])
             put("nextGradeThreshold", if (grade + 1 < sectGradeThresholds.size) sectGradeThresholds[grade + 1] else -1)
@@ -394,6 +458,8 @@ class PackHostActivity : Activity() {
             put("rewardLog", s.sectRewardLog.value)
             put("lastSalaryDay", s.sectLastSalaryDay.value)
             put("lastCultivateDay", s.sectLastCultivateDay.value)
+            put("evalGrade", evalGrade)
+            put("evalMult", evalMult)
             put("today", java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()))
             put("seedArgb", s.themeAccentColorArgb.value)
             put("themeMode", s.themeMode.value.name)
@@ -454,7 +520,8 @@ class PackHostActivity : Activity() {
                         if (s.sectLastCultivateDay.value == today) throw IllegalStateException("今日已修炼，明日再来")
                         val gain = JSONObject(sectStateJson()).optInt("cultGain", 20)
                         s.sectLastCultivateDay.set(today)
-                        s.sectExpBonus.set(s.sectExpBonus.value + gain)
+                        s.sectPtBalance.set(s.sectPtBalance.value + gain)
+                        s.sectPtEarned.set(s.sectPtEarned.value + gain)
                         val st = JSONObject(sectStateJson())
                         applySectRankLayout(st.optInt("rankIndex", 0))
                         sectStateJson()
@@ -478,7 +545,9 @@ class PackHostActivity : Activity() {
                             .format(java.util.Date())
                         if (s.sectLastSalaryDay.value == today) throw IllegalStateException("今日俸禄已领过")
                         s.sectLastSalaryDay.set(today)
-                        s.sectExpBonus.set(s.sectExpBonus.value + st0.optInt("salary", 0))
+                        val sal = st0.optInt("salary", 0)
+                        s.sectPtBalance.set(s.sectPtBalance.value + sal)
+                        s.sectPtEarned.set(s.sectPtEarned.value + sal)
                         val st = JSONObject(sectStateJson())
                         applySectRankLayout(st.optInt("rankIndex", 0))
                         sectStateJson()
@@ -500,12 +569,31 @@ class PackHostActivity : Activity() {
                         sectStateJson()
                     }
                     "cheat" -> {
-                        // 修改器（用户自备面板）：直接设定修为加成，境界/品级/身份随总修为自动重算
+                        // 修改器（用户自备面板）：新制下直接设定轮回点/功绩/境界；
+                        // legacy 键 expBonus/expDelta 映射为功绩（境界按旧门槛一并换算，品级/职位资格随功绩）
+                        sectMigrateIfNeeded(s)
+                        if (options.has("points")) {
+                            s.sectPtBalance.set(options.optInt("points").coerceIn(0, 999999))
+                        }
+                        if (options.has("earned")) {
+                            s.sectPtEarned.set(options.optInt("earned").coerceIn(0, 999999))
+                        }
+                        if (options.has("rank")) {
+                            s.sectRankIdx.set(options.optInt("rank").coerceIn(0, 6))
+                        }
                         if (options.has("expBonus")) {
-                            s.sectExpBonus.set(options.optInt("expBonus").coerceIn(0, 999999))
+                            val v = options.optInt("expBonus").coerceIn(0, 999999)
+                            s.sectPtEarned.set(v)
+                            var r = 0
+                            for (i in sectRankThresholds.indices) if (v >= sectRankThresholds[i]) r = i
+                            s.sectRankIdx.set(r)
                         }
                         if (options.has("expDelta")) {
-                            s.sectExpBonus.set((s.sectExpBonus.value + options.optInt("expDelta")).coerceIn(0, 999999))
+                            val v = (s.sectPtEarned.value + options.optInt("expDelta")).coerceIn(0, 999999)
+                            s.sectPtEarned.set(v)
+                            var r = 0
+                            for (i in sectRankThresholds.indices) if (v >= sectRankThresholds[i]) r = i
+                            s.sectRankIdx.set(r)
                         }
                         val st = JSONObject(sectStateJson())
                         applySectRankLayout(st.optInt("rankIndex", 0))
@@ -555,9 +643,91 @@ class PackHostActivity : Activity() {
                         if (used >= limit) throw IllegalStateException("今日次数已用完")
                         counts[kind] = used + 1
                         s.sectRewardLog.set(today + "|" + counts.entries.joinToString(",") { "${it.key}=${it.value}" })
-                        if (amount > 0) s.sectExpBonus.set(s.sectExpBonus.value + amount)
+                        if (amount > 0) {
+                            s.sectPtBalance.set(s.sectPtBalance.value + amount)
+                            s.sectPtEarned.set(s.sectPtEarned.value + amount)
+                        }
                         val st = JSONObject(sectStateJson())
                         applySectRankLayout(st.optInt("rankIndex", 0))
+                        sectStateJson()
+                    }
+                    "grant" -> {
+                        // 成就产点（轮回加点制的点数源头）：插件报成就 id 与点数，宿主持本世台账，
+                        // 同一成就一世只发一次——插件重渲染/补报不会重复产点。
+                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派")
+                        val gid = options.optString("id")
+                        if (gid.isBlank()) throw IllegalArgumentException("缺成就 id")
+                        val pts = options.optInt("points", 0).coerceIn(0, 500)
+                        val granted = s.sectGranted.value.split(",").filter { it.isNotBlank() }
+                        if (pts > 0 && gid !in granted) {
+                            s.sectGranted.set((granted + gid).joinToString(","))
+                            s.sectPtBalance.set(s.sectPtBalance.value + pts)
+                            s.sectPtEarned.set(s.sectPtEarned.value + pts)
+                        }
+                        sectStateJson()
+                    }
+                    "breakthrough" -> {
+                        // 境界不再随时间自动涨：花轮回点突破，根骨配点给花费折扣（每点 -3%）
+                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派再突破")
+                        sectMigrateIfNeeded(s)
+                        val rank = s.sectRankIdx.value.coerceIn(0, 6)
+                        if (rank >= 6) throw IllegalStateException("已至大乘绝巅，再往上就是成仙路了")
+                        val cost = sectBreakCost(rank, sectAllocOf(s).optInt("gengu", 0))
+                        if (s.sectPtBalance.value < cost) throw IllegalStateException("轮回点不足：突破${sectRankNames[rank + 1]}需 $cost 点，你有 ${s.sectPtBalance.value} 点")
+                        s.sectPtBalance.set(s.sectPtBalance.value - cost)
+                        s.sectRankIdx.set(rank + 1)
+                        applySectRankLayout(rank + 1)
+                        sectStateJson()
+                    }
+                    "rebirth" -> {
+                        // 一世终结与结算：评价档位×倍率作用于（余额 + 功绩一成），加结局加成，得转世点池；
+                        // 本世账目（功绩/台账/境界/职位/系列）就此清零，入待配点阶段。
+                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派")
+                        sectMigrateIfNeeded(s)
+                        val ending = options.optString("ending")
+                        val rank = s.sectRankIdx.value.coerceIn(0, 6)
+                        val endingBonus = when (ending) {
+                            "feisheng" -> { if (rank < 6) throw IllegalStateException("飞升需大乘绝巅"); 150 }
+                            "zuohua" -> { if (rank < 5) throw IllegalStateException("坐化需炼虚以上"); 80 }
+                            "bingjie" -> { if (rank < 2) throw IllegalStateException("兵解需金丹以上"); 50 }
+                            else -> throw IllegalArgumentException("未知结局 $ending")
+                        }
+                        val earned = s.sectPtEarned.value
+                        val (_, mult) = sectEvalOf(earned, rank, sectPostEligibleOf(earned))
+                        val pool = (Math.round((s.sectPtBalance.value + earned * 0.1) * mult) + endingBonus).toInt()
+                        s.sectPtLife.set(s.sectPtLife.value + 1)
+                        s.sectPtPool.set(pool)
+                        s.sectAllocPending.set(true)
+                        s.sectPtBalance.set(0)
+                        s.sectPtEarned.set(0)
+                        s.sectGranted.set("")
+                        s.sectRankIdx.set(0)
+                        s.sectPostChoice.set(-1)
+                        s.sectLastCultivateDay.set("")
+                        s.sectLastSalaryDay.set("")
+                        s.sectRewardLog.set("")
+                        s.sectSeriesClaimed.set("")
+                        s.sectSeriesBonus.set(0)
+                        applySectRankLayout(0)
+                        sectStateJson()
+                    }
+                    "allocate" -> {
+                        // 转世配点：六维每级 10 点、单维 0..10；配完剩下的点池转入新一世余额
+                        if (!s.sectAllocPending.value) throw IllegalStateException("当前不在转世配点阶段")
+                        val a = options.optJSONObject("alloc") ?: throw IllegalArgumentException("缺 alloc")
+                        val clean = JSONObject()
+                        var levels = 0
+                        for (k in sectAllocKeys) {
+                            val v = a.optInt(k, 0).coerceIn(0, 10)
+                            clean.put(k, v)
+                            levels += v
+                        }
+                        val cost = levels * 10
+                        if (cost > s.sectPtPool.value) throw IllegalStateException("点数不够：点池 ${s.sectPtPool.value}，这套配点要 $cost")
+                        s.sectAlloc.set(clean.toString())
+                        s.sectPtBalance.set(s.sectPtPool.value - cost)
+                        s.sectPtPool.set(0)
+                        s.sectAllocPending.set(false)
                         sectStateJson()
                     }
                     "leave" -> {

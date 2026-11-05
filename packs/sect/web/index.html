@@ -679,7 +679,8 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
       <div class="card">
         <h2>🏯 境界与布局</h2>
         <div class="desc" id="hallRankList"></div>
-        <div class="desc" style="margin-top:10px">职位自选（职位是任职、不是身份；修为解锁后想当哪个当哪个，也可选低不选高，或不就任）：</div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="pbtn" id="btnBreak">⬆ 突破</button><span class="desc" id="breakNote"></span></div>
+        <div class="desc" style="margin-top:10px">职位自选（职位是任职、不是身份；功绩解锁后想当哪个当哪个，也可选低不选高，或不就任）：</div>
         <div class="chips" id="postChips"></div>
         <div class="layout-note" id="postNote"></div>
       </div>
@@ -691,12 +692,12 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
         <div class="ladder" id="hallLadder"></div>
       </div>
       <button class="ghost" id="btnFlip">🌗 明暗翻转</button>
-      <button class="ghost" id="btnSwitch">改投他派（修为保留）</button>
+      <button class="ghost" id="btnSwitch">改投他派（功绩保留）</button>
       <button class="ghost" id="btnLeave">叛出师门（恢复默认主题）</button>
-      <button class="ghost" id="btnCheat">🛠️ 修改器（灵石 / 修为）</button>
+      <button class="ghost" id="btnCheat">🛠️ 修改器（灵石 / 功绩）</button>
       <button class="ghost" id="btnBlood">🩸 血脉觉醒</button>
        <button class="ghost" id="btnWorlds2">🌌 诸天万界 · 成仙路（炼虚开启）</button>
-      <div class="foot">境界与修为管你的身份（杂役→外门→内门→核心→亲传→道子，随修为自动晋升）与职位（执事→长老→峰主→太上长老→掌门→老祖，解锁后自选任职）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div></div></div>
+      <div class="foot">境界与功绩管你的身份（杂役→外门→内门→核心→亲传→道子，随境界晋升）与职位（执事→长老→峰主→太上长老→掌门→老祖，解锁后自选任职）与本体布局开关：金丹起顶栏毛玻璃、元婴起首页氛围动画、化神起底栏常驻、页面缩放随境界微涨；品级管宗门的名号、山门排面与俸禄资源，从不入流一路升到圣地。重启梦盒后完全生效。</div></div></div>
   </div>
   <div class="room sroom" id="room-cave">
     <img class="sbg" id="caveBg" src="room-cave1.jpg" alt="">
@@ -772,12 +773,12 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
         <div class="cheatrow"><button class="pbtn" data-stones="100">+100</button><button class="pbtn" data-stones="1000">+1000</button><button class="pbtn" data-stones="10000">+1万</button><button class="pbtn" id="btnStonesZero">清零</button></div>
       </div>
       <div class="card">
-        <h2>✦ 修为</h2>
+        <h2>✦ 功绩与轮回点</h2>
         <div class="desc" id="cheatExpText"></div>
-        <div class="cheatrow"><input id="inExp" type="number" placeholder="输入加成值"><button class="pbtn" id="btnExpSet">设定加成</button></div>
+        <div class="cheatrow"><input id="inExp" type="number" placeholder="输入功绩值"><button class="pbtn" id="btnExpSet">设定功绩</button></div>
         <div class="cheatrow"><button class="pbtn" data-exp="100">+100</button><button class="pbtn" data-exp="500">+500</button><button class="pbtn" data-exp="2000">+2000</button></div>
-        <div class="cheatrow"><button class="pbtn" id="btnExpTop">一键圣地 · 大乘（总修为 4500）</button><button class="pbtn" id="btnExpZero">加成清零</button></div>
-        <div class="desc" style="margin-top:8px">修为 = 入门天数×10 + 配置×25 + 插件×20 + 修为加成，改的是「加成」这一项。境界、品级、身份、职位都按总修为当场重算，本体布局（顶栏毛玻璃、氛围动画、底栏自动隐藏、页面缩放）也会跟着境界变。</div>
+        <div class="cheatrow"><button class="pbtn" id="btnExpTop">一键圣地 · 大乘（功绩 4500）</button><button class="pbtn" id="btnExpZero">功绩清零</button></div>
+        <div class="desc" style="margin-top:8px">轮回加点制：功绩 = 本世累计获得的轮回点，定品级与职位资格；境界按功绩门槛一并换算（与旧制门槛一致）。可用轮回点余额在大殿与轮回碑查看，修改器这里改的是功绩。</div>
         <div class="err" id="cheatErr"></div>
       </div>
     </div>
@@ -793,6 +794,10 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
   <div class="room" id="room-market">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏮 山门集市</div><div class="room-sub">坊市烟火 · 每日新货</div></div></div>
     <div class="room-body" id="marketBody"></div>
+  </div>
+  <div class="room" id="room-rebirth">
+    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🗿 轮回碑</div><div class="room-sub">一世成败皆成点 · 配点定下一世</div></div></div>
+    <div class="room-body" id="rebirthBody"></div>
   </div>
   <div id="npcBox"></div>
   <div id="retreatFx"><div class="sky"></div><div class="breath2">🧘</div><div class="rtxt" id="retreatTxt">入定……</div></div>
@@ -932,7 +937,7 @@ function ladderHtml(s,cur){
 }
 var $=function(id){return document.getElementById(id)};
 var selSect=null, selRank=0;
-var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"杂役弟子",nextThreshold:60,identityIndex:0,eligibleIndex:-1,postChoice:-1,postIndex:-1,postEligibleIndex:-1,postName:"",seriesBonus:0,rewardLog:"",gradeIndex:0,gradeName:"不入流",nextGradeThreshold:100,salary:0,cultGain:20,lastSalaryDay:"",lastCultivateDay:"",today:"",themeMode:"Dark"};
+var state={sectId:"",joinedAt:0,days:0,profileCount:0,packCount:0,expBonus:0,exp:0,rankIndex:0,rankName:"炼气",title:"杂役弟子",nextThreshold:60,identityIndex:0,eligibleIndex:-1,postChoice:-1,postIndex:-1,postEligibleIndex:-1,postName:"",seriesBonus:0,rewardLog:"",gradeIndex:0,gradeName:"不入流",nextGradeThreshold:100,salary:0,cultGain:20,lastSalaryDay:"",lastCultivateDay:"",today:"",themeMode:"Dark",points:0,earned:0,life:1,alloc:{gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0},pool:0,allocPending:false,nextBreakCost:60,evalGrade:"D",evalMult:0.8};
 var hasBridge = !!(window.Capacitor && window.Capacitor.toNative);
 
 function sectById(id){for(var i=0;i<SECTS.length;i++)if(SECTS[i].id===id)return SECTS[i];return null}
@@ -978,10 +983,18 @@ function mockDerive(){
   if(state.joinedAt){
     state.days=Math.max(0,Math.floor((Date.now()-state.joinedAt)/86400000));
   }
-  state.exp=state.days*10+state.profileCount*25+state.packCount*20+state.expBonus;
-  var r=0;for(var i=0;i<RANKS.length;i++)if(state.exp>=RANKS[i].need)r=i;
-  state.rankIndex=r;state.rankName=RANKS[r].name;
-  var ii=0;for(var k=0;k<IDENTITIES.length;k++)if(state.exp>=IDENTITIES[k].need)ii=k;
+  if(state.points==null)state.points=0;
+  if(state.earned==null)state.earned=state.exp||0;
+  if(state.life==null)state.life=1;
+  if(!state.alloc)state.alloc={gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0};
+  if(state.pool==null)state.pool=0;
+  if(state.allocPending==null)state.allocPending=false;
+  state.exp=state.earned;
+  var r=state.rankIndex||0;
+  state.rankName=RANKS[r].name;
+  var ii=Math.min(r,5);
+  var jf=state.alloc.jiashi>=8?2:(state.alloc.jiashi>=5?1:0);
+  if(ii<jf)ii=jf;
   state.identityIndex=ii;
   state.title=IDENTITIES[ii].name;
   var pe=postEligibleAt(state.exp);
@@ -993,9 +1006,131 @@ function mockDerive(){
   state.gradeIndex=g;state.gradeName=GRADES[g].name;
   state.nextGradeThreshold=(g+1<GRADES.length)?GRADES[g+1].need:-1;
   state.salary=gradeSalary(g);state.cultGain=gradeGain(g)+(state.seriesBonus||0);
+  state.nextBreakCost=r>=6?-1:Math.round(BREAK_COSTS[r]*(1-0.03*(state.alloc.gengu||0)));
+  var ev=evalOf(state.earned,r,pe);state.evalGrade=ev.g;state.evalMult=ev.m;
   state.today=new Date().toISOString().slice(0,10);
 }
 function mockSave(){try{localStorage.setItem("sectMock",JSON.stringify(state))}catch(e){}}
+function mockGain(n){state.points=(state.points||0)+n;state.earned=(state.earned||0)+n}
+/* == 轮回碑（pack v35）：轮回加点制——点数源于这一世的成就，境界花点突破，
+   一世终结按评价与结局结算，转世配点决定下一世开局 == */
+var BREAK_COSTS=[60,120,220,400,600,800];
+var ALLOC_DEFS=[
+ {k:"gengu",icon:"🦴",name:"根骨",desc:"突破花费每点 -3%，天骄之资"},
+ {k:"wuxing",icon:"💡",name:"悟性",desc:"资质悟性，功法神通的门槛"},
+ {k:"qiyun",icon:"🍀",name:"气运",desc:"奇遇更频、掉落更好、绝境逢生"},
+ {k:"linggen",icon:"🌱",name:"灵根",desc:"灵根品级，高者可兼修多系"},
+ {k:"jiashi",icon:"🏯",name:"家世",desc:"开局出身与灵石，高家世免杂役起步"},
+ {k:"renyuan",icon:"🤝",name:"人缘",desc:"同门故人初始态度更亲近"}];
+var ENDINGS=[
+ {k:"bingjie",icon:"🗡️",name:"兵解",need:2,bonus:50,desc:"自斩此身，真灵遁入轮回。干脆利落，结算加成 +50。"},
+ {k:"zuohua",icon:"🪷",name:"坐化",need:5,bonus:80,desc:"洞中坐化，肉身成舍利。圆满收官，结算加成 +80。"},
+ {k:"feisheng",icon:"✨",name:"飞升",need:6,bonus:150,desc:"踏碎虚空，白日飞升。此世绝唱，结算加成 +150。"}];
+var rbAlloc=null,rbEnding=null,rbOpening="";
+function evalOf(earned,rank,postEl){var sc=(earned||0)+rank*300+(postEl+1)*200;if(sc>=6000)return{g:"S",m:1.5};if(sc>=4000)return{g:"A",m:1.3};if(sc>=2500)return{g:"B",m:1.15};if(sc>=1200)return{g:"C",m:1.0};return{g:"D",m:0.8}}
+function allocLevels(a){var n=0;ALLOC_DEFS.forEach(function(d){n+=(a&&a[d.k])||0});return n}
+function grantAchievement(id,pts,done){
+  if(hasBridge){
+    callNative("grant",{id:id,points:pts}).then(function(st){state=Object.assign(state,st);done&&done()}).catch(function(){done&&done()});
+  }else{mockGain(pts);mockDerive();mockSave();done&&done()}
+}
+function openingText(a){
+  var fam=a.jiashi>=8?"圣地嫡系，出生便含着金汤匙":(a.jiashi>=5?"修仙世家子弟，族中有长辈照拂":(a.jiashi>=2?"小康之家，父母皆是散修":"散修之家，一贫如洗，全靠自己"));
+  var root=a.linggen>=8?"天灵根现世，宗门抢人":(a.linggen>=5?"双灵根，资质上佳":(a.linggen>=2?"三灵根，中规中矩":"伪灵根开局，胜在路多"));
+  var sp="";
+  if(a.qiyun>=9&&a.gengu<=2)sp="【特殊开局 · 绝世废柴，气运冲天】根骨虽废，气运却浓得化不开——走路捡法宝，跳崖得传承。";
+  else if(a.gengu>=9)sp="【特殊开局 · 天骄临世】根骨绝世，天劫也随之加重——这是伐天的命。";
+  else if(a.wuxing>=9)sp="【特殊开局 · 悟性通天】过目不忘，一点就透，师长看你的眼神都不对了。";
+  else if(a.renyuan>=9)sp="【特殊开局 · 天生亲和】人见人爱，连守山灵兽都愿意蹭你。";
+  else if(ALLOC_DEFS.every(function(d){return (a[d.k]||0)>=5}))sp="【特殊开局 · 六边形战士】无一短板，中庸而全能。";
+  return "第 "+state.life+" 世 —— "+fam+"；"+root+"。"+(sp||"这一世的路，要靠这一世的成就一步步挣出来。");
+}
+function renderRebirth(){
+  var b=$("rebirthBody");if(!b)return;
+  var html='<img src="world-youming.jpg" alt="" style="width:100%;height:130px;object-fit:cover;border-radius:14px;border:1px solid var(--border)">';
+  if(state.allocPending){
+    if(!rbAlloc)rbAlloc={gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0};
+    var cost=allocLevels(rbAlloc)*10,left=state.pool-cost;
+    html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">🗿 第 '+state.life+' 世 · 转世配点</div>'
+      +'<div class="desc" style="margin-top:4px">上一世的结算点池共 <b style="color:#fbbf24">'+state.pool+'</b> 点。每维每级 10 点、单维上限 10 级；配点定这一世的开局，用不完的点会带进这一世当余额。</div>'
+      +ALLOC_DEFS.map(function(d){var v=rbAlloc[d.k]||0;
+        return '<div class="ladrow"><span style="font-size:19px">'+d.icon+'</span><span style="flex:1"><b>'+d.name+' '+v+'</b><span class="desc"> · '+d.desc+'</span></span>'
+        +'<span class="cheatrow" style="margin-top:0"><button class="pbtn" data-rb="'+d.k+':-1">－</button><button class="pbtn" data-rb="'+d.k+':1">＋</button></span></div>'}).join("")
+      +'<div class="desc" style="margin-top:6px">已用 <b>'+cost+'</b> 点 · 剩余 <b style="color:'+(left<0?'#f87171':'#4ade80')+'">'+left+'</b> 点</div>'
+      +'<div class="desc" style="margin-top:6px">🌅 开局预览：'+openingText(rbAlloc)+'</div>'
+      +'<button class="pbtn" id="btnAllocGo" style="margin-top:10px;width:100%"'+(left<0?" disabled":"")+'>踏入第 '+state.life+' 世</button></div>';
+    b.innerHTML=html;
+    Array.prototype.forEach.call(b.querySelectorAll("[data-rb]"),function(el){el.addEventListener("click",function(){
+      var ps=el.getAttribute("data-rb").split(":");var k=ps[0],d=+ps[1];
+      rbAlloc[k]=Math.max(0,Math.min(10,(rbAlloc[k]||0)+d));renderRebirth();
+    })});
+    var go=$("btnAllocGo");if(go)go.addEventListener("click",doAllocate);
+    return;
+  }
+  if(rbOpening){
+    html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">🌅 新的一世</div><div class="desc" style="margin-top:6px;line-height:1.8">'+rbOpening+'</div>'
+      +'<button class="pbtn" id="btnRbBack" style="margin-top:10px;width:100%">回山门，开始这一世</button></div>';
+    b.innerHTML=html;
+    var bk=$("btnRbBack");if(bk)bk.addEventListener("click",function(){rbOpening="";closeRoomsUI()});
+    return;
+  }
+  var ev=evalOf(state.earned,state.rankIndex,state.postEligibleIndex);
+  var alloc=state.alloc||{};
+  html+='<div class="card" style="margin-top:10px"><div style="font-weight:800">🗿 轮回碑 · 第 '+state.life+' 世</div>'
+    +'<div class="desc" style="margin-top:4px">本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b style="color:#fbbf24">'+state.points+'</b> · 境界 '+state.rankName+' · 此世评价 <b>'+ev.g+'</b>（结算倍率 ×'+ev.m+'）</div>'
+    +'<div class="desc" style="margin-top:4px">本世配点：'+ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div></div>'
+    +'<div class="card" style="margin-top:10px"><div style="font-weight:800">☠️ 此世结局（转世结算）</div>'
+    +'<div class="desc" style="margin-top:4px">结算点池 =（可用点 + 功绩一成）× 评价倍率 + 结局加成。转世后本世功绩、境界、职位、功法系列与插件内进度清零，下一世的开局由新配点决定。</div>'
+    +ENDINGS.map(function(e){
+      var ok=state.rankIndex>=e.need;
+      var est=Math.round((state.points+state.earned*0.1)*ev.m)+e.bonus;
+      return '<div class="ladrow"><span style="font-size:19px">'+e.icon+'</span><span style="flex:1"><b>'+e.name+'</b><span class="desc"> · 需 '+RANKS[e.need].name+' · '+e.desc+' 预计点池 '+est+'</span></span>'
+      +(ok?'<button class="pbtn" data-ending="'+e.k+'">'+(rbEnding===e.k?"已选":"选此结局")+'</button>':'<span class="desc">未解锁</span>')+'</div>'}).join("")
+    +(rbEnding?'<button class="pbtn" id="btnRebirthGo" style="margin-top:10px;width:100%">确认转世 · 迎接第 '+(state.life+1)+' 世</button>':'<div class="desc" style="margin-top:6px">先选一个结局，再确认转世。</div>')
+    +'</div>';
+  b.innerHTML=html;
+  Array.prototype.forEach.call(b.querySelectorAll("[data-ending]"),function(el){el.addEventListener("click",function(){rbEnding=el.getAttribute("data-ending");renderRebirth()})});
+  var rg=$("btnRebirthGo");if(rg)rg.addEventListener("click",function(){doRebirth(rbEnding)});
+}
+function doBreakthrough(){
+  if(hasBridge){
+    callNative("breakthrough",{}).then(function(s){state=Object.assign(state,s);render();var ok=$("cultOk");if(ok)ok.textContent="突破成功 —— "+state.rankName+"！"}).catch(function(e){var er=$("hallErr");if(er)er.textContent=e.message});
+  }else{
+    var r=state.rankIndex||0;if(r>=6)return;
+    var cost=state.nextBreakCost;if(state.points<cost){var er2=$("hallErr");if(er2)er2.textContent="轮回点不足：还差 "+(cost-state.points)+" 点";return}
+    state.points-=cost;state.rankIndex=r+1;mockDerive();mockSave();render();
+  }
+}
+function doRebirth(ending){
+  if(!ending)return;
+  if(hasBridge){
+    callNative("rebirth",{ending:ending}).then(function(s){state=Object.assign(state,s);rbEnding=null;rbAlloc=null;playLoad();render();renderRebirth()}).catch(function(e){var er=$("hallErr");if(er)er.textContent=e.message});
+  }else{
+    var e=null;ENDINGS.forEach(function(x){if(x.k===ending)e=x});
+    if(!e||state.rankIndex<e.need)return;
+    var ev=evalOf(state.earned,state.rankIndex,state.postEligibleIndex);
+    state.pool=Math.round((state.points+state.earned*0.1)*ev.m)+e.bonus;
+    state.life=(state.life||1)+1;state.allocPending=true;state.points=0;state.earned=0;
+    state.rankIndex=0;state.postChoice=-1;state.seriesBonus=0;state.lastCultivateDay="";state.lastSalaryDay="";
+    rbEnding=null;rbAlloc=null;mockDerive();mockSave();playLoad();render();renderRebirth();
+  }
+}
+function doAllocate(){
+  if(!rbAlloc)return;
+  var a={};ALLOC_DEFS.forEach(function(d){a[d.k]=rbAlloc[d.k]||0});
+  if(hasBridge){
+    callNative("allocate",{alloc:a}).then(function(s){state=Object.assign(state,s);
+      if(play){play.stones=10+(a.jiashi||0)*500;playSave()}
+      rbOpening=openingText(a);rbAlloc=null;render();renderRebirth();
+    }).catch(function(e){var er=$("hallErr");if(er)er.textContent=e.message});
+  }else{
+    var cost=allocLevels(a)*10;if(cost>state.pool)return;
+    state.alloc=a;state.points=state.pool-cost;state.pool=0;state.allocPending=false;
+    if(play){play.stones=10+(a.jiashi||0)*500;playSave()}
+    rbOpening=openingText(a);rbAlloc=null;mockDerive();mockSave();render();renderRebirth();
+  }
+}
+
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
@@ -1055,7 +1190,8 @@ var SCENE_SPOTS=[
  {room:"room-lecture",icon:"📖",name:"传功堂",day:[33,58],night:[63,58],play:"lecture"},
  {room:"room-forge",icon:"🔨",name:"器峰",day:[29,75],night:[71,65]},
  {room:"room-patrol",icon:"⚖️",name:"执法堂",day:[56,68],night:[38,72],play:"patrol"},
- {room:"room-market",icon:"🏮",name:"山门集市",day:[10,80],night:[60,82]}];
+ {room:"room-market",icon:"🏮",name:"山门集市",day:[10,80],night:[60,82]},
+ {room:"room-rebirth",icon:"🗿",name:"轮回碑",day:[87,84],night:[85,70]}];
 var SECT_FILTER={jian:"hue-rotate(-14deg) saturate(1.06)",fu:"brightness(1.1) sepia(.22) hue-rotate(-8deg)",zhen:"",ti:"sepia(.28) hue-rotate(-18deg) saturate(1.1)",kuilei:"hue-rotate(38deg) saturate(.92)",gui:"hue-rotate(55deg) saturate(1.05) brightness(.94)",mo:"hue-rotate(-38deg) saturate(1.15) brightness(.92)"};
 var FORGE=[
  {icon:"🗡️",name:"青锋剑",grade:0,desc:"入门佩剑，剑身泛青，吹毛断发。"},
@@ -1067,7 +1203,7 @@ var FORGE=[
  {icon:"🪶",name:"鹤羽舟",grade:6,desc:"一羽化舟，载三五人横渡云海，峰主才配领用。"},
  {icon:"🗼",name:"镇山塔",grade:8,desc:"塔落之处，地脉自稳。一品宗门的脸面。"},
  {icon:"👑",name:"圣地道印",grade:10,desc:"圣地之主的印信，印落如天宪，万宗共遵。"}];
-function openRoom(id){SFX.open();cgBars(700);setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0;try{if(!window.__sectRoomOpen){window.__sectRoomOpen=true;history.pushState({sectRoom:1},"")}}catch(e){}}
+function openRoom(id){if(id==="room-rebirth"&&typeof renderRebirth==="function")renderRebirth();SFX.open();cgBars(700);setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0;try{if(!window.__sectRoomOpen){window.__sectRoomOpen=true;history.pushState({sectRoom:1},"")}}catch(e){}}
 function closeRooms(){Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.remove("open")})}
 function closeRoomsUI(){SFX.close();setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);closeRooms();if(window.__sectRoomOpen){window.__sectRoomOpen=false;try{history.back()}catch(e){}}}
 window.addEventListener("popstate",function(){if(window.__sectRoomOpen){window.__sectRoomOpen=false;closeRooms()}});
@@ -1078,6 +1214,7 @@ function sceneIsDay(){
   return state.themeMode==="Light";
 }
 function spotAvail(sp){
+  if(sp.room==="room-rebirth")return !!(state&&state.allocPending);
   if(!sp.play||!play)return false;
   if(sp.play==="lecture")return !play.lectureDone;
   if(sp.play==="spar")return (play.sparN||0)<3;
@@ -1210,38 +1347,29 @@ function renderHall(){
   $("hallSub").textContent=s.name+" · "+s.sect+"一脉 · 「"+s.motto+"」";
   $("skyGrade").textContent=state.gradeIndex>=10?"圣地":state.gradeName+"宗门";
   var pct,expText;
-  if(state.nextThreshold>0){
-    var base=RANKS[state.rankIndex].need;
-    pct=Math.round((state.exp-base)/(state.nextThreshold-base)*100);
-    expText="修为 "+state.exp+" / "+state.nextThreshold+" · "+state.rankName+"期";
-  }else{pct=100;expText="修为 "+state.exp+" · 已至绝巅";}
+  if(state.nextBreakCost>0){
+    pct=Math.max(3,Math.min(100,Math.round((state.points||0)/state.nextBreakCost*100)));
+    expText="轮回点 "+state.points+" · 突破"+RANKS[state.rankIndex+1].name+"需 "+state.nextBreakCost+" 点";
+  }else{pct=100;expText="轮回点 "+state.points+" · 已至绝巅（本世功绩 "+state.exp+"）";}
   $("hallExpText").textContent=expText;
-  $("hallExpBar").style.width=Math.max(3,Math.min(100,pct))+"%";
-  $("skyChips").innerHTML='<span class="sky-chip">身份 <b>'+state.title+'</b></span>'
+  $("hallExpBar").style.width=pct+"%";
+  $("skyChips").innerHTML='<span class="sky-chip">第 <b>'+state.life+'</b> 世</span>'
+    +'<span class="sky-chip">身份 <b>'+state.title+'</b></span>'
     +'<span class="sky-chip">职位 <b>'+(state.postName||"暂无")+'</b></span>'
-    +(state.nextThreshold>0?'<span class="sky-chip">距'+RANKS[state.rankIndex+1].name+" "+(state.nextThreshold-state.exp)+"</span>":"");
+    +(state.allocPending?'<span class="sky-chip" style="color:#fbbf24">🗿 待转世配点（轮回碑）</span>':"");
   var gText,gPct;
   if(state.nextGradeThreshold>0){
     var gBase=GRADES[state.gradeIndex].need;
     gPct=Math.round((state.exp-gBase)/(state.nextGradeThreshold-gBase)*100);
-    gText="宗门品级 "+state.gradeName+" · "+s.names[state.gradeIndex]+"（距 "+GRADES[state.gradeIndex+1].name+"「"+s.names[state.gradeIndex+1]+"」还差 "+(state.nextGradeThreshold-state.exp)+" 修为）";
+    gText="宗门品级 "+state.gradeName+" · "+s.names[state.gradeIndex]+"（距 "+GRADES[state.gradeIndex+1].name+"「"+s.names[state.gradeIndex+1]+"」还差 "+(state.nextGradeThreshold-state.exp)+" 功绩）";
   }else{gPct=100;gText="宗门品级 圣地 · "+s.names[10]+" ——一品之上，万宗来朝。";}
   $("hallGradeText").textContent=gText;
   $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
   $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note;
-  var srcs=[
-    {label:"入门天数",val:state.days*10,note:state.days+" 天 · 每日 +10",color:"var(--accent)"},
-    {label:"导入配置",val:state.profileCount*25,note:state.profileCount+" 份 · 每份 +25",color:"var(--accent2)"},
-    {label:"已装插件",val:state.packCount*20,note:state.packCount+" 个 · 每个 +20",color:"color-mix(in srgb,var(--accent) 45%,#9ca3af)"},
-    {label:"修炼攒下",val:state.expBonus,note:"+"+state.expBonus+" · 修炼与俸禄",color:"#d4af37"}];
-  var srcTot=srcs.reduce(function(a,x){return a+x.val},0);
-  $("hallStats").innerHTML = srcTot>0
-    ? '<div class="srcbar">'+srcs.map(function(x){return x.val>0?'<i style="width:'+(x.val/srcTot*100)+'%;background:'+x.color+'"></i>':""}).join("")+'</div>'
-      +'<div class="srclegend">'+srcs.map(function(x){return '<span><b>'+x.label+' +'+x.val+'</b>（'+x.note+'）</span>'}).join("")+'</div>'
-    : '<div class="desc">修为来源：入门天数（每日 +10）、导入配置（每份 +25）、已装插件（每个 +20）、每日修炼与俸禄——用得越久，家底越厚。</div>';
+  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就（大殿成就殿领取）、🧘 每日修炼、💰 俸禄、演武 / 炼丹 / 奇遇等互动奖励——不再随天数、配置、插件数自动增长。<br>境界靠<b>花轮回点突破</b>，身份随境界晋升；宗门品级与职位资格看<b>本世功绩</b>（累计获得的轮回点，现 '+state.earned+'）。一世终结后去轮回碑结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
   var realmChips=RANKS.map(function(r,i){
     var cls=i<state.rankIndex?"rchip done":(i===state.rankIndex?"rchip cur":"rchip");
-    return '<span class="'+cls+'">'+r.name+" · "+identityAt(r.need).name+'</span>';
+    return '<span class="'+cls+'">'+r.name+" · "+IDENTITIES[Math.min(i,5)].name+'</span>';
   }).join("");
   var idSteps=IDENTITIES.map(function(t,i){
     return stepRow(t, i<state.identityIndex?"done":(i===state.identityIndex?"cur":"lock"), i===state.identityIndex?"当前":"");
@@ -1250,22 +1378,27 @@ function renderHall(){
     return stepRow(t, i===state.postIndex?"cur":(i<=state.postEligibleIndex?"done":"lock"), i===state.postIndex?"在任":(i<=state.postEligibleIndex?"可任":""));
   }).join("");
   $("hallRankList").innerHTML='<div class="rankchips">'+realmChips+'</div>'
-    +'<div style="margin-top:6px">身份阶梯（弟子辈辈分，随修为自动晋升）：</div><div class="trk">'+idSteps+'</div>'
-    +'<div style="margin-top:8px">职位（任职差事，修为解锁后自选，可任低不任高）：</div><div class="trk">'+postSteps+'</div>';
+    +'<div style="margin-top:6px">身份阶梯（弟子辈辈分，随境界晋升）：</div><div class="trk">'+idSteps+'</div>'
+    +'<div style="margin-top:8px">职位（任职差事，功绩解锁后自选，可任低不任高）：</div><div class="trk">'+postSteps+'</div>';
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
-  $("cultDesc").innerHTML="每日修炼：运功一周天，修为 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在山门底部动作坞里。";
+  $("cultDesc").innerHTML="每日修炼：运功一周天，轮回点 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在山门底部动作坞里。";
   var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
   $("btnCultivate").disabled=!!doneToday;
-  $("cultLabel").textContent=doneToday?"今日已修炼":"每日修炼 +"+state.cultGain;
+  $("cultLabel").textContent=doneToday?"今日已修炼":"每日修炼 +"+state.cultGain+" 点";
   var salDone = state.lastSalaryDay && state.today && state.lastSalaryDay===state.today;
   if(state.gradeIndex<=0){
-    $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20）。修为到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36/日、圣地 +40/日。";
+    $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20 点）。功绩到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36 点/日、圣地 +40 点/日。";
     $("btnSalary").disabled=true; $("salaryLabel").textContent="不入流 · 无俸禄";
   }else{
-    $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 修为</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+"）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
+    $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 轮回点</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+" 点）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
     $("btnSalary").disabled=!!salDone;
-    $("salaryLabel").textContent=salDone?"俸禄已领":"俸禄 +"+state.salary;
+    $("salaryLabel").textContent=salDone?"俸禄已领":"俸禄 +"+state.salary+" 点";
+  }
+  var bb=$("btnBreak");
+  if(bb){
+    if(state.rankIndex>=6){bb.disabled=true;bb.textContent="已至大乘绝巅";var bn0=$("breakNote");if(bn0)bn0.textContent="再往上，是成仙路与飞升结局（轮回碑）。"}
+    else{var bc=state.nextBreakCost;bb.disabled=(state.points||0)<bc;bb.textContent="⬆ 突破 "+RANKS[state.rankIndex+1].name+" · "+bc+" 点";var bn1=$("breakNote");if(bn1)bn1.textContent=(state.points||0)<bc?("还差 "+(bc-(state.points||0))+" 点（成就、修炼、俸禄、互动都能攒）"):("当前境界 "+state.rankName+" · 根骨折扣已计入花费")}
   }
   $("hallLadder").innerHTML=ladderHtml(s,state.gradeIndex);
   var chipsHtml='<span class="chip'+(state.postChoice===-1?" on":"")+'" data-post="-1">自动（随修为）</span>';
@@ -1278,16 +1411,16 @@ function renderHall(){
   Array.prototype.forEach.call(document.querySelectorAll("#postChips .chip"),function(el){
     el.addEventListener("click",function(){
       var idx=parseInt(el.getAttribute("data-post"),10);
-      if(idx>=0 && state.exp<POSTS[idx].need){$("hallErr").textContent="修为未到，还当不了"+POSTS[idx].name;return}
+      if(idx>=0 && state.exp<POSTS[idx].need){$("hallErr").textContent="功绩未到，还当不了"+POSTS[idx].name;return}
       doChoosePost(idx);
     });
   });
   $("postNote").textContent = state.postChoice===-2
     ? "当前职位：暂不就任（身份照常晋升；想任职时点上面任意已解锁职位即可）"
     : (state.postIndex<0
-      ? "当前职位：暂无（1100 修为解锁执事起任职；身份与职位是两回事，身份照常随修为晋升）"
+      ? "当前职位：暂无（1100 功绩解锁执事起任职；身份与职位是两回事，身份随境界晋升）"
       : (state.postChoice>=0
-        ? "当前职位："+state.postName+"（自选在任；修为已解锁到 "+POSTS[state.postEligibleIndex].name+"，随时可改）"
+        ? "当前职位："+state.postName+"（自选在任；功绩已解锁到 "+POSTS[state.postEligibleIndex].name+"，随时可改）"
         : "当前职位："+state.postName+"（自动随修为取最高解锁；点上面任意已解锁职位即可改任）"));
   try{
     var prev=JSON.parse(localStorage.getItem("sectPromo2")||"null");
@@ -1431,6 +1564,13 @@ function playLoad(){
   if(!play||typeof play!=="object")play=null;
   var todayStr=state.today||new Date().toISOString().slice(0,10);
   if(!play)play={stones:10,starter:true,fac:{space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0},tomes:[],seriesClaimed:{}};
+  if(state&&state.life){
+    if(play.life==null){play.life=state.life}
+    else if(play.life<state.life){
+      play={stones:10,starter:true,fac:{space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0},tomes:[],seriesClaimed:{}};
+      play.life=state.life;
+    }
+  }
   if(!play.fac)play.fac={space:0,juling:0,garden:0,decor:0,danfang:0,jingshi:0};
   if(play.day!==todayStr){
     play.day=todayStr;
@@ -1462,7 +1602,7 @@ function claimReward(kind,opts,done){
     else if(kind==="lecture")amt=10;else if(kind==="patrol")amt=8;
     else if(kind==="tome_dup")amt=3;else if(kind==="garden")amt=Math.max(0,Math.min(8,opts.amount||0));
     else if(kind==="series"){state.seriesBonus=(state.seriesBonus||0)+2}
-    state.expBonus+=amt;mockDerive();mockSave();done&&done(null);
+    mockGain(amt);mockDerive();mockSave();done&&done(null);
   }
 }
 function caveSvg(){
@@ -1550,16 +1690,15 @@ function facVisual(fc,lvl){
 function renderCheat(){
   var cs=$("cheatStones");if(!cs)return;
   cs.textContent=play?play.stones:0;
-  var base=(state.days||0)*10+(state.profileCount||0)*25+(state.packCount||0)*20;
-  $("cheatExpText").innerHTML="总修为 <b style='color:#fbbf24'>"+state.exp+"</b>（基础 "+base+" ＋ 加成 "+(state.expBonus||0)+"） · "+state.rankName+" · "+state.gradeName+" · "+state.title;
+  $("cheatExpText").innerHTML="本世功绩 <b style='color:#fbbf24'>"+state.earned+"</b> · 可用轮回点 <b style='color:#fbbf24'>"+state.points+"</b> · 第 "+state.life+" 世 · "+state.rankName+" · "+state.gradeName+" · "+state.title;
 }
 function cheatExpSet(v){
   v=Math.max(0,Math.min(999999,v|0));
   if(hasBridge){
-    callNative("cheat",{expBonus:v}).then(function(s){state=Object.assign(state,s);render()}).catch(function(e){var ce=$("cheatErr");if(ce)ce.textContent="改修为失败："+e.message});
-  }else{state.expBonus=v;mockDerive();mockSave();render()}
+    callNative("cheat",{earned:v}).then(function(s){state=Object.assign(state,s);render()}).catch(function(e){var ce=$("cheatErr");if(ce)ce.textContent="改功绩失败："+e.message});
+  }else{state.earned=v;var rr=0;for(var i=0;i<RANKS.length;i++)if(v>=RANKS[i].need)rr=i;state.rankIndex=rr;mockDerive();mockSave();render()}
 }
-function cheatExpAdd(d){cheatExpSet((state.expBonus||0)+d)}
+function cheatExpAdd(d){cheatExpSet((state.earned||0)+d)}
 
 
 /* 熟练六境（法术/神通通用）：初学→小成→精通→大成→圆满→超脱，靠反复施放积累 */
@@ -3162,7 +3301,7 @@ function renderPalaceExtra(){
   var html='<div id="palaceExtra"><div class="card" style="margin-top:10px"><div style="font-weight:800">🏆 成就殿（'+doneN+' / '+ACHS.length+'）</div>'
   +ACHS.map(function(a){
     var done=a.test();var claimed=!!play.achClaimed[a.id];
-    return '<div class="ladrow"><span style="font-size:19px">'+(done?a.icon:"🔒")+'</span><span style="flex:1"><b>'+a.name+'</b><span class="desc"> · '+a.desc+' · 奖 '+a.reward+' 灵石</span></span>'
+    return '<div class="ladrow"><span style="font-size:19px">'+(done?a.icon:"🔒")+'</span><span style="flex:1"><b>'+a.name+'</b><span class="desc"> · '+a.desc+' · 奖 '+a.reward+' 灵石 · 轮回点 '+a.reward+'</span></span>'
     +(claimed?'<span class="desc" style="color:#4ade80">已领取</span>':(done?'<button class="pbtn" data-ach="'+a.id+'">领取</button>':'<span class="desc">未达成</span>'))+'</div>';
   }).join("")+'</div>';
   var cap=2+(state?state.gradeIndex:0);
@@ -3193,7 +3332,8 @@ function renderPalaceExtra(){
   Array.prototype.forEach.call(body.querySelectorAll("[data-ach]"),function(b){b.addEventListener("click",function(){
     var a=null;ACHS.forEach(function(x){if(x.id===b.getAttribute("data-ach"))a=x});
     if(!a||play.achClaimed[a.id]||!a.test())return;
-    play.achClaimed[a.id]=1;play.stones+=a.reward;playSave();renderPalaceExtra();render();
+    play.achClaimed[a.id]=1;play.stones+=a.reward;playSave();
+    grantAchievement("ach-"+a.id,a.reward,function(){renderPalaceExtra();render()});
   })});
   Array.prototype.forEach.call(body.querySelectorAll("[data-job]"),function(b){b.addEventListener("click",function(){
     var parts=b.getAttribute("data-job").split(":");var d=play.disciples[+parts[0]];if(!d)return;
@@ -4135,6 +4275,7 @@ function render(){
     $("view-guide").classList.add("hidden");
     $("view-hall").classList.remove("hidden");
     renderHall();
+    if(state.allocPending&&!window.__rbForced){window.__rbForced=true;setTimeout(function(){openRoom("room-rebirth")},350);}
   }else{
     $("view-hall").classList.add("hidden");
     $("view-guide").classList.remove("hidden");
@@ -4159,15 +4300,16 @@ $("btnJoin").addEventListener("click",function(){
 $("btnCultivate").addEventListener("click",function(){
   $("hallErr").textContent="";$("cultOk").textContent="";
   if(hasBridge){
-    callNative("cultivate",{}).then(function(s){state=Object.assign(state,s);render();$("cultOk").textContent="运功完毕，修为 +"+state.cultGain+"。"})
+    callNative("cultivate",{}).then(function(s){state=Object.assign(state,s);render();$("cultOk").textContent="运功完毕，轮回点 +"+state.cultGain+"。"})
       .catch(function(e){$("hallErr").textContent=e.message});
   }else{
     if(state.lastCultivateDay===state.today){$("hallErr").textContent="今日已修炼，明日再来";return}
     var gain=state.cultGain;
-    state.lastCultivateDay=state.today;state.expBonus+=gain;mockDerive();mockSave();render();
-    $("cultOk").textContent="运功完毕，修为 +"+gain+"。";
+    state.lastCultivateDay=state.today;mockGain(gain);mockDerive();mockSave();render();
+    $("cultOk").textContent="运功完毕，轮回点 +"+gain+"。";
   }
 });
+$("btnBreak").addEventListener("click",function(){doBreakthrough()});
 function doChoosePost(idx){
   $("hallErr").textContent="";
   if(hasBridge){
@@ -4180,13 +4322,13 @@ function doChoosePost(idx){
 $("btnSalary").addEventListener("click",function(){
   $("hallErr").textContent="";$("salaryOk").textContent="";
   if(hasBridge){
-    callNative("salary",{}).then(function(s){state=Object.assign(state,s);render();playLoad();addStones(state.gradeIndex);render();$("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"，灵石 +"+state.gradeIndex+"。"})
+    callNative("salary",{}).then(function(s){state=Object.assign(state,s);render();playLoad();addStones(state.gradeIndex);render();$("salaryOk").textContent="俸禄到账，轮回点 +"+state.salary+"，灵石 +"+state.gradeIndex+"。"})
       .catch(function(e){$("hallErr").textContent=e.message});
   }else{
     if(state.gradeIndex<=0){$("hallErr").textContent="不入流的宗门没有俸禄，先晋品再说";return}
     if(state.lastSalaryDay===state.today){$("hallErr").textContent="今日俸禄已领过";return}
-    state.lastSalaryDay=state.today;state.expBonus+=state.salary;mockDerive();mockSave();render();playLoad();addStones(state.gradeIndex);render();
-    $("salaryOk").textContent="俸禄到账，修为 +"+state.salary+"，灵石 +"+state.gradeIndex+"。";
+    state.lastSalaryDay=state.today;mockGain(state.salary);mockDerive();mockSave();render();playLoad();addStones(state.gradeIndex);render();
+    $("salaryOk").textContent="俸禄到账，轮回点 +"+state.salary+"，灵石 +"+state.gradeIndex+"。";
   }
 });
 $("btnSwitch").addEventListener("click",function(){
@@ -4204,7 +4346,7 @@ $("btnStonesZero").addEventListener("click",function(){if(!play)return;play.ston
 Array.prototype.forEach.call(document.querySelectorAll("[data-exp]"),function(el){el.addEventListener("click",function(){cheatExpAdd(+el.getAttribute("data-exp"))})});
 $("btnExpSet").addEventListener("click",function(){var v=parseInt($("inExp").value,10);if(isNaN(v))return;cheatExpSet(v)});
 $("btnExpZero").addEventListener("click",function(){cheatExpSet(0)});
-$("btnExpTop").addEventListener("click",function(){var base=(state.days||0)*10+(state.profileCount||0)*25+(state.packCount||0)*20;cheatExpSet(Math.max(0,4500-base))});
+$("btnExpTop").addEventListener("click",function(){cheatExpSet(4500)});
 $("btnFlip").addEventListener("click",function(){
   var toDark = state.themeMode==="Light";
   $("hallErr").textContent="";
@@ -4216,7 +4358,7 @@ $("btnFlip").addEventListener("click",function(){
   }
 });
 $("btnLeave").addEventListener("click",function(){
-  if(!confirm("叛出师门？主题恢复默认，入门时间与修为保留（日后回来接着算）。"))return;
+  if(!confirm("叛出师门？主题恢复默认，入门时间与功绩保留（日后回来接着算）。"))return;
   if(hasBridge){
     callNative("leave",{}).then(function(s){state=Object.assign(state,s);document.body.removeAttribute("data-sect");location.reload()})
       .catch(function(e){$("hallErr").textContent=e.message});

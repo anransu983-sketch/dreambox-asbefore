@@ -133,6 +133,17 @@ interface AppSettingsReader {
     val sectRewardLog: Preference<String>
     val sectSeriesClaimed: Preference<String>
     val sectSeriesBonus: Preference<Int>
+    // 轮回加点制（pack v35 起，用户定调「完全按照轮回那种」）：可用轮回点、本世累计功绩、世数、
+    // 转世待分配点池、六维加点（JSON）、本世已发成就台账、已解锁境界下标、旧公式迁移标记、待配点标记
+    val sectPtBalance: Preference<Int>
+    val sectPtEarned: Preference<Int>
+    val sectPtLife: Preference<Int>
+    val sectPtPool: Preference<Int>
+    val sectAlloc: Preference<String>
+    val sectGranted: Preference<String>
+    val sectRankIdx: Preference<Int>
+    val sectPtMigrated: Preference<Boolean>
+    val sectAllocPending: Preference<Boolean>
 }
 
 /** Read/write contract for WebDAV backup settings. */
