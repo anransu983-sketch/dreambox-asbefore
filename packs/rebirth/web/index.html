@@ -2337,6 +2337,128 @@ function zsDoBounty(i){
 var __zsOpen0=openRoom;
 openRoom=function(id){if(id==="room-bounty")renderBounty();__zsOpen0(id);if(id==="room-bounty")rbFxRender("bountyBody")};
 
+/* == v16: 主神空间驻地 —— 五设施五级，跨世保留，效果进机制 == */
+var ZS_BASE_FACS=[
+ {k:"portal",icon:"⛩️",name:"传送阵",fx:function(lv){return "所有裁定 +"+(lv*5)+"（自由行动与悬赏判定）"}},
+ {k:"train",icon:"🏋️",name:"训练场",fx:function(lv){return "主线任务奖励 +"+(lv*12)+"%"}},
+ {k:"hall",icon:"🏪",name:"兑换大厅",fx:function(lv){return "主神兑换价格 -"+(lv*8)+"%"}},
+ {k:"med",icon:"🧘",name:"静修室",fx:function(lv){return "每一世开局灵石 +"+(lv*60)}},
+ {k:"astro",icon:"🔭",name:"占星台",fx:function(lv){return "悬赏赏金 +"+(lv*10)+"%"+(lv>=3?" · 每日悬赏 +1 张":"")}}];
+var ZS_BASE_COSTS=[80,160,260,400,600];
+function zsBaseLoad(){var b=null;try{b=JSON.parse(localStorage.getItem("zsBase")||"null")}catch(e){}if(!b||!b.lv)b={lv:{portal:0,train:0,hall:0,med:0,astro:0},claimLife:0};return b}
+function zsBaseSave(b){try{localStorage.setItem("zsBase",JSON.stringify(b))}catch(e){}}
+function zsBaseLv(k){return zsBaseLoad().lv[k]||0}
+function zsBaseTotal(){var b=zsBaseLoad(),t=0;for(var k in b.lv)t+=b.lv[k];return t}
+function zsScoreBonus(){var z=zsLoad();var buff=(z&&state&&z.life===state.life&&z.buffs)?(z.buffs.score||0):0;return buff+zsBaseLv("portal")*5}
+function zsCheckMission(){
+  if(!hasBridge||!state||!state.sectId||state.allocPending)return;
+  var z=zsCur();if(!z.mission||z.missionPaid)return;
+  var p=zsMissionProg(z);
+  if(p.cur>=p.target){
+    z.missionPaid=true;zsSave(z);
+    var bonus=Math.round(60*z.diff*(1+0.12*zsBaseLv("train")));
+    rbFxSet({tier:"great",title:"主线任务完成",text:zsMissionText(z)+" —— 已达成。主神奖励 +"+bonus+" 点。",pts:bonus});
+    callNative("grant",{id:"mission"+state.life,points:bonus}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()});
+  }
+}
+function zsCostOf(it){return Math.max(10,Math.round(it.cost*(1-0.08*zsBaseLv("hall"))))}
+function zsBuy(k){
+  var it=null;ZS_ITEMS.forEach(function(x){if(x.k===k)it=x});if(!it)return;
+  var z=zsCur();
+  var cost=zsCostOf(it);
+  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
+  if(stones<cost){rbFxSet({tier:"fail",title:"灵石不足",text:"兑换「"+it.name+"」需要 "+cost+" 灵石，你现在有 "+stones+"。",pts:0});renderHub();return}
+  if(it.k==="xiang"&&z.buffs.score){rbFxSet({tier:"meh",title:"已生效",text:"「悟道香」在本世已经生效。",pts:0});renderHub();return}
+  if(it.k==="shield"&&z.buffs.shield){rbFxSet({tier:"meh",title:"已生效",text:"「回春丹」在本世已经生效。",pts:0});renderHub();return}
+  if(it.k==="ju"&&z.buffs.stoneMult>1){rbFxSet({tier:"meh",title:"已生效",text:"「聚宝盆」在本世已经生效。",pts:0});renderHub();return}
+  play.stones-=cost;if(typeof playSave==="function")playSave();
+  if(it.k==="xiang")z.buffs.score=20;
+  if(it.k==="shield")z.buffs.shield=true;
+  if(it.k==="ju")z.buffs.stoneMult=2;
+  zsSave(z);
+  rbFxSet({tier:"great",title:"兑换成功 · "+it.name,text:it.desc+"（本世有效，结算后失效）",pts:it.k==="hub"?80:0});
+  if(it.k==="hub"&&hasBridge){callNative("grant",{id:"amulet"+state.life,points:80}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()})}
+  else renderHub();
+}
+function zsBountyLoad(){
+  var day=(state&&state.today)||"";
+  var b=null;try{b=JSON.parse(localStorage.getItem("zsBounty")||"null")}catch(e){}
+  if(!b||b.day!==day||b.life!==state.life){
+    var seed=0;var s=day+"_"+state.life;for(var i=0;i<s.length;i++)seed=(seed*31+s.charCodeAt(i))>>>0;
+    var count=3+(zsBaseLv("astro")>=3?1:0);
+    var mult=1+0.1*zsBaseLv("astro");
+    var list=[];
+    for(var n=0;n<count;n++){
+      seed=(seed*1103515245+12345)>>>0;var t=ZS_BOUNTY_TYPES[seed%4];
+      seed=(seed*1103515245+12345)>>>0;var li=seed%t.lines.length;
+      seed=(seed*1103515245+12345)>>>0;var pts=Math.round((24+(seed%22))*mult);
+      list.push({type:t.k,li:li,pts:pts,done:false});
+    }
+    b={day:day,life:state.life,list:list};zsBountySave(b);
+  }
+  return b;
+}
+function zsBasePips(lv){var s="";for(var i=0;i<5;i++)s+='<span style="display:inline-block;width:22px;height:7px;border-radius:99px;margin-right:4px;background:'+(i<lv?"linear-gradient(90deg,#38bdf8,#818cf8);box-shadow:0 0 7px rgba(129,140,248,.8)":"rgba(125,211,252,.18)")+'"></span>';return s}
+function renderBase(){
+  var el=$("baseBody");if(!el)return;
+  var b=zsBaseLoad();
+  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
+  el.innerHTML='<div class="simBanner" style="margin:0 0 10px"><img src="scene-night.jpg"><div class="ov"><div class="wl">🏯 我的驻地 · 总等级 '+zsBaseTotal()+'</div><div class="desc" style="color:#cfe4ff">驻地建在主神空间里，转世不毁、世世长存。灵石 '+stones+'</div></div></div>'
+    +ZS_BASE_FACS.map(function(f){
+      var lv=b.lv[f.k]||0;var maxed=lv>=5;var cost=maxed?0:ZS_BASE_COSTS[lv];
+      return '<div class="card holo" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px">'+f.icon+'</span><span style="flex:1"><b style="font-size:16px">'+f.name+'</b> · '+lv+' 级<div style="margin-top:5px">'+zsBasePips(lv)+'</div><div class="desc" style="margin-top:5px">'+(maxed?f.fx(5):("当前："+f.fx(lv)+(lv<5?("　下一级："+f.fx(lv+1)):"")))+'</div></span>'
+      +(maxed?'<span class="desc" style="color:#4ade80">已满级</span>':'<button class="pbtn" data-baseup="'+f.k+'" '+(stones<cost?'disabled style="opacity:.45"':'')+'>升级 · '+cost+' 石</button>')+'</div></div>'}).join("")
+    +'<div class="desc" style="line-height:1.8">灵石来自世界内的事件、集市与洞府经营；驻地等级不会随转世清零——这是你在主神空间里真正属于自己的地方。</div>';
+  Array.prototype.forEach.call(el.querySelectorAll("[data-baseup]"),function(btn){btn.addEventListener("click",function(){zsBaseUp(btn.getAttribute("data-baseup"))})});
+}
+function zsBaseUp(k){
+  var b=zsBaseLoad();var lv=b.lv[k]||0;if(lv>=5)return;
+  var cost=ZS_BASE_COSTS[lv];
+  if(typeof play==="undefined"||!play||(play.stones||0)<cost)return;
+  play.stones-=cost;if(typeof playSave==="function")playSave();
+  b.lv[k]=lv+1;zsBaseSave(b);
+  var f=null;ZS_BASE_FACS.forEach(function(x){if(x.k===k)f=x});
+  rbFxSet({tier:"great",title:"驻地升级 · "+f.name,text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。驻地跨世长存，这一砖一瓦都是你的。",pts:0});
+  renderBase();rbFxRender("baseBody");
+}
+(function zsBuildBaseRoom(){
+  var market=$("room-market");if(!market||$("room-base"))return;
+  var r=market.cloneNode(true);r.id="room-base";
+  r.querySelector(".room-title").textContent="🏯 我的驻地";
+  r.querySelector(".room-sub").textContent="主神空间 · 跨世长存";
+  var bd=r.querySelector(".room-body");bd.id="baseBody";bd.innerHTML="";
+  market.parentNode.insertBefore(r,market.nextSibling);
+  var back=r.querySelector("[data-close]");if(back)back.addEventListener("click",function(){closeRoomsUI()});
+})();
+var __zsOpen1=openRoom;
+openRoom=function(id){if(id==="room-base")renderBase();__zsOpen1(id);if(id==="room-base")rbFxRender("baseBody")};
+var __zsHub2=renderHub;
+renderHub=function(){
+  __zsHub2();
+  var box=$("hubBody");if(!box||!state||!state.sectId||state.allocPending)return;
+  var b=zsBaseLoad();
+  if(b.lv.med>0&&b.claimLife!==state.life){
+    b.claimLife=state.life;zsBaseSave(b);
+    if(typeof addStones==="function")addStones(60*b.lv.med);
+    rbFxSet({tier:"ok",title:"静修室",text:"新一世安顿：静修室送来 "+(60*b.lv.med)+" 灵石。",pts:0});
+  }
+  var zc=$("zsCard");
+  if(zc&&zsBaseLv("hall")>0){
+    Array.prototype.forEach.call(zc.querySelectorAll("[data-zsbuy]"),function(b){
+      var it=null;ZS_ITEMS.forEach(function(x){if(x.k===b.getAttribute("data-zsbuy"))it=x});
+      if(it)b.innerHTML=b.innerHTML.replace(/· \d+ 石/,"· "+zsCostOf(it)+" 石（大厅价）");
+    });
+  }
+  if(!box.querySelector("#baseEntry")){
+    var holder=document.createElement("div");
+    holder.innerHTML='<div class="card holo" id="baseEntry" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🏯</span><span style="flex:1"><b>我的驻地</b> · 设施总等级 '+zsBaseTotal()+'<div class="desc">传送阵 / 训练场 / 兑换大厅 / 静修室 / 占星台——建在空间里，世世长存</div></span><span class="desc">进入 ›</span></div></div>';
+    var card=holder.firstChild;
+    card.addEventListener("click",function(){openRoom("room-base")});
+    var zs=$("zsCard");
+    if(zs&&zs.nextSibling)box.insertBefore(card,zs.nextSibling);else box.appendChild(card);
+  }
+};
+
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
