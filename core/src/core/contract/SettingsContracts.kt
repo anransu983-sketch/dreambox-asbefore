@@ -149,6 +149,10 @@ interface AppSettingsReader {
     val sectLifeLog: Preference<String>
     // 遗产回响已领取台账（逗号分隔的前世世号，防重复结算）
     val sectEchoClaimed: Preference<String>
+    // 本世随机世界/修炼体系（转世配点时按配点加权抽定）与万法归一印记
+    val sectWorldId: Preference<String>
+    val sectSystemId: Preference<String>
+    val sectGuiyi: Preference<Boolean>
 }
 
 /** Read/write contract for WebDAV backup settings. */

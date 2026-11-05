@@ -347,6 +347,55 @@ class PackHostActivity : Activity() {
         return kind to bonus
     }
 
+    private data class WorldDef(val id: String, val minLife: Int, val weight: Int, val systems: List<Pair<String, Int>>)
+
+    /** 转世抽世：按配点加权随机世界与修炼体系（偏科定倾向、世数解锁更深的世界），结果持久化到本世。 */
+    private fun sectRollWorldSystem(s: com.suanran.dreambox.data.store.AppSettingsStore, alloc: JSONObject) {
+        fun a(k: String) = alloc.optInt(k, 0)
+        val life = s.sectPtLife.value
+        val worlds = listOf(
+            WorldDef("cangwu", 1, 10, listOf("ling" to a("linggen"), "jian" to a("wuxing"))),
+            WorldDef("gaoling", 1, 10 + a("linggen") / 10, listOf("ling" to a("linggen"), "jian" to a("wuxing"))),
+            WorldDef("huanggu", 1, 10 + a("gengu") / 10, listOf("ti" to a("gengu"), "xue" to a("xuemai"))),
+            WorldDef("jianzhong", 1, 10 + a("wuxing") / 10, listOf("jian" to a("wuxing"))),
+            WorldDef("dongtian", 1, 10 + a("qiyun") / 10, listOf("ling" to a("linggen"), "ming" to a("tianming") + a("qiyun"))),
+            WorldDef("huangchao", 1, 10 + a("jiashi") / 10, listOf("ling" to a("linggen"), "hongchen" to a("renyuan"))),
+            WorldDef("hongchen", 1, 10 + a("renyuan") / 10, listOf("hongchen" to a("renyuan"), "ming" to a("tianming") + a("qiyun"))),
+            WorldDef("qianji", 1, 10 + a("wuxing") / 20, listOf("qianji" to a("wuxing"), "ti" to a("gengu"))),
+            WorldDef("wanshou", 1, 10 + a("xuemai") / 8, listOf("xue" to a("xuemai"))),
+            WorldDef("minghai", 1, 10 + a("tianming") / 8, listOf("ming" to a("tianming") + a("qiyun"))),
+            WorldDef("guixu", 25, 10, listOf("qianji" to a("wuxing"), "xue" to a("xuemai"))),
+            WorldDef("jiehai", 75, 6 + sectGazeOf(s, alloc) * 4, listOf("ling" to a("linggen"), "ti" to a("gengu")))
+        ).filter { life >= it.minLife }
+        val seed = life * 1000003L + alloc.toString().hashCode().toLong() + s.sectLifeLog.value.length
+        val rnd = kotlin.random.Random(seed)
+        val total = worlds.sumOf { it.weight.coerceAtLeast(1) }
+        var roll = rnd.nextInt(total)
+        var picked = worlds.last()
+        for (w in worlds) { roll -= w.weight.coerceAtLeast(1); if (roll < 0) { picked = w; break } }
+        val stotal = picked.systems.sumOf { 10 + it.second / 10 }
+        var sroll = rnd.nextInt(stotal)
+        var sys = picked.systems.last().first
+        for ((id, affv) in picked.systems) { sroll -= 10 + affv / 10; if (sroll < 0) { sys = id; break } }
+        s.sectWorldId.set(picked.id)
+        s.sectSystemId.set(sys)
+    }
+
+    /** 已修体系集合：碑林里每一世的体系 + 本世正在修的，去重。 */
+    private fun sectSystemsCultivated(s: com.suanran.dreambox.data.store.AppSettingsStore): Set<String> {
+        val set = mutableSetOf<String>()
+        val log = runCatching { org.json.JSONArray(s.sectLifeLog.value.ifBlank { "[]" }) }.getOrDefault(org.json.JSONArray())
+        for (i in 0 until log.length()) {
+            val sys = log.optJSONObject(i)?.optString("system", "") ?: ""
+            if (sys.isNotBlank()) set.add(sys)
+        }
+        if (s.sectSystemId.value.isNotBlank()) set.add(s.sectSystemId.value)
+        return set
+    }
+
+    /** 回响成熟间隔：默认隔两世；廿五世（回响成溪）起隔一世即成熟。 */
+    private fun sectEchoGap(life: Int): Int = if (life >= 25) 1 else 2
+
     /** 天道注视：根骨绝世之世（根骨≥200）每过一世，天道多注视一分；注视满 3 分开启伐天结局。 */
     private fun sectGazeOf(s: com.suanran.dreambox.data.store.AppSettingsStore, currentAlloc: JSONObject): Int {
         var g = if (currentAlloc.optInt("gengu", 0) >= 200) 1 else 0
@@ -479,6 +528,10 @@ class PackHostActivity : Activity() {
             put("openingStones", s.sectOpeningStones.value)
             put("lifeLog", runCatching { org.json.JSONArray(s.sectLifeLog.value.ifBlank { "[]" }) }.getOrDefault(org.json.JSONArray()))
             put("gaze", sectGazeOf(s, sectAllocOf(s)))
+            put("world", s.sectWorldId.value)
+            put("system", s.sectSystemId.value)
+            put("guiyiDone", s.sectGuiyi.value)
+            put("guiyiSystems", org.json.JSONArray(sectSystemsCultivated(s).sorted()))
             put("echoes", org.json.JSONArray().apply {
                 val claimed = s.sectEchoClaimed.value.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
                 val logArr = runCatching { org.json.JSONArray(s.sectLifeLog.value.ifBlank { "[]" }) }.getOrDefault(org.json.JSONArray())
@@ -488,7 +541,7 @@ class PackHostActivity : Activity() {
                     val (kind, bonus) = sectEchoOf(e)
                     val status = when {
                         from in claimed -> "claimed"
-                        from <= s.sectPtLife.value - 2 -> "matured"
+                        from <= s.sectPtLife.value - sectEchoGap(s.sectPtLife.value) -> "matured"
                         else -> "growing"
                     }
                     put(JSONObject().apply {
@@ -496,7 +549,7 @@ class PackHostActivity : Activity() {
                         put("kind", kind)
                         put("bonus", bonus)
                         put("status", status)
-                        put("matureLife", from + 2)
+                        put("matureLife", from + sectEchoGap(s.sectPtLife.value))
                     })
                 }
             })
@@ -507,7 +560,7 @@ class PackHostActivity : Activity() {
                 for (i in 0 until logArr.length()) {
                     val e = logArr.optJSONObject(i) ?: continue
                     val from = e.optInt("life", 0)
-                    if (from !in claimed && from <= s.sectPtLife.value - 2) sum += sectEchoOf(e).second
+                    if (from !in claimed && from <= s.sectPtLife.value - sectEchoGap(s.sectPtLife.value)) sum += sectEchoOf(e).second
                 }
                 sum
             })
@@ -787,8 +840,21 @@ class PackHostActivity : Activity() {
         val endingBonus = when (ending) {
             "fatian" -> {
                 if (rank < 6) throw IllegalStateException("伐天需大乘绝巅")
-                if (sectGazeOf(s, dyingAlloc) < 3) throw IllegalStateException("天道注视未满 3 分，还不到问天的时候")
-                300
+                val gz = sectGazeOf(s, dyingAlloc)
+                if (gz < 3) throw IllegalStateException("天道注视未满 3 分，还不到问天的时候")
+                if (s.sectPtLife.value >= 75 && gz >= 5) 600 else 300
+            }
+            "guiyi" -> {
+                if (rank < 6) throw IllegalStateException("万法归一需大乘绝巅")
+                if (s.sectPtLife.value < 100) throw IllegalStateException("百世未满，还差 ${100 - s.sectPtLife.value} 世")
+                val cultivated = sectSystemsCultivated(s).size
+                if (cultivated < 7) throw IllegalStateException("七大体系未修全，还差 ${7 - cultivated} 门")
+                2000
+            }
+            "chengxian" -> {
+                if (rank < 6) throw IllegalStateException("百世成仙需大乘绝巅")
+                if (s.sectPtLife.value < 100) throw IllegalStateException("百世未满，还差 ${100 - s.sectPtLife.value} 世")
+                1000
             }
             "feisheng" -> { if (rank < 6) throw IllegalStateException("飞升需大乘绝巅"); 150 }
             "zuohua" -> { if (rank < 5) throw IllegalStateException("坐化需炼虚以上"); 80 }
@@ -806,7 +872,7 @@ class PackHostActivity : Activity() {
             for (i in 0 until logArr.length()) {
                 val e = logArr.optJSONObject(i) ?: continue
                 val from = e.optInt("life", 0)
-                if (from !in claimed && from <= dyingLife - 2) {
+                if (from !in claimed && from <= dyingLife - sectEchoGap(dyingLife)) {
                     echoBonus += sectEchoOf(e).second
                     claimed.add(from)
                 }
@@ -815,7 +881,8 @@ class PackHostActivity : Activity() {
         // 血脉（里程碑维度）：每 10 点结算倍率 +2%，上限 +40%；天命：每 10 点多留 1% 功绩化点，上限 30%
         val bloodMult = 1.0 + minOf(0.40, dyingAlloc.optInt("xuemai", 0) * 0.002)
         val fateKeep = earned * minOf(0.30, dyingAlloc.optInt("tianming", 0) * 0.01)
-        val pool = (Math.round((s.sectPtBalance.value + earned * 0.1 + fateKeep) * mult * bloodMult) + endingBonus + echoBonus).toInt()
+        val pool = (Math.round((s.sectPtBalance.value + earned * 0.1 + fateKeep) * mult * bloodMult * (if (s.sectGuiyi.value) 1.1 else 1.0)) + endingBonus + echoBonus).toInt()
+        if (ending == "guiyi") s.sectGuiyi.set(true)
         // 碑林台账：先把这一世记进前世录，再清账
         val log = runCatching { org.json.JSONArray(s.sectLifeLog.value.ifBlank { "[]" }) }.getOrDefault(org.json.JSONArray())
         log.put(JSONObject().apply {
@@ -825,6 +892,8 @@ class PackHostActivity : Activity() {
             put("earned", earned)
             put("pool", pool)
             put("alloc", dyingAlloc)
+            put("world", s.sectWorldId.value)
+            put("system", s.sectSystemId.value)
         })
         s.sectEchoClaimed.set(claimed.joinToString(","))
         s.sectLifeLog.set(log.toString())
@@ -862,6 +931,7 @@ class PackHostActivity : Activity() {
         s.sectPtPool.set(0)
         s.sectAllocPending.set(false)
         s.sectOpeningStones.set(clean.optInt("jiashi", 0) * 50)
+        sectRollWorldSystem(s, clean)
         return sectStateJson()
     }
 

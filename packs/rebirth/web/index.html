@@ -59,17 +59,71 @@ var ENDINGS=[
  {k:"bingjie",icon:"🗡️",name:"兵解",need:2,bonus:50,desc:"自斩此身，真灵遁入轮回。干脆利落，结算加成 +50。"},
  {k:"zuohua",icon:"🪷",name:"坐化",need:5,bonus:80,desc:"洞中坐化，肉身成舍利。圆满收官，结算加成 +80。"},
  {k:"feisheng",icon:"✨",name:"飞升",need:6,bonus:150,desc:"踏碎虚空，白日飞升。此世绝唱，结算加成 +150。"},
- {k:"fatian",icon:"⚡",name:"伐天",need:6,gazeNeed:3,bonus:300,desc:"不飞升、不坐化——提剑问天。需大乘绝巅 + 天道注视满 3 分（绝世根骨之世积下的劫债）。结算加成 +300。"}];
-var ENDING_NAMES={bingjie:"兵解",zuohua:"坐化",feisheng:"飞升",fatian:"伐天"};
+ {k:"fatian",icon:"⚡",name:"伐天",need:6,gazeNeed:3,bonus:300,desc:"不飞升、不坐化——提剑问天。需大乘绝巅 + 天道注视满 3 分（绝世根骨之世积下的劫债）。结算加成 +300；七十五世后且注视满 5 分，加成翻倍 +600。"},
+ {k:"chengxian",icon:"🌈",name:"百世成仙",need:6,lifeNeed:100,bonus:1000,desc:"第一百世的大乘绝巅——百世的书，翻到最后一页。需第 100 世 + 大乘。结算加成 +1000。"},
+ {k:"guiyi",icon:"☯️",name:"万法归一",need:6,lifeNeed:100,systemsNeed:7,bonus:2000,desc:"七大体系修全、百世走满、大乘绝巅——万法归于一法。成后落归一印记，此后每次结算额外 +10%。结算加成 +2000。"}];
+var ENDING_NAMES={bingjie:"兵解",zuohua:"坐化",feisheng:"飞升",fatian:"伐天",chengxian:"百世成仙",guiyi:"万法归一"};
 var TITLES=[[100,"百世终成仙"],[50,"五十世 · 天命在身"],[25,"廿五世 · 轮回老手"],[10,"十世不熄"],[3,"三世轮回客"],[0,"初入轮回"]];
 var ECHO_LINES={"登仙遗泽":"前世飞升时随手留在下界的一道剑意，这一世在你识海里生了根。","威名远播":"茶楼里说书人还在讲你的故事，讲到这一世，听众都换了三茬。","后人香火":"你那一世留下的后人如今香火鼎盛，祠堂里你的牌位擦得最亮。","故人之后":"当年受你接济的放牛娃成了守山长老，见你第一眼就改了口：前辈，请。","天骄余烬":"绝世根骨烧剩的余烬还在——这一世的天才们，都活在你的传说里。","兵解残念":"兵解那一剑的残念不肯散，偶尔会在你梦里替你出剑。","旧世余痕":"旧世的痕迹淡了，但还在：某条山道、某块田埂，都记得你的脚步。"};
-var state={sectId:"",points:0,earned:0,life:1,alloc:{gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0},pool:0,allocPending:false,rankIndex:0,rankName:"炼气",title:"杂役弟子",gradeName:"不入流",postEligibleIndex:-1,evalGrade:"D",evalMult:0.8,lifeLog:[],openingStones:0,seedArgb:0,themeMode:"Dark",echoes:[],echoPending:0,gaze:0,echoClaimed:[]};
-var rbAlloc=null,rbEnding=null,rbOpening="";
+var state={sectId:"",points:0,earned:0,life:1,alloc:{gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0},pool:0,allocPending:false,rankIndex:0,rankName:"炼气",title:"杂役弟子",gradeName:"不入流",postEligibleIndex:-1,evalGrade:"D",evalMult:0.8,lifeLog:[],openingStones:0,seedArgb:0,themeMode:"Dark",echoes:[],echoPending:0,gaze:0,echoClaimed:[],world:"",system:"",guiyiDone:false,guiyiSystems:[]};
+var rbAlloc=null,rbEnding=null,rbOpening="",rbStage=-1;
+var SYSTEMS={
+ling:{name:"灵修",flavor:"引气入体，最正统的一条路。",ranks:["炼气","筑基","金丹","元婴","化神","炼虚","大乘"]},
+ti:{name:"体修",flavor:"不借外物，肉身即是法宝。",ranks:["锻皮","易筋","洗髓","锻骨","金身","不坏","不灭"]},
+jian:{name:"剑修",flavor:"一剑在手，万法退避。",ranks:["剑徒","剑师","剑心","剑宗","剑皇","剑圣","剑仙"]},
+qianji:{name:"千机",flavor:"机关傀儡，万物皆可为兵。",ranks:["匠徒","匠师","机关师","傀儡师","天工","造物","千机主"]},
+ming:{name:"命修",flavor:"观命、改命、窃命——最后逆命。",ranks:["观命","知命","改命","窃命","逆命","命主","伐命"]},
+xue:{name:"万兽",flavor:"血脉返祖，身化万兽之祖。",ranks:["启灵","通智","化形","返祖","血裔","真灵","万兽主"]},
+hongchen:{name:"红尘",flavor:"人间烟火里炼一颗道心。",ranks:["入世","历练","炼心","断尘","忘情","超脱","红尘仙"]}};
+var SYS_ORDER=["ling","ti","jian","qianji","ming","xue","hongchen"];
+var WORLDS={
+cangwu:{name:"苍梧界",flavor:"灵气寻常的小界，胜在安稳。",sys:["ling","jian"]},
+gaoling:{name:"上灵界",flavor:"灵气如潮，修行一日千里。",sys:["ling","jian"]},
+huanggu:{name:"荒古界",flavor:"蛮荒大地，肉身为王。",sys:["ti","xue"]},
+jianzhong:{name:"剑冢界",flavor:"万剑埋骨之地，剑气冲霄。",sys:["jian"]},
+dongtian:{name:"洞天界",flavor:"秘境如雨，机缘遍地。",sys:["ling","ming"]},
+huangchao:{name:"皇朝界",flavor:"世家与皇朝并立，人脉即是资源。",sys:["ling","hongchen"]},
+hongchen:{name:"红尘界",flavor:"人间烟火最盛，心劫也最重。",sys:["hongchen","ming"]},
+qianji:{name:"千机界",flavor:"傀儡与机关之城，万物可化。",sys:["qianji","ti"]},
+wanshou:{name:"万兽界",flavor:"群兽横行，血脉为尊。",sys:["xue"]},
+minghai:{name:"命海界",flavor:"命数如海，沉浮皆是命。",sys:["ming"]},
+guixu:{name:"归墟界",flavor:"万界残骸沉积之所，旧物皆有灵。",sys:["qianji","xue"]},
+jiehai:{name:"劫海界",flavor:"天劫成海，渡者十不存一。",sys:["ling","ti"]}};
+var JOURNEY=[
+{from:1,to:2,name:"初入轮回",theme:"立账",unlock:"轮回账本开启 · 六维配点 · 每世随机落界",line:"一世不成，就把这一世攒成点，留给下一世。"},
+{from:3,to:9,name:"三世轮回客",theme:"回响初生",unlock:"第一道遗产回响成熟 · 碑林开始有故事",line:"前世埋下的人与物，开始在这一世冒头。"},
+{from:10,to:24,name:"十世不熄",theme:"血脉初醒",unlock:"新维度「血脉」 · 真灵之火十世不熄",line:"十世的火种攒在一起，血里开始有光。"},
+{from:25,to:49,name:"回响成溪",theme:"前世成网",unlock:"遗产回响隔一世即成熟 · 深界「归墟」开启抽世",line:"前世不再是零星回声——它们汇成了溪。"},
+{from:50,to:74,name:"天命在身",theme:"命数自握",unlock:"新维度「天命」 · 命海界开启抽世",line:"五十世之后，命数不再是天给的，是自己挣的。"},
+{from:75,to:99,name:"天道死敌",theme:"天劫如雨",unlock:"劫海界开启抽世 · 伐天加成翻倍（注视 ≥5 时 300→600）",line:"当年它唤你蝼蚁，如今它唤你——死敌。"},
+{from:100,to:100,name:"百世终成仙",theme:"百世书成",unlock:"终局「百世成仙」 · 结算加成 +1000",line:"一百世的账，合上最后一页——仙门为你开。"},
+{from:101,to:99999,name:"万法归一",theme:"仙后长路",unlock:"修全七大体系 + 百世 + 大乘 → 终局「万法归一」（+2000），归一印记永久 +10% 结算",line:"万法本是一法。走完这一程的，不再是修士，是道本身。"}];
+function sysName(id){return SYSTEMS[id]?SYSTEMS[id].name:""}
+function sysRank(id,idx){return SYSTEMS[id]?SYSTEMS[id].ranks[Math.min(6,idx||0)]:""}
+function worldName(id){return WORLDS[id]?WORLDS[id].name:""}
+function worldOdds(a,life){
+  function A(k){return a[k]||0}
+  var defs=[["cangwu",1,10],["gaoling",1,10+A("linggen")/10],["huanggu",1,10+A("gengu")/10],["jianzhong",1,10+A("wuxing")/10],["dongtian",1,10+A("qiyun")/10],["huangchao",1,10+A("jiashi")/10],["hongchen",1,10+A("renyuan")/10],["qianji",1,10+A("wuxing")/20],["wanshou",1,10+A("xuemai")/8],["minghai",1,10+A("tianming")/8],["guixu",25,10],["jiehai",75,6+(state.gaze||0)*4]];
+  return defs.filter(function(d){return life>=d[1]}).map(function(d){return{id:d[0],w:Math.max(1,Math.round(d[2]))}});
+}
+function worldOddsText(a){
+  var odds=worldOdds(a,state.life);var tot=odds.reduce(function(n,o){return n+o.w},0);
+  odds.sort(function(x,y){return y.w-x.w});
+  return "命数倾向："+odds.slice(0,3).map(function(o){return worldName(o.id)+" "+Math.round(o.w/tot*100)+"%"}).join(" · ")+"（配点越偏倾向越强，最终落点仍有随机）";
+}
+function bonusOf(e){if(e.k==="fatian")return (state.life>=75&&(state.gaze||0)>=5)?600:300;return e.bonus}
+function lockText(e){
+  if((state.rankIndex||0)<e.need)return "未解锁";
+  if(e.gazeNeed&&(state.gaze||0)<e.gazeNeed)return "注视 "+(state.gaze||0)+"/"+e.gazeNeed;
+  if(e.lifeNeed&&state.life<e.lifeNeed)return "世数 "+state.life+"/"+e.lifeNeed;
+  if(e.systemsNeed&&(state.guiyiSystems||[]).length<e.systemsNeed)return "体系 "+(state.guiyiSystems||[]).length+"/"+e.systemsNeed;
+  return "";
+}
 function titleFor(life){for(var i=0;i<TITLES.length;i++){if(life>=TITLES[i][0])return TITLES[i][1]}return "初入轮回"}
 function nextMsText(){var ns=[3,10,25,50,100];for(var i=0;i<ns.length;i++){if(state.life<ns[i])return ' · 距「'+titleFor(ns[i])+'」还剩 '+(ns[i]-state.life)+' 世'}return ""}
 function gazeText(){var g=state.gaze||0;return g<=0?"天道尚未垂目":(g===1?"天道一瞥":(g===2?"天道凝注":"天道已锁定你"))}
 function echoOf(e){var a=e.alloc||{};var kind=e.ending==="feisheng"?"登仙遗泽":(e.eval==="S"?"威名远播":(a.jiashi>=150?"后人香火":(a.renyuan>=150?"故人之后":(a.gengu>=200?"天骄余烬":(e.ending==="bingjie"?"兵解残念":"旧世余痕")))));var bonus=e.eval==="S"?40:(e.eval==="A"?30:(e.eval==="B"?20:(e.eval==="C"?12:8)));return{kind:kind,bonus:bonus}}
-function estPool(bonus){var a=state.alloc||{};var fk=state.earned*Math.min(0.3,(a.tianming||0)*0.01);var bm=1+Math.min(0.4,(a.xuemai||0)*0.002);return Math.round((state.points+state.earned*0.1+fk)*state.evalMult*bm)+bonus+(state.echoPending||0)}
+function estPool(bonus){var a=state.alloc||{};var fk=state.earned*Math.min(0.3,(a.tianming||0)*0.01);var bm=1+Math.min(0.4,(a.xuemai||0)*0.002);return Math.round((state.points+state.earned*0.1+fk)*state.evalMult*bm*(state.guiyiDone?1.1:1))+bonus+(state.echoPending||0)}
 function callNative(method,options){
   return new Promise(function(resolve,reject){
     if(!hasBridge){reject(new Error("no-bridge"));return}
@@ -89,7 +143,9 @@ function evalOf(earned,rank,postEl){var sc=(earned||0)+rank*300+(postEl+1)*200;i
 function mockDerive(){var ev=evalOf(state.earned,state.rankIndex||0,state.postEligibleIndex==null?-1:state.postEligibleIndex);state.evalGrade=ev.g;state.evalMult=ev.m;state.rankName=RANKS[state.rankIndex||0];
 state.gaze=(state.alloc&&state.alloc.gengu>=200)?1:0;(state.lifeLog||[]).forEach(function(e){if(e.alloc&&e.alloc.gengu>=200)state.gaze++});
 if(!state.echoClaimed)state.echoClaimed=[];
-state.echoes=(state.lifeLog||[]).map(function(e){var ec=echoOf(e);return{fromLife:e.life,kind:ec.kind,bonus:ec.bonus,matureLife:e.life+2,status:state.echoClaimed.indexOf(e.life)>=0?"claimed":(e.life<=state.life-2?"matured":"growing")}});
+var egap=state.life>=25?1:2;
+state.echoes=(state.lifeLog||[]).map(function(e){var ec=echoOf(e);return{fromLife:e.life,kind:ec.kind,bonus:ec.bonus,matureLife:e.life+egap,status:state.echoClaimed.indexOf(e.life)>=0?"claimed":(e.life<=state.life-egap?"matured":"growing")}});
+var gset={};(state.lifeLog||[]).forEach(function(e){if(e.system)gset[e.system]=1});if(state.system)gset[state.system]=1;state.guiyiSystems=Object.keys(gset);
 state.echoPending=state.echoes.reduce(function(n,ec){return n+(ec.status==="matured"?ec.bonus:0)},0)}
 function refreshState(){
   if(hasBridge){return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()}).catch(function(e){$("err").textContent=e.message})}
@@ -119,7 +175,9 @@ function render(){
   html+='<div class="card"><h2>📜 本世 · 第 '+state.life+' 世</h2>'
     +'<div class="desc">境界 <b>'+state.rankName+'</b> · 身份 <b>'+state.title+'</b> · 宗门 <b>'+state.gradeName+'</b><br>'
     +'本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b class="gold">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b>（结算倍率 ×'+state.evalMult+'）</div>'
-    +'<div class="desc" style="margin-top:4px">本世配点：'+ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div><div class="desc" style="margin-top:4px">轮回称号 <b class="gold">'+titleFor(state.life)+'</b>'+nextMsText()+'</div></div>';
+    +'<div class="desc" style="margin-top:4px">本世配点：'+ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div><div class="desc" style="margin-top:4px">轮回称号 <b class="gold">'+titleFor(state.life)+'</b>'+nextMsText()+'</div>'
+    +(state.world?'<div class="desc" style="margin-top:4px">本世世界 <b>'+worldName(state.world)+'</b> · 修炼体系 <b>'+sysName(state.system)+'</b> · 本阶别名 <b>'+sysRank(state.system,state.rankIndex)+'</b></div>':"")
+    +'</div>';
   if(state.allocPending){
     if(!rbAlloc)rbAlloc={gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0,xuemai:0,tianming:0};
     var sum=allocSum(rbAlloc),left=state.pool-sum;
@@ -134,6 +192,7 @@ function render(){
         +'<button class="chipbtn" data-add="'+d.k+':0">清零</button></div>'}).join("")
       +'<div class="desc" style="margin-top:6px">已配 <b id="sumAlloc">'+sum+'</b> 点 · 剩余 <b id="leftAlloc" style="color:'+(left<0?'#f87171':'#4ade80')+'">'+left+'</b> 点 · 开局灵石 <b class="gold" id="stonesAlloc">'+((rbAlloc.jiashi||0)*50)+'</b></div>'
       +'<div class="desc" style="margin-top:6px">🌅 开局预览：<span id="openingPreview">'+openingText(rbAlloc)+'</span></div>'
+      +'<div class="desc" style="margin-top:6px">🌍 <span id="worldOdds">'+worldOddsText(rbAlloc)+'</span></div>'
       +'<button class="pbtn primary" id="btnAllocGo" style="margin-top:10px;width:100%"'+(left<0?" disabled":"")+'>踏入第 '+state.life+' 世</button></div>';
     $("app").innerHTML=html;
     function refreshAllocSummary(){
@@ -142,6 +201,7 @@ function render(){
       var e2=$("leftAlloc");if(e2){e2.textContent=left2;e2.style.color=left2<0?"#f87171":"#4ade80"}
       var e3=$("stonesAlloc");if(e3)e3.textContent=(rbAlloc.jiashi||0)*50;
       var e4=$("openingPreview");if(e4)e4.textContent=openingText(rbAlloc);
+      var e5=$("worldOdds");if(e5)e5.textContent=worldOddsText(rbAlloc);
       var go2=$("btnAllocGo");if(go2)go2.disabled=left2<0;
     }
     Array.prototype.forEach.call(document.querySelectorAll("[data-alloc]"),function(inp){
@@ -162,20 +222,30 @@ function render(){
   }
   if(rbOpening){
     html+='<div class="card"><h2>🌅 新的一世</h2><div class="desc" style="line-height:1.9">'+rbOpening+'</div>'
+      +(state.world?'<div class="desc" style="margin-top:6px;line-height:1.9">🌍 这一世落在 <b>'+worldName(state.world)+'</b>——'+WORLDS[state.world].flavor+' 修 <b>'+sysName(state.system)+'</b>：'+SYSTEMS[state.system].flavor+'<br>本体系境界：'+SYSTEMS[state.system].ranks.join(" → ")+'</div>':"")
       +(state.openingStones>0?'<div class="desc" style="margin-top:6px">开局灵石 <b class="gold">'+state.openingStones+'</b> 已托管：打开「高武门派」即自动到账。</div>':"")
       +'<button class="pbtn" id="btnBack" style="margin-top:10px;width:100%">知道了</button></div>';
     $("app").innerHTML=html;
     $("btnBack").addEventListener("click",function(){rbOpening="";render()});
     return;
   }
+  html+='<div class="card"><h2>📜 百世长卷 · 第 '+state.life+' 世</h2>'
+    +'<div style="background:var(--bg2);border-radius:999px;height:10px;overflow:hidden;margin:6px 0"><div style="height:100%;width:'+Math.min(100,state.life)+'%;background:var(--accent)"></div></div>'
+    +'<div class="desc">走满百世只是中点：终点是把每一世修过的体系融成一法——万法归一。点每一程看它解锁什么。</div>'
+    +JOURNEY.map(function(j,idx){
+      var done=state.life>j.to, cur=state.life>=j.from&&state.life<=j.to;
+      var head='<div class="ladrow" data-stage="'+idx+'" style="cursor:pointer"><span style="font-size:20px">'+(done?"✅":(cur?"🗿":"🔒"))+'</span><span style="flex:1"><b>'+j.name+'</b> <span class="desc">（'+(j.to>=9999?("第 "+j.from+" 世起"):("第 "+j.from+"–"+j.to+" 世"))+' · '+j.theme+'）</span>'+(cur?'<div class="desc" style="color:var(--accent)">—— 你在这一程</div>':"")+'</span><span class="desc">'+(rbStage===idx?"收起":"详情")+'</span></div>';
+      if(rbStage===idx)return head+'<div class="desc" style="padding:2px 0 10px;line-height:1.8">解锁：'+j.unlock+'<br>「'+j.line+'」</div>';
+      return head}).join("")
+    +'</div>';
   html+='<div class="card"><h2>👁️ 天道注视 · '+gazeText()+'</h2><div class="desc">根骨绝世之世（根骨 ≥200）每过一世，天道便多注视你一分，天劫也随世数加重。注视已积 <b>'+(state.gaze||0)+'</b> 分；满 3 分并臻大乘绝巅，结局里就多一条路——不飞升，伐天。</div></div>';
   html+='<div class="card"><h2>☠️ 此世结局（转世结算）</h2>'
     +'<div class="desc">结算点池 =（可用点 + 功绩一成 + 天命留存）× 评价倍率 × 血脉倍率 + 结局加成 + 已成熟回响。转世之后：本世功绩、境界、职位、成就台账与门派包内进度清零重开；世数、碑林与回响留下来。</div>'
     +ENDINGS.map(function(e){
-      var ok=(state.rankIndex||0)>=e.need&&(!e.gazeNeed||(state.gaze||0)>=e.gazeNeed);
-      var est=estPool(e.bonus);
+      var ok=(state.rankIndex||0)>=e.need&&(!e.gazeNeed||(state.gaze||0)>=e.gazeNeed)&&(!e.lifeNeed||state.life>=e.lifeNeed)&&(!e.systemsNeed||(state.guiyiSystems||[]).length>=e.systemsNeed);
+      var est=estPool(bonusOf(e));
       return '<div class="ladrow"><span style="font-size:20px">'+e.icon+'</span><span style="flex:1"><b>'+e.name+'</b><div class="desc">需 '+RANKS[e.need]+' · '+e.desc+' 预计点池 '+est+'</div></span>'
-      +(ok?'<button class="pbtn" data-ending="'+e.k+'">'+(rbEnding===e.k?"已选":"选此结局")+'</button>':'<span class="desc">'+((state.rankIndex||0)<e.need?"未解锁":"注视 "+(state.gaze||0)+"/"+e.gazeNeed)+'</span>')+'</div>'}).join("")
+      +(ok?'<button class="pbtn" data-ending="'+e.k+'">'+(rbEnding===e.k?"已选":"选此结局")+'</button>':'<span class="desc">'+lockText(e)+'</span>')+'</div>'}).join("")
     +(rbEnding?'<button class="pbtn primary" id="btnRebirthGo" style="margin-top:10px;width:100%">确认转世 · 迎接第 '+(state.life+1)+' 世</button>':'<div class="desc" style="margin-top:6px">先选一个结局，再确认转世。</div>')
     +'</div>';
   var echoes=state.echoes||[];
@@ -185,14 +255,19 @@ function render(){
       return '<div class="ladrow"><span style="font-size:20px">🔔</span><span style="flex:1"><b>'+ec.kind+'</b> <span class="desc">（第 '+ec.fromLife+' 世）</span><div class="desc">'+(ECHO_LINES[ec.kind]||"")+'</div></span><span class="desc">'+stTxt+'</span></div>'}).join("")
       :'<div class="desc">前世的痕迹不会消失，只是在时间里慢慢长：收过的弟子、留下的后人、烧剩的余烬——每一世都会生出一道回响，隔两世成熟，成熟后在转世结算时化作点数回来找你。</div>')
     +'</div>';
+  var gs=state.guiyiSystems||[];
+  html+='<div class="card"><h2>☯️ 万法归一（'+gs.length+'/7）</h2>'
+    +'<div class="desc">'+(state.guiyiDone?"归一印记已成：此后每次转世结算额外 +10%。万法归一，你即是道。":"每一世修的体系都刻在真灵里：修全七大体系、走满百世、臻大乘绝巅，结局里便有「万法归一」——百世长卷的最后一页。每一世落在哪个世界、修哪门体系，由那一世的配点加权随机。")+'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'+SYS_ORDER.map(function(id){var has=gs.indexOf(id)>=0;return '<span class="chipbtn" style="'+(has?"border-color:var(--accent);color:var(--text)":"opacity:.55")+'">'+(has?"✅ ":"")+sysName(id)+'</span>'}).join("")+'</div></div>';
   var log=state.lifeLog||[];
   html+='<div class="card"><h2>🪦 前世碑林（'+log.length+' 世）</h2>'
     +(log.length?log.slice().reverse().map(function(en){
-      return '<div class="ladrow"><span style="font-size:20px">🗿</span><span style="flex:1"><b>第 '+en.life+' 世</b><div class="desc">'+(ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 本世功绩 '+en.earned+' · 结算 '+en.pool+' 点</div></span></div>'}).join("")
+      return '<div class="ladrow"><span style="font-size:20px">🗿</span><span style="flex:1"><b>第 '+en.life+' 世</b><div class="desc">'+(ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 本世功绩 '+en.earned+' · 结算 '+en.pool+' 点'+(en.world?' · '+worldName(en.world)+' · '+sysName(en.system):"")+'</div></span></div>'}).join("")
       :(state.life>1?'<div class="desc">碑林自轮回包立碑起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来。</div>'))
     +'</div>';
   $("app").innerHTML=html;
   Array.prototype.forEach.call(document.querySelectorAll("[data-ending]"),function(b){b.addEventListener("click",function(){rbEnding=b.getAttribute("data-ending");render()})});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-stage]"),function(b){b.addEventListener("click",function(){var i=+b.getAttribute("data-stage");rbStage=(rbStage===i?-1:i);render()})});
   var rg=$("btnRebirthGo");if(rg)rg.addEventListener("click",function(){doRebirth(rbEnding)});
 }
 function doRebirth(ending){
@@ -205,12 +280,16 @@ function doRebirth(ending){
     if(!e||(state.rankIndex||0)<e.need)return;
     var ev=evalOf(state.earned,state.rankIndex,state.postEligibleIndex);
     if(e.gazeNeed&&(state.gaze||0)<e.gazeNeed)return;
+    if(e.lifeNeed&&state.life<e.lifeNeed)return;
+    if(e.systemsNeed&&(state.guiyiSystems||[]).length<e.systemsNeed)return;
     if(!state.echoClaimed)state.echoClaimed=[];
-    var eb=0;(state.lifeLog||[]).forEach(function(en){if(state.echoClaimed.indexOf(en.life)<0&&en.life<=state.life-2){eb+=echoOf(en).bonus;state.echoClaimed.push(en.life)}});
+    var egap2=state.life>=25?1:2;
+    var eb=0;(state.lifeLog||[]).forEach(function(en){if(state.echoClaimed.indexOf(en.life)<0&&en.life<=state.life-egap2){eb+=echoOf(en).bonus;state.echoClaimed.push(en.life)}});
     var bm=1+Math.min(0.4,(state.alloc.xuemai||0)*0.002), fk=state.earned*Math.min(0.3,(state.alloc.tianming||0)*0.01);
-    var pool=Math.round((state.points+state.earned*0.1+fk)*ev.m*bm)+e.bonus+eb;
+    var pool=Math.round((state.points+state.earned*0.1+fk)*ev.m*bm*(state.guiyiDone?1.1:1))+bonusOf(e)+eb;
+    if(ending==="guiyi")state.guiyiDone=true;
     if(!state.lifeLog)state.lifeLog=[];
-    state.lifeLog.push({life:state.life,ending:ending,eval:ev.g,earned:state.earned,pool:pool,alloc:Object.assign({},state.alloc)});
+    state.lifeLog.push({life:state.life,ending:ending,eval:ev.g,earned:state.earned,pool:pool,alloc:Object.assign({},state.alloc),world:state.world||"",system:state.system||""});
     state.pool=pool;state.life=(state.life||1)+1;state.allocPending=true;state.points=0;state.earned=0;state.rankIndex=0;
     rbEnding=null;rbAlloc=null;mockDerive();mockSave();render();
   }
@@ -224,6 +303,10 @@ function doAllocate(){
   }else{
     if(allocSum(a)>state.pool){$("err").textContent="点数不够";return}
     state.alloc=a;state.points=state.pool-allocSum(a);state.pool=0;state.allocPending=false;state.openingStones=(a.jiashi||0)*50;
+    (function(){var odds=worldOdds(a,state.life);var seed=state.life*1000003+JSON.stringify(a).length*97+(state.lifeLog||[]).length;function rnd(){seed=(seed*1103515245+12345)%2147483648;return seed/2147483648}
+    var tot=odds.reduce(function(n,o){return n+o.w},0),r=rnd()*tot,pick=odds[odds.length-1];
+    for(var i=0;i<odds.length;i++){r-=odds[i].w;if(r<0){pick=odds[i];break}}
+    var sysList=WORLDS[pick.id].sys;state.world=pick.id;state.system=sysList[Math.floor(rnd()*sysList.length)]||"ling";})();
     rbOpening=openingText(a);rbAlloc=null;mockDerive();mockSave();render();
   }
 }

@@ -147,9 +147,9 @@ class PackStore(context: Context) {
                 id = "rebirth",
                 name = "轮回",
                 summary = "高武门派的转世之所，与门派包共用同一本账：门派里挣的轮回点在这里花。一世终结（兵解/坐化/飞升）按此世评价与结局结算成点池，转世配点是自由填写——想给根骨、悟性、气运、灵根、家世、人缘哪一维加多少自己定，没有等级上限；配点决定下一世的出身、开局灵石与特殊开局，剩下的点带进新一世。前世碑林刻下每一世的结局、评价与结算。需先在高武门派里入门。",
-                version = "3",
+                version = "4",
                 sizeText = "约 125 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/rebirth-pack-v3.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/rebirth-pack-v4.zip",
                 entryClass = "com.suanran.pack.rebirth.RebirthPackEntry",
             ),
             PackDef(

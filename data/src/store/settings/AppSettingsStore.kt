@@ -104,6 +104,9 @@ class AppSettingsStore(externalMmkv: MMKV) : MMKVPreference(externalMmkv = exter
     override val sectOpeningStones by intFlow(0)
     override val sectLifeLog by strFlow("")
     override val sectEchoClaimed by strFlow("")
+    override val sectWorldId by strFlow("")
+    override val sectSystemId by strFlow("")
+    override val sectGuiyi by boolFlow(false)
 
     init { migrateLegacyHomeKeys() }
 
