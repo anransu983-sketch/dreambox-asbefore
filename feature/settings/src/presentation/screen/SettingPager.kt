@@ -333,10 +333,6 @@ private fun SkySettingScene(
         }
     }
     val fallback = timedOut && !imgReady
-    val labelsIn = remember { Animatable(0f) }
-    LaunchedEffect(imgReady, fallback) {
-        if (imgReady || fallback) labelsIn.animateTo(1f, tween(300))
-    }
     var pressedKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(active) { if (!active) pressedKey = null }
     val boost = remember { Animatable(0f) }
@@ -367,10 +363,12 @@ private fun SkySettingScene(
             Box(
                 Modifier.fillMaxSize().graphicsLayer {
                     val t = clock.floatValue
-                    translationX = sin(2.0 * PI * (t / 14f)).toFloat() * size.width * 0.004f
-                    translationY = sin(2.0 * PI * (t / 14f + 0.25f)).toFloat() * size.height * 0.003f
-                    scaleX = 1.04f
-                    scaleY = 1.04f
+                    translationX = sin(2.0 * PI * (t / 11f)).toFloat() * size.width * 0.0035f
+                    translationY = sin(2.0 * PI * (t / 7f)).toFloat() * size.height * 0.0055f
+                    rotationZ = sin(2.0 * PI * (t / 9f)).toFloat() * 0.3f
+                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 13f)).toFloat()
+                    scaleX = breathe
+                    scaleY = breathe
                 },
             ) {
                 SkyBackdropFull(
@@ -443,13 +441,6 @@ private fun SkySettingScene(
                     )
                 }
             }
-            // 页题（heading，底值 0.60，随浮现明暗）
-            SkyGlowLabel(
-                line1 = FlyTxt.Settings.Title,
-                line1Size = 17.sp,
-                modifier =
-                    Modifier.skyCenteredAt(map.at(Offset(0.50f, 0.057f))) { 0.60f * labelsIn.value * caption.value },
-            )
             // 「‹ 首页」：回岛的一条路（另有横滑与系统返回）
             SkyLabelEntry(
                 center = map.at(Offset(0.12f, 0.057f)),
