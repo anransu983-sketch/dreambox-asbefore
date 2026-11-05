@@ -230,7 +230,8 @@ private fun HomeSkyScene(
                     } else {
                         idleHint
                     },
-                latencyMs = ping?.takeIf { isRunning && it > 0 },
+                // 65535 是内核测速失败哨兵、>5000 不算有效延迟（口径同 NodeGroups），别让它冒充延迟
+                latencyMs = ping?.takeIf { isRunning && it in 1..5000 },
                 downText = speed(traffic.download),
                 upText = speed(traffic.upload),
             ),

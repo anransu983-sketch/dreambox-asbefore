@@ -246,12 +246,15 @@ fun SkyIslandScene(
         }
     }
 
-    // 飞行石下「插件」题字：进入首页亮 4 秒，按压时也亮
+    // 全场题字（城堡状态/代理/配置/设置/插件）：进首页或连接状态变化时亮 4 秒，按压时也亮，
+    // 平时隐去、只剩本体光晕指路（用户 2026-11-05 拍板：城堡状态也同此规矩，不常驻）
     var captionOn by remember { mutableStateOf(false) }
-    LaunchedEffect(active) {
+    LaunchedEffect(active, state.connected) {
         if (active) {
             captionOn = true
             delay(4000)
+            captionOn = false
+        } else {
             captionOn = false
         }
     }
@@ -348,6 +351,23 @@ fun SkyIslandScene(
                     Modifier.centeredAt(hitCenter)
                         .size(with(density) { hitDiameterPx.toDp() })
                         .drawBehind {
+                            // 本体光晕：题字隐去时靠它指路，贴着本体呼吸（同浮石口径，只叠光）
+                            val hb = 0.5f + 0.5f * sin(2.0 * PI * (phase + index * 0.25)).toFloat()
+                            val hr = 0.055f * map.iwS
+                            drawCircle(
+                                brush =
+                                    Brush.radialGradient(
+                                        listOf(
+                                            LabelGlow.copy(alpha = (0.06f + 0.07f * hb) * labelsFade),
+                                            Color.Transparent,
+                                        ),
+                                        center = center,
+                                        radius = hr,
+                                    ),
+                                radius = hr,
+                                center = center,
+                                blendMode = BlendMode.Plus,
+                            )
                             val a = bloom
                             if (a > 0.01f) {
                                 val r = size.minDimension * 0.75f
@@ -377,11 +397,17 @@ fun SkyIslandScene(
                         }
                 )
 
+                val capA by
+                    animateFloatAsState(
+                        targetValue = if (captionOn || pressed) 1f else 0f,
+                        animationSpec = tween(if (captionOn || pressed) 300 else 800),
+                        label = "placeCaption",
+                    )
                 // 光字（纯视觉，点它也能跳；读屏只读点击圈）
                 val labelPos = map.at(overrides[dest] ?: place.label)
                 val labelModifier =
                     Modifier.centeredAt(labelPos) {
-                            labelsFade * (if (pressed) 1f else breatheAlpha(phase, index))
+                            labelsFade * capA * (if (pressed) 1f else breatheAlpha(phase, index))
                         }
                         .then(
                             if (debug) {
