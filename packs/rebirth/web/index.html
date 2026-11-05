@@ -1255,6 +1255,7 @@ function rbSteleHtml(){
 function rbBindStele(box){Array.prototype.forEach.call(box.querySelectorAll("[data-life]"),function(b){b.addEventListener("click",function(){var lf=+b.getAttribute("data-life");rbLifeSel=(rbLifeSel===lf?0:lf);if(document.querySelector("#room-rebirth.open"))renderRebirthRoom();if(document.querySelector("#room-hub.open"))renderHub()})})}
 function renderHub(){
   var box=$("hubBody");if(!box)return;
+  var aeF=document.activeElement;if(aeF&&aeF.id==="dynFree")return;
   if(!hasBridge)rbMockDerive();
   if(!state||!state.sectId){
     box.innerHTML='<div class="card"><h2>账本未立</h2><div class="desc">先回山门选一道入门——轮回从第一世开始，每一世的操作都记在这里。</div><button class="pbtn" id="hubGo" style="margin-top:10px;width:100%">回山门</button></div>';
@@ -1415,7 +1416,7 @@ function rbSimApply(sim,srcKey,srcName,opt){
   sim.log.push({h:srcName,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbSimSave(sim);renderHub()}
   if(pts>0){
-    if(hasBridge){callNative("grant",{id:"sim"+state.life+"_"+srcKey,amount:pts}).then(after).catch(function(){after(null)})}
+    if(hasBridge){callNative("grant",{id:"sim"+state.life+"_"+srcKey,points:pts}).then(after).catch(function(){after(null)})}
     else{mockGain(pts);mockDerive();mockSave();after(null)}
   }else after(null);
 }
@@ -1743,7 +1744,7 @@ function rbDynApply(sim,nodeKey,nodeTitle,opt){
   sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
   if(pts>0){
-    if(hasBridge){callNative("grant",{id:"dyn"+state.life+"_"+nodeKey,amount:pts}).then(after).catch(function(){after(null)})}
+    if(hasBridge){callNative("grant",{id:"dyn"+state.life+"_"+nodeKey,points:pts}).then(after).catch(function(){after(null)})}
     else{mockGain(pts);mockDerive();mockSave();after(null)}
   }else after(null);
 }
@@ -1766,6 +1767,161 @@ function rbBindSim(box){
   Array.prototype.forEach.call(box.querySelectorAll("[data-simbreak]"),function(b){b.addEventListener("click",function(){
     callNative("breakthrough",{}).then(function(st){state=Object.assign(state,st);render();renderHub()}).catch(function(){});
   })});
+}
+
+/* == v9: 入账修复（grant 字段 points）+ 自由行动（自己写，意图引擎裁定） == */
+function rbDynApply(sim,nodeKey,nodeTitle,opt){
+  var alloc=state.alloc||{};
+  var dimVal=alloc[opt.dim]||0;
+  var great=dimVal>=150;
+  var pts=Math.round((opt.pts||0)*(great?1.5:1));
+  var text=(great&&opt.great)?opt.great:opt.ok;
+  if(opt.setProf){sim.prof=opt.setProf}
+  if(opt.profExp)sim.profExp=(sim.profExp||0)+opt.profExp;
+  if(opt.flag)sim.flags[opt.flag]=1;
+  if(opt.chain)sim.queue.push(opt.chain);
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
+  sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
+  function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
+  if(pts>0){
+    if(hasBridge){callNative("grant",{id:"dyn"+state.life+"_"+nodeKey,points:pts}).then(after).catch(function(){after(null)})}
+    else{mockGain(pts);mockDerive();mockSave();after(null)}
+  }else after(null);
+}
+var RB_INTENTS=[
+ {k:"heaven",keys:["伐天","逆天","问天","天道","渡劫"],dim:"gengu",name:"问天"},
+ {k:"fight",keys:["打","杀","战","挑战","讨伐","决斗","揍","灭","攻","揍他"],dim:"gengu",name:"出手"},
+ {k:"cult",keys:["闭关","修炼","打坐","炼体","锻体","冲关","苦修","站桩"],dim:"gengu",name:"苦修"},
+ {k:"study",keys:["参悟","读书","研读","学习","请教","拜师","解析","研究","悟","看书"],dim:"wuxing",name:"参悟"},
+ {k:"explore",keys:["探索","探险","寻找","搜","秘境","洞府","遗迹","跳崖","闯","找宝"],dim:"qiyun",name:"探索"},
+ {k:"social",keys:["结交","攀谈","聊天","收徒","教他","帮","救","送礼","宴请","结拜","表白","提亲","交朋友"],dim:"renyuan",name:"结缘"},
+ {k:"trade",keys:["卖","买","摆摊","开店","经商","收购","拍卖","生意"],dim:"jiashi",name:"经营"},
+ {k:"sneak",keys:["偷","抢","盗","赌","潜入","下毒","夜袭"],dim:"qiyun",name:"险招",risky:true},
+ {k:"evade",keys:["逃","躲","藏","避开","隐居","低调","跑路"],dim:"qiyun",name:"藏锋"},
+ {k:"rest",keys:["睡","休息","养伤","喝酒","游历","赏花","钓鱼","回家","散心"],dim:"renyuan",name:"休整"}];
+var RB_PROF_KEYS={"炼丹":"dan","炼器":"qi","画符":"fu","制符":"fu","符":"fu","布阵":"zhen","阵法":"zhen","附魔":"fumo","炼金":"jin","机关":"ji","傀儡":"ji","机械":"ji"};
+var RB_TIER_PRE={great:["事情比所有人预想的还要顺——","这一手惊艳了在场所有人——","天时、地利、人和，你全占了——"],ok:["事情办成了——","一番周折，结果不错——","还算顺利——"],meh:["只办成了一半——","勉强收场——","结果差强人意——"],fail:["事情砸了——","没能如愿——","这一回，命数不在你这边——"]};
+var RB_INTENT_TAIL={heaven:["天色变了一瞬又恢复平静——它听见了。","雷声在远处滚了滚，像是回应。"],fight:["对手倒下时，你的名号又响了几分。","尘埃落定时，站着的还是你。"],cult:["出关时，你的气息沉凝了许多。","这一程功夫，没有白费。"],study:["有些东西，忽然就通了。","你合上书时，眼里的光不一样了。"],explore:["这一趟没有白走。","回来时，你的储物袋沉了不少。"],social:["这份人情，记下了。","缘分这东西，就是这么攒起来的。"],trade:["账本上的数字好看了许多。","这一笔，赚得漂亮。"],sneak:["得手之后，你消失在人群里。","东西到手，心跳半天才平。"],evade:["风头过去，你毫发无伤。","藏得住的人，活得久。"],rest:["身心都松了下来。","难得的闲暇，也是修行。"],craft:["手艺又精进了。","这一行的饭，越吃越香。"],any:["这一页，写进了你的一生。","日子就这样往前走了一格。"]};
+var RB_FAIL_TAIL={fight:"你负了伤，退回去时脚步有些踉跄。",sneak:"事没办成，还差点把自己搭进去。",heaven:"雷声大作，你被震得气血翻涌——天，还不是现在的你能问的。",any:"只留下一声叹息，你把教训记下了。"};
+function rbPickOne(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function rbFreeIntent(text){
+  var pk=Object.keys(RB_PROF_KEYS);
+  for(var i=0;i<pk.length;i++){if(text.indexOf(pk[i])>=0)return{k:"craft",dim:"wuxing",name:"副职业",prof:RB_PROF_KEYS[pk[i]]}}
+  for(var j=0;j<RB_INTENTS.length;j++){var it=RB_INTENTS[j];for(var m=0;m<it.keys.length;m++){if(text.indexOf(it.keys[m])>=0)return it}}
+  var alloc=state.alloc||{};var best="gengu",bv=-1;
+  ["gengu","wuxing","qiyun","linggen","jiashi","renyuan"].forEach(function(d){if((alloc[d]||0)>bv){bv=alloc[d];best=d}});
+  return{k:"any",dim:best,name:"自决"};
+}
+function rbFreeResolve(sim,node,text){
+  var it=rbFreeIntent(text);
+  var alloc=state.alloc||{};
+  var dimVal=alloc[it.dim]||0;
+  var bonus=(node&&node.dim===it.dim)?20:0;
+  if(it.k==="craft"&&it.prof&&sim.prof===it.prof)bonus+=30;
+  var diff=70+sim.prog*6+Math.floor(Math.random()*41)+(sim.flags.hurt?20:0);
+  var score=dimVal+Math.floor(Math.random()*101)+bonus;
+  var base=10+sim.prog*2;
+  var tier,pts;
+  if(score>=diff+60){tier="great";pts=Math.round(base*2)}else if(score>=diff){tier="ok";pts=base}else if(score>=diff-50){tier="meh";pts=Math.max(2,Math.round(base*0.4))}else{tier="fail";pts=0}
+  if(it.risky&&tier==="fail")sim.flags.hurt=1;else if(tier!=="fail"&&sim.flags.hurt)delete sim.flags.hurt;
+  var stones=0,profExp=0;
+  if(it.k==="trade"&&tier!=="fail")stones=tier==="great"?80:(tier==="ok"?45:15);
+  if(it.k==="craft"&&tier!=="fail"){profExp=tier==="great"?30:(tier==="ok"?20:8);if(it.prof&&sim.prof===it.prof){/*本行*/}else if(it.prof){profExp=Math.round(profExp/2)}}
+  var tail=tier==="fail"?(RB_FAIL_TAIL[it.k]||RB_FAIL_TAIL.any):rbPickOne(RB_INTENT_TAIL[it.k]||RB_INTENT_TAIL.any);
+  var narrative="你决定：「"+text+"」"+rbPickOne(RB_TIER_PRE[tier])+tail;
+  return{pts:pts,tier:tier,stones:stones,profExp:profExp,text:narrative};
+}
+function rbFreeHtml(){
+  return '<div style="margin-top:12px;border-top:1px dashed rgba(128,160,140,.35);padding-top:10px">'
+    +'<div class="desc">✍️ <b>自由行动</b>：不想选现成的，就自己写你要做的事——任何事都可以试，成败看这一世的命数与配点。</div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><input id="dynFree" class="rbnum" style="flex:1;text-align:left;width:auto" placeholder="写下你的打算，比如：闭关三年冲关 / 把传承卖个好价 / 收他当徒弟…"><button class="pbtn" id="dynFreeBtn" style="white-space:nowrap">就这么办</button></div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'+["闭关冲关","下山历练","结交同门","摆摊赚钱","探索秘境","挑战强敌","救人结缘","参悟典籍"].map(function(x){return '<button class="rbchip" data-chip="'+x+'">'+x+'</button>'}).join("")+'</div></div>';
+}
+function rbDynFixMakeup(){
+  if(!hasBridge||window.__dynFixed)return;
+  window.__dynFixed=1;
+  try{
+    if(localStorage.getItem("rbDynFixed"+state.life))return;
+    var sim0=rbDynLoad();
+    if(sim0.done&&sim0.log.length){
+      var sum=0;sim0.log.forEach(function(en){var m=/轮回点 \+(\d+)/.exec(en.t);if(m)sum+=+m[1]});
+      localStorage.setItem("rbDynFixed"+state.life,"1");
+      if(sum>0){
+        var pay=Math.min(500,sum);
+        sim0.log.push({h:"补账",t:"人生路此前的奖励没落账，现已补发（轮回点 +"+pay+"）。"});
+        rbDynSave(sim0);
+        callNative("grant",{id:"dynfix"+state.life,points:pay}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){});
+      }
+    }else localStorage.setItem("rbDynFixed"+state.life,"0");
+  }catch(e){}
+}
+function rbSimHtml(){
+  if(!state||!state.sectId||state.allocPending)return "";
+  rbDynFixMakeup();
+  var sim=rbDynLoad();
+  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世（动态）</h2>';
+  html+='<div class="desc">这一世没有固定剧本：事件按你的配点、落界、体系与际遇随机找上门；每一幕除了现成选项，还能<b>自己写</b>要做的事——万千种选择，成败由命数裁定。</div>';
+  if(sim.prof)html+='<div class="desc" style="margin-top:4px">副职业 <b>'+RB_PROFS[sim.prof].icon+' '+RB_PROFS[sim.prof].name+'</b> · 品阶 <b style="color:#fbbf24">'+rbProfRank(sim.profExp)+'</b>（熟练 '+sim.profExp+'）——副职业的事件与订单会优先找你。</div>';
+  if(sim.log.length)html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
+  if(sim.done){
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。在山门自由修行之外，这里还能继续<b>自由行动</b>（每世至多再得 20 次奖励，之后只记事不发点）。想终结这一世，去轮回殿选结局结算。</div>'
+      +rbFreeHtml()
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
+  }else{
+    var node=rbDynPick(sim);
+    if(!node){html+='<div class="desc" style="margin-top:8px">这一世的故事暂告一段落。</div>'}
+    else{
+      var cs=node.profPick?rbProfPickChoices():node.cs;
+      html+='<div class="desc" style="margin-top:10px;line-height:1.85"><b style="color:#fbbf24">'+rbDynText(sim,node.title)+'</b>（第 '+(sim.prog+1)+' 幕）<br>'+rbDynText(sim,node.intro)+'</div>'
+        +cs.map(function(o,i){return '<button class="pbtn" data-sim="'+i+'" style="display:block;width:100%;margin-top:8px;text-align:left">'+o.t+'<span class="desc" style="display:block">'+o.d+'</span></button>'}).join("")
+        +rbFreeHtml();
+    }
+  }
+  if(hasBridge&&state.rankIndex<6&&state.points>=(BREAK_COSTS[state.rankIndex]||9999)){
+    html+='<button class="pbtn" data-simbreak="1" style="margin-top:10px;width:100%">⬆️ 轮回点已够突破下一境（'+BREAK_COSTS[state.rankIndex]+' 点），点此突破</button>';
+  }
+  html+='</div>';
+  return html;
+}
+function rbFreeAct(){
+  var inp=$("dynFree");if(!inp)return;
+  var text=(inp.value||"").trim();if(!text)return;
+  var sim=rbDynLoad();
+  if(sim.done){
+    sim.freeCount=(sim.freeCount||0)+1;
+    var r0=rbFreeResolve(sim,null,text);
+    var pay0=sim.freeCount>20?0:r0.pts;
+    if(r0.stones&&typeof addStones==="function")addStones(r0.stones);
+    if(r0.profExp)sim.profExp=(sim.profExp||0)+r0.profExp;
+    sim.log.push({h:"✍️ 自由行动",t:r0.text+(pay0>0?("（轮回点 +"+pay0+"）"):(sim.freeCount>20?"（本世自由行动的奖励次数已用完）":""))+(r0.stones?("（灵石 +"+r0.stones+"）"):"")+(r0.profExp?("（副职业熟练 +"+r0.profExp+"）"):"")});
+    rbDynSave(sim);
+    if(pay0>0&&hasBridge){callNative("grant",{id:"dynfree"+state.life+"_"+sim.freeCount,points:pay0}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()})}
+    else if(pay0>0){mockGain(pay0);mockDerive();mockSave();renderHub()}
+    else renderHub();
+    return;
+  }
+  var node=rbDynPick(sim);if(!node){renderHub();return}
+  var r=rbFreeResolve(sim,node,text);
+  if(r.stones&&typeof addStones==="function")addStones(r.stones);
+  if(r.profExp)sim.profExp=(sim.profExp||0)+r.profExp;
+  sim.log.push({h:"✍️ "+rbDynText(sim,node.title),t:r.text+(r.pts>0?("（轮回点 +"+r.pts+"）"):"")+(r.stones?("（灵石 +"+r.stones+"）"):"")+(r.profExp?("（副职业熟练 +"+r.profExp+"）"):"")});
+  if(node.profPick){sim.flags.profDecided=1;sim.prog++}else{sim.used.push(node.k);sim.prog++}
+  sim.cur=null;
+  if(sim.prog>=10)sim.done=true;
+  rbDynSave(sim);
+  if(r.pts>0&&hasBridge){callNative("grant",{id:"dynf"+state.life+"_"+node.k,points:r.pts}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()})}
+  else if(r.pts>0){mockGain(r.pts);mockDerive();mockSave();renderHub()}
+  else renderHub();
+}
+function rbBindSim(box){
+  Array.prototype.forEach.call(box.querySelectorAll("[data-sim]"),function(b){b.addEventListener("click",function(){rbSimChoose(+b.getAttribute("data-sim"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-simgo]"),function(b){b.addEventListener("click",function(){openRoom(b.getAttribute("data-simgo"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-simbreak]"),function(b){b.addEventListener("click",function(){
+    callNative("breakthrough",{}).then(function(st){state=Object.assign(state,st);render();renderHub()}).catch(function(){});
+  })});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-chip]"),function(b){b.addEventListener("click",function(){var inp=$("dynFree");if(inp){inp.value=b.getAttribute("data-chip");inp.focus()}})});
+  var fb=$("dynFreeBtn");if(fb)fb.addEventListener("click",rbFreeAct);
+  var fi=$("dynFree");if(fi)fi.addEventListener("keydown",function(ev){if(ev.key==="Enter"){ev.preventDefault();rbFreeAct()}});
 }
 
 function refreshState(){
