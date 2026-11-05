@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -275,6 +276,64 @@ fun SkyIslandScene(
             label = "skyPhase",
         )
 
+
+    // 环境层驱动（灯火/炊烟/云雾/瀑布/航灯，见 SkyAmbientLayer.kt）：
+    // 120s 时钟只在首页走、动画值只在 draw 阶段被读，不触发重组；未连接时灯火只剩零星几点。
+    val ambientClock = remember { mutableFloatStateOf(23f) }
+    LaunchedEffect(active, reduceMotion) {
+        if (active && !reduceMotion) {
+            var last = SystemClock.elapsedRealtime()
+            while (true) {
+                delay(33)
+                val now = SystemClock.elapsedRealtime()
+                ambientClock.floatValue = (ambientClock.floatValue + (now - last) / 1000f) % 120f
+                last = now
+            }
+        }
+    }
+    val lively by
+        animateFloatAsState(if (state.connected) 1f else 0f, tween(5000), label = "skyLively")
+    val bellPulse = remember { Animatable(0f) }
+    val chimePulse = remember { Animatable(0f) }
+    LaunchedEffect(active, state.connected, reduceMotion) {
+        if (active && state.connected && !reduceMotion) {
+            while (true) {
+                delay(kotlin.random.Random.nextLong(40_000, 75_000))
+                bellPulse.snapTo(1f)
+                bellPulse.animateTo(0f, tween(3000, easing = LinearEasing))
+            }
+        }
+    }
+    LaunchedEffect(active, state.connected, reduceMotion) {
+        if (active && state.connected && !reduceMotion) {
+            while (true) {
+                delay(kotlin.random.Random.nextLong(25_000, 50_000))
+                chimePulse.snapTo(0.8f)
+                chimePulse.animateTo(0f, tween(2200, easing = LinearEasing))
+            }
+        }
+    }
+    var farSpec by remember { mutableStateOf(FarSpec(true, 0.09f)) }
+    val farClock = remember { mutableFloatStateOf(-1f) }
+    LaunchedEffect(active, state.connected, reduceMotion) {
+        if (active && state.connected && !reduceMotion) {
+            var fromLeft = true
+            while (true) {
+                delay(kotlin.random.Random.nextLong(20_000, 45_000))
+                fromLeft = !fromLeft
+                farSpec = FarSpec(fromLeft, 0.06f + kotlin.random.Random.nextFloat() * 0.09f)
+                val start = SystemClock.elapsedRealtime()
+                while (true) {
+                    val fp = (SystemClock.elapsedRealtime() - start) / 26_000f
+                    if (fp >= 1f) break
+                    farClock.floatValue = fp
+                    delay(100)
+                }
+                farClock.floatValue = -1f
+            }
+        }
+    }
+
     // debug：拖动后的光字位置（图比例），屏幕左上角实时读数，抄回 skyNightArt
     val overrides = remember { mutableStateMapOf<BottomBarDestination, Offset>() }
     val painter = rememberAsyncImagePainter(request = ImageRequest(LocalContext.current, art.assetUri))
@@ -304,6 +363,18 @@ fun SkyIslandScene(
         val map = remember(w, h, iw, ih) { SkyMap(w, h, iw, ih) }
 
         SkyBackdrop(painter = painter, sat = sat, dusk = dusk)
+
+        // 环境层：灯火渐次亮起、炊烟、云雾横漂、瀑布微光、远空航灯（只叠光与雾）
+        SkyAmbientOverlay(
+            map = map,
+            fade = { labelsFade },
+            t = { ambientClock.floatValue },
+            lively = { lively },
+            bell = { bellPulse.value },
+            chime = { chimePulse.value },
+            far = { if (farClock.floatValue < 0f) 0f else farClock.floatValue },
+            farSpec = { farSpec },
+        )
 
         // 天空垫：点岛顶空天放信号焰（已连接才响应）；无语义，不拦翻页手势
         val padSrc = remember { MutableInteractionSource() }
@@ -636,7 +707,7 @@ private fun breatheAlpha(phase: Float, index: Int): Float =
 // ───────────────────────────── 坐标与手势 ─────────────────────────────
 
 /** 图比例 → 屏幕像素，和 ContentScale.Crop + Alignment.Center 完全同一套算法。 */
-private class SkyMap(w: Float, h: Float, iw: Float, ih: Float) {
+internal class SkyMap(w: Float, h: Float, iw: Float, ih: Float) {
     private val s = max(w / iw, h / ih)
     val iwS = iw * s
     val ihS = ih * s
