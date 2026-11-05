@@ -2173,6 +2173,97 @@ function rbFreeResolve(sim,node,text){
   return{pts:pts,tier:tier,stones:stones,profExp:profExp,text:narrative};
 }
 
+/* == v14: 主神空间视觉层 —— 全息面板 / 星轨长卷 / 世界横幅 == */
+(function(){
+  if(document.getElementById("zsStyle"))return;
+  var st=document.createElement("style");st.id="zsStyle";
+  st.textContent=
+  '.holo{background:linear-gradient(160deg,#0a0f24 0%,#111a3d 55%,#0a0f22 100%)!important;color:#d7e6ff!important;border:1px solid rgba(125,211,252,.35)!important;box-shadow:0 0 24px rgba(56,130,246,.18),inset 0 0 32px rgba(56,130,246,.06)}'
+  +'.holo h2{color:#eaf4ff!important;text-shadow:0 0 12px rgba(125,211,252,.65)}'
+  +'.holo .desc{color:#9db1d8!important}'
+  +'.holo .rbrow{border-bottom-color:rgba(125,211,252,.14)}'
+  +'.holo .rbchip{border-color:rgba(125,211,252,.4);color:#cfe4ff}'
+  +'.holo input.rbnum{background:rgba(10,16,38,.85);color:#eaf4ff;border:1px solid rgba(125,211,252,.4);border-radius:8px}'
+  +'.hbar{height:9px;border-radius:99px;background:rgba(125,211,252,.14);overflow:hidden}'
+  +'.hbar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#818cf8,#e879f9);box-shadow:0 0 10px rgba(129,140,248,.8);transition:width .6s ease}'
+  +'.dimline{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;color:#9db1d8}'
+  +'.dimline .hbar{flex:1}'
+  +'.starmap .rbrow[data-stage]{position:relative;padding-left:28px}'
+  +'.starmap .rbrow[data-stage]::before{content:"";position:absolute;left:6px;top:22px;width:11px;height:11px;border-radius:50%;background:#3b4a6b;box-shadow:0 0 0 3px rgba(125,211,252,.12)}'
+  +'.starmap .rbrow[data-stage]::after{content:"";position:absolute;left:11px;top:36px;bottom:-16px;width:1px;background:linear-gradient(180deg,rgba(125,211,252,.35),rgba(125,211,252,.04))}'
+  +'.starmap .st-done::before{background:#4ade80!important;box-shadow:0 0 10px #4ade80,0 0 0 3px rgba(74,222,128,.15)!important}'
+  +'.starmap .st-cur::before{background:#fbbf24!important;animation:stpulse 1.6s ease-in-out infinite}'
+  +'@keyframes stpulse{0%,100%{box-shadow:0 0 6px #fbbf24,0 0 0 2px rgba(251,191,36,.35)}50%{box-shadow:0 0 16px #fbbf24,0 0 0 6px rgba(251,191,36,.12)}}'
+  +'.epic-gold{border:1px solid rgba(251,191,36,.55)!important;border-radius:12px;padding-left:10px!important;padding-right:10px!important;margin-top:8px;background:linear-gradient(120deg,rgba(251,191,36,.10),rgba(232,121,249,.08));box-shadow:0 0 16px rgba(251,191,36,.18)}'
+  +'.epic-red{border:1px solid rgba(248,113,113,.5)!important;border-radius:12px;padding-left:10px!important;padding-right:10px!important;margin-top:8px;background:linear-gradient(120deg,rgba(248,113,113,.10),rgba(251,191,36,.06));box-shadow:0 0 16px rgba(248,113,113,.16)}'
+  +'.simBanner{position:relative;height:96px;border-radius:12px;overflow:hidden;margin:-4px -4px 10px}'
+  +'.simBanner img{width:100%;height:100%;object-fit:cover;display:block}'
+  +'.simBanner .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,8,20,.05),rgba(5,8,20,.80));display:flex;flex-direction:column;justify-content:flex-end;padding:10px 12px}'
+  +'.simBanner .wl{font-size:17px;font-weight:800;color:#fff;text-shadow:0 0 14px rgba(125,211,252,.9);letter-spacing:2px}'
+  +'.actdots{display:flex;gap:5px;margin-top:6px}'
+  +'.actdots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25)}'
+  +'.actdots i.on{background:#fbbf24;box-shadow:0 0 8px #fbbf24}';
+  document.head.appendChild(st);
+})();
+function holoStatsHtml(){
+  var th=[[1200,"C"],[2500,"B"],[4000,"A"],[6000,"S"]];
+  var e=state.earned||0,prev=0,next=null,nextName="";
+  for(var i=0;i<th.length;i++){if(e<th[i][0]){next=th[i][0];nextName=th[i][1];break}prev=th[i][0]}
+  var line=next?("距 "+nextName+" 评价还差 "+(next-e)+" 功绩"):"已过 S 级评价线";
+  var pct=next?Math.max(2,Math.round((e-prev)/(next-prev)*100)):100;
+  var alloc=state.alloc||{},max=10;
+  RB_DIMS.forEach(function(d){if((alloc[d.k]||0)>max)max=alloc[d.k]});
+  var bars=RB_DIMS.map(function(d){var v=alloc[d.k]||0;return '<div class="dimline"><span style="width:74px">'+d.icon+" "+d.name+'</span><div class="hbar"><i style="width:'+(v?Math.max(3,Math.round(v/max*100)):0)+'%"></i></div><b>'+v+'</b></div>'}).join("");
+  return '<div id="holoStats" style="margin-top:6px"><div class="desc">'+line+'</div><div class="hbar" style="margin-top:6px"><i style="width:'+pct+'%"></i></div>'+bars+'</div>';
+}
+var __zsHall0=renderRebirthRoom;
+renderRebirthRoom=function(){
+  __zsHall0();
+  var box=$("rebirthBody");if(!box||!state||!state.sectId)return;
+  var cards=box.querySelectorAll(".card");
+  Array.prototype.forEach.call(cards,function(c){c.classList.add("holo")});
+  var first=cards[0];
+  if(first&&!first.querySelector("#holoStats")){
+    var h2=first.querySelector("h2");
+    if(h2){var holder=document.createElement("div");holder.innerHTML=holoStatsHtml();h2.parentNode.insertBefore(holder.firstChild,h2.nextSibling)}
+  }
+  Array.prototype.forEach.call(cards,function(c){
+    var h=c.querySelector("h2");if(!h)return;
+    if(h.textContent.indexOf("百世长卷")>=0){
+      c.classList.add("starmap");
+      Array.prototype.forEach.call(c.querySelectorAll("[data-stage]"),function(r){
+        var i=+r.getAttribute("data-stage"),j=RB_JOURNEY[i];if(!j)return;
+        if(state.life>j.to)r.classList.add("st-done");
+        else if(state.life>=j.from&&state.life<=j.to)r.classList.add("st-cur");
+      });
+    }
+    if(h.textContent.indexOf("此世结局")>=0){
+      Array.prototype.forEach.call(c.querySelectorAll(".rbrow"),function(r){
+        if(r.textContent.indexOf("万法归一")>=0)r.classList.add("epic-gold");
+        else if(r.textContent.indexOf("伐天")>=0)r.classList.add("epic-red");
+      });
+    }
+  });
+};
+var __zsHub1=renderHub;
+renderHub=function(){
+  __zsHub1();
+  var box=$("hubBody");if(!box||!state||!state.sectId)return;
+  var cards=box.querySelectorAll(".card");
+  if(cards[1])cards[1].classList.add("holo");
+  var zs=$("zsCard");if(zs)zs.classList.add("holo");
+  Array.prototype.forEach.call(cards,function(c){
+    var h=c.querySelector("h2");if(!h||h.textContent.indexOf("世界任务")<0)return;
+    c.classList.add("holo");
+    if(c.querySelector(".simBanner"))return;
+    var sim=rbDynLoad();
+    var dots="";for(var i=0;i<10;i++)dots+='<i class="'+((sim.done||i<sim.prog)?"on":"")+'"></i>';
+    var holder=document.createElement("div");
+    holder.innerHTML='<div class="simBanner"><img src="scene-night.jpg"><div class="ov"><div class="wl">'+rbWorldName(state.world)+" · "+rbSysName(state.system)+'</div><div class="actdots">'+dots+'</div></div></div>';
+    c.insertBefore(holder.firstChild,c.children[1]||null);
+  });
+};
+
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
