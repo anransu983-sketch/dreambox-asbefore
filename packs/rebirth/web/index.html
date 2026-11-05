@@ -2339,11 +2339,11 @@ openRoom=function(id){if(id==="room-bounty")renderBounty();__zsOpen0(id);if(id==
 
 /* == v16: 主神空间驻地 —— 五设施五级，跨世保留，效果进机制 == */
 var ZS_BASE_FACS=[
- {k:"portal",icon:"⛩️",name:"传送阵",fx:function(lv){return "所有裁定 +"+(lv*5)+"（自由行动与悬赏判定）"}},
- {k:"train",icon:"🏋️",name:"训练场",fx:function(lv){return "主线任务奖励 +"+(lv*12)+"%"}},
- {k:"hall",icon:"🏪",name:"兑换大厅",fx:function(lv){return "主神兑换价格 -"+(lv*8)+"%"}},
- {k:"med",icon:"🧘",name:"静修室",fx:function(lv){return "每一世开局灵石 +"+(lv*60)}},
- {k:"astro",icon:"🔭",name:"占星台",fx:function(lv){return "悬赏赏金 +"+(lv*10)+"%"+(lv>=3?" · 每日悬赏 +1 张":"")}}];
+ {k:"portal",icon:"🌉",name:"界门",fx:function(lv){return "所有裁定 +"+(lv*5)+"（自由行动与悬赏判定）"}},
+ {k:"train",icon:"🏹",name:"校场",fx:function(lv){return "主线任务奖励 +"+(lv*12)+"%"}},
+ {k:"hall",icon:"🧮",name:"账房",fx:function(lv){return "主神兑换价格 -"+(lv*8)+"%"}},
+ {k:"med",icon:"🏠",name:"主宅",fx:function(lv){return "每一世开局灵石 +"+(lv*60)}},
+ {k:"astro",icon:"🗼",name:"瞭望塔",fx:function(lv){return "悬赏赏金 +"+(lv*10)+"%"+(lv>=3?" · 每日悬赏 +1 张":"")}}];
 var ZS_BASE_COSTS=[80,160,260,400,600];
 function zsBaseLoad(){var b=null;try{b=JSON.parse(localStorage.getItem("zsBase")||"null")}catch(e){}if(!b||!b.lv)b={lv:{portal:0,train:0,hall:0,med:0,astro:0},claimLife:0};return b}
 function zsBaseSave(b){try{localStorage.setItem("zsBase",JSON.stringify(b))}catch(e){}}
@@ -2403,12 +2403,12 @@ function renderBase(){
   var el=$("baseBody");if(!el)return;
   var b=zsBaseLoad();
   var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
-  el.innerHTML='<div class="simBanner" style="margin:0 0 10px"><img src="scene-night.jpg"><div class="ov"><div class="wl">🏯 我的驻地 · 总等级 '+zsBaseTotal()+'</div><div class="desc" style="color:#cfe4ff">驻地建在主神空间里，转世不毁、世世长存。灵石 '+stones+'</div></div></div>'
+  el.innerHTML='<div class="simBanner" style="margin:0 0 10px"><img src="scene-night.jpg"><div class="ov"><div class="wl">🏡 我的庄园 · 总等级 '+zsBaseTotal()+'</div><div class="desc" style="color:#cfe4ff">庄园建在主神空间里，转世不毁、世世长存。灵石 '+stones+'</div></div></div>'
     +ZS_BASE_FACS.map(function(f){
       var lv=b.lv[f.k]||0;var maxed=lv>=5;var cost=maxed?0:ZS_BASE_COSTS[lv];
       return '<div class="card holo" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px">'+f.icon+'</span><span style="flex:1"><b style="font-size:16px">'+f.name+'</b> · '+lv+' 级<div style="margin-top:5px">'+zsBasePips(lv)+'</div><div class="desc" style="margin-top:5px">'+(maxed?f.fx(5):("当前："+f.fx(lv)+(lv<5?("　下一级："+f.fx(lv+1)):"")))+'</div></span>'
       +(maxed?'<span class="desc" style="color:#4ade80">已满级</span>':'<button class="pbtn" data-baseup="'+f.k+'" '+(stones<cost?'disabled style="opacity:.45"':'')+'>升级 · '+cost+' 石</button>')+'</div></div>'}).join("")
-    +'<div class="desc" style="line-height:1.8">灵石来自世界内的事件、集市与洞府经营；驻地等级不会随转世清零——这是你在主神空间里真正属于自己的地方。</div>';
+    +'<div class="desc" style="line-height:1.8">灵石来自世界内的事件、集市与洞府经营；庄园等级不会随转世清零——这是你在主神空间里真正属于自己的地方。</div>';
   Array.prototype.forEach.call(el.querySelectorAll("[data-baseup]"),function(btn){btn.addEventListener("click",function(){zsBaseUp(btn.getAttribute("data-baseup"))})});
 }
 function zsBaseUp(k){
@@ -2418,13 +2418,13 @@ function zsBaseUp(k){
   play.stones-=cost;if(typeof playSave==="function")playSave();
   b.lv[k]=lv+1;zsBaseSave(b);
   var f=null;ZS_BASE_FACS.forEach(function(x){if(x.k===k)f=x});
-  rbFxSet({tier:"great",title:"驻地升级 · "+f.name,text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。驻地跨世长存，这一砖一瓦都是你的。",pts:0});
+  rbFxSet({tier:"great",title:"庄园升级 · "+f.name,text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。驻地跨世长存，这一砖一瓦都是你的。",pts:0});
   renderBase();rbFxRender("baseBody");
 }
 (function zsBuildBaseRoom(){
   var market=$("room-market");if(!market||$("room-base"))return;
   var r=market.cloneNode(true);r.id="room-base";
-  r.querySelector(".room-title").textContent="🏯 我的驻地";
+  r.querySelector(".room-title").textContent="🏡 我的庄园";
   r.querySelector(".room-sub").textContent="主神空间 · 跨世长存";
   var bd=r.querySelector(".room-body");bd.id="baseBody";bd.innerHTML="";
   market.parentNode.insertBefore(r,market.nextSibling);
@@ -2440,18 +2440,18 @@ renderHub=function(){
   if(b.lv.med>0&&b.claimLife!==state.life){
     b.claimLife=state.life;zsBaseSave(b);
     if(typeof addStones==="function")addStones(60*b.lv.med);
-    rbFxSet({tier:"ok",title:"静修室",text:"新一世安顿：静修室送来 "+(60*b.lv.med)+" 灵石。",pts:0});
+    rbFxSet({tier:"ok",title:"主宅",text:"新一世安顿：主宅送来 "+(60*b.lv.med)+" 灵石。",pts:0});
   }
   var zc=$("zsCard");
   if(zc&&zsBaseLv("hall")>0){
     Array.prototype.forEach.call(zc.querySelectorAll("[data-zsbuy]"),function(b){
       var it=null;ZS_ITEMS.forEach(function(x){if(x.k===b.getAttribute("data-zsbuy"))it=x});
-      if(it)b.innerHTML=b.innerHTML.replace(/· \d+ 石/,"· "+zsCostOf(it)+" 石（大厅价）");
+      if(it)b.innerHTML=b.innerHTML.replace(/· \d+ 石/,"· "+zsCostOf(it)+" 石（账房价）");
     });
   }
   if(!box.querySelector("#baseEntry")){
     var holder=document.createElement("div");
-    holder.innerHTML='<div class="card holo" id="baseEntry" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🏯</span><span style="flex:1"><b>我的驻地</b> · 设施总等级 '+zsBaseTotal()+'<div class="desc">传送阵 / 训练场 / 兑换大厅 / 静修室 / 占星台——建在空间里，世世长存</div></span><span class="desc">进入 ›</span></div></div>';
+    holder.innerHTML='<div class="card holo" id="baseEntry" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🏯</span><span style="flex:1"><b>我的庄园</b> · 设施总等级 '+zsBaseTotal()+'<div class="desc">传送阵 / 训练场 / 兑换大厅 / 静修室 / 占星台——建在空间里，世世长存</div></span><span class="desc">进入 ›</span></div></div>';
     var card=holder.firstChild;
     card.addEventListener("click",function(){openRoom("room-base")});
     var zs=$("zsCard");
@@ -2467,7 +2467,7 @@ ZS_BASE_COSTS=[30,120,260,400,600];
   st.textContent=
   '.pano{height:432px!important}'
   +'.pano .zs-name{top:auto;bottom:196px}'
-  +'.pano-island{position:absolute;left:0;right:0;bottom:0;height:158px;background:linear-gradient(180deg,rgba(6,10,24,0) 0%,rgba(6,10,24,.38) 34%,rgba(5,8,20,.88) 78%);pointer-events:none}'
+  +'.pano-island{position:absolute;left:0;right:0;bottom:0;height:158px;background:linear-gradient(180deg,rgba(24,44,26,0) 0%,rgba(24,44,26,.42) 34%,rgba(14,30,17,.92) 78%);pointer-events:none}'
   +'.pano-mist{position:absolute;left:0;right:0;bottom:118px;height:44px;background:radial-gradient(ellipse 90% 100% at 50% 100%,rgba(190,220,255,.20),rgba(190,220,255,0) 70%);pointer-events:none}'
   +'.bld{position:absolute;transform:translateX(-50%);background:none;border:none;cursor:pointer;padding:0;z-index:5;text-align:center}'
   +'.bld .bic{display:flex;align-items:center;justify-content:center;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,244,200,.95),rgba(251,191,36,.28) 55%,rgba(10,16,38,.65));border:1px solid rgba(255,220,150,.55);box-shadow:0 0 14px rgba(251,191,36,.35)}'
@@ -2491,8 +2491,6 @@ ZS_BASE_COSTS=[30,120,260,400,600];
   document.head.appendChild(st);
 })();
 var PANO_POS=[{l:"11%",b:66},{l:"30%",b:88},{l:"49%",b:100},{l:"68%",b:88},{l:"87%",b:66}];
-var PANO_NPC_LINES=["上个世界我差点就没回来……还好传送阵够稳。","听说了吗，占星台升到三层，主神每天多挂一张悬赏。","新来的？先把驻地盖起来，那是唯一带得走的东西。","我攒了三世，才把训练场点到四级。","世界里那层身份是借来的，驻地才是自己的。","悬赏榜的寻物最看气运，我每次都空手。","主神从不说话，但结算从没错过一分。","你这世落在哪界？我刚从归墟回来，别问。","兑换大厅盖起来之后，护符便宜多了。","据说有人走满了百世……我是不信的。","别把灵石都花在集市，留着盖驻地。","噩梦难度？拿命换点数，我干过一次。"];
-var __panoNpcIdx=0;
 function panoBldsHtml(){
   var b=zsBaseLoad();
   return ZS_BASE_FACS.map(function(f,i){
@@ -2522,7 +2520,7 @@ function zsPanoUp(k){
   play.stones-=cost;if(typeof playSave==="function")playSave();
   b.lv[k]=lv+1;zsBaseSave(b);
   var f=null;ZS_BASE_FACS.forEach(function(x){if(x.k===k)f=x});
-  rbFxSet({tier:"great",title:"驻地 · "+f.name+" 升起",text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。画里的岛，又长了一分。",pts:0});
+  rbFxSet({tier:"great",title:"庄园 · "+f.name+" 升起",text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。庄园的画里，又长了一分。",pts:0});
   renderHub();
 }
 function panoEnhance(){
@@ -2546,16 +2544,11 @@ function panoEnhance(){
   var island=document.createElement("div");island.className="pano-island";stage.appendChild(island);
   var blds=document.createElement("div");blds.id="panoBlds";blds.innerHTML=panoBldsHtml();stage.appendChild(blds);
   Array.prototype.forEach.call(blds.querySelectorAll("[data-fac]"),function(x){x.addEventListener("click",function(){panoShowPop(x.getAttribute("data-fac"))})});
-  var npc=document.createElement("div");npc.className="pano-npc";npc.id="panoNpc";
-  npc.innerHTML='<div class="pano-bub" id="panoBub">'+PANO_NPC_LINES[__panoNpcIdx%PANO_NPC_LINES.length]+'</div><div class="fig">🥷</div>';
-  npc.addEventListener("click",function(){__panoNpcIdx++;var bb=$("panoBub");if(bb)bb.textContent=PANO_NPC_LINES[__panoNpcIdx%PANO_NPC_LINES.length]});
-  stage.appendChild(npc);
   var pop=document.createElement("div");pop.id="panoPop";pop.className="holo";pop.style.display="none";stage.appendChild(pop);
   if(window.__panoFac)panoShowPop(window.__panoFac);
 }
 var __zsHub3=renderHub;
 renderHub=function(){__zsHub3();panoEnhance()};
-if(!window.__panoNpcTimer){window.__panoNpcTimer=setInterval(function(){var bb=$("panoBub");if(bb){__panoNpcIdx++;bb.textContent=PANO_NPC_LINES[__panoNpcIdx%PANO_NPC_LINES.length]}},7000)}
 
 function refreshState(){
   if(hasBridge){
