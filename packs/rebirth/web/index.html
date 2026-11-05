@@ -2264,6 +2264,79 @@ renderHub=function(){
   });
 };
 
+/* == v15: 世界内去宗门 + 主神悬赏 == */
+var ZS_COVER_HTML='<div class="card"><h2>🪪 此世身份</h2><div class="desc" style="line-height:1.9">你在这一世的掩护，是本地一座小门派里的一个寻常人。经营它能攒灵石、涨副职业熟练；不经营，也丝毫不妨碍主神的任务——轮回者借壳而生，壳不是命。</div>'
+  +[["room-tome","📚","藏经阁","掩护身份的日常 · 读书参悟"],["room-alchemy","🧪","丹堂","炼丹订单 · 副职业炼丹"],["room-lecture","📖","传功堂","讲道与收徒 · 掩护人脉"],["room-forge","🔨","器峰","炼器锻造 · 副职业炼器"],["room-patrol","⚖️","执法堂","巡山执法 · 掩护差事"],["room-cave","🏡","洞府","掩护的住处 · 灵田与休整"]].map(function(r){
+    return '<div class="rbrow" data-room="'+r[0]+'" style="cursor:pointer"><span style="font-size:20px">'+r[1]+'</span><span style="flex:1"><b>'+r[2]+'</b><div class="desc">'+r[3]+'</div></span><span class="desc">进入 ›</span></div>'}).join("")
+  +'</div>';
+var ZS_BOUNTY_TYPES=[
+ {k:"hunt",icon:"🗡️",name:"讨伐悬赏",dim:"gengu",lines:["界外妖物夜啸山林，悬赏讨伐。","凶兽盘踞古道，商旅断绝，主神悬赏清剿。","一名叛逃的轮回者藏在此界，带回他的令牌。"]},
+ {k:"find",icon:"🔮",name:"寻物悬赏",dim:"qiyun",lines:["一枚主神信物坠落此界，寻回者重赏。","上古遗珠沉入寒潭，唯气运所钟者能拾。","走失的界门钥匙，悬赏寻回。"]},
+ {k:"escort",icon:"🛡️",name:"护送悬赏",dim:"renyuan",lines:["护送一队凡人商旅过境，保其周全。","一位故人之后要穿过战区，悬赏护送。","押运灵粮至边城，沿途不太平。"]},
+ {k:"insight",icon:"📜",name:"参悟悬赏",dim:"wuxing",lines:["界壁上有一段残缺天书，参透者得赏。","无字碑林夜放毫光，悬赏解碑。","一位大能坐化前留下棋局，破局者赏。"]}];
+function zsBountySave(b){try{localStorage.setItem("zsBounty",JSON.stringify(b))}catch(e){}}
+function zsBountyLoad(){
+  var day=(state&&state.today)||"";
+  var b=null;try{b=JSON.parse(localStorage.getItem("zsBounty")||"null")}catch(e){}
+  if(!b||b.day!==day||b.life!==state.life){
+    var seed=0;var s=day+"_"+state.life;for(var i=0;i<s.length;i++)seed=(seed*31+s.charCodeAt(i))>>>0;
+    var list=[];
+    for(var n=0;n<3;n++){
+      seed=(seed*1103515245+12345)>>>0;var t=ZS_BOUNTY_TYPES[seed%4];
+      seed=(seed*1103515245+12345)>>>0;var li=seed%t.lines.length;
+      seed=(seed*1103515245+12345)>>>0;var pts=24+(seed%22);
+      list.push({type:t.k,li:li,pts:pts,done:false});
+    }
+    b={day:day,life:state.life,list:list};zsBountySave(b);
+  }
+  return b;
+}
+function zsDimName(k){var n=k;RB_DIMS.forEach(function(d){if(d.k===k)n=d.icon+" "+d.name});return n}
+function renderBounty(){
+  var el=$("bountyBody");if(!el||!state||!state.sectId)return;
+  var b=zsBountyLoad();
+  el.innerHTML='<div class="card holo"><h2>🎯 主神悬赏 · 今日</h2><div class="desc" style="line-height:1.8">主神每日在此界挂三张悬赏，成败看你这一世的强化与命数。赏金计入本世功绩，难度倍率同样生效（当前 ×'+zsPtMult()+'）。</div>'
+    +b.list.map(function(x,i){var t=null;ZS_BOUNTY_TYPES.forEach(function(y){if(y.k===x.type)t=y});
+      return '<div class="rbrow"><span style="font-size:20px">'+t.icon+'</span><span style="flex:1"><b>'+t.name+'</b> · 赏 <b style="color:#fbbf24">'+Math.round(x.pts*zsPtMult())+' 点</b><div class="desc">'+t.lines[x.li]+'（看 '+zsDimName(t.dim)+'）</div></span>'+(x.done?'<span class="desc" style="color:#4ade80">已完成</span>':'<button class="pbtn" data-bounty="'+i+'">接悬赏</button>')+'</div>'}).join("")
+    +'</div>';
+  Array.prototype.forEach.call(el.querySelectorAll("[data-bounty]"),function(btn){btn.addEventListener("click",function(){zsDoBounty(+btn.getAttribute("data-bounty"))})});
+}
+function zsDoBounty(i){
+  var b=zsBountyLoad();var x=b.list[i];if(!x||x.done)return;
+  var t=null;ZS_BOUNTY_TYPES.forEach(function(y){if(y.k===x.type)t=y});
+  var alloc=state.alloc||{};var dv=alloc[t.dim]||0;
+  var z=zsLoad();var zd=(z&&z.life===state.life)?(z.diff||1):1;
+  var score=dv+Math.floor(Math.random()*101)+zsScoreBonus();
+  var diff=110+Math.floor(Math.random()*61)+(zd-1)*25;
+  var pts=0,tier,text;
+  if(score>=diff+60){tier="great";pts=Math.round(x.pts*1.5*zsPtMult());text="干净利落，悬赏目标毫无还手之力。主神加赏。"}
+  else if(score>=diff){tier="ok";pts=Math.round(x.pts*zsPtMult());text="一番周折，悬赏完成了。"}
+  else if(score>=diff-45){tier="meh";pts=Math.round(x.pts*0.4*zsPtMult());text="勉强办成，赏金打了折扣。"}
+  else{tier="fail";text="这张悬赏超出了你这一世的能耐，主神收回了告示。"}
+  x.done=true;zsBountySave(b);
+  rbFxSet({tier:tier,title:t.name,text:text,pts:pts});
+  if(pts>0&&hasBridge){
+    callNative("grant",{id:"bounty"+b.day.replace(/-/g,"")+"_"+i+"_"+state.life,points:pts}).then(function(st){if(st)state=Object.assign(state,st);renderBounty();rbFxRender("bountyBody")}).catch(function(){renderBounty();rbFxRender("bountyBody")});
+  }else{renderBounty();rbFxRender("bountyBody")}
+}
+(function zsBuildRooms(){
+  var market=$("room-market");if(!market||$("room-bounty"))return;
+  var b=market.cloneNode(true);b.id="room-bounty";
+  b.querySelector(".room-title").textContent="🎯 悬赏榜";
+  b.querySelector(".room-sub").textContent="主神告示 · 每日三张";
+  var bb=b.querySelector(".room-body");bb.id="bountyBody";bb.innerHTML="";
+  market.parentNode.insertBefore(b,market.nextSibling);
+  var c=market.cloneNode(true);c.id="room-cover";
+  c.querySelector(".room-title").textContent="🪪 此世身份";
+  c.querySelector(".room-sub").textContent="轮回者的掩护 · 本地门派日常";
+  var cb=c.querySelector(".room-body");cb.id="coverBody";cb.innerHTML=ZS_COVER_HTML;
+  market.parentNode.insertBefore(c,b.nextSibling);
+  [b,c].forEach(function(r){var back=r.querySelector("[data-close]");if(back)back.addEventListener("click",function(){closeRoomsUI()})});
+  Array.prototype.forEach.call(cb.querySelectorAll("[data-room]"),function(r){r.addEventListener("click",function(){openRoom(r.getAttribute("data-room"))})});
+})();
+var __zsOpen0=openRoom;
+openRoom=function(id){if(id==="room-bounty")renderBounty();__zsOpen0(id);if(id==="room-bounty")rbFxRender("bountyBody")};
+
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
@@ -2315,14 +2388,10 @@ function renderPreview(){
 /* —— 天空之城山门页（1.78 / pack v10）：双景可切换、建筑热点进各自房间、每间房布局与互动各异 —— */
 var HALL_ROOMS=["room-lecture","room-spar","room-alchemy","room-forge","room-patrol","room-tome"];
 var SCENE_SPOTS=[
- {room:"room-tome",icon:"📚",name:"藏经阁",day:[15,33],night:[19,25]},
- {room:"room-alchemy",icon:"🧪",name:"丹堂",day:[26,47],night:[76,40],play:"alchemy"},
- {room:"room-spar",icon:"⚔️",name:"演武台",day:[74,53],night:[82,51],play:"spar"},
- {room:"room-cave",icon:"🏡",name:"我的洞府",day:[80,42],night:[24,56],play:"cave"},
- {room:"room-lecture",icon:"📖",name:"传功堂",day:[33,58],night:[63,58],play:"lecture"},
- {room:"room-forge",icon:"🔨",name:"器峰",day:[29,75],night:[71,65]},
- {room:"room-patrol",icon:"⚖️",name:"执法堂",day:[56,68],night:[38,72],play:"patrol"},
+ {room:"room-spar",icon:"⚔️",name:"决斗场",day:[74,53],night:[82,51],play:"spar"},
+ {room:"room-bounty",icon:"🎯",name:"悬赏榜",day:[56,68],night:[38,72]},
  {room:"room-market",icon:"🏮",name:"集市",day:[10,80],night:[60,82]},
+ {room:"room-cover",icon:"🪪",name:"此世身份",day:[80,42],night:[24,56]},
  {room:"room-rebirth",icon:"◉",name:"主神结算",day:[87,84],night:[85,70]}];
 var SECT_FILTER={jian:"hue-rotate(-14deg) saturate(1.06)",fu:"brightness(1.1) sepia(.22) hue-rotate(-8deg)",zhen:"",ti:"sepia(.28) hue-rotate(-18deg) saturate(1.1)",kuilei:"hue-rotate(38deg) saturate(.92)",gui:"hue-rotate(55deg) saturate(1.05) brightness(.94)",mo:"hue-rotate(-38deg) saturate(1.15) brightness(.92)"};
 var FORGE=[
@@ -2514,23 +2583,23 @@ function renderHall(){
     +'<div style="margin-top:8px">职位（任职差事，功绩解锁后自选，可任低不任高）：</div><div class="trk">'+postSteps+'</div>';
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
-  $("cultDesc").innerHTML="每日修炼：运功一周天，轮回点 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在山门底部动作坞里。";
+  $("cultDesc").innerHTML="世界历练：在这一世运功一周天，轮回点 +"+state.cultGain+"（基础 20 + 补给加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在世界底部动作坞里。";
   var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
   $("btnCultivate").disabled=!!doneToday;
-  $("cultLabel").textContent=doneToday?"今日已修炼":"每日修炼 +"+state.cultGain+" 点";
+  $("cultLabel").textContent=doneToday?"今日已历练":"世界历练 +"+state.cultGain+" 点";
   var salDone = state.lastSalaryDay && state.today && state.lastSalaryDay===state.today;
   if(state.gradeIndex<=0){
-    $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20 点）。功绩到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36 点/日、圣地 +40 点/日。";
-    $("btnSalary").disabled=true; $("salaryLabel").textContent="例银 · 暂无";
+    $("hallResText").innerHTML="此世尚无固定补给：世界历练单次 +20 点。功绩攒到 100 起，主神补给与历练加成随之提升，最高 +40 点/日。";
+    $("btnSalary").disabled=true; $("salaryLabel").textContent="补给 · 暂无";
   }else{
-    $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 轮回点</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+" 点）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
+    $("hallResText").innerHTML="主神补给：每日 <b>+"+state.salary+" 轮回点</b>，历练加成 <b>+"+state.gradeIndex+"</b>（单次历练 +"+state.cultGain+" 点）。补给额度随你历世的功绩水涨船高。";
     $("btnSalary").disabled=!!salDone;
-    $("salaryLabel").textContent=salDone?"俸禄已领":"俸禄 +"+state.salary+" 点";
+    $("salaryLabel").textContent=salDone?"补给已领":"补给 +"+state.salary+" 点";
   }
   var bb=$("btnBreak");
   if(bb){
     if(state.rankIndex>=6){bb.disabled=true;bb.textContent="已至大乘绝巅";var bn0=$("breakNote");if(bn0)bn0.textContent="再往上，是成仙路与飞升结局（主神结算）。"}
-    else{var bc=state.nextBreakCost;bb.disabled=(state.points||0)<bc;bb.textContent="⬆ 突破 "+RANKS[state.rankIndex+1].name+" · "+bc+" 点";var bn1=$("breakNote");if(bn1)bn1.textContent=(state.points||0)<bc?("还差 "+(bc-(state.points||0))+" 点（成就、修炼、俸禄、互动都能攒）"):("当前境界 "+state.rankName+" · 根骨折扣已计入花费")}
+    else{var bc=state.nextBreakCost;bb.disabled=(state.points||0)<bc;bb.textContent="⬆ 突破 "+RANKS[state.rankIndex+1].name+" · "+bc+" 点";var bn1=$("breakNote");if(bn1)bn1.textContent=(state.points||0)<bc?("还差 "+(bc-(state.points||0))+" 点（成就、历练、补给、互动都能攒）"):("当前境界 "+state.rankName+" · 根骨折扣已计入花费")}
   }
   $("hallLadder").innerHTML=ladderHtml(s,state.gradeIndex);
   var chipsHtml='<span class="chip'+(state.postChoice===-1?" on":"")+'" data-post="-1">自动（随修为）</span>';
