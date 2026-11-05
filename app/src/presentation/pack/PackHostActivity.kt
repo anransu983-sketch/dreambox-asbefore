@@ -53,6 +53,7 @@ class PackHostActivity : Activity() {
     private var hostBackupAllowed: Boolean = false
     private var hostKernelAllowed: Boolean = false
     private var hostSectAllowed: Boolean = false
+    private var hostRebirthAllowed: Boolean = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,6 +85,10 @@ class PackHostActivity : Activity() {
         hostSectAllowed = runCatching {
             val marker = File(packDir, "pack.json")
             marker.isFile && JSONObject(marker.readText()).optBoolean("hostSect", false)
+        }.getOrDefault(false)
+        hostRebirthAllowed = runCatching {
+            val marker = File(packDir, "pack.json")
+            marker.isFile && JSONObject(marker.readText()).optBoolean("hostRebirth", false)
         }.getOrDefault(false)
         requestPackPermissions()
         dispatcher = loadDispatcher(entryClass)
@@ -252,6 +257,10 @@ class PackHostActivity : Activity() {
                 handleHostSect(callbackId, method, options)
                 return
             }
+            if (pluginId == "HostRebirth") {
+                handleHostRebirth(callbackId, method, options)
+                return
+            }
             val current = dispatcher
             if (current == null) {
                 sendResult(callbackId, success = false, dataJson = null, error = "插件原生代码不可用（$pluginId 未实现）")
@@ -356,7 +365,7 @@ class PackHostActivity : Activity() {
     }
 
     private fun sectBreakCost(rank: Int, gengu: Int): Int =
-        if (rank >= 6) -1 else Math.round(sectBreakCosts[rank] * (1.0 - 0.03 * gengu)).toInt()
+        if (rank >= 6) -1 else Math.round(sectBreakCosts[rank] * (1.0 - minOf(0.5, gengu * 0.003))).toInt()
 
     /** 旧公式最后运行一次：把存量修为换算成本世功绩与已解锁境界，之后旧公式永不启用。 */
     private fun sectMigrateIfNeeded(s: com.suanran.dreambox.data.store.AppSettingsStore) {
@@ -403,7 +412,7 @@ class PackHostActivity : Activity() {
         // 身份随境界晋升；上一世配点里的家世给新一世一个出身下限（嫡系不至沦为杂役）
         var identity = minOf(rank, 5)
         val jiashi = alloc.optInt("jiashi", 0)
-        val identityFloor = when { jiashi >= 8 -> 2; jiashi >= 5 -> 1; else -> 0 }
+        val identityFloor = when { jiashi >= 300 -> 2; jiashi >= 150 -> 1; else -> 0 }
         if (identity < identityFloor) identity = identityFloor
         // 职位独立一轨：choice=-1 自动（取最高解锁）、-2 不就任、0..5 自选职位下标
         var choice = s.sectPostChoice.value
@@ -438,6 +447,8 @@ class PackHostActivity : Activity() {
             put("alloc", alloc)
             put("pool", s.sectPtPool.value)
             put("allocPending", s.sectAllocPending.value)
+            put("openingStones", s.sectOpeningStones.value)
+            put("lifeLog", runCatching { org.json.JSONArray(s.sectLifeLog.value.ifBlank { "[]" }) }.getOrDefault(org.json.JSONArray()))
             put("rankIndex", rank)
             put("rankName", sectRankNames[rank])
             put("identityIndex", identity)
@@ -679,55 +690,11 @@ class PackHostActivity : Activity() {
                         applySectRankLayout(rank + 1)
                         sectStateJson()
                     }
-                    "rebirth" -> {
-                        // 一世终结与结算：评价档位×倍率作用于（余额 + 功绩一成），加结局加成，得转世点池；
-                        // 本世账目（功绩/台账/境界/职位/系列）就此清零，入待配点阶段。
-                        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派")
-                        sectMigrateIfNeeded(s)
-                        val ending = options.optString("ending")
-                        val rank = s.sectRankIdx.value.coerceIn(0, 6)
-                        val endingBonus = when (ending) {
-                            "feisheng" -> { if (rank < 6) throw IllegalStateException("飞升需大乘绝巅"); 150 }
-                            "zuohua" -> { if (rank < 5) throw IllegalStateException("坐化需炼虚以上"); 80 }
-                            "bingjie" -> { if (rank < 2) throw IllegalStateException("兵解需金丹以上"); 50 }
-                            else -> throw IllegalArgumentException("未知结局 $ending")
-                        }
-                        val earned = s.sectPtEarned.value
-                        val (_, mult) = sectEvalOf(earned, rank, sectPostEligibleOf(earned))
-                        val pool = (Math.round((s.sectPtBalance.value + earned * 0.1) * mult) + endingBonus).toInt()
-                        s.sectPtLife.set(s.sectPtLife.value + 1)
-                        s.sectPtPool.set(pool)
-                        s.sectAllocPending.set(true)
-                        s.sectPtBalance.set(0)
-                        s.sectPtEarned.set(0)
-                        s.sectGranted.set("")
-                        s.sectRankIdx.set(0)
-                        s.sectPostChoice.set(-1)
-                        s.sectLastCultivateDay.set("")
-                        s.sectLastSalaryDay.set("")
-                        s.sectRewardLog.set("")
-                        s.sectSeriesClaimed.set("")
-                        s.sectSeriesBonus.set(0)
-                        applySectRankLayout(0)
-                        sectStateJson()
-                    }
-                    "allocate" -> {
-                        // 转世配点：六维每级 10 点、单维 0..10；配完剩下的点池转入新一世余额
-                        if (!s.sectAllocPending.value) throw IllegalStateException("当前不在转世配点阶段")
-                        val a = options.optJSONObject("alloc") ?: throw IllegalArgumentException("缺 alloc")
-                        val clean = JSONObject()
-                        var levels = 0
-                        for (k in sectAllocKeys) {
-                            val v = a.optInt(k, 0).coerceIn(0, 10)
-                            clean.put(k, v)
-                            levels += v
-                        }
-                        val cost = levels * 10
-                        if (cost > s.sectPtPool.value) throw IllegalStateException("点数不够：点池 ${s.sectPtPool.value}，这套配点要 $cost")
-                        s.sectAlloc.set(clean.toString())
-                        s.sectPtBalance.set(s.sectPtPool.value - cost)
-                        s.sectPtPool.set(0)
-                        s.sectAllocPending.set(false)
+                    "rebirth" -> sectDoRebirth(s, options.optString("ending"))
+                    "allocate" -> sectDoAllocate(s, options.optJSONObject("alloc"))
+                    "claimOpening" -> {
+                        // 轮回包配点时托管的开局灵石，门派包领取后清零（一世一次）
+                        s.sectOpeningStones.set(0)
                         sectStateJson()
                     }
                     "leave" -> {
@@ -745,6 +712,95 @@ class PackHostActivity : Activity() {
             }.onFailure { e ->
                 AppLogBuffer.forceAdd(Log.ERROR, "Pack", "HostSect.$method 失败\n" + Log.getStackTraceString(e))
                 sendResult(callbackId, success = false, dataJson = null, error = e.message ?: "门派桥失败")
+            }
+        }
+    }
+
+    /** 转世结算（HostSect 与 HostRebirth 共用）：评价×结局加成得点池，本世账目清零，入待配点阶段。 */
+    private fun sectDoRebirth(s: com.suanran.dreambox.data.store.AppSettingsStore, ending: String): String {
+        if (s.sectPathId.value.isBlank()) throw IllegalStateException("先选一个流派")
+        sectMigrateIfNeeded(s)
+        val rank = s.sectRankIdx.value.coerceIn(0, 6)
+        val endingBonus = when (ending) {
+            "feisheng" -> { if (rank < 6) throw IllegalStateException("飞升需大乘绝巅"); 150 }
+            "zuohua" -> { if (rank < 5) throw IllegalStateException("坐化需炼虚以上"); 80 }
+            "bingjie" -> { if (rank < 2) throw IllegalStateException("兵解需金丹以上"); 50 }
+            else -> throw IllegalArgumentException("未知结局 $ending")
+        }
+        val earned = s.sectPtEarned.value
+        val (evalGrade, mult) = sectEvalOf(earned, rank, sectPostEligibleOf(earned))
+        val pool = (Math.round((s.sectPtBalance.value + earned * 0.1) * mult) + endingBonus).toInt()
+        // 碑林台账：先把这一世记进前世录，再清账
+        val log = runCatching { org.json.JSONArray(s.sectLifeLog.value.ifBlank { "[]" }) }.getOrDefault(org.json.JSONArray())
+        log.put(JSONObject().apply {
+            put("life", s.sectPtLife.value)
+            put("ending", ending)
+            put("eval", evalGrade)
+            put("earned", earned)
+            put("pool", pool)
+        })
+        s.sectLifeLog.set(log.toString())
+        s.sectPtLife.set(s.sectPtLife.value + 1)
+        s.sectPtPool.set(pool)
+        s.sectAllocPending.set(true)
+        s.sectPtBalance.set(0)
+        s.sectPtEarned.set(0)
+        s.sectGranted.set("")
+        s.sectRankIdx.set(0)
+        s.sectPostChoice.set(-1)
+        s.sectLastCultivateDay.set("")
+        s.sectLastSalaryDay.set("")
+        s.sectRewardLog.set("")
+        s.sectSeriesClaimed.set("")
+        s.sectSeriesBonus.set(0)
+        applySectRankLayout(0)
+        return sectStateJson()
+    }
+
+    /** 转世配点（自由数值制）：六维直接填点数、总和不超点池；剩下的转入新一世余额，家世折开局灵石托管。 */
+    private fun sectDoAllocate(s: com.suanran.dreambox.data.store.AppSettingsStore, a: JSONObject?): String {
+        if (!s.sectAllocPending.value) throw IllegalStateException("当前不在转世配点阶段")
+        if (a == null) throw IllegalArgumentException("缺 alloc")
+        val clean = JSONObject()
+        var sum = 0
+        for (k in sectAllocKeys) {
+            val v = a.optInt(k, 0).coerceIn(0, 999999)
+            clean.put(k, v)
+            sum += v
+        }
+        if (sum > s.sectPtPool.value) throw IllegalStateException("点数不够：点池 ${s.sectPtPool.value}，这套配点要 $sum")
+        s.sectAlloc.set(clean.toString())
+        s.sectPtBalance.set(s.sectPtPool.value - sum)
+        s.sectPtPool.set(0)
+        s.sectAllocPending.set(false)
+        s.sectOpeningStones.set(clean.optInt("jiashi", 0) * 50)
+        return sectStateJson()
+    }
+
+    /**
+     * 轮回桥（轮回独立包专用）：只有 pack.json 声明 "hostRebirth": true 的包能调。
+     * 账本与门派桥共用同一套存储：门派包负责产点与现世突破，轮回包负责转世、配点与前世碑林。
+     */
+    private fun handleHostRebirth(callbackId: String, method: String, options: JSONObject) {
+        if (!hostRebirthAllowed) {
+            sendResult(callbackId, success = false, dataJson = null, error = "该插件未声明 hostRebirth 权限")
+            return
+        }
+        io.execute {
+            val result = runCatching {
+                val s = sectSettings()
+                when (method) {
+                    "state" -> sectStateJson()
+                    "rebirth" -> sectDoRebirth(s, options.optString("ending"))
+                    "allocate" -> sectDoAllocate(s, options.optJSONObject("alloc"))
+                    else -> throw IllegalArgumentException("未知方法 $method")
+                }
+            }
+            result.onSuccess { data ->
+                sendResult(callbackId, success = true, dataJson = data, error = null)
+            }.onFailure { e ->
+                AppLogBuffer.forceAdd(Log.ERROR, "Pack", "HostRebirth.$method 失败\n" + Log.getStackTraceString(e))
+                sendResult(callbackId, success = false, dataJson = null, error = e.message ?: "轮回桥失败")
             }
         }
     }
