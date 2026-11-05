@@ -73,8 +73,6 @@ import com.suanran.dreambox.MainActivity
 import com.suanran.dreambox.WebViewActivity
 import com.suanran.dreambox.core.contract.SubStoreSettings
 import com.suanran.dreambox.feature.home.presentation.screen.HomePager
-import com.suanran.dreambox.feature.home.presentation.screen.moe.MoeHomePage
-import com.suanran.dreambox.feature.home.presentation.screen.moe.calculateHomeVisibility
 import com.suanran.dreambox.feature.home.presentation.viewmodel.HomeViewModel
 import com.suanran.dreambox.feature.profiles.presentation.screen.ProfilesPager
 import com.suanran.dreambox.feature.proxy.presentation.screen.ProxyPager
@@ -144,21 +142,11 @@ fun MainScreen(
     val bottomBarScrollBehavior = rememberBottomBarScrollBehavior(autoHideEnabled = mainScreenSettings.bottomBarAutoHide)
     val pagerFlingBehavior = rememberMainPagerFlingBehavior(mainPagerState.pagerState)
     var settledMainPage by remember { mutableIntStateOf(initialMainPage) }
-    val homeVisibility by
-        remember(mainPagerState) {
-            derivedStateOf {
-                calculateHomeVisibility(
-                    currentPage = mainPagerState.pagerState.currentPage,
-                    currentPageOffsetFraction = mainPagerState.pagerState.currentPageOffsetFraction,
-                )
-            }
-        }
-    // Floating nav bar (with the proxy FAB) shows on the classic home and every other page; the default home has its own chrome, so it stays hidden there.
+    // Floating nav bar (with the proxy FAB) shows on every page except the sky-island home, which has its own chrome.
     val bottomBarVisible by
-        remember(mainScreenSettings.moeMainUiEnabled, settledMainPage, mainPagerState.selectedPage) {
+        remember(settledMainPage, mainPagerState.selectedPage) {
             derivedStateOf {
                 when {
-                    mainScreenSettings.moeMainUiEnabled -> true
                     mainPagerState.selectedPage == 0 -> false
                     settledMainPage != 0 -> true
                     else -> false
@@ -317,9 +305,7 @@ fun MainScreen(
                     MainRootPageContent(
                         page = page,
                         mainInnerPadding = mainInnerPadding,
-                        mainScreenSettings = mainScreenSettings,
                         navigator = navigator,
-                        homePageProgress = homeVisibility,
                         selectedPage = settledMainPage,
                         selectedPanelType = selectedPanelType,
                     )
@@ -454,9 +440,7 @@ internal fun MainScreenBackHandler(mainPagerState: MainPagerState) {
 internal fun MainRootPageContent(
     page: Int,
     mainInnerPadding: PaddingValues,
-    mainScreenSettings: AppSettingsViewModel.MainScreenSettings,
     navigator: Navigator,
-    homePageProgress: Float,
     selectedPage: Int,
     selectedPanelType: Int = 0,
 ) {
@@ -477,24 +461,11 @@ internal fun MainRootPageContent(
     }
     when (page) {
         0 -> {
-            if (mainScreenSettings.moeMainUiEnabled) {
-                HomePager(
-                    mainInnerPadding = mainInnerPadding,
-                    onOpenDashboard = openNetworkPanel,
-                    isActive = selectedPage == 0,
-                )
-            } else {
-                MoeHomePage(
-                    mainInnerPadding = mainInnerPadding,
-                    wallpaperUri = mainScreenSettings.moeWallpaperUri,
-                    wallpaperZoom = mainScreenSettings.moeWallpaperZoom,
-                    wallpaperBiasX = mainScreenSettings.moeWallpaperBiasX,
-                    wallpaperBiasY = mainScreenSettings.moeWallpaperBiasY,
-                    isActive = selectedPage == 0,
-                    onOpenDashboard = openNetworkPanel,
-                    pageProgress = homePageProgress,
-                )
-            }
+            HomePager(
+                mainInnerPadding = mainInnerPadding,
+                onOpenDashboard = openNetworkPanel,
+                isActive = selectedPage == 0,
+            )
         }
         1 -> {
             ProxyPager(

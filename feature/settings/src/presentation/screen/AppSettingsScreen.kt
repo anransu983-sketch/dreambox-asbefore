@@ -219,43 +219,6 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
     val pageScale by viewModel.pageScale.state.collectAsStateWithLifecycle()
     val predictiveBackEnabled by viewModel.predictiveBackEnabled.state.collectAsStateWithLifecycle()
     val predictiveBackMaxProgress by viewModel.predictiveBackMaxProgress.state.collectAsStateWithLifecycle()
-    val classicHomeEnabled by viewModel.classicHomeEnabled.state.collectAsStateWithLifecycle()
-    val homeHitokotoEnabled by viewModel.homeHitokotoEnabled.state.collectAsStateWithLifecycle()
-    val homeQuote by viewModel.moeHomeQuote.state.collectAsStateWithLifecycle()
-    val homeQuoteAuthor by viewModel.moeHomeQuoteAuthor.state.collectAsStateWithLifecycle()
-    val homeQuoteSummary =
-        remember(homeQuote) { homeQuote.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteDefault } }
-    val homeQuoteAuthorSummary =
-        remember(homeQuoteAuthor) {
-            homeQuoteAuthor.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteAuthorDefault }
-        }
-
-    val navigator = LocalNavigator.current
-    val wallpaperZoom by viewModel.moeWallpaperZoom.state.collectAsStateWithLifecycle()
-    val wallpaperBiasX by viewModel.moeWallpaperBiasX.state.collectAsStateWithLifecycle()
-    val wallpaperBiasY by viewModel.moeWallpaperBiasY.state.collectAsStateWithLifecycle()
-    var showUrlInputDialog by remember { mutableStateOf(false) }
-    var urlInput by remember { mutableStateOf("") }
-
-    val wallpaperPickerLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            uri ?: return@rememberLauncherForActivityResult
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
-            navigator.push(
-                Route.MoeWallpaperCrop(
-                    wallpaperUri = uri.toString(),
-                    initialZoom = wallpaperZoom,
-                    initialBiasX = wallpaperBiasX,
-                    initialBiasY = wallpaperBiasY,
-                )
-            )
-        }
-
     // 主题模式/配色在上方「主题」分节，这里不再重复放。
     BocchiEnumItem(
             title = FlyTxt.AppSettings.Interface.LanguageTitle,
@@ -303,120 +266,17 @@ private fun AppInterfaceSettingsSection(viewModel: AppSettingsViewModel) {
 
 @Composable
 private fun AppHomeSettingsSection(viewModel: AppSettingsViewModel) {
-    val context = LocalContext.current
-    val navigator = LocalNavigator.current
-    val classicHomeEnabled by viewModel.classicHomeEnabled.state.collectAsStateWithLifecycle()
-    val homeHitokotoEnabled by viewModel.homeHitokotoEnabled.state.collectAsStateWithLifecycle()
-    val homeQuote by viewModel.moeHomeQuote.state.collectAsStateWithLifecycle()
-    val homeQuoteAuthor by viewModel.moeHomeQuoteAuthor.state.collectAsStateWithLifecycle()
-    val homeQuoteSummary =
-        remember(homeQuote) { homeQuote.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteDefault } }
-    val homeQuoteAuthorSummary =
-        remember(homeQuoteAuthor) {
-            homeQuoteAuthor.ifBlank { FlyTxt.AppSettings.Interface.HomeQuoteAuthorDefault }
-        }
-    val wallpaperZoom by viewModel.moeWallpaperZoom.state.collectAsStateWithLifecycle()
-    val wallpaperBiasX by viewModel.moeWallpaperBiasX.state.collectAsStateWithLifecycle()
-    val wallpaperBiasY by viewModel.moeWallpaperBiasY.state.collectAsStateWithLifecycle()
-    var showUrlInputDialog by remember { mutableStateOf(false) }
-    var urlInput by remember { mutableStateOf("") }
-    val wallpaperPickerLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            uri ?: return@rememberLauncherForActivityResult
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
-            navigator.push(
-                Route.MoeWallpaperCrop(
-                    wallpaperUri = uri.toString(),
-                    initialZoom = wallpaperZoom,
-                    initialBiasX = wallpaperBiasX,
-                    initialBiasY = wallpaperBiasY,
-                )
-            )
-        }
     // 面板选择（原 Meta 功能，归位到首页节）：首页打开核心面板时用哪个 Web 面板。
     val metaViewModel = koinViewModel<MetaFeatureViewModel>()
     val selectedPanelType by metaViewModel.panelSettings.selectedPanelType.state.collectAsStateWithLifecycle()
 
-    BocchiSwitchItem(
-        title = FlyTxt.AppSettings.Interface.ClassicHomeTitle,
-            checked = classicHomeEnabled,
-            onCheckedChange = viewModel::onClassicHomeEnabledChange,
-        )
-        AnimatedVisibility(visible = classicHomeEnabled) {
-            BocchiSwitchItem(
-                title = FlyTxt.AppSettings.Interface.HitokotoTitle,
-                summary = FlyTxt.AppSettings.Interface.HitokotoSummary,
-                checked = homeHitokotoEnabled,
-                onCheckedChange = viewModel::onHomeHitokotoEnabledChange,
-            )
-        }
-        AnimatedVisibility(visible = !classicHomeEnabled || homeHitokotoEnabled) {
-            Column {
-                MoeQuotePreferenceItem(
-                    title = FlyTxt.AppSettings.Interface.HomeQuoteTitle,
-                    summary = homeQuoteSummary,
-                    dialogTitle = FlyTxt.AppSettings.Interface.EditHomeQuoteTitle,
-                    currentValue = homeQuote,
-                    onConfirm = viewModel::onMoeHomeQuoteChange,
-                )
-                MoeQuotePreferenceItem(
-                    title = FlyTxt.AppSettings.Interface.HomeQuoteAuthorTitle,
-                    summary = homeQuoteAuthorSummary,
-                    dialogTitle = FlyTxt.AppSettings.Interface.EditHomeQuoteAuthorTitle,
-                    currentValue = homeQuoteAuthor,
-                    onConfirm = viewModel::onMoeHomeQuoteAuthorChange,
-                )
-            }
-        }
-        AnimatedVisibility(visible = !classicHomeEnabled) {
-            WindowDropdownPreference(
-                title = FlyTxt.AppSettings.Interface.HomeWallpaperSourceTitle,
-                summary = FlyTxt.AppSettings.Interface.HomeWallpaperSourceSummary,
-                items = listOf(
-                    FlyTxt.AppSettings.Interface.HomeWallpaperSourceGallery,
-                    FlyTxt.AppSettings.Interface.HomeWallpaperSourceUrl,
-                ),
-                selectedIndex = -1,
-                onSelectedIndexChange = { index ->
-                    when (index) {
-                        0 -> wallpaperPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        1 -> showUrlInputDialog = true
-                    }
-                },
-            )
-        }
-        WindowDropdownPreference(
-            title = FlyTxt.MetaFeature.Panel.SelectPanel,
-            summary = "点按切换面板",
-            items = MetaFeatureViewModel.PANEL_NAMES,
-            selectedIndex = selectedPanelType.coerceIn(MetaFeatureViewModel.PANEL_NAMES.indices),
-            onSelectedIndexChange = { index -> metaViewModel.setPanelType(index) },
-        )
-
-    if (showUrlInputDialog) {
-        RemoteWallpaperUrlDialog(
-            show = showUrlInputDialog,
-            initialUrl = urlInput,
-            onDismiss = { showUrlInputDialog = false },
-            onConfirm = { url ->
-                showUrlInputDialog = false
-                urlInput = url
-                navigator.push(
-                    Route.MoeWallpaperCrop(
-                        wallpaperUri = url,
-                        initialZoom = wallpaperZoom,
-                        initialBiasX = wallpaperBiasX,
-                        initialBiasY = wallpaperBiasY,
-                    )
-                )
-            },
-        )
-    }
+    WindowDropdownPreference(
+        title = FlyTxt.MetaFeature.Panel.SelectPanel,
+        summary = "点按切换面板",
+        items = MetaFeatureViewModel.PANEL_NAMES,
+        selectedIndex = selectedPanelType.coerceIn(MetaFeatureViewModel.PANEL_NAMES.indices),
+        onSelectedIndexChange = { index -> metaViewModel.setPanelType(index) },
+    )
 }
 
 @Composable
@@ -593,60 +453,6 @@ private fun HideAppIconPreferenceItem(
             onHideAppIconChange(true)
             AppIconUtils.toggleIcon(context, true)
         },
-    )
-}
-
-@Composable
-private fun MoeQuotePreferenceItem(
-    title: String,
-    summary: String,
-    dialogTitle: String,
-    currentValue: String,
-    onConfirm: (String) -> Unit,
-) {
-    val showEditDialog = remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-    var localTextFieldValue by remember {
-        mutableStateOf(
-            TextFieldValue(text = currentValue, selection = TextRange(currentValue.length))
-        )
-    }
-
-    BocchiValueItem(
-        title = title,
-        summary = summary,
-        onClick = {
-            localTextFieldValue =
-                TextFieldValue(text = currentValue, selection = TextRange(currentValue.length))
-            showEditDialog.value = true
-        },
-    )
-
-    AppTextFieldDialog(
-        show = showEditDialog.value,
-        title = dialogTitle,
-        textFieldValue = localTextFieldValue,
-        onTextFieldValueChange = { updatedTextFieldValue ->
-            localTextFieldValue = updatedTextFieldValue
-        },
-        onDismissRequest = {
-            showEditDialog.value = false
-            focusManager.clearFocus()
-        },
-        onConfirm = {
-            onConfirm(localTextFieldValue.text)
-            focusManager.clearFocus()
-            showEditDialog.value = false
-        },
-        singleLine = true,
-        keyboardActions =
-            KeyboardActions(
-                onDone = {
-                    onConfirm(localTextFieldValue.text)
-                    focusManager.clearFocus()
-                    showEditDialog.value = false
-                }
-            ),
     )
 }
 
@@ -862,35 +668,6 @@ private fun PageScaleDialog(
             )
         },
     )
-}
-
-@Composable
-private fun RemoteWallpaperUrlDialog(
-    show: Boolean,
-    initialUrl: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    var url by remember { mutableStateOf(initialUrl) }
-    AppFormDialog(
-        show = show,
-        title = FlyTxt.AppSettings.Interface.HomeWallpaperUrlDialogTitle,
-        onDismissRequest = onDismiss,
-        onConfirm = {
-            val trimmed = url.trim()
-            if (trimmed.isNotEmpty()) onConfirm(trimmed)
-        },
-        scrollable = false,
-    ) {
-        TextField(
-            value = url,
-            onValueChange = { url = it },
-            label = "https://example.com/image.jpg",
-            useLabelAsPlaceholder = true,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
 }
 
 @Composable

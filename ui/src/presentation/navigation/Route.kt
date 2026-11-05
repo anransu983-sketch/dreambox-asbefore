@@ -36,14 +36,6 @@ sealed interface Route {
     data class Main(val initialPage: Int = 0) : Route
 
     @Serializable
-    data class MoeWallpaperCrop(
-        val wallpaperUri: String,
-        val initialZoom: Float = 1f,
-        val initialBiasX: Float = 0f,
-        val initialBiasY: Float = 0f,
-    ) : Route
-
-    @Serializable
     data object AppSettings : Route
 
     @Serializable

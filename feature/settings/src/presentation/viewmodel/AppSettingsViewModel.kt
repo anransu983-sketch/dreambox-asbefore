@@ -36,12 +36,9 @@ import com.suanran.dreambox.core.model.AppLanguage
 import com.suanran.dreambox.core.model.SettingsPageStyle
 import com.suanran.dreambox.core.model.ThemeMode
 import com.suanran.dreambox.core.model.UpdateSource
-import com.suanran.dreambox.core.util.path.moeWallpaperFile
-import com.suanran.dreambox.feature.settings.presentation.util.MoeWallpaperImporter
 import com.suanran.dreambox.locale.FlyTxt
 import com.suanran.dreambox.presentation.theme.DEFAULT_CUSTOM_THEME_SEED_ARGB
 import com.suanran.dreambox.presentation.util.toast
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +46,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class AppSettingsViewModel(
     private val application: Application,
@@ -78,17 +74,6 @@ class AppSettingsViewModel(
     val superIslandEnabled: Preference<Boolean> = settings.superIslandEnabled
     val bottomBarAutoHide: Preference<Boolean> = settings.bottomBarAutoHide
     val topBarBlurEnabled: Preference<Boolean> = settings.topBarBlurEnabled
-    val classicHomeEnabled: Preference<Boolean> = settings.classicHomeEnabled
-    val homeHitokotoEnabled: Preference<Boolean> = settings.homeHitokotoEnabled
-    val moeWallpaperUri: Preference<String> = settings.moeWallpaperUri
-    val moeWallpaperSourceUri: Preference<String> = settings.moeWallpaperSourceUri
-    val moeWallpaperZoom: Preference<Float> = settings.moeWallpaperZoom
-    val moeWallpaperBiasX: Preference<Float> = settings.moeWallpaperBiasX
-    val moeWallpaperBiasY: Preference<Float> = settings.moeWallpaperBiasY
-    val moeHomeQuote: Preference<String> = settings.moeHomeQuote
-    val moeHomeQuoteAuthor: Preference<String> = settings.moeHomeQuoteAuthor
-    val moeSidebarExpanded: Preference<Boolean> = settings.moeSidebarExpanded
-    val moeWallpaperScrimEnabled: Preference<Boolean> = settings.moeWallpaperScrimEnabled
     val pageScale: Preference<Float> = settings.pageScale
     val predictiveBackEnabled: Preference<Boolean> = settings.predictiveBackEnabled
     val predictiveBackMaxProgress: Preference<Float> = settings.predictiveBackMaxProgress
@@ -106,63 +91,19 @@ class AppSettingsViewModel(
     data class MainScreenSettings(
         val bottomBarAutoHide: Boolean,
         val topBarBlurEnabled: Boolean,
-        val moeMainUiEnabled: Boolean,
-        val moeWallpaperUri: String,
-        val moeWallpaperZoom: Float,
-        val moeWallpaperBiasX: Float,
-        val moeWallpaperBiasY: Float,
     )
 
-    private data class DisplayPrefs(
-        val bottomBarAutoHide: Boolean,
-        val topBarBlurEnabled: Boolean,
-        val moeMainUiEnabled: Boolean,
-    )
-
-    private data class WallpaperPrefs(
-        val uri: String,
-        val zoom: Float,
-        val biasX: Float,
-        val biasY: Float,
-    )
-
-    val mainScreenSettings: StateFlow<MainScreenSettings> = combine(
-        combine(
-            bottomBarAutoHide.state,
-            topBarBlurEnabled.state,
-            classicHomeEnabled.state,
-            ::DisplayPrefs,
-        ),
-        combine(
-            moeWallpaperUri.state,
-            moeWallpaperZoom.state,
-            moeWallpaperBiasX.state,
-            moeWallpaperBiasY.state,
-            ::WallpaperPrefs,
-        ),
-    ) { display, wallpaper ->
-        MainScreenSettings(
-            bottomBarAutoHide = display.bottomBarAutoHide,
-            topBarBlurEnabled = display.topBarBlurEnabled,
-            moeMainUiEnabled = display.moeMainUiEnabled,
-            moeWallpaperUri = wallpaper.uri,
-            moeWallpaperZoom = wallpaper.zoom,
-            moeWallpaperBiasX = wallpaper.biasX,
-            moeWallpaperBiasY = wallpaper.biasY,
+    val mainScreenSettings: StateFlow<MainScreenSettings> =
+        combine(bottomBarAutoHide.state, topBarBlurEnabled.state) { autoHide, blur ->
+            MainScreenSettings(bottomBarAutoHide = autoHide, topBarBlurEnabled = blur)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            MainScreenSettings(
+                bottomBarAutoHide = bottomBarAutoHide.value,
+                topBarBlurEnabled = topBarBlurEnabled.value,
+            ),
         )
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5_000),
-        MainScreenSettings(
-            bottomBarAutoHide = bottomBarAutoHide.value,
-            topBarBlurEnabled = topBarBlurEnabled.value,
-            moeMainUiEnabled = classicHomeEnabled.value,
-            moeWallpaperUri = moeWallpaperUri.value,
-            moeWallpaperZoom = moeWallpaperZoom.value,
-            moeWallpaperBiasX = moeWallpaperBiasX.value,
-            moeWallpaperBiasY = moeWallpaperBiasY.value,
-        ),
-    )
 
     fun onThemeModeChange(mode: ThemeMode) = themeMode.set(mode)
     fun onSettingsPageStyleChange(style: SettingsPageStyle) = settingsPageStyle.set(style)
@@ -237,58 +178,8 @@ class AppSettingsViewModel(
 
     fun onTopBarBlurEnabledChange(enabled: Boolean) = topBarBlurEnabled.set(enabled)
 
-    fun onClassicHomeEnabledChange(enabled: Boolean) = classicHomeEnabled.set(enabled)
-
-
-
-    fun onHomeHitokotoEnabledChange(enabled: Boolean) = homeHitokotoEnabled.set(enabled)
-
-    fun onMoeWallpaperUriChange(uri: String) = moeWallpaperUri.set(uri)
-
-    /**
-     * Persists the selected Moe wallpaper by copying [sourceUri] into the app-private files dir and storing the resulting `file://` path as [moeWallpaperUri], while remembering the original source in [moeWallpaperSourceUri] for lazy re-import.
-     * If the copy fails the original source URI is persisted directly (degraded but working) and a toast is shown.
-     */
-    fun applyMoeWallpaper(sourceUri: String, onApplied: () -> Unit) {
-        viewModelScope.launch {
-            val localPath = withContext(Dispatchers.IO) { MoeWallpaperImporter.importToLocal(application, sourceUri) }
-            if (localPath != null) {
-                moeWallpaperUri.set(localPath)
-                moeWallpaperSourceUri.set(sourceUri)
-            } else {
-                moeWallpaperUri.set(sourceUri)
-                moeWallpaperSourceUri.set(sourceUri)
-                application.toast(FlyTxt.AppSettings.Interface.HomeWallpaperImportFailed)
-            }
-            onApplied()
-        }
-    }
-
-    fun onMoeWallpaperCropChange(zoom: Float, biasX: Float, biasY: Float) {
-        moeWallpaperZoom.set(zoom.coerceIn(1f, 5f))
-        moeWallpaperBiasX.set(biasX.coerceIn(-1f, 1f))
-        moeWallpaperBiasY.set(biasY.coerceIn(-1f, 1f))
-    }
-
-    fun onMoeHomeQuoteChange(quote: String) = moeHomeQuote.set(quote)
-
-    fun onMoeHomeQuoteAuthorChange(author: String) = moeHomeQuoteAuthor.set(author)
-
-    fun onMoeSidebarExpandedChange(expanded: Boolean) = moeSidebarExpanded.set(expanded)
-
-    fun onMoeWallpaperScrimEnabledChange(enabled: Boolean) = moeWallpaperScrimEnabled.set(enabled)
-
     // 动画商店（快捷开关，详细设置在动画商店页）
     fun onAnimationEnabledChange(enabled: Boolean) = animationEnabled.set(enabled)
-
-    fun clearMoeWallpaperUri() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { runCatching { application.moeWallpaperFile().delete() } }
-            moeWallpaperUri.set("")
-            moeWallpaperSourceUri.set("")
-            onMoeWallpaperCropChange(zoom = 1f, biasX = 0f, biasY = 0f)
-        }
-    }
 
     fun onPageScaleChange(scale: Float) = pageScale.set(scale)
 

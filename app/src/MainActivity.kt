@@ -53,7 +53,6 @@ import com.arkivanov.decompose.retainedComponent
 import com.suanran.dreambox.common.util.AppLanguageManager
 import com.suanran.dreambox.core.util.PendingImportUrlHolder
 import com.suanran.dreambox.core.util.path.APPLICATION_SCOPE_NAME
-import com.suanran.dreambox.feature.home.presentation.screen.moe.HomePreviewGuideDialog
 import com.suanran.dreambox.feature.settings.presentation.viewmodel.AppSettingsViewModel
 import com.suanran.dreambox.presentation.component.dialog.ToastDialogHost
 import com.suanran.dreambox.presentation.component.navigation.LocalTopBarHazeState
@@ -200,12 +199,6 @@ class MainActivity : FragmentActivity() {
 
         requestStartupPermissions()
 
-        val showHomeGuideInitially =
-            savedInstanceState == null && !appSettingsStore.homePreviewGuideShown.value
-        if (showHomeGuideInitially) {
-            appSettingsStore.homePreviewGuideShown.set(true)
-        }
-
         setContent {
             val appSettingsViewModel = koinViewModel<AppSettingsViewModel>()
             val activitySettings by appSettingsViewModel.activitySettings.collectAsStateWithLifecycle()
@@ -264,12 +257,6 @@ class MainActivity : FragmentActivity() {
                                 }
                                 ToastDialogHost()
 
-                                var showHomeGuide by
-                                    remember { mutableStateOf(showHomeGuideInitially) }
-                                HomePreviewGuideDialog(
-                                    show = showHomeGuide,
-                                    onDismissRequest = { showHomeGuide = false },
-                                )
                               }
                             }
                         }

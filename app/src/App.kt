@@ -56,7 +56,6 @@ import com.suanran.dreambox.data.store.FeatureStore
 import com.suanran.dreambox.di.ServiceBootstrapReaderImpl
 import com.suanran.dreambox.di.appModule
 import com.suanran.dreambox.feature.about.GitHubUpdateManager
-import com.suanran.dreambox.feature.settings.presentation.util.MoeWallpaperImporter
 import com.suanran.dreambox.runtime.api.constants.Components
 import com.suanran.dreambox.runtime.api.constants.Intents
 import com.suanran.dreambox.runtime.api.contract.AppScreenState
@@ -278,7 +277,6 @@ class App : Application() {
                 safeRun("App", "Prepare geo assets") { ensureGeoAssetsPrepared() }
             }
             safeRun("App", "Bootstrap custom routing defaults") { koin.get<CustomRoutingInitializer>().ensureDefaultContent() }
-            safeRun("App", "Ensure Moe wallpaper local copy") { ensureMoeWallpaperLocalCopy(koin.get()) }
             safeRun("App", "Init traffic collector") { koin.get<AppTrafficStatisticsCollector>() }
             safeRun("App", "Proxy preview warm-up") { koin.get<ProxyFacade>().awaitProxyGroupWarmUp() }
             safeRun("App", "Schedule profile auto-update") { ProfileProcessor.AutoUpdate.scheduleAll(this@App) }
@@ -370,23 +368,6 @@ class App : Application() {
         source.deleteRecursively()
     }
 
-    /**
-     * Best-effort self-heal for the Moe wallpaper: if the persisted [AppSettingsStore.moeWallpaperUri] points at a local file:// copy that no longer exists, but the original source is still recorded and readable, re-import it so the home screen keeps rendering the user's choice after a cache or data wipe.
-     * Silent no-op otherwise; the render path falls back to the bundled asset.
-     */
-    private suspend fun ensureMoeWallpaperLocalCopy(appSettings: AppSettingsStore) {
-        val stored = appSettings.moeWallpaperUri.value
-        if (!stored.startsWith("file://")) return
-        val localPath = stored.removePrefix("file://")
-        if (localPath.startsWith("/android_asset/")) return
-        if (File(localPath).exists()) return
-        val source = appSettings.moeWallpaperSourceUri.value
-        if (source.isBlank()) return
-        val reimported = MoeWallpaperImporter.importToLocal(this, source)
-        if (reimported != null) {
-            appSettings.moeWallpaperUri.set(reimported)
-        }
-    }
     private suspend fun observeAndBroadcastForegroundState() {
         AppForegroundState.foreground
             .collect { isForeground ->

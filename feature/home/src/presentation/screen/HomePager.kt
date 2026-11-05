@@ -29,8 +29,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
-import com.suanran.dreambox.presentation.component.misc.rememberHomePanels
-import com.suanran.dreambox.presentation.component.misc.HomePanels
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

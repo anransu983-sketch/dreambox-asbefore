@@ -68,7 +68,6 @@ import com.suanran.dreambox.feature.settings.presentation.screen.AccessControlSc
 import com.suanran.dreambox.feature.settings.presentation.screen.AppSettingsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.EbpfServiceOptionsScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.MetaFeatureScreen
-import com.suanran.dreambox.feature.settings.presentation.screen.MoeWallpaperCropScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.KernelManagerScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.AppIconScreen
 import com.suanran.dreambox.feature.settings.presentation.screen.BackButtonIconScreen
@@ -98,13 +97,6 @@ fun RouteContent(route: Route, navigator: Navigator, mainPage: Int = 0) {
     when (route) {
         is Route.AppStart -> MainScreen(navigator, initialPage = 0)
         is Route.Main -> MainScreen(navigator, initialPage = mainPage)
-        is Route.MoeWallpaperCrop -> MoeWallpaperCropScreen(
-            navigator = navigator,
-            wallpaperUri = route.wallpaperUri,
-            initialZoom = route.initialZoom,
-            initialBiasX = route.initialBiasX,
-            initialBiasY = route.initialBiasY,
-        )
         Route.AppSettings -> AppSettingsScreen(navigator)
         Route.NetworkSettings -> NetworkSettingsScreen(navigator)
         Route.KernelManager -> KernelManagerScreen(navigator)
@@ -210,13 +202,6 @@ internal class RouteChild(
                     initialPage = if (route is Route.Main) navigationComponent.mainPage else 0,
                     pendingDetailRoute = navigationComponent.pendingDetailRoute,
                     onConsumePendingDetailRoute = { navigationComponent.pendingDetailRoute = null },
-                )
-                is Route.MoeWallpaperCrop -> MoeWallpaperCropScreen(
-                    navigator = navigator,
-                    wallpaperUri = route.wallpaperUri,
-                    initialZoom = route.initialZoom,
-                    initialBiasX = route.initialBiasX,
-                    initialBiasY = route.initialBiasY,
                 )
                 else -> RouteContent(route, navigator, navigationComponent.mainPage)
             }
