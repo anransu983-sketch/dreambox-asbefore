@@ -101,6 +101,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suanran.dreambox.core.util.format.ByteFormatter
+import com.suanran.dreambox.presentation.util.enabled
+import com.suanran.dreambox.presentation.util.getDisplayProvider
+import com.suanran.dreambox.presentation.util.totalBytes
+import com.suanran.dreambox.presentation.util.usedBytes
 import com.suanran.dreambox.presentation.component.navigation.BottomBarDestination
 import com.suanran.dreambox.presentation.component.navigation.LocalHandlePageChange
 import com.suanran.dreambox.presentation.component.navigation.LocalMainPagerState
@@ -336,7 +340,7 @@ private fun SkyProfileScene(
     onToggleProfile: (Profile) -> Unit,
 ) {
     val pager = LocalMainPagerState.current
-    val active = pager.selectedPage == BottomBarDestination.Profiles.ordinal
+    val active = pager.selectedPage == BottomBarDestination.Config.ordinal
     SkyStatusBarIcons(active)
     val handlePageChange = LocalHandlePageChange.current
     val ctx = LocalContext.current
