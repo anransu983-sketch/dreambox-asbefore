@@ -218,21 +218,28 @@ fun SkyIslandScene(
         }
     var flare by remember { mutableStateOf<FlareShot?>(null) }
     var lastFireAt by remember { mutableLongStateOf(0L) }
+    var latencyFlareDone by remember { mutableStateOf(false) } // 本次连接是否已放过带延迟数字的焰火
     val stateNow by rememberUpdatedState(state)
     val activeNow by rememberUpdatedState(active)
     val tryFire = { minGapMs: Long ->
         val now = SystemClock.elapsedRealtime()
         val s = stateNow
-        if (s.connected && activeNow && flare == null && now - lastFireAt >= minGapMs) {
+        // 内容门：延迟与上下行全空时不放空焰、也不占节流，等数字到了再放带字的
+        val hasContent = s.latencyMs != null || s.downText != null || s.upText != null
+        if (s.connected && activeNow && flare == null && hasContent && now - lastFireAt >= minGapMs) {
             lastFireAt = now
+            if (s.latencyMs != null) latencyFlareDone = true
             flare = FlareShot(now, s.latencyMs, s.downText, s.upText)
         }
     }
     val fireNow by rememberUpdatedState(tryFire)
 
+    // 等延迟测出：连接初期内核还没给主节点测速，latencyMs 是空的；最多等 30 秒，
+    // 等到再缓 400ms 让数字稳定；等不到也试放一次，放不放由 tryFire 的内容门决定。
     suspend fun awaitPing() {
-        withTimeoutOrNull(3500) { snapshotFlow { stateNow.latencyMs }.first { it != null } }
-        delay(400)
+        val got =
+            withTimeoutOrNull(30_000) { snapshotFlow { stateNow.latencyMs }.first { it != null } } != null
+        if (got) delay(400)
     }
     LaunchedEffect(state.connected) {
         if (state.connected) {
@@ -245,6 +252,15 @@ fun SkyIslandScene(
             awaitPing()
             fireNow(60_000L)
         }
+    }
+
+    // 断开时清零带字焰火标记，下次连接重新等数字
+    LaunchedEffect(state.connected) {
+        if (!state.connected) latencyFlareDone = false
+    }
+    // 延迟首达补焰：等了 30 秒还没测出、后来才到的延迟，第一次出现时补放一发带数字的
+    LaunchedEffect(state.latencyMs) {
+        if (state.latencyMs != null && !latencyFlareDone) fireNow(5_000L)
     }
 
     // 全场题字（城堡状态/代理/配置/设置/插件）：进首页或连接状态变化时亮 4 秒，按压时也亮，
