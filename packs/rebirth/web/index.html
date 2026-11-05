@@ -1141,7 +1141,7 @@ function renderRebirthRoom(){
   if(!hasBridge)rbMockDerive();
   if(!state||!state.sectId){box.innerHTML='<div class="card"><h2>账本未立</h2><div class="desc">先在山门选一道入门，轮回账本随门派而立。</div></div>';return}
   var alloc=state.alloc||{};var gs=state.guiyiSystems||[];var html="";
-  html+='<img src="world-youming.jpg" style="width:100%;height:150px;object-fit:cover;border-radius:14px;display:block">';
+  html+='<img src="manor.jpg" style="width:100%;height:150px;object-fit:cover;border-radius:14px;display:block">';
   html+='<div class="card"><h2>📜 本世 · 第 '+state.life+' 世</h2><div class="desc">本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b>（结算倍率 ×'+state.evalMult+'）</div>'
     +'<div class="desc" style="margin-top:4px">本世配点：'+RB_ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div>'
     +'<div class="desc" style="margin-top:4px">轮回称号 <b style="color:#fbbf24">'+rbTitleFor(state.life)+'</b>'+rbNextMs()+'</div>'
@@ -1283,7 +1283,7 @@ function renderHub(){
     var g0=$("hubGo");if(g0)g0.addEventListener("click",function(){closeRoomsUI()});
     return;
   }
-  var html='<img src="world-youming.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:14px;display:block">';
+  var html='<img src="manor.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:14px;display:block">';
   html+='<div class="card"><h2>☯️ 第 '+state.life+' 世 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
     +(state.world?('落界 <b>'+rbWorldName(state.world)+'</b> · 体系 <b>'+rbSysName(state.system)+'</b>（本阶 '+rbSysRank(state.system,state.rankIndex)+'）<br>'):"")
     +'本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b></div></div>';
