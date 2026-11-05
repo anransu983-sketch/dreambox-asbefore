@@ -309,7 +309,9 @@ private fun SkySettingScene(
             Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         }
     val clock = rememberSkyClock(active, reduceMotion)
-    val caption = rememberSkyCaption(active)
+    var showTick by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val caption = rememberSkyCaption(active, showTick)
+    LaunchedEffect(running) { showTick++ }
     var imgReady by remember { mutableStateOf(false) }
     var timedOut by remember { mutableStateOf(false) }
     LaunchedEffect(active) {
@@ -337,7 +339,7 @@ private fun SkySettingScene(
         val h = constraints.maxHeight
         val map =
             remember(w, h) {
-                SkyShotMap(w.toFloat(), h.toFloat(), w.toFloat(), h.toFloat(), 1f, 0.5f, 0.5f, aspect = 1008f / 2240f)
+                SkyShotMap(w.toFloat(), h.toFloat(), w.toFloat(), h.toFloat(), 1f, 0.5f, 0.5f, aspect = 1040f / 2352f)
             }
         if (!fallback) {
             SkyBackdropFull(
@@ -365,19 +367,26 @@ private fun SkySettingScene(
             )
         }
         if (imgReady || fallback) {
+            // 点画任意处：题字重新浮现（同首页题字时钟）
+            Box(
+                Modifier.fillMaxSize().clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                ) { showTick++ },
+            )
             // 页题（heading，底值 0.60）
             SkyGlowLabel(
                 line1 = FlyTxt.Settings.Title,
                 line1Size = 17.sp,
                 modifier =
-                    Modifier.skyCenteredAt(map.at(Offset(0.50f, 0.057f))) { 0.60f * labelsIn.value },
+                    Modifier.skyCenteredAt(map.at(Offset(0.50f, 0.057f))) { 0.60f * labelsIn.value * caption.value },
             )
             // 「‹ 首页」：回岛的一条路（另有横滑与系统返回）
             SkyLabelEntry(
                 center = map.at(Offset(0.12f, 0.057f)),
                 title = "‹ " + BottomBarDestination.Home.label,
                 index = 7,
-                baseAlpha = 0.6f,
+                baseAlpha = 0f,
                 caption = { caption.value },
                 phase = { clock.floatValue },
                 parentSize = IntSize(w, h),
@@ -403,8 +412,10 @@ private fun SkySettingScene(
                     parentSize = IntSize(w, h),
                     contentDescription = settingsDesc(module),
                     active = active,
+                    baseAlpha = 0f,
                     mistAlpha = if (module.key == "app" || module.key == "meta") 0.45f else 0.34f,
                     onPressedChange = { p ->
+                        if (p) showTick++
                         pressedKey = if (p) module.key else if (pressedKey == module.key) null else pressedKey
                     },
                     onClick = { module.route?.let { onOpen(it) } },
@@ -419,13 +430,13 @@ private const val SKY_SETTINGS_TREE_URI = "file:///android_asset/sky_settings_tr
 /** 设置页七个题字在树图上的位置（图比例）与所挂的灯组。 */
 private val SETTINGS_SPOTS: Map<String, Offset> =
     mapOf(
-        "app" to Offset(0.145f, 0.345f),
-        "network" to Offset(0.830f, 0.115f),
-        "override" to Offset(0.235f, 0.605f),
-        "meta" to Offset(0.855f, 0.550f),
-        "lab" to Offset(0.125f, 0.715f),
-        "log" to Offset(0.460f, 0.836f),
-        "about" to Offset(0.830f, 0.845f),
+        "app" to Offset(0.145f, 0.310f),
+        "network" to Offset(0.815f, 0.128f),
+        "override" to Offset(0.235f, 0.640f),
+        "meta" to Offset(0.845f, 0.465f),
+        "lab" to Offset(0.135f, 0.680f),
+        "log" to Offset(0.470f, 0.838f),
+        "about" to Offset(0.835f, 0.848f),
     )
 
 private val SETTINGS_LAMP_GROUP: Map<String, String> =
@@ -465,27 +476,27 @@ private data class TreeLamp(
 
 private val TREE_LAMPS: List<TreeLamp> =
     listOf(
-        // 左枝灯笼群（实测中心 0.199, 0.302，散布其间）
-        TreeLamp("left", 0.199f, 0.302f, 0.026f, 4f, 10f, 0.18f, 0.11f, 0.27f),
-        TreeLamp("left", 0.149f, 0.272f, 0.018f, 3f, 8f, 0.22f, 0.37f, 0.23f),
-        TreeLamp("left", 0.244f, 0.257f, 0.020f, 5f, 12f, 0.15f, 0.53f, 0.25f),
-        TreeLamp("left", 0.171f, 0.337f, 0.016f, 6f, 15f, 0.12f, 0.71f, 0.21f),
-        TreeLamp("left", 0.259f, 0.322f, 0.015f, 4f, 9f, 0.20f, 0.83f, 0.20f),
-        TreeLamp("left", 0.134f, 0.312f, 0.014f, 3f, 11f, 0.21f, 0.29f, 0.20f),
-        TreeLamp("left", 0.219f, 0.232f, 0.013f, 5f, 14f, 0.16f, 0.61f, 0.19f),
-        TreeLamp("left", 0.189f, 0.357f, 0.012f, 6f, 10f, 0.14f, 0.97f, 0.18f),
-        // 右侧垂灯
-        TreeLamp("right", 0.850f, 0.360f, 0.020f, 6f, 12f, 0.15f, 0.19f, 0.24f),
-        TreeLamp("right", 0.865f, 0.440f, 0.017f, 8f, 15f, 0.13f, 0.43f, 0.22f),
-        TreeLamp("right", 0.845f, 0.500f, 0.015f, 7f, 11f, 0.16f, 0.67f, 0.20f),
-        // 秋千灯
-        TreeLamp("swing", 0.189f, 0.438f, 0.022f, 4f, 10f, 0.17f, 0.23f, 0.26f),
-        TreeLamp("swing", 0.345f, 0.465f, 0.013f, 5f, 12f, 0.15f, 0.79f, 0.18f),
-        // 树根石灯（更暗更稳）
-        TreeLamp("stoneL", 0.105f, 0.800f, 0.013f, 6f, 15f, 0.08f, 0.31f, 0.17f),
-        TreeLamp("stoneB", 0.472f, 0.879f, 0.014f, 8f, 12f, 0.08f, 0.57f, 0.18f),
+        // 左枝灯笼群（静谧版实测位置）
+        TreeLamp("left", 0.150f, 0.272f, 0.020f, 3f, 8f, 0.22f, 0.37f, 0.25f),
+        TreeLamp("left", 0.190f, 0.282f, 0.022f, 4f, 10f, 0.18f, 0.11f, 0.27f),
+        TreeLamp("left", 0.115f, 0.295f, 0.016f, 5f, 12f, 0.15f, 0.53f, 0.22f),
+        TreeLamp("left", 0.228f, 0.308f, 0.015f, 6f, 15f, 0.12f, 0.71f, 0.20f),
+        TreeLamp("left", 0.262f, 0.295f, 0.013f, 4f, 9f, 0.20f, 0.83f, 0.19f),
+        TreeLamp("left", 0.095f, 0.315f, 0.013f, 3f, 11f, 0.21f, 0.29f, 0.19f),
+        // 右侧垂灯（疏）
+        TreeLamp("right", 0.848f, 0.207f, 0.017f, 6f, 12f, 0.15f, 0.19f, 0.24f),
+        TreeLamp("right", 0.852f, 0.362f, 0.016f, 8f, 15f, 0.13f, 0.43f, 0.22f),
+        TreeLamp("right", 0.898f, 0.382f, 0.014f, 7f, 11f, 0.16f, 0.67f, 0.20f),
+        TreeLamp("right", 0.742f, 0.218f, 0.012f, 5f, 10f, 0.17f, 0.59f, 0.18f),
+        // 秋千旁小灯
+        TreeLamp("swing", 0.345f, 0.452f, 0.013f, 5f, 12f, 0.15f, 0.79f, 0.19f),
+        // 石灯（更暗更稳）
+        TreeLamp("stoneL", 0.022f, 0.688f, 0.010f, 6f, 15f, 0.08f, 0.31f, 0.16f),
+        TreeLamp("stoneL", 0.095f, 0.792f, 0.013f, 6f, 15f, 0.08f, 0.47f, 0.17f),
+        TreeLamp("stoneB", 0.472f, 0.902f, 0.014f, 8f, 12f, 0.08f, 0.57f, 0.18f),
         // 右下小烛
-        TreeLamp("candle", 0.925f, 0.735f, 0.011f, 3f, 8f, 0.22f, 0.89f, 0.19f),
+        TreeLamp("candle", 0.742f, 0.712f, 0.009f, 3f, 8f, 0.22f, 0.89f, 0.17f),
+        TreeLamp("candle", 0.930f, 0.718f, 0.010f, 3f, 8f, 0.22f, 0.73f, 0.18f),
     )
 
 /** 萤火（图比例中心；轨迹为小幅 Lissajous 漂移）。 */

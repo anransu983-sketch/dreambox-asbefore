@@ -152,9 +152,9 @@ fun Modifier.skyCenteredAt(p: Offset, alpha: () -> Float = { 1f }): Modifier =
 
 /** 题字时钟（同首页）：active 时亮起 4 秒再淡出；返回值在 draw/layer 阶段读。 */
 @Composable
-fun rememberSkyCaption(active: Boolean): Animatable<Float, androidx.compose.animation.core.AnimationVector1D> {
+fun rememberSkyCaption(active: Boolean, reshowKey: Any? = null): Animatable<Float, androidx.compose.animation.core.AnimationVector1D> {
     val anim = remember { Animatable(0f) }
-    LaunchedEffect(active) {
+    LaunchedEffect(active, reshowKey) {
         if (active) {
             anim.snapTo(1f)
             delay(4000)
