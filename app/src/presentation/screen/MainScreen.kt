@@ -327,7 +327,8 @@ fun MainScreen(
                 if (reserveBottomBar) {
                     BottomEdgeScrim(
                         color = bottomBarScrimColor,
-                        visible = bottomBarVisible && bottomBarScrollBehavior.isBottomBarVisible,
+                        // 首页（天空场景）没有底栏，这层给底栏垫底的渐变也必须关，否则浅色主题下屏幕底部糊出一大片白
+                        visible = bottomBarVisible && mainPagerState.selectedPage != 0 && bottomBarScrollBehavior.isBottomBarVisible,
                         height = visibleBottomBarReservedHeight + UiDp.dp28,
                     )
                     Column(

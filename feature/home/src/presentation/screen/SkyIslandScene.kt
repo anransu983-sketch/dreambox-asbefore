@@ -439,7 +439,8 @@ fun SkyIslandScene(
                             line1 = dest.label,
                             line1Color = LabelCore,
                             line1Size = 13.sp,
-                            line2 = proxyLine(state),
+                            // 信号焰亮着时延迟归焰火独占，飞艇题字不再重复一遍
+                            line2 = if (flare == null) proxyLine(state) else null,
                             modifier = labelModifier,
                         )
                     else ->
