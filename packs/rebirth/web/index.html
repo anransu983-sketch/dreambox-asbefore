@@ -1456,6 +1456,318 @@ function rbBindSim(box){
   })});
 }
 
+/* == 人生路 · 动态事件链（v8）：按配点/世界/体系/副职业/回响/注视抽事件，非固定剧本 == */
+var RB_PROFS={dan:{name:"炼丹师",icon:"⚗️"},qi:{name:"炼器师",icon:"🔨"},fu:{name:"符师",icon:"📜"},zhen:{name:"阵法师",icon:"🧭"},fumo:{name:"附魔师",icon:"✨"},jin:{name:"炼金师",icon:"🧪"},ji:{name:"机械师",icon:"⚙️"}};
+var RB_PROF_RANKS=["学徒","一品","二品","三品","四品","五品","六品","宗师","大宗师","匠圣"];
+var RB_PROF_TH=[0,15,35,60,90,125,165,215,280,360];
+function rbProfRank(exp){var r=0;for(var i=0;i<RB_PROF_TH.length;i++){if((exp||0)>=RB_PROF_TH[i])r=i}return RB_PROF_RANKS[r]}
+var RB_DYN_NODES=[
+{k:"e_qiling",ph:[0,2],dim:"linggen",title:"测灵之日",intro:"{W}的测灵台前排起长队，轮到你时，执事忽然多看了你一眼。",cs:[
+ {t:"稳住心神",d:"按规矩来",dim:"linggen",pts:14,ok:"测灵石光芒稳稳亮起，执事点头记下你的名字。",great:"光芒一涨再涨，执事直接起身——这资质，他不敢怠慢。"},
+ {t:"运转家传口诀",d:"把压箱底的东西亮出来",dim:"wuxing",pts:12,ok:"口诀与测灵石隐隐共鸣，算是个不错的开始。",great:"共鸣声传出三丈，连台后的长老都探出头来。"},
+ {t:"先看别人怎么做",d:"不抢先，学规矩",dim:"renyuan",pts:10,ok:"你看清了门道，也和排在前后的几人混了脸熟。",great:"你顺手扶住差点摔下台的孩子——那是执事的孙子。"}]},
+{k:"e_rival",ph:[0,3],dim:"renyuan",title:"一句轻慢",intro:"同乡的天才当众笑你：『就这根骨，也想修行？回去种地吧。』",cs:[
+ {t:"把这句话记一辈子",d:"不争一时，争一世",dim:"gengu",pts:8,flag:"rival",ok:"你没回嘴，转身时把这句话刻进了心里。",great:"你没回嘴。很多年后你才知道，这句话是你这辈子最值钱的东西。"},
+ {t:"当场比一场",d:"少年意气",dim:"gengu",pts:14,ok:"输赢不论，你敢站出来，同乡看你的眼神变了。",great:"你赢了。他脸色铁青——从这天起，你们的梁子结下了。"},
+ {t:"笑笑不答",d:"不值得",dim:"renyuan",pts:12,ok:"你一笑而过，倒让围观的人高看你一眼。",great:"一位路过的老修士把这一幕看在眼里，暗暗点头。"}]},
+{k:"e_jiashi",ph:[0,2],dim:"jiashi",title:"家里凑的盘缠",intro:"临行前，家里把攒了多年的积蓄塞进你包袱，沉甸甸的。",cs:[
+ {t:"收下，立誓回报",d:"这份情记一辈子",dim:"jiashi",pts:12,stones:30,ok:"包袱沉，心更沉——你知道自己为什么修行。",great:"族老又添了一件传家的旧物：『咱家这一辈，就看你了。』"},
+ {t:"只取一半",d:"剩下的留给家里",dim:"renyuan",pts:12,ok:"推让再三，你只取一半，家里人红着眼送你出村。",great:"村里人听说后自发凑了一份——人缘，有时候比灵石硬。"},
+ {t:"自己去挣",d:"不靠家里",dim:"jiashi",pts:10,stones:15,ok:"你在镇上打了两个月短工，挣下自己的盘缠。",great:"短工期间结识了行商，你的第一桶金比同龄人来得早。"}]},
+{k:"e_yishan",ph:[1,3],dim:"qiyun",title:"山中异响",intro:"夜宿山道，远处传来若有若无的钟声——这荒山，本没有庙。",cs:[
+ {t:"循声而去",d:"钟声只响给有缘人",dim:"qiyun",pts:18,ok:"钟声处是一口古钟，钟下压着半页经文，你默记而归。",great:"古钟认主般长鸣三声，你怀里的东西都跟着发烫。"},
+ {t:"喊上同伴",d:"人多胆壮",dim:"renyuan",pts:14,ok:"众人寻去，只见古钟不见人，倒是一起壮了胆。",great:"同伴里有人认出钟上的纹——是失传的一脉传承标记。"},
+ {t:"绕开",d:"好奇害死猫",dim:"gengu",pts:8,ok:"你绕路而行，天亮时听说夜里那山塌了一角。",great:"你绕路而行，天亮时听说夜里那山塌了一角。"}]},
+{k:"g_shicheng",ph:[2,5],dim:"wuxing",title:"长老考校",intro:"一位长老偶然路过，随口考校你们几个新入门的功课。",cs:[
+ {t:"对答如流",d:"把所学都亮出来",dim:"wuxing",pts:18,ok:"长老微微颔首，你的名字进了他的册子。",great:"你答出的最后一题，正是长老卡了多年的关节——他当场收你做记名弟子。"},
+ {t:"献上心得手札",d:"平时攒的功夫",dim:"wuxing",pts:16,flag:"notes",ok:"手札写得有章法，长老翻了两页，收下了。",great:"手札里有一处推演连长老都没想过，他留你喝了杯茶。"},
+ {t:"藏锋不答",d:"木秀于林，未必好事",dim:"gengu",pts:12,flag:"hide",ok:"你答得中规中矩，没出头，也没出错。",great:"散场后长老单独点了你一句：『藏得住的人，走得远。』"}]},
+{k:"g_gongfa",ph:[2,5],dim:"wuxing",title:"功法抉择",intro:"藏经处给你三条路：契合{S}的正途、最难练的险途、无人问津的冷门。",cs:[
+ {t:"走正途",d:"契合{S}，稳扎稳打",dim:"wuxing",pts:18,ok:"功法与你无比契合，进境稳当。",great:"上手第一日就引动异象——这功法像在等你。"},
+ {t:"选险途",d:"难练，但上限高",dim:"gengu",pts:20,ok:"头三个月寸步难行，熬过去后豁然开朗。",great:"险途的关隘被你一一闯过，同门称你为疯子。"},
+ {t:"选冷门",d:"冷门里常有宝贝",dim:"qiyun",pts:16,ok:"冷门功法别有洞天，只是要自己摸索。",great:"冷门功法的末页，藏着前人没写完的半招——你补上了。"}]},
+{k:"g_pingjing",ph:[3,6],dim:"gengu",title:"初次瓶颈",intro:"{R}的关口横在眼前，进不得，退又不甘。",cs:[
+ {t:"硬冲",d:"以意志撞开它",dim:"gengu",pts:24,ok:"三日闭关，你撞开了那道关，醒来时浑身是汗。",great:"关隘碎得干脆，连护关的人都说没见过这么冲的。"},
+ {t:"先磨根基",d:"退一步，海阔天空",dim:"gengu",pts:18,ok:"你停下来把根基重铸一遍，再冲时水到渠成。",great:"重铸的根基比同门厚三分——这一步退得值。"},
+ {t:"请教过来人",d:"前人栽过的树",dim:"renyuan",pts:16,ok:"过来人一句话点醒你：这关，急不得。",great:"点醒你的竟是位扫地老者，深藏不露。"}]},
+{k:"g_jiexi",ph:[2,6],dim:"wuxing",title:"解析残篇",intro:"坊市角落淘到一卷残篇，字迹残缺，却隐隐有解析万物之理。",cs:[
+ {t:"逐字解析",d:"把残篇吃透",dim:"wuxing",pts:20,ok:"残篇的模型在你脑中成形，许多功法都触类旁通。",great:"你解析出的模型比原篇还完整——残篇的主人若在世，也要惊。"},
+ {t:"拿去交换",d:"残篇换资源",dim:"jiashi",pts:12,stones:40,ok:"残篇换了一笔实在的资源，不算亏。",great:"买家是识货的，还附赠了一条秘境消息。"},
+ {t:"拓印参悟",d:"慢慢来",dim:"wuxing",pts:16,ok:"拓印三份，一份自留，两份赠人，结了善缘。",great:"赠出的拓印日后救了一位同门的命——后话。"}]},
+{k:"g_tongmen",ph:[2,6],dim:"renyuan",title:"同门{NPC}",intro:"{NPC}成了你的同门，性子与你截然不同，却总在你眼前晃。",cs:[
+ {t:"结为莫逆",d:"多个朋友多条路",dim:"renyuan",pts:16,flag:"friend",ok:"你们成了无话不谈的交情，修行路上互相扶持。",great:"后来你们并称双璧——这是后话，如今先从一顿酒开始。"},
+ {t:"保持距离",d:"道不同",dim:"gengu",pts:10,ok:"你礼貌而疏远，各走各的路。",great:"你礼貌而疏远，各走各的路。"},
+ {t:"互相较劲",d:"对手也是镜子",dim:"gengu",pts:14,flag:"rival",ok:"你们成了公认的对手，每次较劲都有进益。",great:"较劲归较劲，秘境里他替你挡了一击——这梁子，结得值。"}]},
+{k:"m_mijing",ph:[4,7],dim:"qiyun",title:"秘境开启",intro:"{W}一处秘境开启，名额有限，各方都在抢。",cs:[
+ {t:"全力争名额",d:"机缘不等人",dim:"qiyun",pts:26,ok:"你挤进了名额，秘境之行收获不小。",great:"秘境核心区域让你误打误撞闯了进去——这一趟顶十年。"},
+ {t:"与人组队",d:"分工合作",dim:"renyuan",pts:20,ok:"组队而行，收获平分，胜在稳妥。",great:"队里有人后来成了大人物，你们这队的名号传了很久。"},
+ {t:"守在外围",d:"捡漏也是本事",dim:"jiashi",pts:14,stones:50,ok:"外围收购散修带出的零碎，你赚了个差价。",great:"一件被当废品扔出的东西，你看出了门道。"}]},
+{k:"m_zaiye",ph:[4,8],dim:"gengu",title:"灾厄征兆",intro:"{W}传来消息：沉睡的灾厄有苏醒的征兆，山雨欲来。",cs:[
+ {t:"请缨探查",d:"往最危险处去",dim:"gengu",pts:26,ok:"你带回了灾厄的第一手情报，宗门重赏。",great:"你在灾厄眼皮底下全身而退，还摸清了它的弱点。"},
+ {t:"协助疏散",d:"先护人",dim:"renyuan",pts:20,ok:"三乡百姓因你提前撤离，无一伤亡。",great:"百姓为你立了生祠——香火这东西，有时候真能救命。"},
+ {t:"囤积物资",d:"乱世先活下来",dim:"jiashi",pts:14,stones:60,ok:"你提前备足了物资，这一关过得比旁人稳。",great:"你的囤积清单后来成了各家的模板。"}]},
+{k:"m_leitai",ph:[4,8],dim:"gengu",title:"擂台之约",intro:"同辈擂台开启，有人指名要挑战你——躲不过的。",cs:[
+ {t:"登台",d:"战",dim:"gengu",pts:26,ok:"一场恶战，你的名字登上了同辈的榜单。",great:"三招定胜负，台下静了一瞬，然后炸了。"},
+ {t:"先战一场热身局",d:"稳扎稳打",dim:"wuxing",pts:18,ok:"热身局摸清了对手的路数，正局打得从容。",great:"你的热身录像被各家买去研究——出名有时候很简单。"},
+ {t:"以闭关避战",d:"不应",dim:"gengu",pts:8,ok:"你闭关避战，风言风语了一阵，也就散了。",great:"闭关出来你强了一截——避战的人里，你是最不像避战的。"}]},
+{k:"m_zhaolan",ph:[4,8],dim:"jiashi",title:"势力招揽",intro:"一家势力向你递来橄榄枝：资源、地位、靠山，应有尽有。",cs:[
+ {t:"接受招揽",d:"背靠大树好乘凉",dim:"jiashi",pts:20,stones:40,ok:"资源到位，你的进境快了一截。",great:"你成了他们这一代的门面人物，资源倾斜得旁人眼红。"},
+ {t:"婉拒",d:"自由价更高",dim:"renyuan",pts:16,ok:"婉拒得体面，对方反而高看你。",great:"多年后你自立门户时，他们第一个送来贺礼。"},
+ {t:"谈条件",d:"待价而沽",dim:"jiashi",pts:18,stones:20,ok:"条件谈得漂亮，你拿到了最想要的那一项。",great:"你的谈判被写进商会的教材——这是后话。"}]},
+{k:"m_xinmo",ph:[5,8],dim:"wuxing",title:"心魔夜",intro:"夜半打坐，心魔扮作前世的你，坐在对面问：『值得吗？』",cs:[
+ {t:"与他对谈",d:"心魔也是自己",dim:"wuxing",pts:24,ok:"谈到天明，心魔散去，你的心境厚了一层。",great:"他最后说了一句你听不懂的话——像是预言，你记下了。"},
+ {t:"一剑斩之",d:"不废话",dim:"gengu",pts:20,ok:"剑落魔散，痛快是痛快，心里空了一块。",great:"斩魔时溅出的火星里，你瞥见了下一境的门。"},
+ {t:"请师长护法",d:"不逞强",dim:"renyuan",pts:16,ok:"师长护法，你安然渡过这一夜。",great:"护法的师长事后说：你的心魔，比旁人的都老成。"}]},
+{k:"m_renwu",ph:[4,8],dim:"qiyun",title:"界门任务",intro:"界门任务墙刷新了一批限时任务：讨伐、护送、收集，各凭本事。",cs:[
+ {t:"接讨伐",d:"最难的，赏也最厚",dim:"gengu",pts:24,ok:"讨伐完成，任务墙上的名字往前挪了一大截。",great:"你超额完成了讨伐——任务墙为你亮了一次金字。"},
+ {t:"接护送",d:"稳",dim:"renyuan",pts:18,stones:50,ok:"护送平安，雇主给了好评。",great:"护送途中顺手平了一伙劫修，雇主追加了酬金。"},
+ {t:"接收集",d:"冷门材料，价高",dim:"qiyun",pts:20,ok:"收集齐了，交割时对方多看了你两眼。",great:"你交的材料里混着一件珍品——你自己留了个心眼，没全交。"}]},
+{k:"w_cangwu",ph:[3,9],world:"cangwu",dim:"renyuan",title:"苍梧旱情",intro:"苍梧界大旱，灵田龟裂，农户跪在田埂上求雨。",cs:[
+ {t:"引泉济田",d:"用法力引地下水",dim:"renyuan",pts:22,stones:20,ok:"泉水漫过灵田，这一季的收成保住了。",great:"引出的竟是一眼灵泉，苍梧人把你的名字刻在了泉边。"},
+ {t:"布雨阵",d:"以阵法行云布雨",dim:"wuxing",pts:24,ok:"一场透雨，旱情大解。",great:"雨里带着灵气，这一年的灵米品相格外好。"}]},
+{k:"w_gaoling",ph:[3,9],world:"gaoling",dim:"linggen",title:"灵潮暴涨",intro:"上灵界灵潮毫无征兆地暴涨，修行者又喜又怕。",cs:[
+ {t:"借潮冲关",d:"机不可失",dim:"linggen",pts:26,ok:"借着灵潮，你的修为涨了一大截。",great:"灵潮与你共鸣，这一涨顶得上三年苦修。"},
+ {t:"护住低阶同门",d:"潮太猛，他们受不住",dim:"renyuan",pts:20,ok:"你护着同门退入静室，自己错过了最佳时机。",great:"同门里有人因祸得福，日后成了你的臂助。"}]},
+{k:"w_huanggu",ph:[3,9],world:"huanggu",dim:"gengu",title:"古兽苏醒",intro:"荒古界的地底传来心跳——一头古兽要醒了。",cs:[
+ {t:"近身观兽",d:"蛮荒的规矩：先看它认不认你",dim:"gengu",pts:26,ok:"古兽睁眼看了你一息，又睡去了——它认你的气息。",great:"古兽褪下一块旧甲赠你，荒古的猎手们都看傻了。"},
+ {t:"随猎队撤离",d:"不逞强",dim:"renyuan",pts:16,ok:"撤离有序，无人伤亡。",great:"撤离路上你救下幼兽一头——它的母亲，就是那头古兽。"}]},
+{k:"w_jianzhong",ph:[3,9],world:"jianzhong",dim:"wuxing",title:"万剑齐鸣",intro:"剑冢界万剑无风自动，齐声长鸣——有剑在择主。",cs:[
+ {t:"登冢听剑",d:"让剑来选你",dim:"wuxing",pts:26,ok:"一柄古剑应声而起，绕你三圈，认了主。",great:"齐鸣声中飞出的不是一柄，是剑冢的冢心之剑。"},
+ {t:"以剑意回应",d:"人择剑",dim:"gengu",pts:22,ok:"你的剑意与冢中古意相和，得了一段传承。",great:"你的回应让三柄古剑同时出鞘——剑冢百年未有。"}]},
+{k:"w_dongtian",ph:[3,9],world:"dongtian",dim:"qiyun",title:"秘境如雨",intro:"洞天界的秘境像下雨一样接连开启，人人都在赶场。",cs:[
+ {t:"挑最大的进",d:"富贵险中求",dim:"qiyun",pts:28,ok:"最大的秘境里，你满载而归。",great:"秘境之灵相中了你，单独开了一条近路。"},
+ {t:"专捡冷门小境",d:"人少，东西不差",dim:"wuxing",pts:20,ok:"小境里安安静静，你把好东西都搬空了。",great:"一处小境竟是连环境，越走越深，越深越富。"}]},
+{k:"w_huangchao",ph:[3,9],world:"huangchao",dim:"jiashi",title:"皇朝征召",intro:"皇朝界发下征召令，各家子弟都要应征点卯。",cs:[
+ {t:"应征立功",d:"功名马上取",dim:"jiashi",pts:24,stones:30,ok:"一征立功，你的名字进了皇朝的册子。",great:"你救了主将一命——皇朝的人情，值钱得很。"},
+ {t:"献策不献身",d:"以智换地位",dim:"wuxing",pts:20,ok:"你的策被采纳，人却留在了修行路上。",great:"献策的原件被收进皇朝文库，署名是你的。"}]},
+{k:"w_hongchen",ph:[3,9],world:"hongchen",dim:"renyuan",title:"红尘灯会",intro:"红尘界一年一度的灯会，万人空巷，烟火人间。",cs:[
+ {t:"入世赏灯",d:"修行先修心",dim:"renyuan",pts:20,ok:"一夜灯火，你的心境莫名通透了许多。",great:"灯会上你随手解了一桩十年悬案，满城传颂。"},
+ {t:"摆摊卖符食",d:"挣点烟火钱",dim:"jiashi",pts:14,stones:70,ok:"一夜摆摊，赚得盆满钵满。",great:"你的摊位成了灯会的招牌，第二年有人出高价盘你的位置。"}]},
+{k:"w_qianji",ph:[3,9],world:"qianji",dim:"wuxing",title:"机关城异动",intro:"千机界的机关城核心忽然自行运转，像是有什么在苏醒。",cs:[
+ {t:"入城探核",d:"千机一脉的本行",dim:"wuxing",pts:26,ok:"你在核心处得了一段机关传承，如获至宝。",great:"核心为你让开一条路——仿佛你本就是它的主人。"},
+ {t:"封城避险",d:"先保住人",dim:"renyuan",pts:18,ok:"封城及时，异动平息后无人伤亡。",great:"异动平息时，核心向你传出一道模糊的谢意。"}]},
+{k:"w_wanshou",ph:[3,9],world:"wanshou",dim:"gengu",title:"血月兽潮",intro:"万兽界血月当空，兽潮如海，向人族聚居地涌来。",cs:[
+ {t:"立于潮头",d:"战",dim:"gengu",pts:28,ok:"你在潮头站了一夜，兽潮退时，你还站着。",great:"兽潮退去时，群兽为你让出一条路——它们认强者。"},
+ {t:"驭兽疏导",d:"不硬拼",dim:"renyuan",pts:22,ok:"你引开兽群主力，聚居地保住了。",great:"兽王与你对视良久，低吼一声，竟带着兽群改了道。"}]},
+{k:"w_minghai",ph:[3,9],world:"minghai",dim:"wuxing",title:"命河改道",intro:"命海界的命河毫无征兆地改道，无数人的命数随之起伏。",cs:[
+ {t:"顺河而观",d:"看命数如何流转",dim:"wuxing",pts:26,ok:"你看懂了命河的一段流向，命修之道大进。",great:"改道时你捞起一枚命钱——上面刻着你自己的名字。"},
+ {t:"逆流捞人",d:"有人被命河卷走了",dim:"renyuan",pts:22,ok:"你捞回了三个人，他们的命数从此与你相连。",great:"被捞起的人里，有一位日后成了命海界的大人物。"}]},
+{k:"w_guixu",ph:[3,9],world:"guixu",dim:"qiyun",title:"残骸之海",intro:"归墟界沉着万界的残骸，这一日，海面浮起一具完整的旧世宫阙。",cs:[
+ {t:"登阙探宝",d:"旧世的东西，会认旧人",dim:"qiyun",pts:26,ok:"宫阙里留下的东西，件件都是故事。",great:"宫阙的匾额落下来，正砸在你脚边——上面是你前世的字迹。"},
+ {t:"只拓碑文",d:"宝贝烫手，碑文不烫",dim:"wuxing",pts:18,ok:"碑文拓本卖出了好价钱，还留了一份自研。",great:"碑文里藏着一门失传神通的线索。"}]},
+{k:"w_jiehai",ph:[3,9],world:"jiehai",dim:"gengu",title:"劫海试渡",intro:"劫海界天劫成海，渡者十不存一——但渡过去的人，都脱胎换骨。",cs:[
+ {t:"入海试渡",d:"劫也是机缘",dim:"gengu",pts:30,ok:"你在劫海里撑了三日，出来时气息大变。",great:"劫海为你分开一条缝——像是天劫在给你让路，又像在记住你。"},
+ {t:"岸边观摩",d:"先看别人怎么渡",dim:"wuxing",pts:18,ok:"三日观摩，你把劫海的脾气摸了个七八分。",great:"观摩时你救下一位渡劫失败者，得了他的手札。"}]},
+{k:"s_ling",ph:[3,9],sys:"ling",dim:"linggen",title:"引气异变",intro:"这一日引气入体，灵气忽然比平时活泼十倍，像在试探你。",cs:[
+ {t:"顺势导引",d:"让灵气走遍周天",dim:"linggen",pts:24,ok:"周天圆满，灵气的亲和又深一层。",great:"灵气在你体内自成循环——这是天才的标志。"},
+ {t:"压住异变",d:"稳字当头",dim:"gengu",pts:16,ok:"你压住了异变，没出岔子。",great:"压住的灵气凝成一颗种子，日后慢慢发芽。"}]},
+{k:"s_ti",ph:[3,9],sys:"ti",dim:"gengu",title:"肉身枷锁",intro:"体修之路走到一处枷锁：肉身像被无形的锁扣住了。",cs:[
+ {t:"以痛破锁",d:"药浴加倍，瀑下加时",dim:"gengu",pts:26,ok:"枷锁应声而开，你的肉身强横了一大截。",great:"破锁那一夜，你的血气冲霄，惊动了半座山。"},
+ {t:"寻访体修前辈",d:"问路",dim:"renyuan",pts:18,ok:"前辈一语道破：锁不在身上，在心里。",great:"前辈传你一段锻体的口诀，是他压箱底的东西。"}]},
+{k:"s_jian",ph:[3,9],sys:"jian",dim:"wuxing",title:"剑心蒙尘",intro:"你的剑忽然钝了——不是剑钝，是心蒙了尘。",cs:[
+ {t:"静坐擦剑",d:"擦剑也是擦心",dim:"wuxing",pts:24,ok:"擦了七日，剑光复明，心也跟着亮了。",great:"第七日剑鸣自起，剑心通明更胜从前。"},
+ {t:"下山问剑",d:"去战，去问",dim:"gengu",pts:20,ok:"三场问剑，你的剑重新有了锋芒。",great:"问剑的最后一人，是隐退的剑圣，你们战成了平手。"}]},
+{k:"s_qianji",ph:[3,9],sys:"qianji",dim:"wuxing",title:"傀心化物",intro:"你炼的傀儡忽然动了一下手指——不是机关，是它自己。万物可化，此言不虚。",cs:[
+ {t:"顺势点化",d:"给它一个名字",dim:"wuxing",pts:28,ok:"傀儡睁开眼唤你主人，千机一脉的真意，你摸到了门。",great:"它日后成了名震一方的存在——而它永远记得，是你先叫了它的名字。"},
+ {t:"封印观察",d:"来历不明，先稳",dim:"gengu",pts:16,ok:"你封了它的核心，慢慢观察，不急。",great:"封印期间它学会了写字，第一张纸条写着：放我出来，我帮你。"}]},
+{k:"s_ming",ph:[3,9],sys:"ming",dim:"wuxing",title:"窥见命线",intro:"观命时你忽然看见自己的命线——它在一个地方打了个结。",cs:[
+ {t:"解这个结",d:"命是自己的",dim:"wuxing",pts:26,ok:"结解开了，虽然费了大功夫，你的命从此顺了几分。",great:"解结时你顺手改了一笔——天机随之晃动了一下。"},
+ {t:"记下位置",d:"留待来日",dim:"gengu",pts:16,ok:"你记下了结的位置，继续赶路。",great:"你记下时，命线另一端似乎有人同时抬起了头。"}]},
+{k:"s_xue",ph:[3,9],sys:"xue",dim:"gengu",title:"血脉返祖",intro:"你的血忽然沸腾，祖辈的影子在血里翻涌——返祖开始了。",cs:[
+ {t:"迎上去",d:"让血脉觉醒",dim:"gengu",pts:26,ok:"返祖完成，你的身上多了几分祖辈的威势。",great:"觉醒的形态前所未有，长老说：这一脉，要改谱了。"},
+ {t:"压着慢慢来",d:"稳",dim:"renyuan",pts:18,ok:"你压着血脉分段觉醒，根基更稳。",great:"分段觉醒让你多得了一门血脉神通。"}]},
+{k:"s_hongchen",ph:[3,9],sys:"hongchen",dim:"renyuan",title:"红尘情劫",intro:"红尘炼心，总有一劫是情：一个让你心动的人，出现在了最不合适的时候。",cs:[
+ {t:"坦然相待",d:"情也是道",dim:"renyuan",pts:24,ok:"你们坦然相待，无论结果如何，心境都过了一关。",great:"这一段成了红尘界传唱的故事，而你们都走出了自己的路。"},
+ {t:"快刀斩情",d:"道心为重",dim:"gengu",pts:18,ok:"你斩得干脆。只是很多年后想起，仍有一声叹息。",great:"斩情那一剑，快得连心魔都没反应过来。"}]},
+{k:"p_dan",ph:[3,9],prof:"dan",dim:"wuxing",title:"有人求丹",intro:"一位大户捧着重金求你开炉——这一炉，炼的是你的名声。",cs:[
+ {t:"开炉",d:"接",dim:"wuxing",pts:16,stones:60,profExp:25,ok:"丹成九颗，颗颗圆润，求丹者千恩万谢。",great:"出丹时丹香三里，这一炉直接打出了你的招牌。"},
+ {t:"先言明风险",d:"丑话说前头",dim:"renyuan",pts:10,profExp:12,ok:"风险说清，丹也成了，对方反而更敬你。",great:"对方事后成了你的长期主顾，还介绍了三家。"}]},
+{k:"p_dan2",ph:[4,9],prof:"dan",dim:"gengu",title:"丹炉炸响",intro:"炼到中途，丹炉发出不祥的炸响——保丹还是保人？",cs:[
+ {t:"扑上去护炉",d:"丹师的手就是命",dim:"gengu",pts:14,profExp:22,ok:"你护住了丹胚，手上烫出一串水泡。",great:"炸炉的火被你反手压成丹纹——这一手，够学徒看十年。"},
+ {t:"先撤人",d:"人比丹贵",dim:"renyuan",pts:12,profExp:14,ok:"人全撤出，炉炸了，丹房的学徒看你的眼神变了。",great:"学徒们自发凑钱帮你重修丹房——人心就是这么攒的。"}]},
+{k:"p_qi",ph:[3,9],prof:"qi",dim:"wuxing",title:"古宝修复",intro:"有人送来一件残破的古宝：修好，天价；修坏，赔命。",cs:[
+ {t:"接",d:"手艺人的胆量",dim:"wuxing",pts:16,stones:70,profExp:25,ok:"古宝复光，送宝人当场加了酬金。",great:"你不仅修好了，还补全了它缺失的一道纹——价值翻倍。"},
+ {t:"先验宝再报价",d:"稳妥",dim:"jiashi",pts:10,stones:30,profExp:12,ok:"验完报价，双方都满意。",great:"验宝时你发现宝里还藏着宝——这话你没说，先记下了。"}]},
+{k:"p_fu",ph:[3,9],prof:"fu",dim:"wuxing",title:"符救急",intro:"夜里有人砸门求符：家里出事了，就等你这一张符救命。",cs:[
+ {t:"连夜画符",d:"救急如救火",dim:"wuxing",pts:16,profExp:24,ok:"符到病除，那家人敲锣打鼓来谢你。",great:"情急之下你画出了平生最好的一张符——境界松动了。"},
+ {t:"亲自上门",d:"符不如人",dim:"renyuan",pts:14,profExp:14,ok:"你亲自上门处置，比一张符更让人安心。",great:"上门才发现事情比符更复杂——你顺手解决了一个大麻烦。"}]},
+{k:"p_zhen",ph:[3,9],prof:"zhen",dim:"wuxing",title:"护山大阵",intro:"护山大阵到了年检的时候，阵眼的位置，只有你看得出问题。",cs:[
+ {t:"连夜补阵",d:"阵眼的裂痕在扩大",dim:"wuxing",pts:16,profExp:25,ok:"补完阵眼，大阵的嗡鸣声稳了下来。",great:"你顺手升级了三处旧阵眼——这一手，长老都做不到。"},
+ {t:"上报长老",d:"功劳与风险分开",dim:"renyuan",pts:10,profExp:12,ok:"长老带人一起补阵，你的名字记在了功劳簿上。",great:"长老看完你的标记说：后生可畏。"}]},
+{k:"p_fumo",ph:[3,9],prof:"fumo",dim:"wuxing",title:"附魔订单",intro:"一批兵器等着附魔赶交付，工坊的人手不够，单子压到了你头上。",cs:[
+ {t:"通宵赶工",d:"接",dim:"wuxing",pts:16,stones:60,profExp:24,ok:"交付时件件精品，工坊的招牌更响了。",great:"其中一件附魔出了异色光泽——极品，买家当场加价。"},
+ {t:"先保精品线",d:"宁缺毋滥",dim:"jiashi",pts:12,stones:30,profExp:14,ok:"你砍掉一半单量保品质，口碑反而涨了。",great:"被砍单的客人排起了明年的队。"}]},
+{k:"p_jin",ph:[3,9],prof:"jin",dim:"wuxing",title:"炼金异变",intro:"炼金釜里的药液忽然变成了不该有的颜色——异变，有时候是宝贝。",cs:[
+ {t:"稳住异变",d:"顺着它走",dim:"wuxing",pts:16,profExp:25,ok:"异变产物是一种新药，炼金师公会抢着登记。",great:"新药的配方只在你脑子里——这就是炼金师的命根子。"},
+ {t:"立刻封釜",d:"安全第一",dim:"gengu",pts:10,profExp:12,ok:"封釜及时，没有出事，你记下了异变的参数。",great:"参数记全了：下次，你可以主动引发它。"}]},
+{k:"p_ji",ph:[3,9],prof:"ji",dim:"wuxing",title:"机关核心订单",intro:"有人订制一批机关核心，指名要你的手艺——机械师的招牌，响了。",cs:[
+ {t:"接大单",d:"量大，利薄，名声厚",dim:"wuxing",pts:16,stones:70,profExp:25,ok:"核心批批过关，你的名号传到了别的界。",great:"其中一颗核心被装进了界舟——你的手艺，上天了。"},
+ {t:"限量精品",d:"少而精",dim:"jiashi",pts:12,stones:40,profExp:14,ok:"限量版供不应求，价格翻了一番。",great:"一颗限量核心在拍卖场拍出了天价。"}]},
+{k:"x_guren",ph:[3,10],echoMature:true,dim:"renyuan",title:"故人之后",intro:"一位年轻人对着你的画像长跪不起：『先祖遗言，若遇此人，必以命相报。』前世的回响，找上了这一世的门。",cs:[
+ {t:"倾囊相授",d:"前世的情，这一世续",dim:"renyuan",pts:24,ok:"你倾囊相授，年轻人跪谢而去，眼里有了光。",great:"他日后成了搅动风云的人物——所有人都知道，他是你这一世点起的一盏灯。"},
+ {t:"结伴同行",d:"新账旧情，一起走",dim:"qiyun",pts:22,ok:"多了个知根知底的同伴，这一路不再孤单。",great:"同行百日，他为你挡了一记暗算——前世的债，这一世用命还。"}]},
+{k:"x_yiji",ph:[3,10],echoAny:true,dim:"qiyun",title:"前世遗迹",intro:"你按着一股说不清的熟悉感走进一处遗迹——上一世的你，在这里留过东西。",cs:[
+ {t:"取走遗物",d:"本就是你的",dim:"qiyun",pts:24,ok:"遗物入手时微微发烫，像是等了你很多年。",great:"遗物里封着上一世的你留给这一世的一句话，你看了很久。"},
+ {t:"只看不动",d:"有些东西，留着比拿着好",dim:"wuxing",pts:16,ok:"你只看了一圈就退出去——这一世的路，要这一世挣。",great:"退出时遗迹为你亮了一盏灯，像是上一世的你在送你。"}]},
+{k:"x_fanzhuan",ph:[4,10],minLife:5,dim:"renyuan",title:"改口",intro:"当年看轻你的那一脉，如今托人带话，措辞恭敬：『请前辈指点。』——蝼蚁？这一世，你该听他们怎么称呼你。",cs:[
+ {t:"平静指点",d:"不翻旧账",dim:"renyuan",pts:22,ok:"你平静地指点了几句。带话的人回去后说：前辈的气度，深不可测。",great:"你指点的内容被他们刻成了碑——当年笑你的那家，如今供着你的字。"},
+ {t:"回赠一句话",d:"『当年那句，送还你们。』",dim:"gengu",pts:18,ok:"话送回去，那边沉默了很久，然后送来了重礼。",great:"那句话成了修行界的名言，而你从头到尾没有抬过声音。"}]},
+{k:"h_jiexiang",ph:[6,10],gaze:2,dim:"gengu",title:"天劫异象",intro:"你头顶的云层无风自动，隐隐有雷音——天道，似乎看了你一眼。",cs:[
+ {t:"抬头迎视",d:"看就看",dim:"gengu",pts:24,flag:"heavenMark",ok:"雷音在你头顶盘旋三圈，散了。你知道，它记住你了。",great:"你迎视的那一瞬，雷音竟退了半分——天劫，也会迟疑。"},
+ {t:"收敛气息",d:"还不到时候",dim:"wuxing",pts:16,ok:"你收敛气息，云层慢慢散去。账，先记着。",great:"散去的云层里掉下一缕雷精，被你稳稳接住。"}]},
+{k:"h_chuiwen",ph:[6,10],gaze:2,minLife:50,dim:"wuxing",title:"天道垂问",intro:"梦中有一道目光落在你身上，一个声音问：『蝼蚁，安敢望天？』",cs:[
+ {t:"答：下一世你再问我",d:"把话顶回去",dim:"gengu",pts:22,flag:"fatianSeed",ok:"目光停了三息，散去时，梦里的天色都变了。",great:"你听见那声音笑了一下——不是嘲笑，是棋逢对手的笑。"},
+ {t:"沉默记下",d:"账记着，慢慢算",dim:"wuxing",pts:18,ok:"你没回答。但你把这一夜，原原本本记进了心里。",great:"沉默里你听清了那声音的来处——这比回答更重要。"}]},
+{k:"h_fatian",ph:[7,10],gaze:3,minLife:75,dim:"gengu",title:"伐天前兆",intro:"这一世的天劫比往世重了三分，像是天道在提前布防——它怕了。",cs:[
+ {t:"立誓",d:"这一世不成就攒下一世，总有一世",dim:"gengu",pts:26,flag:"fatianSeed",ok:"誓言出口时，劫云翻涌，又像是在回应。",great:"立誓的雷音传遍诸界，有人开始打听：是谁，在向天宣战？"},
+ {t:"积蓄力量",d:"不声张",dim:"wuxing",pts:20,ok:"你把锋芒都收起来，只在暗处磨剑。",great:"磨剑的声响很轻，轻到天道都没有察觉。"}]},
+{k:"l_shoutu",ph:[7,10],dim:"renyuan",title:"收徒",intro:"有年轻人跪在门外三天了，资质寻常，眼神却像极了当年的你。",cs:[
+ {t:"收下",d:"传下去",dim:"renyuan",pts:24,flag:"disciple",ok:"你收下了他。很多年后你才知道，这是这一世最对的一个决定。",great:"他后来开宗立派，山门上刻的第一条规矩，是你随口说的一句话。"},
+ {t:"给一封引荐信",d:"你的道不在我这里",dim:"renyuan",pts:16,ok:"引荐信把他送去了更合适的地方。",great:"他在那边成了气候，每年都给你寄土产，雷打不动。"}]},
+{k:"l_juezhan",ph:[7,10],needFlag:"rival",dim:"gengu",title:"宿敌决战",intro:"当年结下的梁子，终究要了结——你的宿敌，发来了战书。",cs:[
+ {t:"赴约",d:"一战了恩仇",dim:"gengu",pts:30,ok:"一场大战，你们都尽了全力。打完，他请你喝了酒。",great:"你赢了，却扶起了他。他说：输给你，不冤。这一战，成了传说。"},
+ {t:"先谈后战",d:"有些话，战前说清",dim:"renyuan",pts:22,ok:"话说开了，战书变成了酒约。恩仇，有时只差一句话。",great:"你们成了彼此最知根知底的人——宿敌，有时比朋友更懂你。"}]},
+{k:"l_lundao",ph:[7,10],dim:"wuxing",title:"名宿论道",intro:"几位名宿设论道局，邀你赴会——这一局，论的是道，争的是名。",cs:[
+ {t:"赴会论道",d:"把你的道说出来",dim:"wuxing",pts:24,ok:"你的论点让满座沉默了三息，然后掌声雷动。",great:"论道局散场时，最年长的名宿对你执了弟子礼。"},
+ {t:"只听不说",d:"听，也是修行",dim:"renyuan",pts:16,ok:"你听了一整局，收获比说还多。",great:"你临走时补的那一句，成了整场论道的题眼。"}]},
+{k:"l_shuhou",ph:[8,10],dim:"wuxing",title:"身后名",intro:"你开始认真想这一世要留下什么：一本书、一座碑、还是一群人。",cs:[
+ {t:"著书",d:"把这一世写下来",dim:"wuxing",pts:24,ok:"书成之日，你知道这一世没有白过。",great:"这本书在你身后流传了八百年，养活了无数后来者。"},
+ {t:"立碑",d:"刻下这一世的名字与话",dim:"renyuan",pts:20,ok:"碑立在山门前，字是你自己写的。",great:"碑上的那句话，成了后来者入门先读的第一课。"},
+ {t:"什么都不留",d:"来去无牵挂",dim:"qiyun",pts:18,ok:"你洒脱地什么都不留——这本身就是一种留。",great:"你越不留，人们越传你。传说，从不问本人意见。"}]}];
+function rbDynLoad(){
+  var sim=null;
+  try{sim=JSON.parse(localStorage.getItem("rbDynLife")||"null")}catch(e){}
+  if(!sim||sim.life!==state.life)sim={life:state.life,prog:0,used:[],queue:[],prof:"",profExp:0,flags:{},log:[],done:false,cur:null,npc:""};
+  return sim;
+}
+function rbDynSave(sim){try{localStorage.setItem("rbDynLife",JSON.stringify(sim))}catch(e){}}
+function rbDynNpc(sim){
+  if(sim.npc)return sim.npc;
+  var fams=["沈","顾","陆","江","白","秦","楚","叶","萧","林","周"][Math.floor(Math.random()*11)];
+  var givs=["青禾","长川","小满","听澜","既白","南乔","砚秋","扶摇"][Math.floor(Math.random()*8)];
+  sim.npc=fams+givs;return sim.npc;
+}
+function rbDynText(sim,t){
+  return String(t||"").replace(/\{W\}/g,state.world?rbWorldName(state.world):"此界")
+    .replace(/\{S\}/g,state.system?rbSysName(state.system):"本门")
+    .replace(/\{R\}/g,rbSysRank(state.system||"ling",state.rankIndex||0))
+    .replace(/\{NPC\}/g,rbDynNpc(sim));
+}
+function rbDynNodeDef(key){for(var i=0;i<RB_DYN_NODES.length;i++){if(RB_DYN_NODES[i].k===key)return RB_DYN_NODES[i]}return null}
+function rbDynEligible(sim,n){
+  if(sim.used.indexOf(n.k)>=0)return false;
+  if(sim.prog<n.ph[0]||sim.prog>n.ph[1])return false;
+  if(n.world&&state.world!==n.world)return false;
+  if(n.sys&&state.system!==n.sys)return false;
+  if(n.prof&&sim.prof!==n.prof)return false;
+  if(n.needFlag&&!sim.flags[n.needFlag])return false;
+  if(n.gaze&&(state.gaze||0)<n.gaze)return false;
+  if(n.minLife&&state.life<n.minLife)return false;
+  if(n.echoMature&&!(state.echoes||[]).some(function(ec){return ec.status==="matured"}))return false;
+  if(n.echoAny&&!(state.lifeLog||[]).length)return false;
+  return true;
+}
+function rbDynPick(sim){
+  if(sim.cur){var cur=rbDynNodeDef(sim.cur);if(cur)return cur;sim.cur=null}
+  if(sim.queue.length){var qk=sim.queue.shift();var qn=rbDynNodeDef(qk);if(qn){sim.cur=qk;rbDynSave(sim);return qn}}
+  if(sim.prog>=10)return null;
+  if(sim.prog===2&&!sim.prof&&!sim.flags.profDecided)return {k:"prof_pick",profPick:true,title:"择一门副职业",intro:"师傅说：主修定境界，副职业定饭碗——这一世，你想兼修哪一行？也可以不兼修，专心主修。",cs:[]};
+  var alloc=state.alloc||{};var cands=[];
+  RB_DYN_NODES.forEach(function(n){
+    if(!rbDynEligible(sim,n))return;
+    var w=3+Math.min(4,(alloc[n.dim]||0)/80);
+    if(n.world)w+=8; if(n.sys)w+=7; if(n.prof)w+=7; if(n.echoMature||n.echoAny)w+=4; if(n.gaze)w+=3;
+    cands.push({n:n,w:w});
+  });
+  if(!cands.length){
+    RB_DYN_NODES.forEach(function(n){
+      if(sim.used.indexOf(n.k)>=0)return;
+      if(n.world&&state.world!==n.world)return;
+      if(n.sys&&state.system!==n.sys)return;
+      if(n.prof&&sim.prof!==n.prof)return;
+      if(n.needFlag&&!sim.flags[n.needFlag])return;
+      if(n.gaze&&(state.gaze||0)<n.gaze)return;
+      if(n.minLife&&state.life<n.minLife)return;
+      if(n.echoMature&&!(state.echoes||[]).some(function(ec){return ec.status==="matured"}))return;
+      if(n.echoAny&&!(state.lifeLog||[]).length)return;
+      cands.push({n:n,w:1});
+    });
+    if(!cands.length)return null;
+    tot=cands.reduce(function(a,c){return a+c.w},0);
+  }
+  var tot=cands.reduce(function(a,c){return a+c.w},0),r=Math.random()*tot,pick=cands[0].n;
+  for(var i=0;i<cands.length;i++){r-=cands[i].w;if(r<0){pick=cands[i].n;break}}
+  sim.cur=pick.k;rbDynSave(sim);return pick;
+}
+function rbProfPickChoices(){
+  var cs=Object.keys(RB_PROFS).map(function(k){return{t:RB_PROFS[k].icon+" "+RB_PROFS[k].name,d:"兼修这一行，事件与订单都会找上门",setProf:k,pts:6,ok:"你选了"+RB_PROFS[k].name+"这一行——手艺，要用一世来养。",great:"你选了"+RB_PROFS[k].name+"这一行——师傅说，你这双手，天生就是吃这碗饭的。"}});
+  cs.push({t:"暂不兼修",d:"一心主修",pts:4,ok:"你决定这一世只走主修一路，心无旁骛。",great:"你决定这一世只走主修一路，心无旁骛。"});
+  return cs;
+}
+function rbSimHtml(){
+  if(!state||!state.sectId||state.allocPending)return "";
+  var sim=rbDynLoad();
+  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世（动态）</h2>';
+  html+='<div class="desc">这一世没有固定剧本：事件按你的配点、落界、体系与际遇随机找上门，选择会留下痕迹，有些账，下一世还要算。</div>';
+  if(sim.prof)html+='<div class="desc" style="margin-top:4px">副职业 <b>'+RB_PROFS[sim.prof].icon+' '+RB_PROFS[sim.prof].name+'</b> · 品阶 <b style="color:#fbbf24">'+rbProfRank(sim.profExp)+'</b>（熟练 '+sim.profExp+'）——副职业的事件与订单会优先找你。</div>';
+  if(sim.log.length)html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
+  if(sim.done){
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行，想终结这一世，去轮回殿选结局结算。</div>'
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
+  }else{
+    var node=rbDynPick(sim);
+    if(!node){html+='<div class="desc" style="margin-top:8px">这一世的故事暂告一段落。</div>'}
+    else{
+      var cs=node.profPick?rbProfPickChoices():node.cs;
+      html+='<div class="desc" style="margin-top:10px;line-height:1.85"><b style="color:#fbbf24">'+rbDynText(sim,node.title)+'</b>（第 '+(sim.prog+1)+' 幕）<br>'+rbDynText(sim,node.intro)+'</div>'
+        +cs.map(function(o,i){return '<button class="pbtn" data-sim="'+i+'" style="display:block;width:100%;margin-top:8px;text-align:left">'+o.t+'<span class="desc" style="display:block">'+o.d+'</span></button>'}).join("");
+    }
+  }
+  if(hasBridge&&state.rankIndex<6&&state.points>=(BREAK_COSTS[state.rankIndex]||9999)){
+    html+='<button class="pbtn" data-simbreak="1" style="margin-top:10px;width:100%">⬆️ 轮回点已够突破下一境（'+BREAK_COSTS[state.rankIndex]+' 点），点此突破</button>';
+  }
+  html+='</div>';
+  return html;
+}
+function rbDynApply(sim,nodeKey,nodeTitle,opt){
+  var alloc=state.alloc||{};
+  var dimVal=alloc[opt.dim]||0;
+  var great=dimVal>=150;
+  var pts=Math.round((opt.pts||0)*(great?1.5:1));
+  var text=(great&&opt.great)?opt.great:opt.ok;
+  if(opt.setProf){sim.prof=opt.setProf}
+  if(opt.profExp)sim.profExp=(sim.profExp||0)+opt.profExp;
+  if(opt.flag)sim.flags[opt.flag]=1;
+  if(opt.chain)sim.queue.push(opt.chain);
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
+  sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
+  function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
+  if(pts>0){
+    if(hasBridge){callNative("grant",{id:"dyn"+state.life+"_"+nodeKey,amount:pts}).then(after).catch(function(){after(null)})}
+    else{mockGain(pts);mockDerive();mockSave();after(null)}
+  }else after(null);
+}
+function rbSimChoose(i){
+  var sim=rbDynLoad();if(sim.done)return;
+  var node=rbDynPick(sim);if(!node)return;
+  var cs=node.profPick?rbProfPickChoices():node.cs;
+  var opt=cs[i];if(!opt)return;
+  if(node.profPick)sim.flags.profDecided=1;
+  if(!node.profPick){sim.used.push(node.k);sim.prog++}
+  sim.cur=null;
+  if(sim.prog>=10)sim.done=true;
+  rbDynSave(sim);
+  rbDynApply(sim,node.k,rbDynText(sim,node.title),opt);
+}
+function rbSimEncChoose(i){}
+function rbBindSim(box){
+  Array.prototype.forEach.call(box.querySelectorAll("[data-sim]"),function(b){b.addEventListener("click",function(){rbSimChoose(+b.getAttribute("data-sim"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-simgo]"),function(b){b.addEventListener("click",function(){openRoom(b.getAttribute("data-simgo"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-simbreak]"),function(b){b.addEventListener("click",function(){
+    callNative("breakthrough",{}).then(function(st){state=Object.assign(state,st);render();renderHub()}).catch(function(){});
+  })});
+}
+
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
