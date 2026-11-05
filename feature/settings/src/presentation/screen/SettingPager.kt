@@ -101,6 +101,24 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import com.suanran.dreambox.presentation.component.navigation.BottomBarDestination
+import com.suanran.dreambox.presentation.component.navigation.LocalMainPagerState
+import com.suanran.dreambox.presentation.component.sky.SkyGlowLabel
+import com.suanran.dreambox.presentation.component.sky.SkyLightRow
+import com.suanran.dreambox.presentation.component.sky.SkyMistBackdrop
+import com.suanran.dreambox.presentation.component.sky.SkyShotHeader
+import com.suanran.dreambox.presentation.component.sky.SkyStatusBarIcons
+import com.suanran.dreambox.presentation.component.sky.rememberSkyCaption
+import com.suanran.dreambox.presentation.component.sky.skyCenteredAt
+import kotlinx.coroutines.delay
 
 /** 设置磁吸模块描述。 */
 private data class SettingsModule(
@@ -192,6 +210,16 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
     val listState = rememberLazyListState()
     val visibleModules = modules.distinctBy { it.key }.filter { it.key !in hiddenKeys }
 
+    // 仿首页（天空版）：S 镜头 Header + 雾海光字清单。旧版保留在下方分支里，随时可切回。
+    if (SKY_SETTINGS_PAGE) {
+        SkySettingHome(
+            modules = visibleModules,
+            mainInnerPadding = mainInnerPadding,
+            onOpen = { route -> openSecondary(route) },
+        )
+        return
+    }
+
     // 深色时背景换成种子色深色渐变，不再整页波奇粉（与其它页黑底不统一，深色专项 1.77）。
     val dark = bocchiDark()
     val scheme = MiuixTheme.colorScheme
@@ -228,6 +256,63 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
                         isDragging = false,
                         onClick = { module.route?.let { openSecondary(it) } },
                     )
+                }
+            }
+        }
+    }
+}
+
+private const val SKY_SETTINGS_PAGE = true
+
+/**
+ * 设置页 · 天空版：巨树镜头 Header（图比例取景，光字「设置」）+ 雾海光字清单。
+ * 行数据与跳转沿用 [SettingPager] 原有 modules / openSecondary，行为不变。
+ */
+@Composable
+private fun SkySettingHome(
+    modules: List<SettingsModule>,
+    mainInnerPadding: PaddingValues,
+    onOpen: (Route) -> Unit,
+) {
+    val pager = LocalMainPagerState.current
+    val active = pager.selectedPage == BottomBarDestination.Setting.ordinal
+    SkyStatusBarIcons(active)
+    val caption = rememberSkyCaption(active)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val headerH = maxHeight * 0.34f
+        SkyMistBackdrop(Modifier.fillMaxSize())
+        Column(Modifier.fillMaxSize()) {
+            SkyShotHeader(height = headerH, zoom = 1.45f, cx = 0.31f, cy = 0.27f) { map ->
+                SkyGlowLabel(
+                    line1 = FlyTxt.Settings.Title,
+                    line1Size = 20.sp,
+                    modifier = Modifier.skyCenteredAt(map.at(Offset(0.22f, 0.36f))) { caption.value },
+                )
+            }
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(bottom = mainInnerPadding.calculateBottomPadding() + 12.dp),
+            ) {
+                itemsIndexed(modules, key = { _, m -> m.key }) { index, module ->
+                    val entry = remember { Animatable(0f) }
+                    LaunchedEffect(active) {
+                        if (active) {
+                            delay(index * 28L)
+                            entry.animateTo(1f, tween(220))
+                        }
+                    }
+                    Box(
+                        Modifier.graphicsLayer {
+                            alpha = entry.value
+                            translationY = (1f - entry.value) * 8.dp.toPx()
+                        },
+                    ) {
+                        SkyLightRow(
+                            title = module.title,
+                            summary = if (module.badge != null) "${module.summary} · ${module.badge}" else module.summary,
+                            onClick = { module.route?.let { onOpen(it) } },
+                        )
+                    }
                 }
             }
         }
