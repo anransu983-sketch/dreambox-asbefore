@@ -619,6 +619,14 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
 #dockOrg{display:none!important}
 #hallGradeText{display:none!important}
 #hallGradeBar{display:none!important}
+
+.zs-stage{position:relative;height:204px;border-radius:14px;overflow:hidden;background:radial-gradient(ellipse 130% 95% at 50% 0%,#1c2647 0%,#0a0f22 55%,#04060d 100%)}
+.zs-ball{position:absolute;left:50%;top:30px;width:104px;height:104px;margin-left:-52px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#ffffff 0%,#ffefc4 34%,#f7cd72 58%,rgba(247,205,114,.35) 80%,rgba(247,205,114,0) 100%);box-shadow:0 0 55px 16px rgba(255,216,130,.45),0 0 130px 55px rgba(255,190,90,.16);animation:zsFloat 5.5s ease-in-out infinite}
+.zs-ring{position:absolute;left:50%;top:76px;width:196px;height:46px;margin-left:-98px;border:1px solid rgba(255,220,150,.35);border-radius:50%;animation:zsRing 9s linear infinite}
+@keyframes zsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes zsRing{from{transform:rotateX(64deg) rotate(0deg)}to{transform:rotateX(64deg) rotate(360deg)}}
+.zs-name{position:absolute;left:0;right:0;bottom:24px;text-align:center;color:#ffe9b8;font-size:21px;font-weight:900;letter-spacing:14px;text-indent:14px;text-shadow:0 0 18px rgba(255,205,110,.85)}
+.zs-sub{position:absolute;left:0;right:0;bottom:7px;text-align:center;color:rgba(226,232,255,.75);font-size:11px;letter-spacing:3px}
 </style>
 
 </head>
@@ -828,7 +836,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
     <div class="room-body" id="hubBody"></div>
   </div>
   <div class="room" id="room-rebirth">
-    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🗿 轮回殿</div><div class="room-sub">转世 · 配点 · 回响 · 碑林 · 百世长卷</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">◉ 主神结算</div><div class="room-sub">结算 · 强化 · 回响 · 档案 · 长卷</div></div></div>
     <div class="room-body" id="rebirthBody"></div>
   </div>
   <div id="npcBox"></div>
@@ -1144,7 +1152,7 @@ function renderRebirthRoom(){
   html+='<img src="world-youming.jpg" style="width:100%;height:150px;object-fit:cover;border-radius:14px;display:block">';
   html+='<div class="card"><h2>📜 本世 · 第 '+state.life+' 世</h2><div class="desc">本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b>（结算倍率 ×'+state.evalMult+'）</div>'
     +'<div class="desc" style="margin-top:4px">本世配点：'+RB_ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div>'
-    +'<div class="desc" style="margin-top:4px">轮回称号 <b style="color:#fbbf24">'+rbTitleFor(state.life)+'</b>'+rbNextMs()+'</div>'
+    +'<div class="desc" style="margin-top:4px">轮回者称号 <b style="color:#fbbf24">'+rbTitleFor(state.life)+'</b>'+rbNextMs()+'</div>'
     +(state.world?'<div class="desc" style="margin-top:4px">本世世界 <b>'+rbWorldName(state.world)+'</b> · 修炼体系 <b>'+rbSysName(state.system)+'</b> · 本阶别名 <b>'+rbSysRank(state.system,state.rankIndex)+'</b></div>':"")
     +'</div>';
   if(state.allocPending){
@@ -1219,7 +1227,7 @@ function doRbRebirth(ending){
   if(!ending)return;
   var errEl=$("rbErr");if(errEl)errEl.textContent="";
   if(hasBridge){
-    callRebirth("rebirth",{ending:ending}).then(function(st){state=Object.assign(state,st);rbEnding=null;rbAlloc=null;rbFxSet({tier:"great",title:"转世 · 新世开篇",text:"旧世已了。一睁眼，又是新的一生——配点决定出身，活法决定结局。",pts:0});render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
+    callRebirth("rebirth",{ending:ending}).then(function(st){state=Object.assign(state,st);rbEnding=null;rbAlloc=null;rbFxSet({tier:"great",title:"传送 · 新世界开启",text:"传送完成。新世界的大门已经打开——强化决定起点，活法决定结局。",pts:0});render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
   }else{
     var e=null;RB_ENDINGS.forEach(function(x){if(x.k===ending)e=x});
     if(!e||(state.rankIndex||0)<e.need)return;
@@ -1245,7 +1253,7 @@ function doRbAllocate(){
   var errEl=$("rbErr");if(errEl)errEl.textContent="";
   if(rbAllocSum(a)>state.pool){if(errEl)errEl.textContent="点数不够";return}
   if(hasBridge){
-    callRebirth("allocate",{alloc:a}).then(function(st){state=Object.assign(state,st);rbOpening=rbOpeningText(a);rbAlloc=null;rbFxSet({tier:"great",title:"配点完成 · 命运落子",text:"这一世的命数已经落定，出生只是开始。",pts:0});if(document.activeElement)document.activeElement.blur();render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
+    callRebirth("allocate",{alloc:a}).then(function(st){state=Object.assign(state,st);rbOpening=rbOpeningText(a);rbAlloc=null;rbFxSet({tier:"great",title:"强化完成 · 传送就绪",text:"属性强化已经落定，传送随时可以开始。",pts:0});if(document.activeElement)document.activeElement.blur();render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
   }else{
     state.alloc=a;state.points=state.pool-rbAllocSum(a);state.pool=0;state.allocPending=false;state.openingStones=(a.jiashi||0)*50;
     (function(){var odds=rbWorldOdds(a,state.life);var seed=state.life*1000003+JSON.stringify(a).length*97+(state.lifeLog||[]).length;function rnd(){seed=(seed*1103515245+12345)%2147483648;return seed/2147483648}
@@ -1259,8 +1267,8 @@ function doRbAllocate(){
 /* == 轮回主页：以世为纲——选一世、看这世的操作、进这世的山门 == */
 var rbLifeSel=0;
 function rbSteleHtml(){
-  var log=state.lifeLog||[];var html='<div class="card"><h2>🪦 前世碑林（'+log.length+' 世）</h2>';
-  if(!log.length){html+=(state.life>1?'<div class="desc">碑林自轮回殿立碑起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来，点开任意一碑，能看那一世的配点与操作。</div>');return html+'</div>'}
+  var log=state.lifeLog||[];var html='<div class="card"><h2>🗂️ 世界档案（'+log.length+' 个世界）</h2>';
+  if(!log.length){html+=(state.life>1?'<div class="desc">档案自首次结算起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来，点开任意一碑，能看那一世的配点与操作。</div>');return html+'</div>'}
   html+=log.slice().reverse().map(function(en){
     var row='<div class="rbrow" data-life="'+en.life+'" style="cursor:pointer"><span style="font-size:20px">🗿</span><span style="flex:1"><b>第 '+en.life+' 世</b><div class="desc">'+(RB_ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 本世功绩 '+en.earned+' · 结算 '+en.pool+' 点'+(en.world?' · '+rbWorldName(en.world)+' · '+rbSysName(en.system):"")+'</div></span><span class="desc">'+(rbLifeSel===en.life?"收起":"看这世")+'</span></div>';
     if(rbLifeSel===en.life){
@@ -1283,25 +1291,25 @@ function renderHub(){
     var g0=$("hubGo");if(g0)g0.addEventListener("click",function(){closeRoomsUI()});
     return;
   }
-  var html='<img src="world-youming.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:14px;display:block">';
-  html+='<div class="card"><h2>☯️ 第 '+state.life+' 世 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
+  var html='<div class="zs-stage"><div class="zs-ring"></div><div class="zs-ball"></div><span class="fxspark" style="left:16%;top:30px">✦</span><span class="fxspark" style="left:78%;top:20px;animation-delay:.3s">✦</span><span class="fxspark" style="left:64%;top:52px;animation-delay:.55s">✧</span><span class="fxspark" style="left:28%;top:64px;animation-delay:.8s">✧</span><div class="zs-name">主神空间</div><div class="zs-sub">万 界 轮 回 · 皆 在 一 念 之 间</div></div>';
+  html+='<div class="card"><h2>◉ 第 '+state.life+' 个世界 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
     +(state.world?('落界 <b>'+rbWorldName(state.world)+'</b> · 体系 <b>'+rbSysName(state.system)+'</b>（本阶 '+rbSysRank(state.system,state.rankIndex)+'）<br>'):"")
     +'本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b></div></div>';
   if(state.allocPending){
-    html+='<div class="card"><h2>🗿 这一世还没开始</h2><div class="desc">上一世的点池（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去配点 · 定这一世</button></div>';
+    html+='<div class="card"><h2>◉ 新世界待传送</h2><div class="desc">上个世界的奖励点（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去强化 · 定新世界</button></div>';
   }else{
     html+=rbSimHtml();
-    html+='<div class="card"><h2>🎛️ 这一世的操作</h2><div class="desc">这一世要做什么都从这里进：修炼与差事在山门，买卖去集市，闯界去万界，终结这一世去轮回殿。</div><div class="hubops">'
-      +'<button class="pbtn" data-op="scene">🏔️ 进入此世</button>'
+    html+='<div class="card"><h2>🎛️ 世界之间</h2><div class="desc">这里是世界之间的主神空间：进世界做任务，回空间结算与强化——要做什么都从这里走。</div><div class="hubops">'
+      +'<button class="pbtn" data-op="scene">🌐 进入世界</button>'
       +'<button class="pbtn" data-op="room-worlds">🌌 诸天万界</button>'
       +'<button class="pbtn" data-op="room-market">🏮 集市</button>'
       +'<button class="pbtn" data-op="room-events">🎲 今日奇遇</button>'
       +'<button class="pbtn" data-op="room-blood">🩸 血脉</button>'
       +'<button class="pbtn" data-op="room-feed">🏮 人间动态</button>'
-      +'</div><button class="pbtn" data-op="room-rebirth" style="margin-top:8px;width:100%">🗿 轮回殿 · 结算这一世</button></div>';
+      +'</div><button class="pbtn" data-op="room-rebirth" style="margin-top:8px;width:100%">◉ 主神结算 · 结算这个世界</button></div>';
   }
   var lives=[];for(var lf=state.life;lf>=1;lf--)lives.push(lf);
-  html+='<div class="card"><h2>🗿 选择一世</h2><div class="desc">点任意一世，看它当年的配点与操作；当前世就是置顶的这一世。</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
+  html+='<div class="card"><h2>🗂️ 历次世界档案</h2><div class="desc">点任意一个世界，看它当年的强化与经历；当前世界就是置顶的这个。</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
     +lives.map(function(lf){
       var cur=lf===state.life;var logged=(state.lifeLog||[]).some(function(e){return e.life===lf});
       return '<button class="rbchip" data-seelife="'+lf+'" style="'+(cur?"border-color:#f59e0b;color:#fbbf24":"")+'">第 '+lf+' 世'+(cur?"（当前）":(logged?"":" · 无碑"))+'</button>'}).join("")
@@ -1401,14 +1409,14 @@ function rbSimText(t){return t}
 function rbSimHtml(){
   if(!state||!state.sectId||state.allocPending)return "";
   var sim=rbSimLoad();
-  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世</h2>';
+  var html='<div class="card"><h2>📜 世界任务 · 第 '+state.life+' 个世界</h2>';
   if(state.world)html+='<div class="desc">这一世：'+rbWorldName(state.world)+' · '+rbSysName(state.system)+'——配点定下的命，从出生开始一步步走。</div>';
   if(sim.log.length){
     html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
   }
   if(sim.done){
-    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行（差事、集市、万界都在下方入口），想终结这一世，去轮回殿选结局结算。</div>'
-      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行（差事、集市、万界都在下方入口），想终结这个世界，去主神结算选结局。</div>'
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">回主神空间 · 结算这个世界</button>';
   }else if(sim.enc){
     var enc=null;SIM_ENCS.forEach(function(x){if(x.key===sim.enc)enc=x});
     if(enc){
@@ -1729,13 +1737,13 @@ function rbProfPickChoices(){
 function rbSimHtml(){
   if(!state||!state.sectId||state.allocPending)return "";
   var sim=rbDynLoad();
-  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世（动态）</h2>';
-  html+='<div class="desc">这一世没有固定剧本：事件按你的配点、落界、体系与际遇随机找上门，选择会留下痕迹，有些账，下一世还要算。</div>';
+  var html='<div class="card"><h2>📜 世界任务 · 第 '+state.life+' 个世界</h2>';
+  html+='<div class="desc">这个世界没有固定剧本：事件按你的强化、落界、体系与际遇随机找上门，选择会留下痕迹，有些账，下一世还要算。</div>';
   if(sim.prof)html+='<div class="desc" style="margin-top:4px">副职业 <b>'+RB_PROFS[sim.prof].icon+' '+RB_PROFS[sim.prof].name+'</b> · 品阶 <b style="color:#fbbf24">'+rbProfRank(sim.profExp)+'</b>（熟练 '+sim.profExp+'）——副职业的事件与订单会优先找你。</div>';
   if(sim.log.length)html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
   if(sim.done){
-    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行，想终结这一世，去轮回殿选结局结算。</div>'
-      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行，想终结这个世界，去主神结算选结局。</div>'
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">回主神空间 · 结算这个世界</button>';
   }else{
     var node=rbDynPick(sim);
     if(!node){html+='<div class="desc" style="margin-top:8px">这一世的故事暂告一段落。</div>'}
@@ -1882,14 +1890,14 @@ function rbSimHtml(){
   if(!state||!state.sectId||state.allocPending)return "";
   rbDynFixMakeup();
   var sim=rbDynLoad();
-  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世（动态）</h2>';
-  html+='<div class="desc">这一世没有固定剧本：事件按你的配点、落界、体系与际遇随机找上门；每一幕除了现成选项，还能<b>自己写</b>要做的事——万千种选择，成败由命数裁定。</div>';
+  var html='<div class="card"><h2>📜 世界任务 · 第 '+state.life+' 个世界</h2>';
+  html+='<div class="desc">这个世界没有固定剧本：事件按你的强化、落界、体系与际遇随机找上门；每一幕除了现成选项，还能<b>自己写</b>要做的事——万千种选择，成败由命数裁定。</div>';
   if(sim.prof)html+='<div class="desc" style="margin-top:4px">副职业 <b>'+RB_PROFS[sim.prof].icon+' '+RB_PROFS[sim.prof].name+'</b> · 品阶 <b style="color:#fbbf24">'+rbProfRank(sim.profExp)+'</b>（熟练 '+sim.profExp+'）——副职业的事件与订单会优先找你。</div>';
   if(sim.log.length)html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
   if(sim.done){
-    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。在山门自由修行之外，这里还能继续<b>自由行动</b>（每世至多再得 20 次奖励，之后只记事不发点）。想终结这一世，去轮回殿选结局结算。</div>'
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这个世界的任务走完了。在世界内自由行动之外，这里还能继续<b>自由行动</b>（每世至多再得 20 次奖励，之后只记事不发点）。想终结这个世界，去主神结算选结局。</div>'
       +rbFreeHtml()
-      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">回主神空间 · 结算这个世界</button>';
   }else{
     var node=rbDynPick(sim);
     if(!node){html+='<div class="desc" style="margin-top:8px">这一世的故事暂告一段落。</div>'}
@@ -2020,9 +2028,9 @@ callNative=function(method,options){
 function rbRenderLifeBar(){
   var bar=$("lifeBar");if(!bar||!state||!state.sectId)return;
   var sim=rbDynLoad();
-  var nodeTxt=sim.done?"人生路已走完 · 自由行动中":("人生路 · 第 "+(sim.prog+1)+" 幕");
+  var nodeTxt=sim.done?"世界任务已走完 · 自由行动中":("世界任务 · 第 "+(sim.prog+1)+" 幕");
   var profTxt=sim.prof?(" · "+RB_PROFS[sim.prof].icon+RB_PROFS[sim.prof].name+" "+rbProfRank(sim.profExp)):"";
-  bar.innerHTML='<div class="card" style="margin-top:0;display:flex;align-items:center;gap:10px;padding:10px 14px"><span style="flex:1" class="desc">☯️ <b>第 '+state.life+' 世</b> · '+nodeTxt+profTxt+(state.world?(" · "+rbWorldName(state.world)+" · "+rbSysName(state.system)):"")+'</span><button class="pbtn" id="lifeBarBtn">回轮回主页</button></div>';
+  bar.innerHTML='<div class="card" style="margin-top:0;display:flex;align-items:center;gap:10px;padding:10px 14px"><span style="flex:1" class="desc">☯️ <b>第 '+state.life+' 世</b> · '+nodeTxt+profTxt+(state.world?(" · "+rbWorldName(state.world)+" · "+rbSysName(state.system)):"")+'</span><button class="pbtn" id="lifeBarBtn">回主神空间</button></div>';
 }
 document.addEventListener("click",function(e){if(e.target&&e.target.id==="lifeBarBtn")openRoom("room-hub")});
 
@@ -2091,7 +2099,7 @@ var SCENE_SPOTS=[
  {room:"room-forge",icon:"🔨",name:"器峰",day:[29,75],night:[71,65]},
  {room:"room-patrol",icon:"⚖️",name:"执法堂",day:[56,68],night:[38,72],play:"patrol"},
  {room:"room-market",icon:"🏮",name:"集市",day:[10,80],night:[60,82]},
- {room:"room-rebirth",icon:"🗿",name:"轮回殿",day:[87,84],night:[85,70]}];
+ {room:"room-rebirth",icon:"◉",name:"主神结算",day:[87,84],night:[85,70]}];
 var SECT_FILTER={jian:"hue-rotate(-14deg) saturate(1.06)",fu:"brightness(1.1) sepia(.22) hue-rotate(-8deg)",zhen:"",ti:"sepia(.28) hue-rotate(-18deg) saturate(1.1)",kuilei:"hue-rotate(38deg) saturate(.92)",gui:"hue-rotate(55deg) saturate(1.05) brightness(.94)",mo:"hue-rotate(-38deg) saturate(1.15) brightness(.92)"};
 var FORGE=[
  {icon:"🗡️",name:"青锋剑",grade:0,desc:"入门佩剑，剑身泛青，吹毛断发。"},
@@ -2256,7 +2264,7 @@ function renderHall(){
   $("skyChips").innerHTML='<span class="sky-chip">第 <b>'+state.life+'</b> 世</span>'
     +(state.system?'<span class="sky-chip">'+rbSysName(state.system)+' · <b>'+rbDispRank(state)+'</b></span>':"")
     +(state.world?'<span class="sky-chip">'+rbWorldName(state.world)+'</span>':"")
-    +(state.allocPending?'<span class="sky-chip" style="color:#fbbf24">🗿 待转世配点（轮回殿）</span>':"");
+    +(state.allocPending?'<span class="sky-chip" style="color:#fbbf24">◉ 待强化传送（主神结算）</span>':"");
   var gText,gPct;
   if(state.nextGradeThreshold>0){
     var gBase=GRADES[state.gradeIndex].need;
@@ -2266,7 +2274,7 @@ function renderHall(){
   $("hallGradeText").textContent=gText;
   $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
   $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note;
-  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就、🧘 每日修炼、💰 例银、演武 / 炼丹 / 奇遇等互动奖励——不再随天数自动增长。<br>境界靠<b>花轮回点突破</b>，阶名按<b>本世体系</b>走（现本世功绩 '+state.earned+'）。一世终结后去轮回殿结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
+  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就、🧘 每日修炼、💰 例银、演武 / 炼丹 / 奇遇等互动奖励——不再随天数自动增长。<br>境界靠<b>花轮回点突破</b>，阶名按<b>本世体系</b>走（现本世功绩 '+state.earned+'）。一世终结后去主神结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
   var realmChips=RANKS.map(function(r,i){
     var cls=i<state.rankIndex?"rchip done":(i===state.rankIndex?"rchip cur":"rchip");
     return '<span class="'+cls+'">'+r.name+" · "+IDENTITIES[Math.min(i,5)].name+'</span>';
@@ -2297,7 +2305,7 @@ function renderHall(){
   }
   var bb=$("btnBreak");
   if(bb){
-    if(state.rankIndex>=6){bb.disabled=true;bb.textContent="已至大乘绝巅";var bn0=$("breakNote");if(bn0)bn0.textContent="再往上，是成仙路与飞升结局（轮回殿）。"}
+    if(state.rankIndex>=6){bb.disabled=true;bb.textContent="已至大乘绝巅";var bn0=$("breakNote");if(bn0)bn0.textContent="再往上，是成仙路与飞升结局（主神结算）。"}
     else{var bc=state.nextBreakCost;bb.disabled=(state.points||0)<bc;bb.textContent="⬆ 突破 "+RANKS[state.rankIndex+1].name+" · "+bc+" 点";var bn1=$("breakNote");if(bn1)bn1.textContent=(state.points||0)<bc?("还差 "+(bc-(state.points||0))+" 点（成就、修炼、俸禄、互动都能攒）"):("当前境界 "+state.rankName+" · 根骨折扣已计入花费")}
   }
   $("hallLadder").innerHTML=ladderHtml(s,state.gradeIndex);
