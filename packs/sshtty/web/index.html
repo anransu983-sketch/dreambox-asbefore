@@ -335,6 +335,12 @@
       var bIpqView = document.createElement('button');
       bIpqView.className = 'mini'; bIpqView.textContent = 'IP结果';
       bIpqView.onclick = function () { openTest('ipq', s, false); };
+      var bNq = document.createElement('button');
+      bNq.className = 'mini'; bNq.textContent = '一键NQ';
+      bNq.onclick = function () { openTest('nq', s, true); };
+      var bNqView = document.createElement('button');
+      bNqView.className = 'mini'; bNqView.textContent = 'NQ结果';
+      bNqView.onclick = function () { openTest('nq', s, false); };
       var bEdit = document.createElement('button');
       bEdit.className = 'mini'; bEdit.textContent = '编辑';
       bEdit.onclick = function () { openForm(s); };
@@ -349,6 +355,7 @@
       card.appendChild(bConn); card.appendChild(bTq); card.appendChild(bTqView);
       card.appendChild(bEcs); card.appendChild(bEcsView);
       card.appendChild(bIpq); card.appendChild(bIpqView);
+      card.appendChild(bNq); card.appendChild(bNqView);
       card.appendChild(bTune); card.appendChild(bEdit); card.appendChild(bDel);
       box.appendChild(card);
     });
@@ -518,7 +525,13 @@
       running: '⏳ IP 体检运行中…（约 2–3 分钟）',
       done: '✅ IP 体检已完成，结果在下面日志里。',
       doneUrl: '✅ IP 体检已完成，报告链接：',
-      idle: '还没有跑过 IP 体检，或上次的日志已被清理。回列表点「一键IP体检」开始。' }
+      idle: '还没有跑过 IP 体检，或上次的日志已被清理。回列表点「一键IP体检」开始。' },
+    nq: { start: 'nqStart', state: 'nqState', title: '📊 一键 NodeQuality', startLabel: '开始跑 NodeQuality',
+      sub: 'NodeQuality 全家桶：硬件检测＋IP 质量＋网络质量＋回程路由四合一，在沙箱里跑、测完自动清理不留痕，全套约 5–15 分钟。在服务器上脱离会话运行，关掉本页也不中断，回来点服务器的「NQ结果」继续看。注意：它内部跑的 IP 质量结果只进 NQ 报告页，IP 本身在报告里是完整展示的，公开发帖前留意。',
+      running: '⏳ NodeQuality 运行中…（四合一全套，约 5–15 分钟）',
+      done: '✅ NodeQuality 已跑完，结果在下面日志尾部。',
+      doneUrl: '✅ NodeQuality 已跑完，报告链接：',
+      idle: '还没有跑过 NodeQuality，或上次的日志已被清理。回列表点「一键NQ」开始。' }
   };
   var testKind = null, testSrv = null, testTimer = null;
   function openTest(kind, s, start) {

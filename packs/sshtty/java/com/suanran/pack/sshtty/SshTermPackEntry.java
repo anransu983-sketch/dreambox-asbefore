@@ -174,6 +174,12 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             case "ipqState":
                 io.execute(() -> doIpqState(opts, callback));
                 return true;
+            case "nqStart":
+                io.execute(() -> doNqStart(opts, callback));
+                return true;
+            case "nqState":
+                io.execute(() -> doNqState(opts, callback));
+                return true;
             case "tuneStart":
                 io.execute(() -> doTuneStart(opts, callback));
                 return true;
@@ -841,7 +847,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
     }
 
     // ── 一键 IP 体检（IPQuality，xykt）─────────────────────────
-    // -f 完整测试；-y 自动同意安装缺失依赖（脚本唯一的交互点）。IP.Check.Place
+    // 不带 -f：脚本默认在报告里给 IP 打码（-f 恰恰是「报告展示完整 IP」，发帖分享会露 IP）；-y 自动同意安装缺失依赖（脚本唯一的交互点）。IP.Check.Place
     // 本身 302 跳到 xykt/IPQuality 的 ip.sh，这里直下 GitHub 原文件、短链兜底。
     // 脱离会话与状态读取与 TQ 同款。
 
@@ -854,7 +860,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     + "https://raw.githubusercontent.com/xykt/IPQuality/main/ip.sh "
                     + "|| curl -sL -o ipq.sh https://IP.Check.Place) && "
                     + "mv -f ipq.log ipq-prev.log 2>/dev/null; "
-                    + "nohup env TERM=xterm-256color bash ipq.sh -f -y "
+                    + "nohup env TERM=xterm-256color bash ipq.sh -y "
                     + "> ipq.log 2>&1 < /dev/null & echo $! > ipq.pid; echo STARTED; fi";
             String r = runExec(srv, cmd, 90).trim();
             callback.onResult(true, new JSONObject()
@@ -894,6 +900,60 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     .toString(), null);
         } catch (Exception e) {
             callback.onResult(false, null, "读取 IP 体检状态失败：" + msg(e));
+        }
+    }
+
+    // ── 一键 NodeQuality（LloydAsp/NodeQuality）──────────────────
+    // 全家桶：硬件＋IP 质量＋网络质量＋回程路由，在 BenchOS 沙箱里跑、测完自清理。
+    // 脚本开头有四道跑哪几项的选择题，stdin 接 /dev/null 时 read 读到空、
+    // 每项都取默认 y，所以脱离会话跑即是无人值守全套；报告由服务端生成，
+    // 链接打印在日志里，状态读取时提出来做链接卡（与 TQ/IP 体检同款）。
+
+    private void doNqStart(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "mkdir -p /tmp/sshtty-nq && cd /tmp/sshtty-nq && "
+                    + "if [ -f nq.pid ] && kill -0 $(cat nq.pid) 2>/dev/null; then echo ALREADY; "
+                    + "else (curl -fsSL -o nq.sh https://run.nodequality.com) && "
+                    + "mv -f nq.log nq-prev.log 2>/dev/null; "
+                    + "nohup env TERM=xterm-256color bash nq.sh "
+                    + "> nq.log 2>&1 < /dev/null & echo $! > nq.pid; echo STARTED; fi";
+            String r = runExec(srv, cmd, 90).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("started", r.contains("STARTED"))
+                    .put("alreadyRunning", r.contains("ALREADY"))
+                    .put("echo", r)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "启动 NodeQuality 失败：" + msg(e));
+        }
+    }
+
+    private void doNqState(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "if [ -f /tmp/sshtty-nq/nq.pid ] && kill -0 $(cat /tmp/sshtty-nq/nq.pid) 2>/dev/null; "
+                    + "then echo RUNNING; else echo IDLE; fi; "
+                    + "grep -aoE 'nodequality[.]com/r/[A-Za-z0-9]+' "
+                    + "/tmp/sshtty-nq/nq.log 2>/dev/null | tail -1; "
+                    + "echo __TAIL__; tail -c 1500 /tmp/sshtty-nq/nq.log 2>/dev/null";
+            String r = runExec(srv, cmd, 30);
+            boolean running = r.startsWith("RUNNING");
+            String url = "";
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("nodequality\\.com/r/[A-Za-z0-9]+")
+                    .matcher(r);
+            while (m.find()) url = "https://" + m.group();
+            String tail = "";
+            int idx = r.indexOf("__TAIL__");
+            if (idx >= 0) tail = stripAnsi(r.substring(idx + "__TAIL__".length()).trim());
+            callback.onResult(true, new JSONObject()
+                    .put("running", running)
+                    .put("url", url)
+                    .put("tail", tail)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "读取 NodeQuality 状态失败：" + msg(e));
         }
     }
 
