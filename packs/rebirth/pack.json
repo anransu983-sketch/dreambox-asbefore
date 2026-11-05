@@ -1,1 +1,1 @@
-{"hostRebirth":true,"id":"rebirth","permissions":[],"pluginHeaders":[{"methods":[{"name":"state","rtype":"promise"},{"name":"rebirth","rtype":"promise"},{"name":"allocate","rtype":"promise"}],"name":"HostRebirth"}],"version":"2"}
+{"hostRebirth":true,"id":"rebirth","permissions":[],"pluginHeaders":[{"methods":[{"name":"state","rtype":"promise"},{"name":"rebirth","rtype":"promise"},{"name":"allocate","rtype":"promise"}],"name":"HostRebirth"}],"version":"3"}

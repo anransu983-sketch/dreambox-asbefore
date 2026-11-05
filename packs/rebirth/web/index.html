@@ -128,22 +128,34 @@ function render(){
       +ALLOC_DEFS.map(function(d){
         if(d.unlock&&state.life<d.unlock)return '<div class="ladrow"><span style="font-size:20px">'+d.icon+'</span><span style="flex:1"><b>'+d.name+'</b><div class="desc">'+d.desc+'</div></span><span class="desc">第 '+d.unlock+' 世解锁</span></div>';
         return '<div class="ladrow"><span style="font-size:20px">'+d.icon+'</span><span style="flex:1"><b>'+d.name+'</b><div class="desc">'+d.desc+'</div></span>'
-        +'<input type="number" min="0" step="1" data-alloc="'+d.k+'" value="'+(rbAlloc[d.k]||0)+'"></div>'
+        +'<input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" data-alloc="'+d.k+'" value="'+(rbAlloc[d.k]||0)+'"></div>'
         +'<div style="display:flex;gap:6px;justify-content:flex-end;padding:2px 0 4px">'
         +[10,50,100,500].map(function(n){return '<button class="chipbtn" data-add="'+d.k+':'+n+'">+'+n+'</button>'}).join("")
         +'<button class="chipbtn" data-add="'+d.k+':0">清零</button></div>'}).join("")
-      +'<div class="desc" style="margin-top:6px">已配 <b>'+sum+'</b> 点 · 剩余 <b style="color:'+(left<0?'#f87171':'#4ade80')+'">'+left+'</b> 点'
-      +(rbAlloc.jiashi>0?' · 开局灵石 <b class="gold">'+(rbAlloc.jiashi*50)+'</b>':"")+'</div>'
-      +'<div class="desc" style="margin-top:6px">🌅 开局预览：'+openingText(rbAlloc)+'</div>'
+      +'<div class="desc" style="margin-top:6px">已配 <b id="sumAlloc">'+sum+'</b> 点 · 剩余 <b id="leftAlloc" style="color:'+(left<0?'#f87171':'#4ade80')+'">'+left+'</b> 点 · 开局灵石 <b class="gold" id="stonesAlloc">'+((rbAlloc.jiashi||0)*50)+'</b></div>'
+      +'<div class="desc" style="margin-top:6px">🌅 开局预览：<span id="openingPreview">'+openingText(rbAlloc)+'</span></div>'
       +'<button class="pbtn primary" id="btnAllocGo" style="margin-top:10px;width:100%"'+(left<0?" disabled":"")+'>踏入第 '+state.life+' 世</button></div>';
     $("app").innerHTML=html;
-    Array.prototype.forEach.call(document.querySelectorAll("[data-alloc]"),function(inp){inp.addEventListener("input",function(){
-      var v=parseInt(inp.value,10);if(isNaN(v)||v<0)v=0;rbAlloc[inp.getAttribute("data-alloc")]=v;render();
-      var again=document.querySelector('[data-alloc="'+inp.getAttribute("data-alloc")+'"]');if(again){again.focus();again.select()}
-    })});
+    function refreshAllocSummary(){
+      var sum2=allocSum(rbAlloc),left2=state.pool-sum2;
+      var e1=$("sumAlloc");if(e1)e1.textContent=sum2;
+      var e2=$("leftAlloc");if(e2){e2.textContent=left2;e2.style.color=left2<0?"#f87171":"#4ade80"}
+      var e3=$("stonesAlloc");if(e3)e3.textContent=(rbAlloc.jiashi||0)*50;
+      var e4=$("openingPreview");if(e4)e4.textContent=openingText(rbAlloc);
+      var go2=$("btnAllocGo");if(go2)go2.disabled=left2<0;
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("[data-alloc]"),function(inp){
+      inp.addEventListener("input",function(){
+        var v=parseInt(inp.value,10);if(isNaN(v)||v<0)v=0;
+        rbAlloc[inp.getAttribute("data-alloc")]=v;refreshAllocSummary();
+      });
+      inp.addEventListener("change",function(){inp.value=rbAlloc[inp.getAttribute("data-alloc")]||0});
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-add]"),function(b){b.addEventListener("click",function(){
       var ps=b.getAttribute("data-add").split(":");var k=ps[0],n=+ps[1];
-      rbAlloc[k]=n===0?0:((rbAlloc[k]||0)+n);render();
+      rbAlloc[k]=n===0?0:((rbAlloc[k]||0)+n);
+      var inp2=document.querySelector('[data-alloc="'+k+'"]');if(inp2)inp2.value=rbAlloc[k];
+      refreshAllocSummary();
     })});
     var go=$("btnAllocGo");if(go)go.addEventListener("click",doAllocate);
     return;
