@@ -468,3 +468,194 @@ fun SkyLightRow(
         }
     }
 }
+
+/**
+ * 整屏底画：按 map 摆图（zoom=1 时与首页整屏取景一致），无渐隐、无清单底。
+ */
+@Composable
+fun SkyBackdropFull(map: SkyShotMap, modifier: Modifier = Modifier) {
+    val painter = rememberAsyncImagePainter(request = ImageRequest(LocalContext.current, SKY_NIGHT_URI))
+    val density = LocalDensity.current
+    Box(modifier.fillMaxSize().clipToBounds().background(SkyNightBase)) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            modifier =
+                Modifier.offset { map.imageOffset }
+                    .size(with(density) { map.iwS.toDp() }, with(density) { map.ihS.toDp() }),
+            contentScale = ContentScale.FillBounds,
+        )
+    }
+}
+
+/**
+ * 整屏轻环境层：星光微闪 + 两道瀑布微光 + 下半屏三团雾漂移。
+ * 120s 时钟只在 draw 阶段读；不挂任何地标功能（地标辉光归首页本体）。
+ */
+@Composable
+fun SkySceneAmbient(active: Boolean, modifier: Modifier = Modifier) {
+    val trans = rememberInfiniteTransition(label = "skySceneClock")
+    val phaseState =
+        trans.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(120_000, easing = LinearEasing)),
+            label = "skyScenePhase",
+        )
+    Canvas(modifier.fillMaxSize()) {
+        if (active) {
+            val ph = phaseState.value
+            val w = size.width
+            val h = size.height
+            for (i in 0 until 30) {
+                val fx = ((i * 37 + 13) % 97) / 97f
+                val fy = ((i * 29 + 7) % 88) / 100f
+                val tw = 0.25f + 0.55f * (0.5f + 0.5f * sin(2.0 * PI * (ph * 6f + i * 0.41f)).toFloat())
+                drawCircle(SkyLabelGlow.copy(alpha = tw * 0.45f), 2.6f, Offset(fx * w, fy * h))
+                drawCircle(Color.White.copy(alpha = tw * 0.9f), 1.1f, Offset(fx * w, fy * h))
+            }
+            for (sx in listOf(0.078f, 0.922f)) {
+                val pulse = 0.10f + 0.10f * (0.5f + 0.5f * sin(2.0 * PI * (ph * 3f + sx)).toFloat())
+                drawRect(
+                    brush =
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, SkyLabelGlow.copy(alpha = pulse), Color.Transparent),
+                            startY = 0.38f * h,
+                            endY = 0.66f * h,
+                        ),
+                    topLeft = Offset(sx * w - 7f, 0.38f * h),
+                    size = Size(14f, 0.28f * h),
+                )
+            }
+            val bands = arrayOf(0.58f to 0.16f, 0.78f to 0.22f, 0.95f to 0.18f)
+            for ((k, band) in bands.withIndex()) {
+                val (fy, fw) = band
+                val drift = sin(2.0 * PI * (ph + k * 0.33f)).toFloat() * 0.03f
+                val c = Offset((0.5f + drift) * w, fy * h)
+                val r = fw * w * 1.6f
+                withTransform({ scale(1f, 0.16f, pivot = c) }) {
+                    drawCircle(
+                        Brush.radialGradient(
+                            listOf(Color.White.copy(alpha = 0.05f), Color.Transparent),
+                            center = c,
+                            radius = r,
+                        ),
+                        r,
+                        c,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 画中地标热区：以像素点为中心、diameter 直径的无形点击圆。 */
+@Composable
+fun SkyHotspot(center: Offset, diameter: Dp, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier
+            .skyCenteredAt(center)
+            .size(diameter)
+            .clickable(interactionSource = interaction, indication = null) { onClick() },
+    )
+}
+
+/**
+ * 画上光字行（整屏版）：宽雾垫 + 两层衬线光字 + 按压横向光带；无卡片、无行框。
+ * 高度由调用方按屏高比例给。
+ */
+@Composable
+fun SkySceneRow(
+    title: String,
+    summary: String?,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val band by
+        animateFloatAsState(
+            targetValue = if (pressed) 1f else 0f,
+            animationSpec = tween(if (pressed) 90 else 300),
+            label = "skySceneRowBand",
+        )
+    Row(
+        modifier
+            .drawBehind {
+                val r = size.width * 0.62f
+                withTransform({ scale(1f, (size.height * 1.6f) / (2f * r), pivot = center) }) {
+                    drawCircle(
+                        brush =
+                            Brush.radialGradient(
+                                listOf(SkyMistColor.copy(alpha = 0.30f), Color.Transparent),
+                                center = center,
+                                radius = r,
+                            ),
+                        radius = r,
+                        center = center,
+                    )
+                }
+                if (band > 0f) {
+                    drawRect(
+                        brush =
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    SkyLabelGlow.copy(alpha = 0.10f * band),
+                                    Color.Transparent,
+                                ),
+                            ),
+                        size = size,
+                    )
+                }
+            }
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(interactionSource = interaction, indication = null) { onClick() }
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            BasicText(
+                title,
+                style =
+                    TextStyle(
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 17.sp,
+                        color = SkyLabelCore.copy(alpha = 0.95f),
+                        shadow = Shadow(SkyLabelGlow.copy(alpha = 0.35f), Offset(0f, 0f), 7f),
+                    ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!summary.isNullOrEmpty()) {
+                BasicText(
+                    summary,
+                    style =
+                        TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 12.sp,
+                            color = SkyLabelCore.copy(alpha = 0.62f),
+                        ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        BasicText(
+            "›",
+            style =
+                TextStyle(
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 16.sp,
+                    color = SkyLabelCore.copy(alpha = 0.55f),
+                ),
+        )
+    }
+}

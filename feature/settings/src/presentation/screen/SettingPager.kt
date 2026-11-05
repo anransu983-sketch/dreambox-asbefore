@@ -110,11 +110,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import com.suanran.dreambox.presentation.component.navigation.BottomBarDestination
+import com.suanran.dreambox.presentation.component.navigation.LocalHandlePageChange
 import com.suanran.dreambox.presentation.component.navigation.LocalMainPagerState
+import com.suanran.dreambox.presentation.component.sky.SkyBackdropFull
 import com.suanran.dreambox.presentation.component.sky.SkyGlowLabel
-import com.suanran.dreambox.presentation.component.sky.SkyLightRow
-import com.suanran.dreambox.presentation.component.sky.SkyMistBackdrop
-import com.suanran.dreambox.presentation.component.sky.SkyShotHeader
+import com.suanran.dreambox.presentation.component.sky.SkyHotspot
+import com.suanran.dreambox.presentation.component.sky.SkySceneAmbient
+import com.suanran.dreambox.presentation.component.sky.SkySceneRow
+import com.suanran.dreambox.presentation.component.sky.SkyShotMap
 import com.suanran.dreambox.presentation.component.sky.SkyStatusBarIcons
 import com.suanran.dreambox.presentation.component.sky.rememberSkyCaption
 import com.suanran.dreambox.presentation.component.sky.skyCenteredAt
@@ -210,11 +213,10 @@ fun SettingPager(mainInnerPadding: PaddingValues) {
     val listState = rememberLazyListState()
     val visibleModules = modules.distinctBy { it.key }.filter { it.key !in hiddenKeys }
 
-    // 仿首页（天空版）：S 镜头 Header + 雾海光字清单。旧版保留在下方分支里，随时可切回。
+    // 仿首页（天空版）：整屏浮岛画 + 地标光字导航 + 云海光字七行，无横幅、无底栏。旧版保留在下方分支里，随时可切回。
     if (SKY_SETTINGS_PAGE) {
-        SkySettingHome(
+        SkySettingScene(
             modules = visibleModules,
-            mainInnerPadding = mainInnerPadding,
             onOpen = { route -> openSecondary(route) },
         )
         return
@@ -269,52 +271,71 @@ private const val SKY_SETTINGS_PAGE = true
  * 行数据与跳转沿用 [SettingPager] 原有 modules / openSecondary，行为不变。
  */
 @Composable
-private fun SkySettingHome(
+private fun SkySettingScene(
     modules: List<SettingsModule>,
-    mainInnerPadding: PaddingValues,
     onOpen: (Route) -> Unit,
 ) {
     val pager = LocalMainPagerState.current
     val active = pager.selectedPage == BottomBarDestination.Setting.ordinal
     SkyStatusBarIcons(active)
     val caption = rememberSkyCaption(active)
+    val handlePageChange = LocalHandlePageChange.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val headerH = maxHeight * 0.34f
-        SkyMistBackdrop(Modifier.fillMaxSize())
-        Column(Modifier.fillMaxSize()) {
-            SkyShotHeader(height = headerH, zoom = 1.45f, cx = 0.31f, cy = 0.27f) { map ->
-                SkyGlowLabel(
-                    line1 = FlyTxt.Settings.Title,
-                    line1Size = 20.sp,
-                    modifier = Modifier.skyCenteredAt(map.at(Offset(0.22f, 0.36f))) { caption.value },
-                )
+        val w = constraints.maxWidth.toFloat()
+        val h = constraints.maxHeight.toFloat()
+        val map = remember(w, h) { SkyShotMap(w, h, w, h, 1f, 0.5f, 0.5f) }
+        SkyBackdropFull(map)
+        SkySceneAmbient(active)
+        // 地标导航（锚点与首页一致）：城堡→首页、飞艇→代理、齿轮→配置；巨树是本页，只题字不跳转。
+        SkyHotspot(map.at(Offset(0.50f, 0.287f)), 120.dp) {
+            handlePageChange(BottomBarDestination.Home.ordinal)
+        }
+        SkyHotspot(map.at(Offset(0.765f, 0.250f)), 130.dp) {
+            handlePageChange(BottomBarDestination.Proxy.ordinal)
+        }
+        SkyHotspot(map.at(Offset(0.493f, 0.368f)), 110.dp) {
+            handlePageChange(BottomBarDestination.Config.ordinal)
+        }
+        SkyGlowLabel(
+            line1 = BottomBarDestination.Home.label,
+            modifier = Modifier.skyCenteredAt(map.at(Offset(0.51f, 0.238f))) { caption.value },
+        )
+        SkyGlowLabel(
+            line1 = BottomBarDestination.Proxy.label,
+            modifier = Modifier.skyCenteredAt(map.at(Offset(0.765f, 0.098f))) { caption.value },
+        )
+        SkyGlowLabel(
+            line1 = BottomBarDestination.Config.label,
+            modifier = Modifier.skyCenteredAt(map.at(Offset(0.545f, 0.415f))) { caption.value },
+        )
+        SkyGlowLabel(
+            line1 = BottomBarDestination.Setting.label,
+            modifier = Modifier.skyCenteredAt(map.at(Offset(0.217f, 0.381f))) { 1f },
+        )
+        // 七行光字：写在岛身与云海上（y 0.528 起、行高 6.35% 屏高）。
+        val rowH = maxHeight * 0.0635f
+        modules.forEachIndexed { index, module ->
+            val entry = remember { Animatable(0f) }
+            LaunchedEffect(active) {
+                if (active) {
+                    delay(index * 28L)
+                    entry.animateTo(1f, tween(220))
+                }
             }
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(bottom = mainInnerPadding.calculateBottomPadding() + 12.dp),
-            ) {
-                itemsIndexed(modules, key = { _, m -> m.key }) { index, module ->
-                    val entry = remember { Animatable(0f) }
-                    LaunchedEffect(active) {
-                        if (active) {
-                            delay(index * 28L)
-                            entry.animateTo(1f, tween(220))
-                        }
-                    }
-                    Box(
-                        Modifier.graphicsLayer {
+            SkySceneRow(
+                title = module.title,
+                summary = if (module.badge != null) "${module.summary} · ${module.badge}" else module.summary,
+                modifier =
+                    Modifier.offset(y = maxHeight * 0.528f + rowH * index)
+                        .fillMaxWidth()
+                        .height(rowH)
+                        .padding(horizontal = 26.dp)
+                        .graphicsLayer {
                             alpha = entry.value
                             translationY = (1f - entry.value) * 8.dp.toPx()
                         },
-                    ) {
-                        SkyLightRow(
-                            title = module.title,
-                            summary = if (module.badge != null) "${module.summary} · ${module.badge}" else module.summary,
-                            onClick = { module.route?.let { onOpen(it) } },
-                        )
-                    }
-                }
-            }
+                onClick = { module.route?.let { onOpen(it) } },
+            )
         }
     }
 }
