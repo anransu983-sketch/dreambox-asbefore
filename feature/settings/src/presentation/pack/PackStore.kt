@@ -138,9 +138,9 @@ class PackStore(context: Context) {
                 id = "rebirth",
                 name = "轮回",
                 summary = "高武门派与轮回已合为一体：一个包走完修仙一生与百世轮回。山门大世界照旧（选道、境界、俸禄、成就、集市、万界、NPC），山门里多了一间轮回殿——转世结算、自由配点、遗产回响、天道注视与伐天、百世长卷都在里面；每世按配点加权随机落界与修炼体系（12 界 7 体系），修全七体系走满百世可融万法归一。原高武门派包的进度（弟子、设施、NPC 记录）同源存储，自动延续。",
-                version = "18",
+                version = "19",
                 sizeText = "约 2.6 MB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/rebirth-pack-v18.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/rebirth-pack-v19.zip",
                 entryClass = "com.suanran.pack.rebirth.RebirthPackEntry",
             ),
             PackDef(

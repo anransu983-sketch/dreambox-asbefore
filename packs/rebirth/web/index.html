@@ -619,14 +619,6 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
 #dockOrg{display:none!important}
 #hallGradeText{display:none!important}
 #hallGradeBar{display:none!important}
-
-.zs-stage{position:relative;height:204px;border-radius:14px;overflow:hidden;background:radial-gradient(ellipse 130% 95% at 50% 0%,#1c2647 0%,#0a0f22 55%,#04060d 100%)}
-.zs-ball{position:absolute;left:50%;top:30px;width:104px;height:104px;margin-left:-52px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#ffffff 0%,#ffefc4 34%,#f7cd72 58%,rgba(247,205,114,.35) 80%,rgba(247,205,114,0) 100%);box-shadow:0 0 55px 16px rgba(255,216,130,.45),0 0 130px 55px rgba(255,190,90,.16);animation:zsFloat 5.5s ease-in-out infinite}
-.zs-ring{position:absolute;left:50%;top:76px;width:196px;height:46px;margin-left:-98px;border:1px solid rgba(255,220,150,.35);border-radius:50%;animation:zsRing 9s linear infinite}
-@keyframes zsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-@keyframes zsRing{from{transform:rotateX(64deg) rotate(0deg)}to{transform:rotateX(64deg) rotate(360deg)}}
-.zs-name{position:absolute;left:0;right:0;bottom:24px;text-align:center;color:#ffe9b8;font-size:21px;font-weight:900;letter-spacing:14px;text-indent:14px;text-shadow:0 0 18px rgba(255,205,110,.85)}
-.zs-sub{position:absolute;left:0;right:0;bottom:7px;text-align:center;color:rgba(226,232,255,.75);font-size:11px;letter-spacing:3px}
 </style>
 
 </head>
@@ -836,7 +828,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
     <div class="room-body" id="hubBody"></div>
   </div>
   <div class="room" id="room-rebirth">
-    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">◉ 主神结算</div><div class="room-sub">结算 · 强化 · 回响 · 档案 · 长卷</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🗿 轮回殿</div><div class="room-sub">转世 · 配点 · 回响 · 碑林 · 百世长卷</div></div></div>
     <div class="room-body" id="rebirthBody"></div>
   </div>
   <div id="npcBox"></div>
@@ -1152,7 +1144,7 @@ function renderRebirthRoom(){
   html+='<img src="world-youming.jpg" style="width:100%;height:150px;object-fit:cover;border-radius:14px;display:block">';
   html+='<div class="card"><h2>📜 本世 · 第 '+state.life+' 世</h2><div class="desc">本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b>（结算倍率 ×'+state.evalMult+'）</div>'
     +'<div class="desc" style="margin-top:4px">本世配点：'+RB_ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div>'
-    +'<div class="desc" style="margin-top:4px">轮回者称号 <b style="color:#fbbf24">'+rbTitleFor(state.life)+'</b>'+rbNextMs()+'</div>'
+    +'<div class="desc" style="margin-top:4px">轮回称号 <b style="color:#fbbf24">'+rbTitleFor(state.life)+'</b>'+rbNextMs()+'</div>'
     +(state.world?'<div class="desc" style="margin-top:4px">本世世界 <b>'+rbWorldName(state.world)+'</b> · 修炼体系 <b>'+rbSysName(state.system)+'</b> · 本阶别名 <b>'+rbSysRank(state.system,state.rankIndex)+'</b></div>':"")
     +'</div>';
   if(state.allocPending){
@@ -1227,7 +1219,7 @@ function doRbRebirth(ending){
   if(!ending)return;
   var errEl=$("rbErr");if(errEl)errEl.textContent="";
   if(hasBridge){
-    callRebirth("rebirth",{ending:ending}).then(function(st){state=Object.assign(state,st);rbEnding=null;rbAlloc=null;rbFxSet({tier:"great",title:"传送 · 新世界开启",text:"传送完成。新世界的大门已经打开——强化决定起点，活法决定结局。",pts:0});render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
+    callRebirth("rebirth",{ending:ending}).then(function(st){state=Object.assign(state,st);rbEnding=null;rbAlloc=null;rbFxSet({tier:"great",title:"转世 · 新世开篇",text:"旧世已了。一睁眼，又是新的一生——配点决定出身，活法决定结局。",pts:0});render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
   }else{
     var e=null;RB_ENDINGS.forEach(function(x){if(x.k===ending)e=x});
     if(!e||(state.rankIndex||0)<e.need)return;
@@ -1253,7 +1245,7 @@ function doRbAllocate(){
   var errEl=$("rbErr");if(errEl)errEl.textContent="";
   if(rbAllocSum(a)>state.pool){if(errEl)errEl.textContent="点数不够";return}
   if(hasBridge){
-    callRebirth("allocate",{alloc:a}).then(function(st){state=Object.assign(state,st);rbOpening=rbOpeningText(a);rbAlloc=null;rbFxSet({tier:"great",title:"强化完成 · 传送就绪",text:"属性强化已经落定，传送随时可以开始。",pts:0});if(document.activeElement)document.activeElement.blur();render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
+    callRebirth("allocate",{alloc:a}).then(function(st){state=Object.assign(state,st);rbOpening=rbOpeningText(a);rbAlloc=null;rbFxSet({tier:"great",title:"配点完成 · 命运落子",text:"这一世的命数已经落定，出生只是开始。",pts:0});if(document.activeElement)document.activeElement.blur();render();playLoad();renderRebirthRoom()}).catch(function(e){var x=$("rbErr");if(x)x.textContent=e.message});
   }else{
     state.alloc=a;state.points=state.pool-rbAllocSum(a);state.pool=0;state.allocPending=false;state.openingStones=(a.jiashi||0)*50;
     (function(){var odds=rbWorldOdds(a,state.life);var seed=state.life*1000003+JSON.stringify(a).length*97+(state.lifeLog||[]).length;function rnd(){seed=(seed*1103515245+12345)%2147483648;return seed/2147483648}
@@ -1267,8 +1259,8 @@ function doRbAllocate(){
 /* == 轮回主页：以世为纲——选一世、看这世的操作、进这世的山门 == */
 var rbLifeSel=0;
 function rbSteleHtml(){
-  var log=state.lifeLog||[];var html='<div class="card"><h2>🗂️ 世界档案（'+log.length+' 个世界）</h2>';
-  if(!log.length){html+=(state.life>1?'<div class="desc">档案自首次结算起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来，点开任意一碑，能看那一世的配点与操作。</div>');return html+'</div>'}
+  var log=state.lifeLog||[];var html='<div class="card"><h2>🪦 前世碑林（'+log.length+' 世）</h2>';
+  if(!log.length){html+=(state.life>1?'<div class="desc">碑林自轮回殿立碑起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来，点开任意一碑，能看那一世的配点与操作。</div>');return html+'</div>'}
   html+=log.slice().reverse().map(function(en){
     var row='<div class="rbrow" data-life="'+en.life+'" style="cursor:pointer"><span style="font-size:20px">🗿</span><span style="flex:1"><b>第 '+en.life+' 世</b><div class="desc">'+(RB_ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 本世功绩 '+en.earned+' · 结算 '+en.pool+' 点'+(en.world?' · '+rbWorldName(en.world)+' · '+rbSysName(en.system):"")+'</div></span><span class="desc">'+(rbLifeSel===en.life?"收起":"看这世")+'</span></div>';
     if(rbLifeSel===en.life){
@@ -1291,25 +1283,25 @@ function renderHub(){
     var g0=$("hubGo");if(g0)g0.addEventListener("click",function(){closeRoomsUI()});
     return;
   }
-  var html='<div class="zs-stage"><div class="zs-ring"></div><div class="zs-ball"></div><span class="fxspark" style="left:16%;top:30px">✦</span><span class="fxspark" style="left:78%;top:20px;animation-delay:.3s">✦</span><span class="fxspark" style="left:64%;top:52px;animation-delay:.55s">✧</span><span class="fxspark" style="left:28%;top:64px;animation-delay:.8s">✧</span><div class="zs-name">主神空间</div><div class="zs-sub">万 界 轮 回 · 皆 在 一 念 之 间</div></div>';
-  html+='<div class="card"><h2>◉ 第 '+state.life+' 个世界 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
+  var html='<img src="world-youming.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:14px;display:block">';
+  html+='<div class="card"><h2>☯️ 第 '+state.life+' 世 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
     +(state.world?('落界 <b>'+rbWorldName(state.world)+'</b> · 体系 <b>'+rbSysName(state.system)+'</b>（本阶 '+rbSysRank(state.system,state.rankIndex)+'）<br>'):"")
     +'本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b></div></div>';
   if(state.allocPending){
-    html+='<div class="card"><h2>◉ 新世界待传送</h2><div class="desc">上个世界的奖励点（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去强化 · 定新世界</button></div>';
+    html+='<div class="card"><h2>🗿 这一世还没开始</h2><div class="desc">上一世的点池（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去配点 · 定这一世</button></div>';
   }else{
     html+=rbSimHtml();
-    html+='<div class="card"><h2>🎛️ 世界之间</h2><div class="desc">这里是世界之间的主神空间：进世界做任务，回空间结算与强化——要做什么都从这里走。</div><div class="hubops">'
-      +'<button class="pbtn" data-op="scene">🌐 进入世界</button>'
+    html+='<div class="card"><h2>🎛️ 这一世的操作</h2><div class="desc">这一世要做什么都从这里进：修炼与差事在山门，买卖去集市，闯界去万界，终结这一世去轮回殿。</div><div class="hubops">'
+      +'<button class="pbtn" data-op="scene">🏔️ 进入此世</button>'
       +'<button class="pbtn" data-op="room-worlds">🌌 诸天万界</button>'
       +'<button class="pbtn" data-op="room-market">🏮 集市</button>'
       +'<button class="pbtn" data-op="room-events">🎲 今日奇遇</button>'
       +'<button class="pbtn" data-op="room-blood">🩸 血脉</button>'
       +'<button class="pbtn" data-op="room-feed">🏮 人间动态</button>'
-      +'</div><button class="pbtn" data-op="room-rebirth" style="margin-top:8px;width:100%">◉ 主神结算 · 结算这个世界</button></div>';
+      +'</div><button class="pbtn" data-op="room-rebirth" style="margin-top:8px;width:100%">🗿 轮回殿 · 结算这一世</button></div>';
   }
   var lives=[];for(var lf=state.life;lf>=1;lf--)lives.push(lf);
-  html+='<div class="card"><h2>🗂️ 历次世界档案</h2><div class="desc">点任意一个世界，看它当年的强化与经历；当前世界就是置顶的这个。</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
+  html+='<div class="card"><h2>🗿 选择一世</h2><div class="desc">点任意一世，看它当年的配点与操作；当前世就是置顶的这一世。</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
     +lives.map(function(lf){
       var cur=lf===state.life;var logged=(state.lifeLog||[]).some(function(e){return e.life===lf});
       return '<button class="rbchip" data-seelife="'+lf+'" style="'+(cur?"border-color:#f59e0b;color:#fbbf24":"")+'">第 '+lf+' 世'+(cur?"（当前）":(logged?"":" · 无碑"))+'</button>'}).join("")
@@ -1409,14 +1401,14 @@ function rbSimText(t){return t}
 function rbSimHtml(){
   if(!state||!state.sectId||state.allocPending)return "";
   var sim=rbSimLoad();
-  var html='<div class="card"><h2>📜 世界任务 · 第 '+state.life+' 个世界</h2>';
+  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世</h2>';
   if(state.world)html+='<div class="desc">这一世：'+rbWorldName(state.world)+' · '+rbSysName(state.system)+'——配点定下的命，从出生开始一步步走。</div>';
   if(sim.log.length){
     html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
   }
   if(sim.done){
-    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行（差事、集市、万界都在下方入口），想终结这个世界，去主神结算选结局。</div>'
-      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">回主神空间 · 结算这个世界</button>';
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行（差事、集市、万界都在下方入口），想终结这一世，去轮回殿选结局结算。</div>'
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
   }else if(sim.enc){
     var enc=null;SIM_ENCS.forEach(function(x){if(x.key===sim.enc)enc=x});
     if(enc){
@@ -1440,9 +1432,8 @@ function rbSimApply(sim,srcKey,srcName,opt){
   var dimVal=alloc[opt.dim]||0;
   var great=dimVal>=150;
   var pts=Math.round((opt.pts||0)*(great?1.5:1));
-  pts=Math.round(pts*zsPtMult());
   var text=(great&&opt.great)?opt.great:opt.ok;
-  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(Math.round(opt.stones*zsStoneMult()));
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
   sim.log.push({h:srcName,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbSimSave(sim);renderHub()}
   if(pts>0){
@@ -1738,13 +1729,13 @@ function rbProfPickChoices(){
 function rbSimHtml(){
   if(!state||!state.sectId||state.allocPending)return "";
   var sim=rbDynLoad();
-  var html='<div class="card"><h2>📜 世界任务 · 第 '+state.life+' 个世界</h2>';
-  html+='<div class="desc">这个世界没有固定剧本：事件按你的强化、落界、体系与际遇随机找上门，选择会留下痕迹，有些账，下一世还要算。</div>';
+  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世（动态）</h2>';
+  html+='<div class="desc">这一世没有固定剧本：事件按你的配点、落界、体系与际遇随机找上门，选择会留下痕迹，有些账，下一世还要算。</div>';
   if(sim.prof)html+='<div class="desc" style="margin-top:4px">副职业 <b>'+RB_PROFS[sim.prof].icon+' '+RB_PROFS[sim.prof].name+'</b> · 品阶 <b style="color:#fbbf24">'+rbProfRank(sim.profExp)+'</b>（熟练 '+sim.profExp+'）——副职业的事件与订单会优先找你。</div>';
   if(sim.log.length)html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
   if(sim.done){
-    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行，想终结这个世界，去主神结算选结局。</div>'
-      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">回主神空间 · 结算这个世界</button>';
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行，想终结这一世，去轮回殿选结局结算。</div>'
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
   }else{
     var node=rbDynPick(sim);
     if(!node){html+='<div class="desc" style="margin-top:8px">这一世的故事暂告一段落。</div>'}
@@ -1765,13 +1756,12 @@ function rbDynApply(sim,nodeKey,nodeTitle,opt){
   var dimVal=alloc[opt.dim]||0;
   var great=dimVal>=150;
   var pts=Math.round((opt.pts||0)*(great?1.5:1));
-  pts=Math.round(pts*zsPtMult());
   var text=(great&&opt.great)?opt.great:opt.ok;
   if(opt.setProf){sim.prof=opt.setProf;rbJobSync(sim,15)}
   if(opt.profExp){sim.profExp=(sim.profExp||0)+opt.profExp;rbJobSync(sim,opt.profExp)}
   if(opt.flag)sim.flags[opt.flag]=1;
   if(opt.chain)sim.queue.push(opt.chain);
-  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(Math.round(opt.stones*zsStoneMult()));
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
   rbFxSet({tier:great?"great":"ok",title:nodeTitle,text:text,pts:pts,stones:opt.stones||0,profExp:opt.profExp||0});
   sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
@@ -1807,13 +1797,12 @@ function rbDynApply(sim,nodeKey,nodeTitle,opt){
   var dimVal=alloc[opt.dim]||0;
   var great=dimVal>=150;
   var pts=Math.round((opt.pts||0)*(great?1.5:1));
-  pts=Math.round(pts*zsPtMult());
   var text=(great&&opt.great)?opt.great:opt.ok;
   if(opt.setProf){sim.prof=opt.setProf;rbJobSync(sim,15)}
   if(opt.profExp){sim.profExp=(sim.profExp||0)+opt.profExp;rbJobSync(sim,opt.profExp)}
   if(opt.flag)sim.flags[opt.flag]=1;
   if(opt.chain)sim.queue.push(opt.chain);
-  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(Math.round(opt.stones*zsStoneMult()));
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
   rbFxSet({tier:great?"great":"ok",title:nodeTitle,text:text,pts:pts,stones:opt.stones||0,profExp:opt.profExp||0});
   sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
@@ -1893,14 +1882,14 @@ function rbSimHtml(){
   if(!state||!state.sectId||state.allocPending)return "";
   rbDynFixMakeup();
   var sim=rbDynLoad();
-  var html='<div class="card"><h2>📜 世界任务 · 第 '+state.life+' 个世界</h2>';
-  html+='<div class="desc">这个世界没有固定剧本：事件按你的强化、落界、体系与际遇随机找上门；每一幕除了现成选项，还能<b>自己写</b>要做的事——万千种选择，成败由命数裁定。</div>';
+  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世（动态）</h2>';
+  html+='<div class="desc">这一世没有固定剧本：事件按你的配点、落界、体系与际遇随机找上门；每一幕除了现成选项，还能<b>自己写</b>要做的事——万千种选择，成败由命数裁定。</div>';
   if(sim.prof)html+='<div class="desc" style="margin-top:4px">副职业 <b>'+RB_PROFS[sim.prof].icon+' '+RB_PROFS[sim.prof].name+'</b> · 品阶 <b style="color:#fbbf24">'+rbProfRank(sim.profExp)+'</b>（熟练 '+sim.profExp+'）——副职业的事件与订单会优先找你。</div>';
   if(sim.log.length)html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
   if(sim.done){
-    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这个世界的任务走完了。在世界内自由行动之外，这里还能继续<b>自由行动</b>（每世至多再得 20 次奖励，之后只记事不发点）。想终结这个世界，去主神结算选结局。</div>'
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。在山门自由修行之外，这里还能继续<b>自由行动</b>（每世至多再得 20 次奖励，之后只记事不发点）。想终结这一世，去轮回殿选结局结算。</div>'
       +rbFreeHtml()
-      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">回主神空间 · 结算这个世界</button>';
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
   }else{
     var node=rbDynPick(sim);
     if(!node){html+='<div class="desc" style="margin-top:8px">这一世的故事暂告一段落。</div>'}
@@ -2031,9 +2020,9 @@ callNative=function(method,options){
 function rbRenderLifeBar(){
   var bar=$("lifeBar");if(!bar||!state||!state.sectId)return;
   var sim=rbDynLoad();
-  var nodeTxt=sim.done?"世界任务已走完 · 自由行动中":("世界任务 · 第 "+(sim.prog+1)+" 幕");
+  var nodeTxt=sim.done?"人生路已走完 · 自由行动中":("人生路 · 第 "+(sim.prog+1)+" 幕");
   var profTxt=sim.prof?(" · "+RB_PROFS[sim.prof].icon+RB_PROFS[sim.prof].name+" "+rbProfRank(sim.profExp)):"";
-  bar.innerHTML='<div class="card" style="margin-top:0;display:flex;align-items:center;gap:10px;padding:10px 14px"><span style="flex:1" class="desc">☯️ <b>第 '+state.life+' 世</b> · '+nodeTxt+profTxt+(state.world?(" · "+rbWorldName(state.world)+" · "+rbSysName(state.system)):"")+'</span><button class="pbtn" id="lifeBarBtn">回主神空间</button></div>';
+  bar.innerHTML='<div class="card" style="margin-top:0;display:flex;align-items:center;gap:10px;padding:10px 14px"><span style="flex:1" class="desc">☯️ <b>第 '+state.life+' 世</b> · '+nodeTxt+profTxt+(state.world?(" · "+rbWorldName(state.world)+" · "+rbSysName(state.system)):"")+'</span><button class="pbtn" id="lifeBarBtn">回轮回主页</button></div>';
 }
 document.addEventListener("click",function(e){if(e.target&&e.target.id==="lifeBarBtn")openRoom("room-hub")});
 
@@ -2042,513 +2031,6 @@ function rbDispRank(st){
   if(st&&st.system&&typeof SYS_LADDERS!=="undefined"&&SYS_LADDERS[st.system])return SYS_LADDERS[st.system][st.rankIndex]||st.rankName;
   return st?st.rankName:"";
 }
-
-/* == v13: 主神空间实质层 —— 主线任务 / 难度 / 兑换 == */
-function rbDispRank(st){if(st&&st.system)return rbSysRank(st.system,st.rankIndex);return st?st.rankName:""}
-function zsLoad(){try{return JSON.parse(localStorage.getItem("zsState")||"null")}catch(e){return null}}
-function zsSave(z){try{localStorage.setItem("zsState",JSON.stringify(z))}catch(e){}}
-function zsCur(){
-  var z=zsLoad();
-  if(!z||z.life!==state.life){
-    var nd=1;try{nd=+(localStorage.getItem("zsDiffNext")||1)}catch(e){}
-    z={life:state.life,diff:nd,mission:null,buffs:{},missionPaid:false};zsSave(z);zsAssign(z);
-  }
-  return z;
-}
-function zsAssign(z){
-  var L=state.life;
-  var pool=[
-    {k:"rank",title:"主线 · 登临",target:Math.min(6,2+Math.floor(L/2))},
-    {k:"earn",title:"主线 · 立功",target:260+L*60},
-    {k:"acts",title:"主线 · 历世",target:10},
-    {k:"deeds",title:"主线 · 功勋",target:10}];
-  var idx=((L*7)+(state.world?state.world.length:0))%pool.length;
-  z.mission=pool[idx];z.missionPaid=false;zsSave(z);
-}
-function zsMissionText(z){
-  var m=z.mission;if(!m)return "";
-  if(m.k==="rank")return "突破至 "+rbSysRank(state.system,m.target);
-  if(m.k==="earn")return "本世累计功绩达到 "+m.target;
-  if(m.k==="acts")return "世界任务走完十幕";
-  return "世录记事达到 10 条";
-}
-function zsMissionProg(z){
-  var m=z.mission;if(!m)return{cur:0,target:1};
-  if(m.k==="rank")return{cur:state.rankIndex,target:m.target};
-  if(m.k==="earn")return{cur:state.earned,target:m.target};
-  if(m.k==="acts"){var sim=rbDynLoad();return{cur:sim.done?10:sim.prog,target:10}}
-  var sim2=rbDynLoad();return{cur:sim2.log.length,target:m.target};
-}
-function zsCheckMission(){
-  if(!hasBridge||!state||!state.sectId||state.allocPending)return;
-  var z=zsCur();if(!z.mission||z.missionPaid)return;
-  var p=zsMissionProg(z);
-  if(p.cur>=p.target){
-    z.missionPaid=true;zsSave(z);
-    var bonus=60*z.diff;
-    rbFxSet({tier:"great",title:"主线任务完成",text:zsMissionText(z)+" —— 已达成。主神奖励 +"+bonus+" 点。",pts:bonus});
-    callNative("grant",{id:"mission"+state.life,points:bonus}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()});
-  }
-}
-function zsPtMult(){var z=zsLoad();return (z&&state&&z.life===state.life)?[1,1.5,2][(z.diff||1)-1]:1}
-function zsScoreBonus(){var z=zsLoad();return (z&&state&&z.life===state.life&&z.buffs)?(z.buffs.score||0):0}
-function zsStoneMult(){var z=zsLoad();return (z&&state&&z.life===state.life&&z.buffs)?(z.buffs.stoneMult||1):1}
-var ZS_ITEMS=[
- {k:"xiang",icon:"🪔",name:"悟道香",cost:80,desc:"本世所有裁定 +20，更容易大成功"},
- {k:"hub",icon:"🧧",name:"传送护符",cost:120,desc:"立刻 +80 轮回点（记入本世功绩）"},
- {k:"shield",icon:"💊",name:"回春丹",cost:50,desc:"本世下一次失败改为勉强成功"},
- {k:"ju",icon:"🏺",name:"聚宝盆",cost:100,desc:"本世事件灵石奖励翻倍"}];
-function zsBuy(k){
-  var it=null;ZS_ITEMS.forEach(function(x){if(x.k===k)it=x});if(!it)return;
-  var z=zsCur();
-  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
-  if(stones<it.cost){rbFxSet({tier:"fail",title:"灵石不足",text:"兑换「"+it.name+"」需要 "+it.cost+" 灵石，你现在有 "+stones+"。",pts:0});renderHub();return}
-  if(it.k==="xiang"&&z.buffs.score){rbFxSet({tier:"meh",title:"已生效",text:"「悟道香」在本世已经生效。",pts:0});renderHub();return}
-  if(it.k==="shield"&&z.buffs.shield){rbFxSet({tier:"meh",title:"已生效",text:"「回春丹」在本世已经生效。",pts:0});renderHub();return}
-  if(it.k==="ju"&&z.buffs.stoneMult>1){rbFxSet({tier:"meh",title:"已生效",text:"「聚宝盆」在本世已经生效。",pts:0});renderHub();return}
-  play.stones-=it.cost;if(typeof playSave==="function")playSave();
-  if(it.k==="xiang")z.buffs.score=20;
-  if(it.k==="shield")z.buffs.shield=true;
-  if(it.k==="ju")z.buffs.stoneMult=2;
-  zsSave(z);
-  rbFxSet({tier:"great",title:"兑换成功 · "+it.name,text:it.desc+"（本世有效，结算后失效）",pts:it.k==="hub"?80:0});
-  if(it.k==="hub"&&hasBridge){callNative("grant",{id:"amulet"+state.life,points:80}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()})}
-  else renderHub();
-}
-function zsSetDiff(d){try{localStorage.setItem("zsDiffNext",""+d)}catch(e){}renderHub()}
-function zsCardHtml(){
-  var z=zsCur();
-  var diffNames=["","标准","困难","噩梦"];
-  var html='<div class="card" id="zsCard"><h2>◉ 主神任务 · 当前难度 '+diffNames[z.diff]+'</h2>';
-  if(z.mission){
-    var p=zsMissionProg(z);
-    var pct=Math.max(2,Math.min(100,Math.round(Math.min(p.cur,p.target)/p.target*100)));
-    html+='<div class="desc" style="line-height:1.8"><b>'+z.mission.title+'</b>：'+zsMissionText(z)+'<br>进度 <b>'+Math.min(p.cur,p.target)+' / '+p.target+'</b>'+(z.missionPaid?' · <b style="color:#4ade80">已完成，奖励已发</b>':' · 完成奖励 <b style="color:#fbbf24">'+(60*z.diff)+' 点</b>')+'</div>'
-      +'<div style="height:8px;border-radius:99px;background:rgba(128,140,160,.25);margin-top:8px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:99px;transition:width .6s ease"></div></div>';
-  }
-  var nextDiff=1;try{nextDiff=+(localStorage.getItem("zsDiffNext")||1)}catch(e){}
-  html+='<div class="desc" style="margin-top:10px">下个世界的难度（传送前选定：奖励倍率涨，自由行动的裁定也更难）：</div><div style="display:flex;gap:6px;margin-top:6px">'
-    +[1,2,3].map(function(d){var sel=nextDiff===d;return '<button class="rbchip" data-zsdiff="'+d+'" style="'+(sel?'background:#f59e0b;color:#111;font-weight:800':'')+'">'+diffNames[d]+' · 奖励×'+[1,1.5,2][d-1]+'</button>'}).join("")+'</div>';
-  html+='<div class="desc" style="margin-top:12px">主神兑换（灵石 '+((typeof play!=="undefined"&&play)?(play.stones||0):0)+' · 本世有效，结算后失效）：</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'
-    +ZS_ITEMS.map(function(it){var on=(it.k==="xiang"&&z.buffs.score)||(it.k==="shield"&&z.buffs.shield)||(it.k==="ju"&&z.buffs.stoneMult>1);
-      return '<button class="pbtn" data-zsbuy="'+it.k+'" style="text-align:left">'+it.icon+' <b>'+it.name+'</b> · '+it.cost+' 石<span class="desc" style="display:block">'+(on?'已生效':it.desc)+'</span></button>'}).join("")+'</div></div>';
-  return html;
-}
-function zsBindCard(box){
-  Array.prototype.forEach.call(box.querySelectorAll("[data-zsbuy]"),function(b){if(!b.__zs){b.__zs=1;b.addEventListener("click",function(){zsBuy(b.getAttribute("data-zsbuy"))})}});
-  Array.prototype.forEach.call(box.querySelectorAll("[data-zsdiff]"),function(b){if(!b.__zs){b.__zs=1;b.addEventListener("click",function(){zsSetDiff(+b.getAttribute("data-zsdiff"))})}});
-}
-var __zsRenderHub0=renderHub;
-renderHub=function(){
-  __zsRenderHub0();
-  var box=$("hubBody");if(!box||!state||!state.sectId||state.allocPending)return;
-  if(box.querySelector("#zsCard"))return;
-  var holder=document.createElement("div");holder.innerHTML=zsCardHtml();
-  var card=holder.firstChild;
-  var ref=box.children[2]||null;
-  box.insertBefore(card,ref);
-  zsBindCard(box);
-  zsCheckMission();
-};
-function rbFreeResolve(sim,node,text){
-  var it=rbFreeIntent(text);
-  var alloc=state.alloc||{};
-  var dimVal=alloc[it.dim]||0;
-  var bonus=(node&&node.dim===it.dim)?20:0;
-  if(it.k==="craft"&&it.prof&&sim.prof===it.prof)bonus+=30;
-  var __z=zsLoad();var __zd=(__z&&__z.life===state.life)?(__z.diff||1):1;
-  var diff=70+sim.prog*6+Math.floor(Math.random()*41)+(sim.flags.hurt?20:0)+(__zd-1)*25;
-  var score=dimVal+Math.floor(Math.random()*101)+bonus+zsScoreBonus();
-  var base=10+sim.prog*2;
-  var tier,pts;
-  if(score>=diff+60){tier="great";pts=Math.round(base*2)}else if(score>=diff){tier="ok";pts=base}else if(score>=diff-50){tier="meh";pts=Math.max(2,Math.round(base*0.4))}else{tier="fail";pts=0}
-  if(tier==="fail"&&__z&&__z.buffs&&__z.buffs.shield){__z.buffs.shield=false;zsSave(__z);tier="meh";pts=Math.max(2,Math.round(base*0.4))}
-  if(it.risky&&tier==="fail")sim.flags.hurt=1;else if(tier!=="fail"&&sim.flags.hurt)delete sim.flags.hurt;
-  pts=Math.round(pts*zsPtMult());
-  var stones=0,profExp=0;
-  if(it.k==="trade"&&tier!=="fail")stones=tier==="great"?80:(tier==="ok"?45:15);
-  if(it.k==="craft"&&tier!=="fail"){profExp=tier==="great"?30:(tier==="ok"?20:8);if(it.prof&&sim.prof===it.prof){/*本行*/}else if(it.prof){profExp=Math.round(profExp/2)}}
-  var tail=tier==="fail"?(RB_FAIL_TAIL[it.k]||RB_FAIL_TAIL.any):rbPickOne(RB_INTENT_TAIL[it.k]||RB_INTENT_TAIL.any);
-  var narrative="你决定：「"+text+"」"+rbPickOne(RB_TIER_PRE[tier])+tail;
-  return{pts:pts,tier:tier,stones:stones,profExp:profExp,text:narrative};
-}
-
-/* == v14: 主神空间视觉层 —— 全息面板 / 星轨长卷 / 世界横幅 == */
-(function(){
-  if(document.getElementById("zsStyle"))return;
-  var st=document.createElement("style");st.id="zsStyle";
-  st.textContent=
-  '.holo{background:linear-gradient(160deg,#0a0f24 0%,#111a3d 55%,#0a0f22 100%)!important;color:#d7e6ff!important;border:1px solid rgba(125,211,252,.35)!important;box-shadow:0 0 24px rgba(56,130,246,.18),inset 0 0 32px rgba(56,130,246,.06)}'
-  +'.holo h2{color:#eaf4ff!important;text-shadow:0 0 12px rgba(125,211,252,.65)}'
-  +'.holo .desc{color:#9db1d8!important}'
-  +'.holo .rbrow{border-bottom-color:rgba(125,211,252,.14)}'
-  +'.holo .rbchip{border-color:rgba(125,211,252,.4);color:#cfe4ff}'
-  +'.holo input.rbnum{background:rgba(10,16,38,.85);color:#eaf4ff;border:1px solid rgba(125,211,252,.4);border-radius:8px}'
-  +'.hbar{height:9px;border-radius:99px;background:rgba(125,211,252,.14);overflow:hidden}'
-  +'.hbar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#818cf8,#e879f9);box-shadow:0 0 10px rgba(129,140,248,.8);transition:width .6s ease}'
-  +'.dimline{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;color:#9db1d8}'
-  +'.dimline .hbar{flex:1}'
-  +'.starmap .rbrow[data-stage]{position:relative;padding-left:28px}'
-  +'.starmap .rbrow[data-stage]::before{content:"";position:absolute;left:6px;top:22px;width:11px;height:11px;border-radius:50%;background:#3b4a6b;box-shadow:0 0 0 3px rgba(125,211,252,.12)}'
-  +'.starmap .rbrow[data-stage]::after{content:"";position:absolute;left:11px;top:36px;bottom:-16px;width:1px;background:linear-gradient(180deg,rgba(125,211,252,.35),rgba(125,211,252,.04))}'
-  +'.starmap .st-done::before{background:#4ade80!important;box-shadow:0 0 10px #4ade80,0 0 0 3px rgba(74,222,128,.15)!important}'
-  +'.starmap .st-cur::before{background:#fbbf24!important;animation:stpulse 1.6s ease-in-out infinite}'
-  +'@keyframes stpulse{0%,100%{box-shadow:0 0 6px #fbbf24,0 0 0 2px rgba(251,191,36,.35)}50%{box-shadow:0 0 16px #fbbf24,0 0 0 6px rgba(251,191,36,.12)}}'
-  +'.epic-gold{border:1px solid rgba(251,191,36,.55)!important;border-radius:12px;padding-left:10px!important;padding-right:10px!important;margin-top:8px;background:linear-gradient(120deg,rgba(251,191,36,.10),rgba(232,121,249,.08));box-shadow:0 0 16px rgba(251,191,36,.18)}'
-  +'.epic-red{border:1px solid rgba(248,113,113,.5)!important;border-radius:12px;padding-left:10px!important;padding-right:10px!important;margin-top:8px;background:linear-gradient(120deg,rgba(248,113,113,.10),rgba(251,191,36,.06));box-shadow:0 0 16px rgba(248,113,113,.16)}'
-  +'.simBanner{position:relative;height:96px;border-radius:12px;overflow:hidden;margin:-4px -4px 10px}'
-  +'.simBanner img{width:100%;height:100%;object-fit:cover;display:block}'
-  +'.simBanner .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,8,20,.05),rgba(5,8,20,.80));display:flex;flex-direction:column;justify-content:flex-end;padding:10px 12px}'
-  +'.simBanner .wl{font-size:17px;font-weight:800;color:#fff;text-shadow:0 0 14px rgba(125,211,252,.9);letter-spacing:2px}'
-  +'.actdots{display:flex;gap:5px;margin-top:6px}'
-  +'.actdots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25)}'
-  +'.actdots i.on{background:#fbbf24;box-shadow:0 0 8px #fbbf24}';
-  document.head.appendChild(st);
-})();
-function holoStatsHtml(){
-  var th=[[1200,"C"],[2500,"B"],[4000,"A"],[6000,"S"]];
-  var e=state.earned||0,prev=0,next=null,nextName="";
-  for(var i=0;i<th.length;i++){if(e<th[i][0]){next=th[i][0];nextName=th[i][1];break}prev=th[i][0]}
-  var line=next?("距 "+nextName+" 评价还差 "+(next-e)+" 功绩"):"已过 S 级评价线";
-  var pct=next?Math.max(2,Math.round((e-prev)/(next-prev)*100)):100;
-  var alloc=state.alloc||{},max=10;
-  RB_DIMS.forEach(function(d){if((alloc[d.k]||0)>max)max=alloc[d.k]});
-  var bars=RB_DIMS.map(function(d){var v=alloc[d.k]||0;return '<div class="dimline"><span style="width:74px">'+d.icon+" "+d.name+'</span><div class="hbar"><i style="width:'+(v?Math.max(3,Math.round(v/max*100)):0)+'%"></i></div><b>'+v+'</b></div>'}).join("");
-  return '<div id="holoStats" style="margin-top:6px"><div class="desc">'+line+'</div><div class="hbar" style="margin-top:6px"><i style="width:'+pct+'%"></i></div>'+bars+'</div>';
-}
-var __zsHall0=renderRebirthRoom;
-renderRebirthRoom=function(){
-  __zsHall0();
-  var box=$("rebirthBody");if(!box||!state||!state.sectId)return;
-  var cards=box.querySelectorAll(".card");
-  Array.prototype.forEach.call(cards,function(c){c.classList.add("holo")});
-  var first=cards[0];
-  if(first&&!first.querySelector("#holoStats")){
-    var h2=first.querySelector("h2");
-    if(h2){var holder=document.createElement("div");holder.innerHTML=holoStatsHtml();h2.parentNode.insertBefore(holder.firstChild,h2.nextSibling)}
-  }
-  Array.prototype.forEach.call(cards,function(c){
-    var h=c.querySelector("h2");if(!h)return;
-    if(h.textContent.indexOf("百世长卷")>=0){
-      c.classList.add("starmap");
-      Array.prototype.forEach.call(c.querySelectorAll("[data-stage]"),function(r){
-        var i=+r.getAttribute("data-stage"),j=RB_JOURNEY[i];if(!j)return;
-        if(state.life>j.to)r.classList.add("st-done");
-        else if(state.life>=j.from&&state.life<=j.to)r.classList.add("st-cur");
-      });
-    }
-    if(h.textContent.indexOf("此世结局")>=0){
-      Array.prototype.forEach.call(c.querySelectorAll(".rbrow"),function(r){
-        if(r.textContent.indexOf("万法归一")>=0)r.classList.add("epic-gold");
-        else if(r.textContent.indexOf("伐天")>=0)r.classList.add("epic-red");
-      });
-    }
-  });
-};
-var __zsHub1=renderHub;
-renderHub=function(){
-  __zsHub1();
-  var box=$("hubBody");if(!box||!state||!state.sectId)return;
-  var cards=box.querySelectorAll(".card");
-  if(cards[1])cards[1].classList.add("holo");
-  var zs=$("zsCard");if(zs)zs.classList.add("holo");
-  Array.prototype.forEach.call(cards,function(c){
-    var h=c.querySelector("h2");if(!h||h.textContent.indexOf("世界任务")<0)return;
-    c.classList.add("holo");
-    if(c.querySelector(".simBanner"))return;
-    var sim=rbDynLoad();
-    var dots="";for(var i=0;i<10;i++)dots+='<i class="'+((sim.done||i<sim.prog)?"on":"")+'"></i>';
-    var holder=document.createElement("div");
-    holder.innerHTML='<div class="simBanner"><img src="scene-night.jpg"><div class="ov"><div class="wl">'+rbWorldName(state.world)+" · "+rbSysName(state.system)+'</div><div class="actdots">'+dots+'</div></div></div>';
-    c.insertBefore(holder.firstChild,c.children[1]||null);
-  });
-};
-
-/* == v15: 世界内去宗门 + 主神悬赏 == */
-var ZS_COVER_HTML='<div class="card"><h2>🪪 此世身份</h2><div class="desc" style="line-height:1.9">你在这一世的掩护，是本地一座小门派里的一个寻常人。经营它能攒灵石、涨副职业熟练；不经营，也丝毫不妨碍主神的任务——轮回者借壳而生，壳不是命。</div>'
-  +[["room-tome","📚","藏经阁","掩护身份的日常 · 读书参悟"],["room-alchemy","🧪","丹堂","炼丹订单 · 副职业炼丹"],["room-lecture","📖","传功堂","讲道与收徒 · 掩护人脉"],["room-forge","🔨","器峰","炼器锻造 · 副职业炼器"],["room-patrol","⚖️","执法堂","巡山执法 · 掩护差事"],["room-cave","🏡","洞府","掩护的住处 · 灵田与休整"]].map(function(r){
-    return '<div class="rbrow" data-room="'+r[0]+'" style="cursor:pointer"><span style="font-size:20px">'+r[1]+'</span><span style="flex:1"><b>'+r[2]+'</b><div class="desc">'+r[3]+'</div></span><span class="desc">进入 ›</span></div>'}).join("")
-  +'</div>';
-var ZS_BOUNTY_TYPES=[
- {k:"hunt",icon:"🗡️",name:"讨伐悬赏",dim:"gengu",lines:["界外妖物夜啸山林，悬赏讨伐。","凶兽盘踞古道，商旅断绝，主神悬赏清剿。","一名叛逃的轮回者藏在此界，带回他的令牌。"]},
- {k:"find",icon:"🔮",name:"寻物悬赏",dim:"qiyun",lines:["一枚主神信物坠落此界，寻回者重赏。","上古遗珠沉入寒潭，唯气运所钟者能拾。","走失的界门钥匙，悬赏寻回。"]},
- {k:"escort",icon:"🛡️",name:"护送悬赏",dim:"renyuan",lines:["护送一队凡人商旅过境，保其周全。","一位故人之后要穿过战区，悬赏护送。","押运灵粮至边城，沿途不太平。"]},
- {k:"insight",icon:"📜",name:"参悟悬赏",dim:"wuxing",lines:["界壁上有一段残缺天书，参透者得赏。","无字碑林夜放毫光，悬赏解碑。","一位大能坐化前留下棋局，破局者赏。"]}];
-function zsBountySave(b){try{localStorage.setItem("zsBounty",JSON.stringify(b))}catch(e){}}
-function zsBountyLoad(){
-  var day=(state&&state.today)||"";
-  var b=null;try{b=JSON.parse(localStorage.getItem("zsBounty")||"null")}catch(e){}
-  if(!b||b.day!==day||b.life!==state.life){
-    var seed=0;var s=day+"_"+state.life;for(var i=0;i<s.length;i++)seed=(seed*31+s.charCodeAt(i))>>>0;
-    var list=[];
-    for(var n=0;n<3;n++){
-      seed=(seed*1103515245+12345)>>>0;var t=ZS_BOUNTY_TYPES[seed%4];
-      seed=(seed*1103515245+12345)>>>0;var li=seed%t.lines.length;
-      seed=(seed*1103515245+12345)>>>0;var pts=24+(seed%22);
-      list.push({type:t.k,li:li,pts:pts,done:false});
-    }
-    b={day:day,life:state.life,list:list};zsBountySave(b);
-  }
-  return b;
-}
-function zsDimName(k){var n=k;RB_DIMS.forEach(function(d){if(d.k===k)n=d.icon+" "+d.name});return n}
-function renderBounty(){
-  var el=$("bountyBody");if(!el||!state||!state.sectId)return;
-  var b=zsBountyLoad();
-  el.innerHTML='<div class="card holo"><h2>🎯 主神悬赏 · 今日</h2><div class="desc" style="line-height:1.8">主神每日在此界挂三张悬赏，成败看你这一世的强化与命数。赏金计入本世功绩，难度倍率同样生效（当前 ×'+zsPtMult()+'）。</div>'
-    +b.list.map(function(x,i){var t=null;ZS_BOUNTY_TYPES.forEach(function(y){if(y.k===x.type)t=y});
-      return '<div class="rbrow"><span style="font-size:20px">'+t.icon+'</span><span style="flex:1"><b>'+t.name+'</b> · 赏 <b style="color:#fbbf24">'+Math.round(x.pts*zsPtMult())+' 点</b><div class="desc">'+t.lines[x.li]+'（看 '+zsDimName(t.dim)+'）</div></span>'+(x.done?'<span class="desc" style="color:#4ade80">已完成</span>':'<button class="pbtn" data-bounty="'+i+'">接悬赏</button>')+'</div>'}).join("")
-    +'</div>';
-  Array.prototype.forEach.call(el.querySelectorAll("[data-bounty]"),function(btn){btn.addEventListener("click",function(){zsDoBounty(+btn.getAttribute("data-bounty"))})});
-}
-function zsDoBounty(i){
-  var b=zsBountyLoad();var x=b.list[i];if(!x||x.done)return;
-  var t=null;ZS_BOUNTY_TYPES.forEach(function(y){if(y.k===x.type)t=y});
-  var alloc=state.alloc||{};var dv=alloc[t.dim]||0;
-  var z=zsLoad();var zd=(z&&z.life===state.life)?(z.diff||1):1;
-  var score=dv+Math.floor(Math.random()*101)+zsScoreBonus();
-  var diff=110+Math.floor(Math.random()*61)+(zd-1)*25;
-  var pts=0,tier,text;
-  if(score>=diff+60){tier="great";pts=Math.round(x.pts*1.5*zsPtMult());text="干净利落，悬赏目标毫无还手之力。主神加赏。"}
-  else if(score>=diff){tier="ok";pts=Math.round(x.pts*zsPtMult());text="一番周折，悬赏完成了。"}
-  else if(score>=diff-45){tier="meh";pts=Math.round(x.pts*0.4*zsPtMult());text="勉强办成，赏金打了折扣。"}
-  else{tier="fail";text="这张悬赏超出了你这一世的能耐，主神收回了告示。"}
-  x.done=true;zsBountySave(b);
-  rbFxSet({tier:tier,title:t.name,text:text,pts:pts});
-  if(pts>0&&hasBridge){
-    callNative("grant",{id:"bounty"+b.day.replace(/-/g,"")+"_"+i+"_"+state.life,points:pts}).then(function(st){if(st)state=Object.assign(state,st);renderBounty();rbFxRender("bountyBody")}).catch(function(){renderBounty();rbFxRender("bountyBody")});
-  }else{renderBounty();rbFxRender("bountyBody")}
-}
-(function zsBuildRooms(){
-  var market=$("room-market");if(!market||$("room-bounty"))return;
-  var b=market.cloneNode(true);b.id="room-bounty";
-  b.querySelector(".room-title").textContent="🎯 悬赏榜";
-  b.querySelector(".room-sub").textContent="主神告示 · 每日三张";
-  var bb=b.querySelector(".room-body");bb.id="bountyBody";bb.innerHTML="";
-  market.parentNode.insertBefore(b,market.nextSibling);
-  var c=market.cloneNode(true);c.id="room-cover";
-  c.querySelector(".room-title").textContent="🪪 此世身份";
-  c.querySelector(".room-sub").textContent="轮回者的掩护 · 本地门派日常";
-  var cb=c.querySelector(".room-body");cb.id="coverBody";cb.innerHTML=ZS_COVER_HTML;
-  market.parentNode.insertBefore(c,b.nextSibling);
-  [b,c].forEach(function(r){var back=r.querySelector("[data-close]");if(back)back.addEventListener("click",function(){closeRoomsUI()})});
-  Array.prototype.forEach.call(cb.querySelectorAll("[data-room]"),function(r){r.addEventListener("click",function(){openRoom(r.getAttribute("data-room"))})});
-})();
-var __zsOpen0=openRoom;
-openRoom=function(id){if(id==="room-bounty")renderBounty();__zsOpen0(id);if(id==="room-bounty")rbFxRender("bountyBody")};
-
-/* == v16: 主神空间驻地 —— 五设施五级，跨世保留，效果进机制 == */
-var ZS_BASE_FACS=[
- {k:"portal",icon:"🌉",name:"界门",fx:function(lv){return "所有裁定 +"+(lv*5)+"（自由行动与悬赏判定）"}},
- {k:"train",icon:"🏹",name:"校场",fx:function(lv){return "主线任务奖励 +"+(lv*12)+"%"}},
- {k:"hall",icon:"🧮",name:"账房",fx:function(lv){return "主神兑换价格 -"+(lv*8)+"%"}},
- {k:"med",icon:"🏠",name:"主宅",fx:function(lv){return "每一世开局灵石 +"+(lv*60)}},
- {k:"astro",icon:"🗼",name:"瞭望塔",fx:function(lv){return "悬赏赏金 +"+(lv*10)+"%"+(lv>=3?" · 每日悬赏 +1 张":"")}}];
-var ZS_BASE_COSTS=[80,160,260,400,600];
-function zsBaseLoad(){var b=null;try{b=JSON.parse(localStorage.getItem("zsBase")||"null")}catch(e){}if(!b||!b.lv)b={lv:{portal:0,train:0,hall:0,med:0,astro:0},claimLife:0};return b}
-function zsBaseSave(b){try{localStorage.setItem("zsBase",JSON.stringify(b))}catch(e){}}
-function zsBaseLv(k){return zsBaseLoad().lv[k]||0}
-function zsBaseTotal(){var b=zsBaseLoad(),t=0;for(var k in b.lv)t+=b.lv[k];return t}
-function zsScoreBonus(){var z=zsLoad();var buff=(z&&state&&z.life===state.life&&z.buffs)?(z.buffs.score||0):0;return buff+zsBaseLv("portal")*5}
-function zsCheckMission(){
-  if(!hasBridge||!state||!state.sectId||state.allocPending)return;
-  var z=zsCur();if(!z.mission||z.missionPaid)return;
-  var p=zsMissionProg(z);
-  if(p.cur>=p.target){
-    z.missionPaid=true;zsSave(z);
-    var bonus=Math.round(60*z.diff*(1+0.12*zsBaseLv("train")));
-    rbFxSet({tier:"great",title:"主线任务完成",text:zsMissionText(z)+" —— 已达成。主神奖励 +"+bonus+" 点。",pts:bonus});
-    callNative("grant",{id:"mission"+state.life,points:bonus}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()});
-  }
-}
-function zsCostOf(it){return Math.max(10,Math.round(it.cost*(1-0.08*zsBaseLv("hall"))))}
-function zsBuy(k){
-  var it=null;ZS_ITEMS.forEach(function(x){if(x.k===k)it=x});if(!it)return;
-  var z=zsCur();
-  var cost=zsCostOf(it);
-  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
-  if(stones<cost){rbFxSet({tier:"fail",title:"灵石不足",text:"兑换「"+it.name+"」需要 "+cost+" 灵石，你现在有 "+stones+"。",pts:0});renderHub();return}
-  if(it.k==="xiang"&&z.buffs.score){rbFxSet({tier:"meh",title:"已生效",text:"「悟道香」在本世已经生效。",pts:0});renderHub();return}
-  if(it.k==="shield"&&z.buffs.shield){rbFxSet({tier:"meh",title:"已生效",text:"「回春丹」在本世已经生效。",pts:0});renderHub();return}
-  if(it.k==="ju"&&z.buffs.stoneMult>1){rbFxSet({tier:"meh",title:"已生效",text:"「聚宝盆」在本世已经生效。",pts:0});renderHub();return}
-  play.stones-=cost;if(typeof playSave==="function")playSave();
-  if(it.k==="xiang")z.buffs.score=20;
-  if(it.k==="shield")z.buffs.shield=true;
-  if(it.k==="ju")z.buffs.stoneMult=2;
-  zsSave(z);
-  rbFxSet({tier:"great",title:"兑换成功 · "+it.name,text:it.desc+"（本世有效，结算后失效）",pts:it.k==="hub"?80:0});
-  if(it.k==="hub"&&hasBridge){callNative("grant",{id:"amulet"+state.life,points:80}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()})}
-  else renderHub();
-}
-function zsBountyLoad(){
-  var day=(state&&state.today)||"";
-  var b=null;try{b=JSON.parse(localStorage.getItem("zsBounty")||"null")}catch(e){}
-  if(!b||b.day!==day||b.life!==state.life){
-    var seed=0;var s=day+"_"+state.life;for(var i=0;i<s.length;i++)seed=(seed*31+s.charCodeAt(i))>>>0;
-    var count=3+(zsBaseLv("astro")>=3?1:0);
-    var mult=1+0.1*zsBaseLv("astro");
-    var list=[];
-    for(var n=0;n<count;n++){
-      seed=(seed*1103515245+12345)>>>0;var t=ZS_BOUNTY_TYPES[seed%4];
-      seed=(seed*1103515245+12345)>>>0;var li=seed%t.lines.length;
-      seed=(seed*1103515245+12345)>>>0;var pts=Math.round((24+(seed%22))*mult);
-      list.push({type:t.k,li:li,pts:pts,done:false});
-    }
-    b={day:day,life:state.life,list:list};zsBountySave(b);
-  }
-  return b;
-}
-function zsBasePips(lv){var s="";for(var i=0;i<5;i++)s+='<span style="display:inline-block;width:22px;height:7px;border-radius:99px;margin-right:4px;background:'+(i<lv?"linear-gradient(90deg,#38bdf8,#818cf8);box-shadow:0 0 7px rgba(129,140,248,.8)":"rgba(125,211,252,.18)")+'"></span>';return s}
-function renderBase(){
-  var el=$("baseBody");if(!el)return;
-  var b=zsBaseLoad();
-  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
-  el.innerHTML='<div class="simBanner" style="margin:0 0 10px"><img src="scene-night.jpg"><div class="ov"><div class="wl">🏡 我的庄园 · 总等级 '+zsBaseTotal()+'</div><div class="desc" style="color:#cfe4ff">庄园建在主神空间里，转世不毁、世世长存。灵石 '+stones+'</div></div></div>'
-    +ZS_BASE_FACS.map(function(f){
-      var lv=b.lv[f.k]||0;var maxed=lv>=5;var cost=maxed?0:ZS_BASE_COSTS[lv];
-      return '<div class="card holo" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px">'+f.icon+'</span><span style="flex:1"><b style="font-size:16px">'+f.name+'</b> · '+lv+' 级<div style="margin-top:5px">'+zsBasePips(lv)+'</div><div class="desc" style="margin-top:5px">'+(maxed?f.fx(5):("当前："+f.fx(lv)+(lv<5?("　下一级："+f.fx(lv+1)):"")))+'</div></span>'
-      +(maxed?'<span class="desc" style="color:#4ade80">已满级</span>':'<button class="pbtn" data-baseup="'+f.k+'" '+(stones<cost?'disabled style="opacity:.45"':'')+'>升级 · '+cost+' 石</button>')+'</div></div>'}).join("")
-    +'<div class="desc" style="line-height:1.8">灵石来自世界内的事件、集市与洞府经营；庄园等级不会随转世清零——这是你在主神空间里真正属于自己的地方。</div>';
-  Array.prototype.forEach.call(el.querySelectorAll("[data-baseup]"),function(btn){btn.addEventListener("click",function(){zsBaseUp(btn.getAttribute("data-baseup"))})});
-}
-function zsBaseUp(k){
-  var b=zsBaseLoad();var lv=b.lv[k]||0;if(lv>=5)return;
-  var cost=ZS_BASE_COSTS[lv];
-  if(typeof play==="undefined"||!play||(play.stones||0)<cost)return;
-  play.stones-=cost;if(typeof playSave==="function")playSave();
-  b.lv[k]=lv+1;zsBaseSave(b);
-  var f=null;ZS_BASE_FACS.forEach(function(x){if(x.k===k)f=x});
-  rbFxSet({tier:"great",title:"庄园升级 · "+f.name,text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。驻地跨世长存，这一砖一瓦都是你的。",pts:0});
-  renderBase();rbFxRender("baseBody");
-}
-(function zsBuildBaseRoom(){
-  var market=$("room-market");if(!market||$("room-base"))return;
-  var r=market.cloneNode(true);r.id="room-base";
-  r.querySelector(".room-title").textContent="🏡 我的庄园";
-  r.querySelector(".room-sub").textContent="主神空间 · 跨世长存";
-  var bd=r.querySelector(".room-body");bd.id="baseBody";bd.innerHTML="";
-  market.parentNode.insertBefore(r,market.nextSibling);
-  var back=r.querySelector("[data-close]");if(back)back.addEventListener("click",function(){closeRoomsUI()});
-})();
-var __zsOpen1=openRoom;
-openRoom=function(id){if(id==="room-base")renderBase();__zsOpen1(id);if(id==="room-base")rbFxRender("baseBody")};
-var __zsHub2=renderHub;
-renderHub=function(){
-  __zsHub2();
-  var box=$("hubBody");if(!box||!state||!state.sectId||state.allocPending)return;
-  var b=zsBaseLoad();
-  if(b.lv.med>0&&b.claimLife!==state.life){
-    b.claimLife=state.life;zsBaseSave(b);
-    if(typeof addStones==="function")addStones(60*b.lv.med);
-    rbFxSet({tier:"ok",title:"主宅",text:"新一世安顿：主宅送来 "+(60*b.lv.med)+" 灵石。",pts:0});
-  }
-  var zc=$("zsCard");
-  if(zc&&zsBaseLv("hall")>0){
-    Array.prototype.forEach.call(zc.querySelectorAll("[data-zsbuy]"),function(b){
-      var it=null;ZS_ITEMS.forEach(function(x){if(x.k===b.getAttribute("data-zsbuy"))it=x});
-      if(it)b.innerHTML=b.innerHTML.replace(/· \d+ 石/,"· "+zsCostOf(it)+" 石（账房价）");
-    });
-  }
-  if(!box.querySelector("#baseEntry")){
-    var holder=document.createElement("div");
-    holder.innerHTML='<div class="card holo" id="baseEntry" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🏯</span><span style="flex:1"><b>我的庄园</b> · 设施总等级 '+zsBaseTotal()+'<div class="desc">传送阵 / 训练场 / 兑换大厅 / 静修室 / 占星台——建在空间里，世世长存</div></span><span class="desc">进入 ›</span></div></div>';
-    var card=holder.firstChild;
-    card.addEventListener("click",function(){openRoom("room-base")});
-    var zs=$("zsCard");
-    if(zs&&zs.nextSibling)box.insertBefore(card,zs.nextSibling);else box.appendChild(card);
-  }
-};
-
-/* == v17: 主神空间全景画 —— 建筑在画里长，点画办事 == */
-ZS_BASE_COSTS=[30,120,260,400,600];
-(function(){
-  if(document.getElementById("panoStyle"))return;
-  var st=document.createElement("style");st.id="panoStyle";
-  st.textContent=
-  '.pano{height:432px!important}'
-  +'.pano .zs-name{top:auto;bottom:196px}'
-  +'.pano-island{position:absolute;left:0;right:0;bottom:0;height:158px;background:linear-gradient(180deg,rgba(24,44,26,0) 0%,rgba(24,44,26,.42) 34%,rgba(14,30,17,.92) 78%);pointer-events:none}'
-  +'.pano-mist{position:absolute;left:0;right:0;bottom:118px;height:44px;background:radial-gradient(ellipse 90% 100% at 50% 100%,rgba(190,220,255,.20),rgba(190,220,255,0) 70%);pointer-events:none}'
-  +'.bld{position:absolute;transform:translateX(-50%);background:none;border:none;cursor:pointer;padding:0;z-index:5;text-align:center}'
-  +'.bld .bic{display:flex;align-items:center;justify-content:center;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,244,200,.95),rgba(251,191,36,.28) 55%,rgba(10,16,38,.65));border:1px solid rgba(255,220,150,.55);box-shadow:0 0 14px rgba(251,191,36,.35)}'
-  +'.bld.lv0 .bic{background:rgba(10,16,38,.45);border:1px dashed rgba(160,190,230,.5);box-shadow:none;filter:grayscale(.8);opacity:.75}'
-  +'.bld.lv3 .bic,.bld.lv4 .bic{box-shadow:0 0 18px rgba(251,191,36,.65)}'
-  +'.bld.lv5 .bic{box-shadow:0 0 24px rgba(251,191,36,.95);animation:stpulse 1.8s ease-in-out infinite}'
-  +'.bld .bnm{display:block;margin-top:3px;font-size:10px;color:#eaf4ff;text-shadow:0 1px 6px #000,0 0 8px rgba(0,0,0,.8);letter-spacing:1px}'
-  +'.bld .blv{display:block;font-size:9px;color:#fbbf24;text-shadow:0 1px 4px #000}'
-  +'.bld:active{transform:translateX(-50%) scale(.92)}'
-  +'.pano-portal{position:absolute;left:5%;top:35%;width:64px;height:64px;border-radius:50%;border:2px solid rgba(125,211,252,.75);background:radial-gradient(circle,rgba(125,211,252,.30) 0%,rgba(125,211,252,.05) 62%,transparent 70%);box-shadow:0 0 22px rgba(125,211,252,.5),inset 0 0 18px rgba(125,211,252,.4);cursor:pointer;z-index:5;animation:stpulse 2.6s ease-in-out infinite}'
-  +'.pano-portal span{position:absolute;left:50%;top:70px;transform:translateX(-50%);white-space:nowrap;font-size:10px;color:#cfe4ff;text-shadow:0 1px 6px #000;letter-spacing:1px}'
-  +'.pano-sign{position:absolute;left:24%;top:52%;z-index:5;cursor:pointer;background:linear-gradient(160deg,#3a2a16,#241a0e);border:1px solid rgba(251,191,36,.6);border-radius:9px;padding:5px 8px;color:#ffe9b0;font-size:11px;box-shadow:0 4px 14px rgba(0,0,0,.5);text-align:center}'
-  +'.pano-sign:active{transform:scale(.93)}'
-  +'.pano-chip{position:absolute;left:10px;top:10px;z-index:6;background:rgba(6,10,26,.55);backdrop-filter:blur(6px);border:1px solid rgba(125,211,252,.35);border-radius:99px;padding:5px 11px;font-size:11px;color:#d7e6ff}'
-  +'.pano-npc{position:absolute;bottom:150px;left:56%;z-index:4;width:36px;text-align:center;cursor:pointer;animation:panoWalk 34s ease-in-out infinite alternate}'
-  +'@keyframes panoWalk{0%{transform:translateX(0)}50%{transform:translateX(74px)}100%{transform:translateX(-38px)}}'
-  +'.pano-npc .fig{font-size:25px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}'
-  +'.pano-bub{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);width:148px;background:rgba(250,250,246,.94);color:#26314d;border-radius:11px;padding:6px 8px;font-size:10.5px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.35)}'
-  +'.pano-bub::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-5px;border:5px solid transparent;border-top-color:rgba(250,250,246,.94);border-bottom:none}'
-  +'#panoPop{position:absolute;left:50%;transform:translateX(-50%);bottom:166px;width:88%;z-index:9;border-radius:14px;padding:12px 14px}';
-  document.head.appendChild(st);
-})();
-var PANO_POS=[{l:"11%",b:66},{l:"30%",b:88},{l:"49%",b:100},{l:"68%",b:88},{l:"87%",b:66}];
-function panoBldsHtml(){
-  var b=zsBaseLoad();
-  return ZS_BASE_FACS.map(function(f,i){
-    var lv=b.lv[f.k]||0;var sz=30+lv*6;
-    return '<button class="bld lv'+lv+'" data-fac="'+f.k+'" style="left:'+PANO_POS[i].l+';bottom:'+PANO_POS[i].b+'px"><span class="bic" style="width:'+sz+'px;height:'+sz+'px;font-size:'+(16+lv*2)+'px">'+f.icon+'</span><span class="bnm">'+f.name+'</span><span class="blv">'+(lv?("◆".repeat(lv)):"未建")+'</span></button>';
-  }).join("");
-}
-function panoPopHtml(k){
-  var b=zsBaseLoad();var f=null;ZS_BASE_FACS.forEach(function(x){if(x.k===k)f=x});if(!f)return "";
-  var lv=b.lv[f.k]||0;var maxed=lv>=5;var cost=maxed?0:ZS_BASE_COSTS[lv];
-  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
-  return '<div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:26px">'+f.icon+'</span><span style="flex:1"><b>'+f.name+'</b> · '+lv+' 级<div class="desc" style="margin-top:3px;line-height:1.7">'+(maxed?("已满级："+f.fx(5)):("当前 "+f.fx(lv)+"<br>下一级 "+f.fx(lv+1)))+'</div></span><button class="rbchip" data-panoclose="1">✕</button></div>'
-    +(maxed?'<div class="desc" style="margin-top:8px;color:#4ade80">这座建筑已经盖到顶了。</div>'
-      :'<button class="pbtn" data-panoup="'+f.k+'" style="margin-top:9px;width:100%;'+(stones<cost?'opacity:.45':'background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b')+'">'+(stones<cost?("灵石不足 · 需 "+cost+" 石（现有 "+stones+"）"):("升级 · "+cost+" 灵石"))+'</button>');
-}
-function panoShowPop(k){
-  var pop=$("panoPop");if(!pop)return;
-  window.__panoFac=k;
-  pop.innerHTML=panoPopHtml(k);pop.style.display="block";
-  Array.prototype.forEach.call(pop.querySelectorAll("[data-panoclose]"),function(x){x.addEventListener("click",function(){pop.style.display="none";window.__panoFac=null})});
-  Array.prototype.forEach.call(pop.querySelectorAll("[data-panoup]"),function(x){x.addEventListener("click",function(){zsPanoUp(x.getAttribute("data-panoup"))})});
-}
-function zsPanoUp(k){
-  var b=zsBaseLoad();var lv=b.lv[k]||0;if(lv>=5)return;
-  var cost=ZS_BASE_COSTS[lv];
-  if(typeof play==="undefined"||!play||(play.stones||0)<cost)return;
-  play.stones-=cost;if(typeof playSave==="function")playSave();
-  b.lv[k]=lv+1;zsBaseSave(b);
-  var f=null;ZS_BASE_FACS.forEach(function(x){if(x.k===k)f=x});
-  rbFxSet({tier:"great",title:"庄园 · "+f.name+" 升起",text:f.name+" 升至 "+(lv+1)+" 级："+f.fx(lv+1)+"。庄园的画里，又长了一分。",pts:0});
-  renderHub();
-}
-function panoEnhance(){
-  var box=$("hubBody");if(!box)return;
-  var stage=box.querySelector(".zs-stage");if(!stage||stage.classList.contains("pano"))return;
-  stage.classList.add("pano");
-  var day=false;try{day=sceneIsDay()}catch(e){}
-  stage.style.backgroundImage='linear-gradient(180deg,rgba(4,6,13,.18),rgba(4,6,13,.02) 38%,rgba(4,6,13,.42)),url('+(day?"scene-day.jpg":"scene-night.jpg")+')';
-  stage.style.backgroundSize="cover";stage.style.backgroundPosition="center 30%";
-  var chip=document.createElement("div");chip.className="pano-chip";
-  chip.textContent="第 "+state.life+" 个世界 · "+rbWorldName(state.world)+" · 可用点 "+(state.points||0);
-  stage.appendChild(chip);
-  var ball=stage.querySelector(".zs-ball");if(ball){ball.style.cursor="pointer";ball.addEventListener("click",function(){openRoom("room-rebirth")})}
-  var portal=document.createElement("div");portal.className="pano-portal";portal.innerHTML="<span>传送门 · 进世界</span>";
-  portal.addEventListener("click",function(){closeRoomsUI()});
-  stage.appendChild(portal);
-  var sign=document.createElement("div");sign.className="pano-sign";sign.innerHTML="🎯 悬赏榜<br><span style='font-size:9px;opacity:.8'>每日三张</span>";
-  sign.addEventListener("click",function(){openRoom("room-bounty")});
-  stage.appendChild(sign);
-  var mist=document.createElement("div");mist.className="pano-mist";stage.appendChild(mist);
-  var island=document.createElement("div");island.className="pano-island";stage.appendChild(island);
-  var blds=document.createElement("div");blds.id="panoBlds";blds.innerHTML=panoBldsHtml();stage.appendChild(blds);
-  Array.prototype.forEach.call(blds.querySelectorAll("[data-fac]"),function(x){x.addEventListener("click",function(){panoShowPop(x.getAttribute("data-fac"))})});
-  var pop=document.createElement("div");pop.id="panoPop";pop.className="holo";pop.style.display="none";stage.appendChild(pop);
-  if(window.__panoFac)panoShowPop(window.__panoFac);
-}
-var __zsHub3=renderHub;
-renderHub=function(){__zsHub3();panoEnhance()};
 
 function refreshState(){
   if(hasBridge){
@@ -2601,11 +2083,15 @@ function renderPreview(){
 /* —— 天空之城山门页（1.78 / pack v10）：双景可切换、建筑热点进各自房间、每间房布局与互动各异 —— */
 var HALL_ROOMS=["room-lecture","room-spar","room-alchemy","room-forge","room-patrol","room-tome"];
 var SCENE_SPOTS=[
- {room:"room-spar",icon:"⚔️",name:"决斗场",day:[74,53],night:[82,51],play:"spar"},
- {room:"room-bounty",icon:"🎯",name:"悬赏榜",day:[56,68],night:[38,72]},
+ {room:"room-tome",icon:"📚",name:"藏经阁",day:[15,33],night:[19,25]},
+ {room:"room-alchemy",icon:"🧪",name:"丹堂",day:[26,47],night:[76,40],play:"alchemy"},
+ {room:"room-spar",icon:"⚔️",name:"演武台",day:[74,53],night:[82,51],play:"spar"},
+ {room:"room-cave",icon:"🏡",name:"我的洞府",day:[80,42],night:[24,56],play:"cave"},
+ {room:"room-lecture",icon:"📖",name:"传功堂",day:[33,58],night:[63,58],play:"lecture"},
+ {room:"room-forge",icon:"🔨",name:"器峰",day:[29,75],night:[71,65]},
+ {room:"room-patrol",icon:"⚖️",name:"执法堂",day:[56,68],night:[38,72],play:"patrol"},
  {room:"room-market",icon:"🏮",name:"集市",day:[10,80],night:[60,82]},
- {room:"room-cover",icon:"🪪",name:"此世身份",day:[80,42],night:[24,56]},
- {room:"room-rebirth",icon:"◉",name:"主神结算",day:[87,84],night:[85,70]}];
+ {room:"room-rebirth",icon:"🗿",name:"轮回殿",day:[87,84],night:[85,70]}];
 var SECT_FILTER={jian:"hue-rotate(-14deg) saturate(1.06)",fu:"brightness(1.1) sepia(.22) hue-rotate(-8deg)",zhen:"",ti:"sepia(.28) hue-rotate(-18deg) saturate(1.1)",kuilei:"hue-rotate(38deg) saturate(.92)",gui:"hue-rotate(55deg) saturate(1.05) brightness(.94)",mo:"hue-rotate(-38deg) saturate(1.15) brightness(.92)"};
 var FORGE=[
  {icon:"🗡️",name:"青锋剑",grade:0,desc:"入门佩剑，剑身泛青，吹毛断发。"},
@@ -2770,7 +2256,7 @@ function renderHall(){
   $("skyChips").innerHTML='<span class="sky-chip">第 <b>'+state.life+'</b> 世</span>'
     +(state.system?'<span class="sky-chip">'+rbSysName(state.system)+' · <b>'+rbDispRank(state)+'</b></span>':"")
     +(state.world?'<span class="sky-chip">'+rbWorldName(state.world)+'</span>':"")
-    +(state.allocPending?'<span class="sky-chip" style="color:#fbbf24">◉ 待强化传送（主神结算）</span>':"");
+    +(state.allocPending?'<span class="sky-chip" style="color:#fbbf24">🗿 待转世配点（轮回殿）</span>':"");
   var gText,gPct;
   if(state.nextGradeThreshold>0){
     var gBase=GRADES[state.gradeIndex].need;
@@ -2780,7 +2266,7 @@ function renderHall(){
   $("hallGradeText").textContent=gText;
   $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
   $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note;
-  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就、🧘 每日修炼、💰 例银、演武 / 炼丹 / 奇遇等互动奖励——不再随天数自动增长。<br>境界靠<b>花轮回点突破</b>，阶名按<b>本世体系</b>走（现本世功绩 '+state.earned+'）。一世终结后去主神结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
+  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就、🧘 每日修炼、💰 例银、演武 / 炼丹 / 奇遇等互动奖励——不再随天数自动增长。<br>境界靠<b>花轮回点突破</b>，阶名按<b>本世体系</b>走（现本世功绩 '+state.earned+'）。一世终结后去轮回殿结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
   var realmChips=RANKS.map(function(r,i){
     var cls=i<state.rankIndex?"rchip done":(i===state.rankIndex?"rchip cur":"rchip");
     return '<span class="'+cls+'">'+r.name+" · "+IDENTITIES[Math.min(i,5)].name+'</span>';
@@ -2796,23 +2282,23 @@ function renderHall(){
     +'<div style="margin-top:8px">职位（任职差事，功绩解锁后自选，可任低不任高）：</div><div class="trk">'+postSteps+'</div>';
   var isLight = state.themeMode==="Light";
   $("btnFlip").textContent = isLight ? "🌗 明暗翻转 · 当前浅色（点此转深色）" : "🌗 明暗翻转 · 当前深色（点此转浅色）";
-  $("cultDesc").innerHTML="世界历练：在这一世运功一周天，轮回点 +"+state.cultGain+"（基础 20 + 补给加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在世界底部动作坞里。";
+  $("cultDesc").innerHTML="每日修炼：运功一周天，轮回点 +"+state.cultGain+"（基础 20 + 品级加成 "+state.gradeIndex+" + 系列加成 "+(state.seriesBonus||0)+")。按钮在山门底部动作坞里。";
   var doneToday = state.lastCultivateDay && state.today && state.lastCultivateDay===state.today;
   $("btnCultivate").disabled=!!doneToday;
-  $("cultLabel").textContent=doneToday?"今日已历练":"世界历练 +"+state.cultGain+" 点";
+  $("cultLabel").textContent=doneToday?"今日已修炼":"每日修炼 +"+state.cultGain+" 点";
   var salDone = state.lastSalaryDay && state.today && state.lastSalaryDay===state.today;
   if(state.gradeIndex<=0){
-    $("hallResText").innerHTML="此世尚无固定补给：世界历练单次 +20 点。功绩攒到 100 起，主神补给与历练加成随之提升，最高 +40 点/日。";
-    $("btnSalary").disabled=true; $("salaryLabel").textContent="补给 · 暂无";
+    $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20 点）。功绩到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36 点/日、圣地 +40 点/日。";
+    $("btnSalary").disabled=true; $("salaryLabel").textContent="例银 · 暂无";
   }else{
-    $("hallResText").innerHTML="主神补给：每日 <b>+"+state.salary+" 轮回点</b>，历练加成 <b>+"+state.gradeIndex+"</b>（单次历练 +"+state.cultGain+" 点）。补给额度随你历世的功绩水涨船高。";
+    $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 轮回点</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+" 点）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
     $("btnSalary").disabled=!!salDone;
-    $("salaryLabel").textContent=salDone?"补给已领":"补给 +"+state.salary+" 点";
+    $("salaryLabel").textContent=salDone?"俸禄已领":"俸禄 +"+state.salary+" 点";
   }
   var bb=$("btnBreak");
   if(bb){
-    if(state.rankIndex>=6){bb.disabled=true;bb.textContent="已至大乘绝巅";var bn0=$("breakNote");if(bn0)bn0.textContent="再往上，是成仙路与飞升结局（主神结算）。"}
-    else{var bc=state.nextBreakCost;bb.disabled=(state.points||0)<bc;bb.textContent="⬆ 突破 "+RANKS[state.rankIndex+1].name+" · "+bc+" 点";var bn1=$("breakNote");if(bn1)bn1.textContent=(state.points||0)<bc?("还差 "+(bc-(state.points||0))+" 点（成就、历练、补给、互动都能攒）"):("当前境界 "+state.rankName+" · 根骨折扣已计入花费")}
+    if(state.rankIndex>=6){bb.disabled=true;bb.textContent="已至大乘绝巅";var bn0=$("breakNote");if(bn0)bn0.textContent="再往上，是成仙路与飞升结局（轮回殿）。"}
+    else{var bc=state.nextBreakCost;bb.disabled=(state.points||0)<bc;bb.textContent="⬆ 突破 "+RANKS[state.rankIndex+1].name+" · "+bc+" 点";var bn1=$("breakNote");if(bn1)bn1.textContent=(state.points||0)<bc?("还差 "+(bc-(state.points||0))+" 点（成就、修炼、俸禄、互动都能攒）"):("当前境界 "+state.rankName+" · 根骨折扣已计入花费")}
   }
   $("hallLadder").innerHTML=ladderHtml(s,state.gradeIndex);
   var chipsHtml='<span class="chip'+(state.postChoice===-1?" on":"")+'" data-post="-1">自动（随修为）</span>';
