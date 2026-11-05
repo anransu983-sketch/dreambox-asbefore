@@ -2,10 +2,10 @@
 * What went wrong:
 Execution failed for task ':feature:settings:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_REFERENCE
+   > Kotlin compiler: NO_VALUE_FOR_PARAMETER
        Kotlin compiler error
-         Unresolved reference 'DragHandle'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:399
+         No value passed for parameter 'onClick'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:290
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,12 +19,17 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 1m 16s
-479 actionable tasks: 255 executed, 224 from cache
+BUILD FAILED in 1m 4s
+484 actionable tasks: 260 executed, 224 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:399:88 Unresolved reference 'DragHandle'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/PersonalizeScreen.kt:556:72 Unresolved reference 'ChevronRight'.
 > Task :feature:settings:compileReleaseKotlin FAILED
-BUILD FAILED in 1m 16s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:290:9 No value passed for parameter 'onClick'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:290:59 Argument type mismatch: actual type is '() -> Unit', but 'Modifier' was expected.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:293:9 No value passed for parameter 'onClick'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:293:60 Argument type mismatch: actual type is '() -> Unit', but 'Modifier' was expected.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:296:9 No value passed for parameter 'onClick'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:296:60 Argument type mismatch: actual type is '() -> Unit', but 'Modifier' was expected.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/settings/src/presentation/screen/SettingPager.kt:329:30 Unresolved reference 'offset'.
+BUILD FAILED in 1m 4s
