@@ -1,17 +1,11 @@
 === What went wrong ===
 * What went wrong:
-Execution failed for task ':ui:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':feature:profiles:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: NONE_APPLICABLE
+   > Kotlin compiler: UNRESOLVED_REFERENCE
        Kotlin compiler error
-         None of the following candidates is applicable:
-     
-         fun BasicText(text: String, modifier: Modifier = ..., style: TextStyle = ..., onTextLayout: ((TextLayoutResult) -> Unit)? = ..., overflow: TextOverflow = ..., softWrap: Boolean = ..., maxLines: Int = ..., minLines: Int = ..., color: ColorProducer? = ..., autoSize: TextAutoSize? = ...): Unit:
-           Argument type mismatch: actual type is 'CharSequence', but 'String' was expected.
-     
-         fun BasicText(text: AnnotatedString, modifier: Modifier = ..., style: TextStyle = ..., onTextLayout: ((TextLayoutResult) -> Unit)? = ..., overflow: TextOverflow = ..., softWrap: Boolean = ..., maxLines: Int = ..., minLines: Int = ..., inlineContent: Map<String, InlineTextContent> = ..., color: ColorProducer? = ..., autoSize: TextAutoSize? = ...): Unit:
-           Argument type mismatch: actual type is 'CharSequence', but 'AnnotatedString' was expected.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/sky/SkyKit.kt:311
+         Unresolved reference 'Profiles'.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:339
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -25,11 +19,17 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 53s
-463 actionable tasks: 241 executed, 222 from cache
+BUILD FAILED in 52s
+598 actionable tasks: 331 executed, 267 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/ui/src/presentation/component/sky/SkyKit.kt:311:13 None of the following candidates is applicable:
-> Task :ui:compileReleaseKotlin FAILED
-BUILD FAILED in 53s
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:339:61 Unresolved reference 'Profiles'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:581:51 Unresolved reference 'enabled' on receiver of type 'Profile'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:597:25 Unresolved reference 'getDisplayProvider' on receiver of type 'Profile'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:609:33 Unresolved reference 'totalBytes' on receiver of type 'Profile'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:610:40 Unresolved reference 'compareTo' on receiver of type 'Any'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:612:53 Unresolved reference 'usedBytes' on receiver of type 'Profile'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:612:90 Argument type mismatch: actual type is 'Any', but 'Long' was expected.
+> Task :feature:profiles:compileReleaseKotlin FAILED
+BUILD FAILED in 52s
