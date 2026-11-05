@@ -45,12 +45,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -275,6 +277,14 @@ fun SkyIslandScene(
             animationSpec = infiniteRepeatable(tween(4500, easing = LinearEasing)),
             label = "skyPhase",
         )
+    // 整岛浮沉：14s 一周期，只动底图（放大 3% 锁边），锚点漂移 ≤ 画高 0.35%，题字/光晕不跟随也看不出错位
+    val floatPhase by
+        breathe.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(14000, easing = LinearEasing)),
+            label = "skyFloat",
+        )
 
 
     // 环境层驱动（灯火/炊烟/云雾/瀑布/航灯，见 SkyAmbientLayer.kt）：
@@ -293,10 +303,11 @@ fun SkyIslandScene(
     }
     val lively by
         animateFloatAsState(if (state.connected) 1f else 0f, tween(5000), label = "skyLively")
+    val audioDriven = remember { mutableStateOf(false) } // 声音引擎在跑时，钟/铃脉冲改由音频事件驱动
     val bellPulse = remember { Animatable(0f) }
     val chimePulse = remember { Animatable(0f) }
-    LaunchedEffect(active, state.connected, reduceMotion) {
-        if (active && state.connected && !reduceMotion) {
+    LaunchedEffect(active, state.connected, reduceMotion, audioDriven.value) {
+        if (active && state.connected && !reduceMotion && !audioDriven.value) {
             while (true) {
                 delay(kotlin.random.Random.nextLong(40_000, 75_000))
                 bellPulse.snapTo(1f)
@@ -304,8 +315,8 @@ fun SkyIslandScene(
             }
         }
     }
-    LaunchedEffect(active, state.connected, reduceMotion) {
-        if (active && state.connected && !reduceMotion) {
+    LaunchedEffect(active, state.connected, reduceMotion, audioDriven.value) {
+        if (active && state.connected && !reduceMotion && !audioDriven.value) {
             while (true) {
                 delay(kotlin.random.Random.nextLong(25_000, 50_000))
                 chimePulse.snapTo(0.8f)
@@ -333,6 +344,32 @@ fun SkyIslandScene(
             }
         }
     }
+
+
+    // 环境声（SkyAmbientAudio.kt）：开关存本地偏好、默认开；引擎不抢音频焦点，
+    // 启动时别的 App 在放音乐就不启动，此时钟/铃脉冲回退到上面的随机调度（audioDriven=false）。
+    val skyPrefs = remember { ctx.getSharedPreferences("sky_home", Context.MODE_PRIVATE) }
+    var soundOn by remember { mutableStateOf(skyPrefs.getBoolean("ambient_sound", true)) }
+    val pulseScope = rememberCoroutineScope()
+    val audioRunning =
+        rememberSkyAmbientSound(
+            enabled = soundOn,
+            active = active,
+            lively = { lively },
+            onBell = {
+                pulseScope.launch {
+                    bellPulse.snapTo(1f)
+                    bellPulse.animateTo(0f, tween(3000, easing = LinearEasing))
+                }
+            },
+            onChime = {
+                pulseScope.launch {
+                    chimePulse.snapTo(0.8f)
+                    chimePulse.animateTo(0f, tween(2200, easing = LinearEasing))
+                }
+            },
+        )
+    LaunchedEffect(audioRunning.value) { audioDriven.value = audioRunning.value }
 
     // debug：拖动后的光字位置（图比例），屏幕左上角实时读数，抄回 skyNightArt
     val overrides = remember { mutableStateMapOf<BottomBarDestination, Offset>() }
@@ -362,7 +399,12 @@ fun SkyIslandScene(
         val ih = 1f
         val map = remember(w, h, iw, ih) { SkyMap(w, h, iw, ih) }
 
-        SkyBackdrop(painter = painter, sat = sat, dusk = dusk)
+        SkyBackdrop(
+            painter = painter,
+            sat = sat,
+            dusk = dusk,
+            floatY = { if (reduceMotion) 0f else sin(2.0 * PI * floatPhase).toFloat() * 0.0035f * map.ihS },
+        )
 
         // 环境层：灯火渐次亮起、炊烟、云雾横漂、瀑布微光、远空航灯（只叠光与雾）
         SkyAmbientOverlay(
@@ -577,6 +619,17 @@ fun SkyIslandScene(
 
         flare?.let { shot -> FlareLayer(shot, map, reduceMotion) { if (flare?.id == shot.id) flare = null } }
 
+        // 环境声快捷开关：右上角一枚 ♪ 光字，跟题字同一时钟浮现，点按切换并持久化
+        SkySoundGlyph(
+            on = soundOn,
+            lit = captionOn,
+            onToggle = {
+                soundOn = !soundOn
+                skyPrefs.edit().putBoolean("ambient_sound", soundOn).apply()
+            },
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 46.dp, end = 10.dp),
+        )
+
         if (debug) {
             Column(
                 Modifier.align(Alignment.TopStart)
@@ -771,16 +824,34 @@ private tailrec fun Context.findActivity(): Activity? =
 
 /** 底图单独一层：饱和度（未连接降到 0.8）+ 暮色压暗；上层光字每秒更新不碰它。 */
 @Composable
-private fun SkyBackdrop(painter: androidx.compose.ui.graphics.painter.Painter, sat: Float, dusk: Float) {
+private fun SkyBackdrop(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    sat: Float,
+    dusk: Float,
+    floatY: () -> Float = { 0f },
+) {
     Image(
         painter = painter,
         contentDescription = null,
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier.fillMaxSize().graphicsLayer {
+                scaleX = 1.03f
+                scaleY = 1.03f
+                translationY = floatY()
+            },
         contentScale = ContentScale.Crop,
         alignment = Alignment.Center, // 必须与 SkyMap 的居中裁切一致
         colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(sat) }),
     )
-    Box(Modifier.fillMaxSize().drawBehind { drawRect(DuskTint.copy(alpha = dusk)) })
+    Box(
+        Modifier.fillMaxSize()
+            .graphicsLayer {
+                scaleX = 1.03f
+                scaleY = 1.03f
+                translationY = floatY()
+            }
+            .drawBehind { drawRect(DuskTint.copy(alpha = dusk)) }
+    )
 }
 
 // ───────────────────────────── 飞行石与信号焰 ─────────────────────────────
