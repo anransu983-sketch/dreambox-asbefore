@@ -309,7 +309,7 @@ private fun SkyLabelLines(
         )
         if (line2 != null) {
             BasicText(
-                text = if (glowLayer) line2.text else line2,
+                text = if (glowLayer) AnnotatedString(line2.text) else line2,
                 modifier = Modifier.padding(top = 2.dp),
                 style =
                     TextStyle(
