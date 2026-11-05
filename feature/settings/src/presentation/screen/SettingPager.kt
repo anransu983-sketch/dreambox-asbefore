@@ -424,7 +424,7 @@ private val SETTINGS_SPOTS: Map<String, Offset> =
         "override" to Offset(0.235f, 0.605f),
         "meta" to Offset(0.855f, 0.550f),
         "lab" to Offset(0.125f, 0.715f),
-        "log" to Offset(0.475f, 0.878f),
+        "log" to Offset(0.460f, 0.836f),
         "about" to Offset(0.830f, 0.845f),
     )
 
@@ -577,11 +577,11 @@ private fun SkyTreeAmbient(
             val ky = ((i + 1) % 3) + 1
             val x = base.x * w + 0.008f * w * sin(2.0 * PI * (kx * t / p + i * 0.37f)).toFloat()
             val y = base.y * h + 0.006f * h * sin(2.0 * PI * (ky * t / p + i * 0.53f)).toFloat()
-            val tw = 0.25f + 0.75f * (0.5f + 0.5f * sin(2.0 * PI * (t / listOf(3f, 4f, 5f, 6f)[i % 4] + i * 0.61f)).toFloat()).pow(2)
+            val tw = 0.15f + 0.60f * (0.5f + 0.5f * sin(2.0 * PI * (t / listOf(3f, 4f, 5f, 6f)[i % 4] + i * 0.61f)).toFloat()).pow(2)
             val col = if (i % 5 == 4) Color.White else Color(0xFFD8F2A0)
             val c = Offset(x, y)
-            drawCircle(col.copy(alpha = tw * 0.35f), 7.dp.toPx(), c, blendMode = BlendMode.Plus)
-            drawCircle(col.copy(alpha = tw), 1.4.dp.toPx(), c)
+            drawCircle(col.copy(alpha = tw * 0.16f), 2.8.dp.toPx(), c, blendMode = BlendMode.Plus)
+            drawCircle(col.copy(alpha = tw * 0.9f), 1.2.dp.toPx(), c)
         }
         // 树冠微光与星
         for ((i, s) in TREE_SPARKLES.withIndex()) {
