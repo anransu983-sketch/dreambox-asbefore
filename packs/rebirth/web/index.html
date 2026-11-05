@@ -1440,8 +1440,9 @@ function rbSimApply(sim,srcKey,srcName,opt){
   var dimVal=alloc[opt.dim]||0;
   var great=dimVal>=150;
   var pts=Math.round((opt.pts||0)*(great?1.5:1));
+  pts=Math.round(pts*zsPtMult());
   var text=(great&&opt.great)?opt.great:opt.ok;
-  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(Math.round(opt.stones*zsStoneMult()));
   sim.log.push({h:srcName,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbSimSave(sim);renderHub()}
   if(pts>0){
@@ -1764,12 +1765,13 @@ function rbDynApply(sim,nodeKey,nodeTitle,opt){
   var dimVal=alloc[opt.dim]||0;
   var great=dimVal>=150;
   var pts=Math.round((opt.pts||0)*(great?1.5:1));
+  pts=Math.round(pts*zsPtMult());
   var text=(great&&opt.great)?opt.great:opt.ok;
   if(opt.setProf){sim.prof=opt.setProf;rbJobSync(sim,15)}
   if(opt.profExp){sim.profExp=(sim.profExp||0)+opt.profExp;rbJobSync(sim,opt.profExp)}
   if(opt.flag)sim.flags[opt.flag]=1;
   if(opt.chain)sim.queue.push(opt.chain);
-  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(Math.round(opt.stones*zsStoneMult()));
   rbFxSet({tier:great?"great":"ok",title:nodeTitle,text:text,pts:pts,stones:opt.stones||0,profExp:opt.profExp||0});
   sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
@@ -1805,12 +1807,13 @@ function rbDynApply(sim,nodeKey,nodeTitle,opt){
   var dimVal=alloc[opt.dim]||0;
   var great=dimVal>=150;
   var pts=Math.round((opt.pts||0)*(great?1.5:1));
+  pts=Math.round(pts*zsPtMult());
   var text=(great&&opt.great)?opt.great:opt.ok;
   if(opt.setProf){sim.prof=opt.setProf;rbJobSync(sim,15)}
   if(opt.profExp){sim.profExp=(sim.profExp||0)+opt.profExp;rbJobSync(sim,opt.profExp)}
   if(opt.flag)sim.flags[opt.flag]=1;
   if(opt.chain)sim.queue.push(opt.chain);
-  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(Math.round(opt.stones*zsStoneMult()));
   rbFxSet({tier:great?"great":"ok",title:nodeTitle,text:text,pts:pts,stones:opt.stones||0,profExp:opt.profExp||0});
   sim.log.push({h:nodeTitle,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")+(opt.profExp?("（副职业熟练 +"+opt.profExp+"）"):"")});
   function after(st){if(st)state=Object.assign(state,st);rbDynSave(sim);renderHub()}
@@ -2038,6 +2041,136 @@ document.addEventListener("click",function(e){if(e.target&&e.target.id==="lifeBa
 function rbDispRank(st){
   if(st&&st.system&&typeof SYS_LADDERS!=="undefined"&&SYS_LADDERS[st.system])return SYS_LADDERS[st.system][st.rankIndex]||st.rankName;
   return st?st.rankName:"";
+}
+
+/* == v13: 主神空间实质层 —— 主线任务 / 难度 / 兑换 == */
+function rbDispRank(st){if(st&&st.system)return rbSysRank(st.system,st.rankIndex);return st?st.rankName:""}
+function zsLoad(){try{return JSON.parse(localStorage.getItem("zsState")||"null")}catch(e){return null}}
+function zsSave(z){try{localStorage.setItem("zsState",JSON.stringify(z))}catch(e){}}
+function zsCur(){
+  var z=zsLoad();
+  if(!z||z.life!==state.life){
+    var nd=1;try{nd=+(localStorage.getItem("zsDiffNext")||1)}catch(e){}
+    z={life:state.life,diff:nd,mission:null,buffs:{},missionPaid:false};zsSave(z);zsAssign(z);
+  }
+  return z;
+}
+function zsAssign(z){
+  var L=state.life;
+  var pool=[
+    {k:"rank",title:"主线 · 登临",target:Math.min(6,2+Math.floor(L/2))},
+    {k:"earn",title:"主线 · 立功",target:260+L*60},
+    {k:"acts",title:"主线 · 历世",target:10},
+    {k:"deeds",title:"主线 · 功勋",target:10}];
+  var idx=((L*7)+(state.world?state.world.length:0))%pool.length;
+  z.mission=pool[idx];z.missionPaid=false;zsSave(z);
+}
+function zsMissionText(z){
+  var m=z.mission;if(!m)return "";
+  if(m.k==="rank")return "突破至 "+rbSysRank(state.system,m.target);
+  if(m.k==="earn")return "本世累计功绩达到 "+m.target;
+  if(m.k==="acts")return "世界任务走完十幕";
+  return "世录记事达到 10 条";
+}
+function zsMissionProg(z){
+  var m=z.mission;if(!m)return{cur:0,target:1};
+  if(m.k==="rank")return{cur:state.rankIndex,target:m.target};
+  if(m.k==="earn")return{cur:state.earned,target:m.target};
+  if(m.k==="acts"){var sim=rbDynLoad();return{cur:sim.done?10:sim.prog,target:10}}
+  var sim2=rbDynLoad();return{cur:sim2.log.length,target:m.target};
+}
+function zsCheckMission(){
+  if(!hasBridge||!state||!state.sectId||state.allocPending)return;
+  var z=zsCur();if(!z.mission||z.missionPaid)return;
+  var p=zsMissionProg(z);
+  if(p.cur>=p.target){
+    z.missionPaid=true;zsSave(z);
+    var bonus=60*z.diff;
+    rbFxSet({tier:"great",title:"主线任务完成",text:zsMissionText(z)+" —— 已达成。主神奖励 +"+bonus+" 点。",pts:bonus});
+    callNative("grant",{id:"mission"+state.life,points:bonus}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()});
+  }
+}
+function zsPtMult(){var z=zsLoad();return (z&&state&&z.life===state.life)?[1,1.5,2][(z.diff||1)-1]:1}
+function zsScoreBonus(){var z=zsLoad();return (z&&state&&z.life===state.life&&z.buffs)?(z.buffs.score||0):0}
+function zsStoneMult(){var z=zsLoad();return (z&&state&&z.life===state.life&&z.buffs)?(z.buffs.stoneMult||1):1}
+var ZS_ITEMS=[
+ {k:"xiang",icon:"🪔",name:"悟道香",cost:80,desc:"本世所有裁定 +20，更容易大成功"},
+ {k:"hub",icon:"🧧",name:"传送护符",cost:120,desc:"立刻 +80 轮回点（记入本世功绩）"},
+ {k:"shield",icon:"💊",name:"回春丹",cost:50,desc:"本世下一次失败改为勉强成功"},
+ {k:"ju",icon:"🏺",name:"聚宝盆",cost:100,desc:"本世事件灵石奖励翻倍"}];
+function zsBuy(k){
+  var it=null;ZS_ITEMS.forEach(function(x){if(x.k===k)it=x});if(!it)return;
+  var z=zsCur();
+  var stones=(typeof play!=="undefined"&&play)?(play.stones||0):0;
+  if(stones<it.cost){rbFxSet({tier:"fail",title:"灵石不足",text:"兑换「"+it.name+"」需要 "+it.cost+" 灵石，你现在有 "+stones+"。",pts:0});renderHub();return}
+  if(it.k==="xiang"&&z.buffs.score){rbFxSet({tier:"meh",title:"已生效",text:"「悟道香」在本世已经生效。",pts:0});renderHub();return}
+  if(it.k==="shield"&&z.buffs.shield){rbFxSet({tier:"meh",title:"已生效",text:"「回春丹」在本世已经生效。",pts:0});renderHub();return}
+  if(it.k==="ju"&&z.buffs.stoneMult>1){rbFxSet({tier:"meh",title:"已生效",text:"「聚宝盆」在本世已经生效。",pts:0});renderHub();return}
+  play.stones-=it.cost;if(typeof playSave==="function")playSave();
+  if(it.k==="xiang")z.buffs.score=20;
+  if(it.k==="shield")z.buffs.shield=true;
+  if(it.k==="ju")z.buffs.stoneMult=2;
+  zsSave(z);
+  rbFxSet({tier:"great",title:"兑换成功 · "+it.name,text:it.desc+"（本世有效，结算后失效）",pts:it.k==="hub"?80:0});
+  if(it.k==="hub"&&hasBridge){callNative("grant",{id:"amulet"+state.life,points:80}).then(function(st){if(st)state=Object.assign(state,st);renderHub()}).catch(function(){renderHub()})}
+  else renderHub();
+}
+function zsSetDiff(d){try{localStorage.setItem("zsDiffNext",""+d)}catch(e){}renderHub()}
+function zsCardHtml(){
+  var z=zsCur();
+  var diffNames=["","标准","困难","噩梦"];
+  var html='<div class="card" id="zsCard"><h2>◉ 主神任务 · 当前难度 '+diffNames[z.diff]+'</h2>';
+  if(z.mission){
+    var p=zsMissionProg(z);
+    var pct=Math.max(2,Math.min(100,Math.round(Math.min(p.cur,p.target)/p.target*100)));
+    html+='<div class="desc" style="line-height:1.8"><b>'+z.mission.title+'</b>：'+zsMissionText(z)+'<br>进度 <b>'+Math.min(p.cur,p.target)+' / '+p.target+'</b>'+(z.missionPaid?' · <b style="color:#4ade80">已完成，奖励已发</b>':' · 完成奖励 <b style="color:#fbbf24">'+(60*z.diff)+' 点</b>')+'</div>'
+      +'<div style="height:8px;border-radius:99px;background:rgba(128,140,160,.25);margin-top:8px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:99px;transition:width .6s ease"></div></div>';
+  }
+  var nextDiff=1;try{nextDiff=+(localStorage.getItem("zsDiffNext")||1)}catch(e){}
+  html+='<div class="desc" style="margin-top:10px">下个世界的难度（传送前选定：奖励倍率涨，自由行动的裁定也更难）：</div><div style="display:flex;gap:6px;margin-top:6px">'
+    +[1,2,3].map(function(d){var sel=nextDiff===d;return '<button class="rbchip" data-zsdiff="'+d+'" style="'+(sel?'background:#f59e0b;color:#111;font-weight:800':'')+'">'+diffNames[d]+' · 奖励×'+[1,1.5,2][d-1]+'</button>'}).join("")+'</div>';
+  html+='<div class="desc" style="margin-top:12px">主神兑换（灵石 '+((typeof play!=="undefined"&&play)?(play.stones||0):0)+' · 本世有效，结算后失效）：</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'
+    +ZS_ITEMS.map(function(it){var on=(it.k==="xiang"&&z.buffs.score)||(it.k==="shield"&&z.buffs.shield)||(it.k==="ju"&&z.buffs.stoneMult>1);
+      return '<button class="pbtn" data-zsbuy="'+it.k+'" style="text-align:left">'+it.icon+' <b>'+it.name+'</b> · '+it.cost+' 石<span class="desc" style="display:block">'+(on?'已生效':it.desc)+'</span></button>'}).join("")+'</div></div>';
+  return html;
+}
+function zsBindCard(box){
+  Array.prototype.forEach.call(box.querySelectorAll("[data-zsbuy]"),function(b){if(!b.__zs){b.__zs=1;b.addEventListener("click",function(){zsBuy(b.getAttribute("data-zsbuy"))})}});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-zsdiff]"),function(b){if(!b.__zs){b.__zs=1;b.addEventListener("click",function(){zsSetDiff(+b.getAttribute("data-zsdiff"))})}});
+}
+var __zsRenderHub0=renderHub;
+renderHub=function(){
+  __zsRenderHub0();
+  var box=$("hubBody");if(!box||!state||!state.sectId||state.allocPending)return;
+  if(box.querySelector("#zsCard"))return;
+  var holder=document.createElement("div");holder.innerHTML=zsCardHtml();
+  var card=holder.firstChild;
+  var ref=box.children[2]||null;
+  box.insertBefore(card,ref);
+  zsBindCard(box);
+  zsCheckMission();
+};
+function rbFreeResolve(sim,node,text){
+  var it=rbFreeIntent(text);
+  var alloc=state.alloc||{};
+  var dimVal=alloc[it.dim]||0;
+  var bonus=(node&&node.dim===it.dim)?20:0;
+  if(it.k==="craft"&&it.prof&&sim.prof===it.prof)bonus+=30;
+  var __z=zsLoad();var __zd=(__z&&__z.life===state.life)?(__z.diff||1):1;
+  var diff=70+sim.prog*6+Math.floor(Math.random()*41)+(sim.flags.hurt?20:0)+(__zd-1)*25;
+  var score=dimVal+Math.floor(Math.random()*101)+bonus+zsScoreBonus();
+  var base=10+sim.prog*2;
+  var tier,pts;
+  if(score>=diff+60){tier="great";pts=Math.round(base*2)}else if(score>=diff){tier="ok";pts=base}else if(score>=diff-50){tier="meh";pts=Math.max(2,Math.round(base*0.4))}else{tier="fail";pts=0}
+  if(tier==="fail"&&__z&&__z.buffs&&__z.buffs.shield){__z.buffs.shield=false;zsSave(__z);tier="meh";pts=Math.max(2,Math.round(base*0.4))}
+  if(it.risky&&tier==="fail")sim.flags.hurt=1;else if(tier!=="fail"&&sim.flags.hurt)delete sim.flags.hurt;
+  pts=Math.round(pts*zsPtMult());
+  var stones=0,profExp=0;
+  if(it.k==="trade"&&tier!=="fail")stones=tier==="great"?80:(tier==="ok"?45:15);
+  if(it.k==="craft"&&tier!=="fail"){profExp=tier==="great"?30:(tier==="ok"?20:8);if(it.prof&&sim.prof===it.prof){/*本行*/}else if(it.prof){profExp=Math.round(profExp/2)}}
+  var tail=tier==="fail"?(RB_FAIL_TAIL[it.k]||RB_FAIL_TAIL.any):rbPickOne(RB_INTENT_TAIL[it.k]||RB_INTENT_TAIL.any);
+  var narrative="你决定：「"+text+"」"+rbPickOne(RB_TIER_PRE[tier])+tail;
+  return{pts:pts,tier:tier,stones:stones,profExp:profExp,text:narrative};
 }
 
 function refreshState(){
