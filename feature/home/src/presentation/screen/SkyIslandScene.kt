@@ -155,10 +155,10 @@ fun skyNightArt(assetUri: String) =
                 SkyPlace(BottomBarDestination.Home, Offset(0.50f, 0.287f), 0.075f, Offset(0.51f, 0.238f)),
                 // 飞艇：点击圈罩住整个气囊+船身，光字放在气囊上方的空天
                 SkyPlace(BottomBarDestination.Proxy, Offset(0.765f, 0.250f), 0.140f, Offset(0.765f, 0.098f)),
-                // 齿轮工坊：字落在崖顶
-                SkyPlace(BottomBarDestination.Config, Offset(0.493f, 0.368f), 0.075f, Offset(0.493f, 0.410f)),
-                // 巨树：点击圈罩树冠+树干，字落在树根草地
-                SkyPlace(BottomBarDestination.Setting, Offset(0.260f, 0.270f), 0.150f, Offset(0.270f, 0.347f)),
+                // 齿轮工坊：字落在齿轮右下草沿，避开工坊棚顶（用户 2026-11-05：原位压棚顶像浮在旗帜上）
+                SkyPlace(BottomBarDestination.Config, Offset(0.493f, 0.368f), 0.075f, Offset(0.545f, 0.415f)),
+                // 巨树：点击圈罩树冠+树干，字落在树脚左前的草径上，避开树根树皮（用户 2026-11-05）
+                SkyPlace(BottomBarDestination.Setting, Offset(0.260f, 0.270f), 0.150f, Offset(0.217f, 0.381f)),
             ),
     )
 
