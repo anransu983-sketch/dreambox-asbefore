@@ -167,6 +167,7 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
             FlyTxt.Home.Status.TapToConnect.takeIf { controlState == HomeProxyControlState.Idle },
         onHomeClick = onHomeClick,
         onOpenPacks = { openSecondary(Route.FeaturePacks) },
+        onOpenTraffic = { openSecondary(Route.TrafficStatistics) },
     )
 }
 
@@ -183,6 +184,7 @@ private fun HomeSkyScene(
     idleHint: String?,
     onHomeClick: () -> Unit,
     onOpenPacks: () -> Unit,
+    onOpenTraffic: () -> Unit,
 ) {
     val name by homeViewModel.selectedServerName.collectAsStateWithLifecycle()
     val ping by homeViewModel.selectedServerPing.collectAsStateWithLifecycle()
@@ -210,12 +212,12 @@ private fun HomeSkyScene(
     fun speed(b: Long): String? =
         if (!isRunning || b <= 0) null else formatBytesForDisplay(b).let { (v, u) -> "$v $u/s" }
 
-    // 插件入口：画里原有的两块发光浮石，同一个目标（进插件页），左石是主入口
+    // 浮石入口：画里原有的两块发光浮石，左石=插件、右石=流量统计
     val packSpots =
         remember {
             listOf(
                 SkyPackSpot("packs", "插件", Offset(0.220f, 0.545f)),
-                SkyPackSpot("packs-r", "插件", Offset(0.789f, 0.539f)),
+                SkyPackSpot("traffic", "流量统计", Offset(0.789f, 0.539f)),
             )
         }
 
@@ -238,6 +240,6 @@ private fun HomeSkyScene(
         art = remember { skyNightArt("file:///android_asset/sky_island_night.webp") },
         onHomeClick = onHomeClick,
         packSpots = packSpots,
-        onOpenPack = { onOpenPacks() },
+        onOpenPack = { id -> if (id == "traffic") onOpenTraffic() else onOpenPacks() },
     )
 }

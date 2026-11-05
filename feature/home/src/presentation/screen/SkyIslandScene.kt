@@ -136,7 +136,7 @@ data class SkyPlace(
     val label: Offset,
 )
 
-/** 岛上的一个插件光字点。坐标同 [SkyPlace]：图比例。 */
+/** 岛上的一个浮石入口点。坐标同 [SkyPlace]：图比例。 */
 @Immutable
 data class SkyPackSpot(val id: String, val name: String, val at: Offset)
 
@@ -197,7 +197,7 @@ fun SkyIslandScene(
     debug: Boolean = false,
     /** 已在首页时点城堡的动作（首页接入方接启停）；其它地点仍走翻页。 */
     onHomeClick: (() -> Unit)? = null,
-    /** 岛上的插件光字点（接入方生成；当前只有一个「插件」入口）；点了走 [onOpenPack]。 */
+    /** 岛上的浮石入口点（接入方生成；左石插件、右石流量统计）；点了走 [onOpenPack] 按 id 分流。 */
     packSpots: List<SkyPackSpot> = emptyList(),
     onOpenPack: (String) -> Unit = {},
 ) {
@@ -454,7 +454,7 @@ fun SkyIslandScene(
             }
         }
 
-        // 插件入口：两块发光浮石（飞行石），不画新东西，只在原有光晕上叠光；两块同目标、左石主焦点
+        // 浮石入口：两块发光浮石（飞行石），不画新东西，只在原有光晕上叠光；左石=插件、右石=流量统计，两块都是正式焦点、各带自己的题字
         packSpots.forEachIndexed { index, spot ->
             key(spot.id) {
                 val src = remember { MutableInteractionSource() }
@@ -475,19 +475,13 @@ fun SkyIslandScene(
                             drawStone(phase, if (index == 0) 0f else 0.5f, bloom, labelsFade, map, dpPx)
                         }
                         .skyTap(src) { onOpenPack(spot.id) }
-                        .then(
-                            if (index == 0) {
-                                Modifier.semantics {
-                                    role = Role.Button
-                                    contentDescription = spot.name
-                                    onClick(action = { onOpenPack(spot.id); true })
-                                }
-                            } else {
-                                Modifier.clearAndSetSemantics {}
-                            }
-                        )
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = spot.name
+                            onClick(action = { onOpenPack(spot.id); true })
+                        }
                 )
-                if (index == 0) {
+                run {
                     val capA by
                         animateFloatAsState(
                             targetValue = if (captionOn || pressed) 0.9f else 0f,
