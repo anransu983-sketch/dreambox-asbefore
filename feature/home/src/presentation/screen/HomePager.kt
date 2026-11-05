@@ -210,8 +210,14 @@ private fun HomeSkyScene(
     fun speed(b: Long): String? =
         if (!isRunning || b <= 0) null else formatBytesForDisplay(b).let { (v, u) -> "$v $u/s" }
 
-    // 岛上只放一个「插件」入口（崖壁中段），进插件页后自己点具体的包
-    val packSpots = remember { listOf(SkyPackSpot("packs", "插件", Offset(0.5f, 0.48f))) }
+    // 插件入口：画里原有的两块发光浮石，同一个目标（进插件页），左石是主入口
+    val packSpots =
+        remember {
+            listOf(
+                SkyPackSpot("packs", "插件", Offset(0.220f, 0.545f)),
+                SkyPackSpot("packs-r", "插件", Offset(0.789f, 0.539f)),
+            )
+        }
 
     SkyIslandScene(
         state =

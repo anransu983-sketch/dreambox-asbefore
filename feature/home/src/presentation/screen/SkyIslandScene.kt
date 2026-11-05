@@ -13,12 +13,16 @@ package com.suanran.dreambox.feature.home.presentation.screen
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.SystemClock
+import android.provider.Settings
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -42,21 +46,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -90,9 +99,13 @@ import com.suanran.dreambox.presentation.component.navigation.LocalHandlePageCha
 import com.suanran.dreambox.presentation.component.navigation.LocalMainPagerState
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 // ───────────────────────────── 数据 ─────────────────────────────
 
@@ -151,6 +164,17 @@ fun skyNightArt(assetUri: String) =
 
 // ───────────────────────────── 场景 ─────────────────────────────
 
+private val StoneCyan = Color(0xFF7FE3FF)
+private val StoneMoteDx = floatArrayOf(-0.045f, -0.026f, -0.008f, 0.012f, 0.030f, 0.046f)
+private val StoneMoteDy = floatArrayOf(0.012f, -0.004f, 0.016f, 0f, 0.010f, -0.008f)
+private val FlareOrigin = Offset(0.640f, 0.232f)
+private val FlareCtrl = Offset(0.630f, 0.140f)
+private val FlareApex = Offset(0.545f, 0.105f)
+private const val FlareMs = 5000f
+
+@Immutable
+private class FlareShot(val id: Long, val latencyMs: Int?, val down: String?, val up: String?)
+
 private val NightBase = Color(0xFF0B1636)
 private val DuskTint = Color(0xFF141B3D)
 private val MistColor = Color(0xFF050B1F)
@@ -180,6 +204,57 @@ fun SkyIslandScene(
     val mainPager = LocalMainPagerState.current
     val handlePageChange = LocalHandlePageChange.current
     val active = mainPager.selectedPage == BottomBarDestination.Home.ordinal
+
+    // 信号焰（飞艇灯笼放出的链路报告）：触发与节流都在场景内，闲时零开销
+    val ctx = LocalContext.current
+    val reduceMotion =
+        remember {
+            Settings.Global.getFloat(
+                ctx.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f,
+            ) == 0f
+        }
+    var flare by remember { mutableStateOf<FlareShot?>(null) }
+    var lastFireAt by remember { mutableLongStateOf(0L) }
+    val stateNow by rememberUpdatedState(state)
+    val activeNow by rememberUpdatedState(active)
+    val tryFire = { minGapMs: Long ->
+        val now = SystemClock.elapsedRealtime()
+        val s = stateNow
+        if (s.connected && activeNow && flare == null && now - lastFireAt >= minGapMs) {
+            lastFireAt = now
+            flare = FlareShot(now, s.latencyMs, s.downText, s.upText)
+        }
+    }
+    val fireNow by rememberUpdatedState(tryFire)
+
+    suspend fun awaitPing() {
+        withTimeoutOrNull(3500) { snapshotFlow { stateNow.latencyMs }.first { it != null } }
+        delay(400)
+    }
+    LaunchedEffect(state.connected) {
+        if (state.connected) {
+            awaitPing()
+            fireNow(5_000L)
+        }
+    }
+    LaunchedEffect(active) {
+        if (active && stateNow.connected) {
+            awaitPing()
+            fireNow(60_000L)
+        }
+    }
+
+    // 飞行石下「插件」题字：进入首页亮 4 秒，按压时也亮
+    var captionOn by remember { mutableStateOf(false) }
+    LaunchedEffect(active) {
+        if (active) {
+            captionOn = true
+            delay(4000)
+            captionOn = false
+        }
+    }
 
     LightStatusBarIcons(active)
 
@@ -226,6 +301,18 @@ fun SkyIslandScene(
         val map = remember(w, h, iw, ih) { SkyMap(w, h, iw, ih) }
 
         SkyBackdrop(painter = painter, sat = sat, dusk = dusk)
+
+        // 天空垫：点岛顶空天放信号焰（已连接才响应）；无语义，不拦翻页手势
+        val padSrc = remember { MutableInteractionSource() }
+        Box(
+            Modifier.centeredAt(map.at(Offset(0.460f, 0.103f)))
+                .size(
+                    with(density) { (0.32f * map.iwS).toDp() },
+                    with(density) { (0.115f * map.ihS).toDp() },
+                )
+                .skyTap(padSrc) { fireNow(5_000L) }
+                .clearAndSetSemantics {}
+        )
 
         art.places.forEachIndexed { index, place ->
             key(place.destination) {
@@ -341,36 +428,62 @@ fun SkyIslandScene(
             }
         }
 
-        // 插件光字：字即地点，点字进插件页
+        // 插件入口：两块发光浮石（飞行石），不画新东西，只在原有光晕上叠光；两块同目标、左石主焦点
         packSpots.forEachIndexed { index, spot ->
             key(spot.id) {
                 val src = remember { MutableInteractionSource() }
                 val pressed by src.collectIsPressedAsState()
+                val bloom by
+                    animateFloatAsState(
+                        targetValue = if (pressed) 0.5f else 0f,
+                        animationSpec = tween(if (pressed) 90 else 280),
+                        label = "stoneBloom",
+                    )
                 val center = map.at(spot.at)
-                val hitDiameterPx = max(0.11f * map.iwS, with(density) { 48.dp.toPx() })
+                val hitPx = max(0.15f * map.iwS, with(density) { 48.dp.toPx() })
+                val dpPx = density.density
                 Box(
                     Modifier.centeredAt(center)
-                        .size(with(density) { hitDiameterPx.toDp() })
-                        .skyTap(src) { onOpenPack(spot.id) }
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = spot.name
-                            onClick(action = { onOpenPack(spot.id); true })
+                        .size(with(density) { hitPx.toDp() })
+                        .drawBehind {
+                            drawStone(phase, if (index == 0) 0f else 0.5f, bloom, labelsFade, map, dpPx)
                         }
-                )
-                LightLabel(
-                    line1 = spot.name,
-                    line1Color = LabelCore,
-                    line1Size = 12.sp,
-                    line2 = null,
-                    modifier =
-                        Modifier.centeredAt(center) {
-                                labelsFade * (if (pressed) 1f else breatheAlpha(phase, 4 + index))
+                        .skyTap(src) { onOpenPack(spot.id) }
+                        .then(
+                            if (index == 0) {
+                                Modifier.semantics {
+                                    role = Role.Button
+                                    contentDescription = spot.name
+                                    onClick(action = { onOpenPack(spot.id); true })
+                                }
+                            } else {
+                                Modifier.clearAndSetSemantics {}
                             }
-                            .clearAndSetSemantics {},
+                        )
                 )
+                if (index == 0) {
+                    val capA by
+                        animateFloatAsState(
+                            targetValue = if (captionOn || pressed) 0.9f else 0f,
+                            animationSpec = tween(if (captionOn || pressed) 300 else 800),
+                            label = "stoneCaption",
+                        )
+                    LightLabel(
+                        line1 = spot.name,
+                        line1Color = LabelCore,
+                        line1Size = 11.sp,
+                        line2 = null,
+                        modifier =
+                            Modifier.centeredAt(map.at(spot.at + Offset(0.002f, 0.062f))) {
+                                    capA * labelsFade
+                                }
+                                .clearAndSetSemantics {},
+                    )
+                }
             }
         }
+
+        flare?.let { shot -> FlareLayer(shot, map, reduceMotion) { if (flare?.id == shot.id) flare = null } }
 
         if (debug) {
             Column(
@@ -481,20 +594,13 @@ private fun LabelLines(
     }
 }
 
-/** 飞艇第二行：延迟（按阈值染色）+ 上下行；都没有就整行不显示。 */
-private fun proxyLine(s: SkyHomeState): AnnotatedString? {
-    val text =
+/** 飞艇第二行：只留延迟（上下行改由信号焰绽放时呈现，避免长行被屏幕右缘裁切）。 */
+private fun proxyLine(s: SkyHomeState): AnnotatedString? =
+    s.latencyMs?.let {
         buildAnnotatedString {
-            s.latencyMs?.let {
-                withStyle(SpanStyle(color = latencyColor(it))) { append("$it ms") }
-            }
-            if (s.downText != null || s.upText != null) {
-                if (length > 0) append("  ")
-                append("↓ ${s.downText ?: "0"}  ↑ ${s.upText ?: "0"}")
-            }
+            withStyle(SpanStyle(color = latencyColor(it))) { append("$it ms") }
         }
-    return text.takeIf { it.isNotEmpty() }
-}
+    }
 
 private fun latencyColor(ms: Int): Color =
     when {
@@ -583,4 +689,173 @@ private fun SkyBackdrop(painter: androidx.compose.ui.graphics.painter.Painter, s
         colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(sat) }),
     )
     Box(Modifier.fillMaxSize().drawBehind { drawRect(DuskTint.copy(alpha = dusk)) })
+}
+
+// ───────────────────────────── 飞行石与信号焰 ─────────────────────────────
+
+/** 浮石光晕 + 光尘：只叠光，不画形。phase/off 决定呼吸相位，bloom 是按压绽光，fade 是图未就绪门控。 */
+private fun DrawScope.drawStone(
+    phase: Float,
+    off: Float,
+    bloom: Float,
+    fade: Float,
+    map: SkyMap,
+    dp: Float,
+) {
+    val c = center
+    val b = 0.5f + 0.5f * sin(2.0 * PI * (phase + off)).toFloat()
+    val r = 0.060f * map.iwS
+    drawCircle(
+        Brush.radialGradient(
+            listOf(
+                StoneCyan.copy(alpha = ((0.12f + 0.16f * b + bloom * 0.4f) * fade).coerceIn(0f, 0.8f)),
+                Color.Transparent,
+            ),
+            c,
+            r,
+        ),
+        r,
+        c,
+        blendMode = BlendMode.Plus,
+    )
+    for (i in 0 until 6) {
+        val t = (phase + i / 6f + off * 0.37f) % 1f
+        val s = sin(PI * t).toFloat()
+        val p =
+            Offset(
+                c.x + StoneMoteDx[i] * map.iwS + sin(2.0 * PI * (t + i * 0.2)).toFloat() * 0.004f * map.iwS,
+                c.y + (StoneMoteDy[i] - t * 0.035f) * map.ihS,
+            )
+        val al = s * s * 0.85f * fade
+        drawCircle(StoneCyan.copy(alpha = al * 0.35f), 3.2f * dp, p, blendMode = BlendMode.Plus)
+        drawCircle(Color.White.copy(alpha = al), 1.1f * dp, p, blendMode = BlendMode.Plus)
+    }
+}
+
+/**
+ * 信号焰：从飞艇灯笼升空、绽放成一次链路报告（延迟层级色 + 光字三行）。
+ * 单个 Animatable 驱动 5 秒，只在 draw/layer 阶段读值；同时只有一发。
+ */
+@Composable
+private fun FlareLayer(shot: FlareShot, map: SkyMap, reduceMotion: Boolean, onDone: () -> Unit) {
+    val clock = remember(shot.id) { Animatable(0f) }
+    LaunchedEffect(shot.id) {
+        clock.animateTo(FlareMs, tween(FlareMs.toInt(), easing = LinearEasing))
+        onDone()
+    }
+    val density = LocalDensity.current
+    val dpPx = density.density
+    val ms = shot.latencyMs
+    val tier = ms?.let { latencyColor(it) } ?: LabelGlow
+    val core = lerp(tier, Color.White, 0.55f)
+    val (n, droop, rK) =
+        when {
+            ms == null -> Triple(28, 0f, 1f)
+            ms <= 150 -> Triple(40, 0f, 1f)
+            ms <= 400 -> Triple(32, 0.02f, 1f)
+            else -> Triple(24, 0.04f, 0.9f)
+        }
+    val ang =
+        remember(shot.id) {
+            FloatArray(n) { i ->
+                val inner = i % 3 == 2
+                (2.0 * PI * i / n).toFloat() +
+                    ((i * 37 % 11) / 11f - 0.5f) * 0.18f +
+                    if (inner) (PI / n).toFloat() else 0f
+            }
+        }
+    val rk =
+        remember(shot.id) {
+            FloatArray(n) { i -> if (i % 3 == 2) 0.55f else 0.92f + (i * 13 % 7) / 7f * 0.08f }
+        }
+    val textA: () -> Float = {
+        val t = clock.value
+        when {
+            t < 1000f -> 0f
+            t < 1350f -> (t - 1000f) / 350f
+            t < 4300f -> 1f
+            else -> (1f - (t - 4300f) / 700f).coerceIn(0f, 1f)
+        }
+    }
+    val a = map.at(FlareApex)
+
+    Canvas(Modifier.fillMaxSize()) {
+        val t = clock.value
+        val o = map.at(FlareOrigin)
+        val c = map.at(FlareCtrl)
+        val dp = dpPx
+        if (!reduceMotion && t < 700f) {
+            // 升空：二次贝塞尔 + 9 点彗尾
+            val p = 1f - (1f - t / 700f).let { it * it * it }
+            for (k in 0 until 9) {
+                val u = (p - k * 0.04f).coerceAtLeast(0f)
+                val w = 1f - u
+                val pt =
+                    Offset(
+                        w * w * o.x + 2 * w * u * c.x + u * u * a.x,
+                        w * w * o.y + 2 * w * u * c.y + u * u * a.y,
+                    )
+                val f = 1f - k / 9f
+                drawCircle(tier.copy(alpha = 0.30f * f), (5f - k * 0.4f) * dp, pt, blendMode = BlendMode.Plus)
+                drawCircle(
+                    core.copy(alpha = 0.9f * f),
+                    (1.6f - k * 0.1f).coerceAtLeast(0.6f) * dp,
+                    pt,
+                    blendMode = BlendMode.Plus,
+                )
+            }
+        }
+        val tb = (t - 700f) / 1900f
+        if (!reduceMotion && tb in 0f..1f) {
+            // 绽放：双层牡丹
+            if (tb < 0.13f) {
+                val fr = 0.06f * map.iwS
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(core.copy(alpha = 0.55f * (1f - tb / 0.13f)), Color.Transparent),
+                        a,
+                        fr,
+                    ),
+                    fr,
+                    a,
+                    blendMode = BlendMode.Plus,
+                )
+            }
+            val e = 1f - (1f - tb).let { it * it * it }
+            val fade = if (tb < 0.12f) tb / 0.12f else (1f - (tb - 0.12f) / 0.88f).let { it * sqrt(it) }
+            val rr = 0.14f * rK * map.iwS
+            val drop = droop * map.ihS * tb * tb
+            for (i in 0 until n) {
+                val al = fade * (0.78f + 0.22f * sin(t * 0.018f + i * 1.7f))
+                val pt = Offset(a.x + cos(ang[i]) * rr * rk[i] * e, a.y + sin(ang[i]) * rr * rk[i] * e + drop)
+                drawCircle(tier.copy(alpha = 0.28f * al), 4.2f * dp, pt, blendMode = BlendMode.Plus)
+                drawCircle(core.copy(alpha = 0.95f * al), 1.5f * dp, pt, blendMode = BlendMode.Plus)
+            }
+        }
+        val ta = textA()
+        if (ta > 0f) {
+            // 余光衬字
+            val hr = 0.09f * map.iwS
+            drawCircle(
+                Brush.radialGradient(listOf(tier.copy(alpha = 0.16f * ta), Color.Transparent), a, hr),
+                hr,
+                a,
+                blendMode = BlendMode.Plus,
+            )
+        }
+    }
+
+    val speeds = listOfNotNull(shot.down?.let { "↓ $it" }, shot.up?.let { "↑ $it" }).joinToString("\n")
+    if (ms != null || speeds.isNotEmpty()) {
+        LightLabel(
+            line1 = ms?.let { "$it ms" } ?: speeds.substringBefore("\n"),
+            line1Color = tier,
+            line1Size = 20.sp,
+            line2 =
+                (if (ms != null) speeds else speeds.substringAfter("\n", ""))
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { AnnotatedString(it) },
+            modifier = Modifier.centeredAt(a) { textA() * 0.95f }.clearAndSetSemantics {},
+        )
+    }
 }
