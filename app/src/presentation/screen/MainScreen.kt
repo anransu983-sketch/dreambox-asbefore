@@ -148,7 +148,7 @@ fun MainScreen(
             derivedStateOf {
                 when {
                     mainPagerState.selectedPage == 0 -> false
-                    mainPagerState.selectedPage == 3 -> false
+                    mainPagerState.selectedPage == 3 && !windowLayoutMode.usesSplitShell -> false
                     settledMainPage != 0 -> true
                     else -> false
                 }

@@ -113,15 +113,34 @@ import com.suanran.dreambox.presentation.component.navigation.BottomBarDestinati
 import com.suanran.dreambox.presentation.component.navigation.LocalHandlePageChange
 import com.suanran.dreambox.presentation.component.navigation.LocalMainPagerState
 import com.suanran.dreambox.presentation.component.sky.SkyBackdropFull
+import com.suanran.dreambox.presentation.component.sky.SkyBadgeGold
+import com.suanran.dreambox.presentation.component.sky.SkyDeepBase
 import com.suanran.dreambox.presentation.component.sky.SkyGlowLabel
-import com.suanran.dreambox.presentation.component.sky.SkyHotspot
-import com.suanran.dreambox.presentation.component.sky.SkySceneAmbient
-import com.suanran.dreambox.presentation.component.sky.SkySceneRow
+import com.suanran.dreambox.presentation.component.sky.SkyLabelEntry
+import com.suanran.dreambox.presentation.component.sky.SkyLabelGlow
+import com.suanran.dreambox.presentation.component.sky.SkyNightBase
 import com.suanran.dreambox.presentation.component.sky.SkyShotMap
 import com.suanran.dreambox.presentation.component.sky.SkyStatusBarIcons
 import com.suanran.dreambox.presentation.component.sky.rememberSkyCaption
+import com.suanran.dreambox.presentation.component.sky.rememberSkyClock
 import com.suanran.dreambox.presentation.component.sky.skyCenteredAt
 import kotlinx.coroutines.delay
+import android.provider.Settings
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntSize
+import com.suanran.dreambox.runtime.api.contract.ProxyControlContract
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
 
 /** 设置磁吸模块描述。 */
 private data class SettingsModule(
@@ -278,67 +297,307 @@ private fun SkySettingScene(
     val pager = LocalMainPagerState.current
     val active = pager.selectedPage == BottomBarDestination.Setting.ordinal
     SkyStatusBarIcons(active)
-    val caption = rememberSkyCaption(active)
     val handlePageChange = LocalHandlePageChange.current
+    val proxyControl: ProxyControlContract = koinInject()
+    val running by proxyControl.isRunning.collectAsStateWithLifecycle()
+    val lively by animateFloatAsState(if (running) 1f else 0f, tween(5000), label = "setLively")
+    val sat by animateFloatAsState(if (running) 1f else 0.8f, tween(700), label = "setSat")
+    val dusk by animateFloatAsState(if (running) 0f else 0.10f, tween(700), label = "setDusk")
+    val ctx = LocalContext.current
+    val reduceMotion =
+        remember {
+            Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        }
+    val clock = rememberSkyClock(active, reduceMotion)
+    val caption = rememberSkyCaption(active)
+    var imgReady by remember { mutableStateOf(false) }
+    var timedOut by remember { mutableStateOf(false) }
+    LaunchedEffect(active) {
+        if (active) {
+            delay(1200)
+            timedOut = true
+        }
+    }
+    val fallback = timedOut && !imgReady
+    val labelsIn = remember { Animatable(0f) }
+    LaunchedEffect(imgReady, fallback) {
+        if (imgReady || fallback) labelsIn.animateTo(1f, tween(300))
+    }
+    var pressedKey by remember { mutableStateOf<String?>(null) }
+    val lampBoost = remember { Animatable(0f) }
+    LaunchedEffect(pressedKey) {
+        if (pressedKey != null) {
+            lampBoost.animateTo(1f, tween(600))
+        } else {
+            lampBoost.animateTo(0f, tween(300))
+        }
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val w = constraints.maxWidth.toFloat()
-        val h = constraints.maxHeight.toFloat()
-        val map = remember(w, h) { SkyShotMap(w, h, w, h, 1f, 0.5f, 0.5f) }
-        SkyBackdropFull(map)
-        SkySceneAmbient(active)
-        // 地标导航（锚点与首页一致）：城堡→首页、飞艇→代理、齿轮→配置；巨树是本页，只题字不跳转。
-        SkyHotspot(map.at(Offset(0.50f, 0.287f)), 120.dp) {
-            handlePageChange(BottomBarDestination.Home.ordinal)
-        }
-        SkyHotspot(map.at(Offset(0.765f, 0.250f)), 130.dp) {
-            handlePageChange(BottomBarDestination.Proxy.ordinal)
-        }
-        SkyHotspot(map.at(Offset(0.493f, 0.368f)), 110.dp) {
-            handlePageChange(BottomBarDestination.Config.ordinal)
-        }
-        SkyGlowLabel(
-            line1 = BottomBarDestination.Home.label,
-            modifier = Modifier.skyCenteredAt(map.at(Offset(0.51f, 0.238f))) { caption.value },
-        )
-        SkyGlowLabel(
-            line1 = BottomBarDestination.Proxy.label,
-            modifier = Modifier.skyCenteredAt(map.at(Offset(0.765f, 0.098f))) { caption.value },
-        )
-        SkyGlowLabel(
-            line1 = BottomBarDestination.Config.label,
-            modifier = Modifier.skyCenteredAt(map.at(Offset(0.545f, 0.415f))) { caption.value },
-        )
-        SkyGlowLabel(
-            line1 = BottomBarDestination.Setting.label,
-            modifier = Modifier.skyCenteredAt(map.at(Offset(0.217f, 0.381f))) { 1f },
-        )
-        // 七行光字：写在岛身与云海上（y 0.528 起、行高 6.35% 屏高）。
-        val rowH = maxHeight * 0.0635f
-        modules.forEachIndexed { index, module ->
-            val entry = remember { Animatable(0f) }
-            LaunchedEffect(active) {
-                if (active) {
-                    delay(index * 28L)
-                    entry.animateTo(1f, tween(220))
-                }
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        val map =
+            remember(w, h) {
+                SkyShotMap(w.toFloat(), h.toFloat(), w.toFloat(), h.toFloat(), 1f, 0.5f, 0.5f, aspect = 1008f / 2240f)
             }
-            SkySceneRow(
-                title = module.title,
-                summary = if (module.badge != null) "${module.summary} · ${module.badge}" else module.summary,
-                modifier =
-                    Modifier.offset(y = maxHeight * 0.528f + rowH * index)
-                        .fillMaxWidth()
-                        .height(rowH)
-                        .padding(horizontal = 26.dp)
-                        .graphicsLayer {
-                            alpha = entry.value
-                            translationY = (1f - entry.value) * 8.dp.toPx()
-                        },
-                onClick = { module.route?.let { onOpen(it) } },
+        if (!fallback) {
+            SkyBackdropFull(
+                map = map,
+                assetUri = SKY_SETTINGS_TREE_URI,
+                sat = sat,
+                dusk = dusk,
+                onReadyChange = { imgReady = it },
             )
+            SkyTreeAmbient(
+                phase = { clock.floatValue },
+                lively = lively,
+                boostKey = pressedKey,
+                boost = { lampBoost.value },
+                mistOnly = false,
+            )
+        } else {
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SkyNightBase, SkyDeepBase))))
+            SkyTreeAmbient(
+                phase = { clock.floatValue },
+                lively = lively,
+                boostKey = null,
+                boost = { 0f },
+                mistOnly = true,
+            )
+        }
+        if (imgReady || fallback) {
+            // 页题（heading，底值 0.60）
+            SkyGlowLabel(
+                line1 = FlyTxt.Settings.Title,
+                line1Size = 17.sp,
+                modifier =
+                    Modifier.skyCenteredAt(map.at(Offset(0.50f, 0.057f))) { 0.60f * labelsIn.value },
+            )
+            // 「‹ 首页」：回岛的一条路（另有横滑与系统返回）
+            SkyLabelEntry(
+                center = map.at(Offset(0.12f, 0.057f)),
+                title = "‹ " + BottomBarDestination.Home.label,
+                index = 7,
+                baseAlpha = 0.6f,
+                caption = { caption.value },
+                phase = { clock.floatValue },
+                parentSize = IntSize(w, h),
+                contentDescription = BottomBarDestination.Home.label,
+                active = active,
+                onClick = { handlePageChange(BottomBarDestination.Home.ordinal) },
+            )
+            modules.forEachIndexed { index, module ->
+                val spot = SETTINGS_SPOTS[module.key] ?: return@forEachIndexed
+                val center =
+                    if (fallback) {
+                        Offset(w / 2f, h * (0.20f + index * 0.095f))
+                    } else {
+                        map.at(spot)
+                    }
+                SkyLabelEntry(
+                    center = center,
+                    title = module.title,
+                    sub = settingsSub(module),
+                    index = index,
+                    caption = { caption.value },
+                    phase = { clock.floatValue },
+                    parentSize = IntSize(w, h),
+                    contentDescription = settingsDesc(module),
+                    active = active,
+                    mistAlpha = if (module.key == "app" || module.key == "meta") 0.45f else 0.34f,
+                    onPressedChange = { p ->
+                        pressedKey = if (p) module.key else if (pressedKey == module.key) null else pressedKey
+                    },
+                    onClick = { module.route?.let { onOpen(it) } },
+                )
+            }
         }
     }
 }
+
+private const val SKY_SETTINGS_TREE_URI = "file:///android_asset/sky_settings_tree.webp"
+
+/** 设置页七个题字在树图上的位置（图比例）与所挂的灯组。 */
+private val SETTINGS_SPOTS: Map<String, Offset> =
+    mapOf(
+        "app" to Offset(0.145f, 0.345f),
+        "network" to Offset(0.830f, 0.115f),
+        "override" to Offset(0.235f, 0.605f),
+        "meta" to Offset(0.855f, 0.550f),
+        "lab" to Offset(0.125f, 0.715f),
+        "log" to Offset(0.475f, 0.878f),
+        "about" to Offset(0.830f, 0.845f),
+    )
+
+private val SETTINGS_LAMP_GROUP: Map<String, String> =
+    mapOf(
+        "app" to "left",
+        "network" to "canopy",
+        "override" to "swing",
+        "meta" to "right",
+        "lab" to "stoneL",
+        "log" to "stoneB",
+        "about" to "candle",
+    )
+
+private fun settingsSub(module: SettingsModule): AnnotatedString =
+    buildAnnotatedString {
+        append(module.summary)
+        module.badge?.let { badge ->
+            append(" · ")
+            withStyle(SpanStyle(color = SkyBadgeGold)) { append(badge) }
+        }
+    }
+
+private fun settingsDesc(module: SettingsModule): String =
+    listOfNotNull(module.title, module.summary, module.badge).joinToString("，")
+
+private data class TreeLamp(
+    val group: String,
+    val fx: Float,
+    val fy: Float,
+    val rFrac: Float,
+    val p1: Float,
+    val p2: Float,
+    val depth: Float,
+    val seed: Float,
+    val peak: Float,
+)
+
+private val TREE_LAMPS: List<TreeLamp> =
+    listOf(
+        // 左枝灯笼群（实测中心 0.199, 0.302，散布其间）
+        TreeLamp("left", 0.199f, 0.302f, 0.026f, 4f, 10f, 0.18f, 0.11f, 0.27f),
+        TreeLamp("left", 0.149f, 0.272f, 0.018f, 3f, 8f, 0.22f, 0.37f, 0.23f),
+        TreeLamp("left", 0.244f, 0.257f, 0.020f, 5f, 12f, 0.15f, 0.53f, 0.25f),
+        TreeLamp("left", 0.171f, 0.337f, 0.016f, 6f, 15f, 0.12f, 0.71f, 0.21f),
+        TreeLamp("left", 0.259f, 0.322f, 0.015f, 4f, 9f, 0.20f, 0.83f, 0.20f),
+        TreeLamp("left", 0.134f, 0.312f, 0.014f, 3f, 11f, 0.21f, 0.29f, 0.20f),
+        TreeLamp("left", 0.219f, 0.232f, 0.013f, 5f, 14f, 0.16f, 0.61f, 0.19f),
+        TreeLamp("left", 0.189f, 0.357f, 0.012f, 6f, 10f, 0.14f, 0.97f, 0.18f),
+        // 右侧垂灯
+        TreeLamp("right", 0.850f, 0.360f, 0.020f, 6f, 12f, 0.15f, 0.19f, 0.24f),
+        TreeLamp("right", 0.865f, 0.440f, 0.017f, 8f, 15f, 0.13f, 0.43f, 0.22f),
+        TreeLamp("right", 0.845f, 0.500f, 0.015f, 7f, 11f, 0.16f, 0.67f, 0.20f),
+        // 秋千灯
+        TreeLamp("swing", 0.189f, 0.438f, 0.022f, 4f, 10f, 0.17f, 0.23f, 0.26f),
+        TreeLamp("swing", 0.345f, 0.465f, 0.013f, 5f, 12f, 0.15f, 0.79f, 0.18f),
+        // 树根石灯（更暗更稳）
+        TreeLamp("stoneL", 0.105f, 0.800f, 0.013f, 6f, 15f, 0.08f, 0.31f, 0.17f),
+        TreeLamp("stoneB", 0.472f, 0.879f, 0.014f, 8f, 12f, 0.08f, 0.57f, 0.18f),
+        // 右下小烛
+        TreeLamp("candle", 0.925f, 0.735f, 0.011f, 3f, 8f, 0.22f, 0.89f, 0.19f),
+    )
+
+/** 萤火（图比例中心；轨迹为小幅 Lissajous 漂移）。 */
+private val TREE_FIREFLIES: List<Offset> =
+    listOf(
+        Offset(0.30f, 0.52f), Offset(0.42f, 0.60f), Offset(0.60f, 0.52f), Offset(0.68f, 0.66f),
+        Offset(0.36f, 0.70f), Offset(0.55f, 0.74f), Offset(0.80f, 0.66f), Offset(0.16f, 0.86f),
+        Offset(0.30f, 0.90f), Offset(0.62f, 0.86f), Offset(0.72f, 0.94f), Offset(0.44f, 0.95f),
+        Offset(0.90f, 0.78f), Offset(0.08f, 0.55f),
+    )
+
+private val TREE_SPARKLES: List<Offset> =
+    listOf(
+        Offset(0.20f, 0.12f), Offset(0.35f, 0.08f), Offset(0.50f, 0.16f), Offset(0.65f, 0.10f),
+        Offset(0.78f, 0.20f), Offset(0.28f, 0.24f), Offset(0.58f, 0.26f), Offset(0.88f, 0.32f),
+        Offset(0.12f, 0.20f), Offset(0.45f, 0.28f),
+    )
+
+private val TREE_STARS: List<Offset> =
+    listOf(
+        Offset(0.06f, 0.03f), Offset(0.20f, 0.05f), Offset(0.38f, 0.02f), Offset(0.55f, 0.04f),
+        Offset(0.70f, 0.03f), Offset(0.85f, 0.05f), Offset(0.95f, 0.02f), Offset(0.30f, 0.09f),
+        Offset(0.62f, 0.08f), Offset(0.78f, 0.09f), Offset(0.12f, 0.10f), Offset(0.48f, 0.10f),
+    )
+
+/**
+ * 设置页（巨树之境）环境生命层：灯火呼吸、萤火、树冠微光、星与雾流。
+ * 时钟只在 draw 阶段读；灯亮度随连接态 lively 与按压 boost 联动。
+ */
+@Composable
+private fun SkyTreeAmbient(
+    phase: () -> Float,
+    lively: Float,
+    boostKey: String?,
+    boost: () -> Float,
+    mistOnly: Boolean,
+) {
+    val warm = Color(0xFFFFC27A)
+    Canvas(Modifier.fillMaxSize()) {
+        val t = phase()
+        val w = size.width
+        val h = size.height
+        // 雾流三团（兜底时也只剩它们）
+        val bandY = listOf(0.62f, 0.78f, 0.92f)
+        for ((k, fy) in bandY.withIndex()) {
+            val drift = sin(2.0 * PI * (t / 120f + k * 0.33f)).toFloat() * 0.03f
+            val c = Offset((0.5f + drift) * w, fy * h)
+            val r = w * 0.85f
+            withTransform({ scale(1f, 0.15f, pivot = c) }) {
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Color.White.copy(alpha = 0.05f), Color.Transparent),
+                        center = c,
+                        radius = r,
+                    ),
+                    r,
+                    c,
+                )
+            }
+        }
+        if (mistOnly) return@Canvas
+        val lampMul = 0.78f + 0.22f * lively
+        val boostGroup = boostKey?.let { SETTINGS_LAMP_GROUP[it] }
+        val boostV = boost()
+        for (lamp in TREE_LAMPS) {
+            val s1 = 0.5f + 0.5f * sin(2.0 * PI * (t / lamp.p1 + lamp.seed)).toFloat()
+            val s2 = 0.5f + 0.5f * sin(2.0 * PI * (t / lamp.p2 + lamp.seed * 1.7f)).toFloat()
+            var a = lamp.peak * lampMul * (1f - lamp.depth * (0.4f + 0.6f * s1) * (0.5f + 0.5f * s2))
+            // 左枝群里有一盏每 60s 熄 4s
+            if (lamp.group == "left" && lamp.seed == 0.53f && (t % 60f) in 30f..34f) a *= 0.15f
+            if (boostGroup == lamp.group) a += 0.35f * boostV
+            val c = Offset(lamp.fx * w, lamp.fy * h)
+            val r = lamp.rFrac * w
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(warm.copy(alpha = a.coerceIn(0f, 0.85f)), Color.Transparent),
+                    center = c,
+                    radius = r * 2.2f,
+                ),
+                r * 2.2f,
+                c,
+                blendMode = BlendMode.Plus,
+            )
+        }
+        // 萤火
+        for ((i, base) in TREE_FIREFLIES.withIndex()) {
+            val p = listOf(20f, 24f, 30f, 40f, 60f, 120f)[i % 6]
+            val kx = (i % 3) + 1
+            val ky = ((i + 1) % 3) + 1
+            val x = base.x * w + 0.008f * w * sin(2.0 * PI * (kx * t / p + i * 0.37f)).toFloat()
+            val y = base.y * h + 0.006f * h * sin(2.0 * PI * (ky * t / p + i * 0.53f)).toFloat()
+            val tw = 0.25f + 0.75f * (0.5f + 0.5f * sin(2.0 * PI * (t / listOf(3f, 4f, 5f, 6f)[i % 4] + i * 0.61f)).toFloat()).pow(2)
+            val col = if (i % 5 == 4) Color.White else Color(0xFFD8F2A0)
+            val c = Offset(x, y)
+            drawCircle(col.copy(alpha = tw * 0.35f), 7.dp.toPx(), c, blendMode = BlendMode.Plus)
+            drawCircle(col.copy(alpha = tw), 1.4.dp.toPx(), c)
+        }
+        // 树冠微光与星
+        for ((i, s) in TREE_SPARKLES.withIndex()) {
+            val per = listOf(6f, 8f, 10f, 12f, 15f, 20f)[i % 6]
+            val tw = 0.5f + 0.5f * sin(2.0 * PI * (t / per + i * 0.43f)).toFloat()
+            val c = Offset(s.x * w, s.y * h)
+            drawCircle(SkyLabelGlow.copy(alpha = tw * 0.30f), 3.4f, c, blendMode = BlendMode.Plus)
+            drawCircle(Color.White.copy(alpha = tw * 0.8f), 1.2f, c)
+        }
+        for ((i, s) in TREE_STARS.withIndex()) {
+            val tw = 0.3f + 0.5f * (0.5f + 0.5f * sin(2.0 * PI * (t / 5f + i * 0.29f)).toFloat())
+            drawCircle(Color.White.copy(alpha = tw), 1.1f, Offset(s.x * w, s.y * h))
+        }
+    }
+}
+
 
 /** 动漫风背景：波奇酱粉纵向渐变。 */
 private val animeBackgroundBrush = Brush.verticalGradient(
