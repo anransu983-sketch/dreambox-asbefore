@@ -147,6 +147,8 @@ interface AppSettingsReader {
     // 开局灵石托管（轮回包配点时按家世折算，门派包领取清零）与前世碑林台账（JSON 数组）
     val sectOpeningStones: Preference<Int>
     val sectLifeLog: Preference<String>
+    // 遗产回响已领取台账（逗号分隔的前世世号，防重复结算）
+    val sectEchoClaimed: Preference<String>
 }
 
 /** Read/write contract for WebDAV backup settings. */
