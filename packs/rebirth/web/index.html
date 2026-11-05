@@ -596,6 +596,8 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 .rbrow:last-child{border-bottom:none}
 .rbchip{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer}
 .rbnum{width:110px;padding:9px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;text-align:right}
+.hubops{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.hubops .pbtn{width:100%}
 </style>
 
 </head>
@@ -678,6 +680,7 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
         <div class="desc" id="hallGradeText"></div>
         <div class="rankbar"><i id="hallGradeBar" style="width:0%"></i></div>
         <div class="layout-note" id="hallLayoutNote"></div>
+        <button class="pbtn" id="hubBtn" style="width:100%;margin:4px 0 10px">☯️ 回轮回主页 · 选一世 / 看这世的操作</button>
         <div id="hallStats"></div>
       </div>
       <div class="card">
@@ -798,6 +801,10 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
   <div class="room" id="room-market">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏮 山门集市</div><div class="room-sub">坊市烟火 · 每日新货</div></div></div>
     <div class="room-body" id="marketBody"></div>
+  </div>
+  <div class="room" id="room-hub">
+    <div class="room-head"><div><div class="room-title">☯️ 轮回</div><div class="room-sub">一世一操作 · 百世一长卷</div></div></div>
+    <div class="room-body" id="hubBody"></div>
   </div>
   <div class="room" id="room-rebirth">
     <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🗿 轮回殿</div><div class="room-sub">转世 · 配点 · 回响 · 碑林 · 百世长卷</div></div></div>
@@ -1180,15 +1187,11 @@ function renderRebirthRoom(){
     +'</div>';
   html+='<div class="card"><h2>☯️ 万法归一（'+gs.length+'/7）</h2><div class="desc">'+(state.guiyiDone?"归一印记已成：此后每次转世结算额外 +10%。万法归一，你即是道。":"每一世修的体系都刻在真灵里：修全七大体系、走满百世、臻大乘绝巅，结局里便有「万法归一」——百世长卷的最后一页。每一世落在哪个世界、修哪门体系，由那一世的配点加权随机。")+'</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'+RB_SYS_ORDER.map(function(id){var has=gs.indexOf(id)>=0;return '<span class="rbchip" style="'+(has?"border-color:#7fd08c;color:inherit":"opacity:.55")+'">'+(has?"✅ ":"")+rbSysName(id)+'</span>'}).join("")+'</div></div>';
-  var log=state.lifeLog||[];
-  html+='<div class="card"><h2>🪦 前世碑林（'+log.length+' 世）</h2>'
-    +(log.length?log.slice().reverse().map(function(en){
-      return '<div class="rbrow"><span style="font-size:20px">🗿</span><span style="flex:1"><b>第 '+en.life+' 世</b><div class="desc">'+(RB_ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 本世功绩 '+en.earned+' · 结算 '+en.pool+' 点'+(en.world?' · '+rbWorldName(en.world)+' · '+rbSysName(en.system):"")+'</div></span></div>'}).join("")
-      :(state.life>1?'<div class="desc">碑林自轮回殿立碑起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来。</div>'))
-    +'</div>';
+  html+=rbSteleHtml();
   box.innerHTML=html;
   Array.prototype.forEach.call(box.querySelectorAll("[data-ending]"),function(b){b.addEventListener("click",function(){rbEnding=b.getAttribute("data-ending");renderRebirthRoom()})});
   Array.prototype.forEach.call(box.querySelectorAll("[data-stage]"),function(b){b.addEventListener("click",function(){var i=+b.getAttribute("data-stage");rbStage=(rbStage===i?-1:i);renderRebirthRoom()})});
+  rbBindStele(box);
   var rg=$("btnRbRebirth");if(rg)rg.addEventListener("click",function(){doRbRebirth(rbEnding)});
 }
 function doRbRebirth(ending){
@@ -1232,6 +1235,69 @@ function doRbAllocate(){
   }
 }
 
+/* == 轮回主页：以世为纲——选一世、看这世的操作、进这世的山门 == */
+var rbLifeSel=0;
+function rbSteleHtml(){
+  var log=state.lifeLog||[];var html='<div class="card"><h2>🪦 前世碑林（'+log.length+' 世）</h2>';
+  if(!log.length){html+=(state.life>1?'<div class="desc">碑林自轮回殿立碑起记：更早的世已经走完，来不及刻碑——从这一世起，你的每一世都会刻在这里。</div>':'<div class="desc">尚无前世——你还在第一世。碑林会把每一世的结局、评价与结算都刻下来，点开任意一碑，能看那一世的配点与操作。</div>');return html+'</div>'}
+  html+=log.slice().reverse().map(function(en){
+    var row='<div class="rbrow" data-life="'+en.life+'" style="cursor:pointer"><span style="font-size:20px">🗿</span><span style="flex:1"><b>第 '+en.life+' 世</b><div class="desc">'+(RB_ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 本世功绩 '+en.earned+' · 结算 '+en.pool+' 点'+(en.world?' · '+rbWorldName(en.world)+' · '+rbSysName(en.system):"")+'</div></span><span class="desc">'+(rbLifeSel===en.life?"收起":"看这世")+'</span></div>';
+    if(rbLifeSel===en.life){
+      var a=en.alloc||{};var ec=null;(state.echoes||[]).forEach(function(x){if(x.fromLife===en.life)ec=x});
+      row+='<div class="desc" style="padding:2px 0 10px;line-height:1.85">这一世的操作 —— 配点：'+RB_ALLOC_DEFS.map(function(d){return d.name+" "+(a[d.k]||0)}).join(" · ")
+        +'<br>落界 '+(en.world?rbWorldName(en.world):"（那时尚无抽世）")+' · 体系 '+(en.system?rbSysName(en.system):"—")+' · 结局 '+(RB_ENDING_NAMES[en.ending]||en.ending)+' · 评价 '+en.eval+' · 功绩 '+en.earned+' → 结算 '+en.pool+' 点'
+        +(ec?'<br>这一世留下的回响：'+ec.kind+'（+'+ec.bonus+' 点，'+(ec.status==="claimed"?"已回响入账":(ec.status==="matured"?"已成熟，待下次结算回响":"蕴养中，第 "+ec.matureLife+" 世成熟"))+'）':"")
+        +'</div>';
+    }
+    return row}).join("");
+  return html+'</div>';
+}
+function rbBindStele(box){Array.prototype.forEach.call(box.querySelectorAll("[data-life]"),function(b){b.addEventListener("click",function(){var lf=+b.getAttribute("data-life");rbLifeSel=(rbLifeSel===lf?0:lf);if(document.querySelector("#room-rebirth.open"))renderRebirthRoom();if(document.querySelector("#room-hub.open"))renderHub()})})}
+function renderHub(){
+  var box=$("hubBody");if(!box)return;
+  if(!hasBridge)rbMockDerive();
+  if(!state||!state.sectId){
+    box.innerHTML='<div class="card"><h2>账本未立</h2><div class="desc">先回山门选一道入门——轮回从第一世开始，每一世的操作都记在这里。</div><button class="pbtn" id="hubGo" style="margin-top:10px;width:100%">回山门</button></div>';
+    var g0=$("hubGo");if(g0)g0.addEventListener("click",function(){closeRoomsUI()});
+    return;
+  }
+  var html='<img src="world-youming.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:14px;display:block">';
+  html+='<div class="card"><h2>☯️ 第 '+state.life+' 世 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
+    +(state.world?('落界 <b>'+rbWorldName(state.world)+'</b> · 体系 <b>'+rbSysName(state.system)+'</b>（本阶 '+rbSysRank(state.system,state.rankIndex)+'）<br>'):"")
+    +'宗门品级 <b>'+state.gradeName+'</b> · 境界 <b>'+state.rankName+'</b> · 身份 <b>'+state.title+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b></div></div>';
+  if(state.allocPending){
+    html+='<div class="card"><h2>🗿 这一世还没开始</h2><div class="desc">上一世的点池（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去配点 · 定这一世</button></div>';
+  }else{
+    html+='<div class="card"><h2>🎛️ 这一世的操作</h2><div class="desc">这一世要做什么都从这里进：修炼与差事在山门，买卖去集市，闯界去万界，终结这一世去轮回殿。</div><div class="hubops">'
+      +'<button class="pbtn" data-op="scene">🏔️ 进入山门</button>'
+      +'<button class="pbtn" data-op="room-worlds">🌌 诸天万界</button>'
+      +'<button class="pbtn" data-op="room-market">🏮 山门集市</button>'
+      +'<button class="pbtn" data-op="room-events">🎲 今日奇遇</button>'
+      +'<button class="pbtn" data-op="room-blood">🩸 血脉</button>'
+      +'<button class="pbtn" data-op="room-feed">🏮 同门动态</button>'
+      +'</div><button class="pbtn" data-op="room-rebirth" style="margin-top:8px;width:100%">🗿 轮回殿 · 结算这一世</button></div>';
+  }
+  var lives=[];for(var lf=state.life;lf>=1;lf--)lives.push(lf);
+  html+='<div class="card"><h2>🗿 选择一世</h2><div class="desc">点任意一世，看它当年的配点与操作；当前世就是置顶的这一世。</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
+    +lives.map(function(lf){
+      var cur=lf===state.life;var logged=(state.lifeLog||[]).some(function(e){return e.life===lf});
+      return '<button class="rbchip" data-seelife="'+lf+'" style="'+(cur?"border-color:#f59e0b;color:#fbbf24":"")+'">第 '+lf+' 世'+(cur?"（当前）":(logged?"":" · 无碑"))+'</button>'}).join("")
+    +'</div></div>';
+  html+=rbSteleHtml();
+  box.innerHTML=html;
+  var ha=$("hubAlloc");if(ha)ha.addEventListener("click",function(){openRoom("room-rebirth")});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-op]"),function(b){b.addEventListener("click",function(){var t=b.getAttribute("data-op");if(t==="scene")closeRoomsUI();else openRoom(t)})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-seelife]"),function(b){b.addEventListener("click",function(){
+    var lf=+b.getAttribute("data-seelife");
+    if(lf===state.life){box.scrollTop=0;return}
+    rbLifeSel=(rbLifeSel===lf?0:lf);renderHub();
+    var nb=$("hubBody");var el=nb?nb.querySelector('[data-life="'+lf+'"]'):null;if(el)el.scrollIntoView({block:"center"});
+  })});
+  rbBindStele(box);
+}
+function bindHubBtn(){var b=$("hubBtn");if(b)b.addEventListener("click",function(){openRoom("room-hub")})}
+
+bindHubBtn();
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
@@ -1304,7 +1370,7 @@ var FORGE=[
  {icon:"🪶",name:"鹤羽舟",grade:6,desc:"一羽化舟，载三五人横渡云海，峰主才配领用。"},
  {icon:"🗼",name:"镇山塔",grade:8,desc:"塔落之处，地脉自稳。一品宗门的脸面。"},
  {icon:"👑",name:"圣地道印",grade:10,desc:"圣地之主的印信，印落如天宪，万宗共遵。"}];
-function openRoom(id){if(id==="room-rebirth"&&typeof renderRebirthRoom==="function")renderRebirthRoom();SFX.open();cgBars(700);setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0;try{if(!window.__sectRoomOpen){window.__sectRoomOpen=true;history.pushState({sectRoom:1},"")}}catch(e){}}
+function openRoom(id){if(id==="room-rebirth"&&typeof renderRebirthRoom==="function")renderRebirthRoom();if(id==="room-hub"&&typeof renderHub==="function")renderHub();SFX.open();cgBars(700);setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.toggle("open",r.id===id)});var b=document.querySelector("#"+id+" .room-body");if(b)b.scrollTop=0;try{if(!window.__sectRoomOpen){window.__sectRoomOpen=true;history.pushState({sectRoom:1},"")}}catch(e){}}
 function closeRooms(){Array.prototype.forEach.call(document.querySelectorAll(".room"),function(r){r.classList.remove("open")})}
 function closeRoomsUI(){SFX.close();setTimeout(function(){if(window.__sectCgHook)window.__sectCgHook()},80);closeRooms();if(window.__sectRoomOpen){window.__sectRoomOpen=false;try{history.back()}catch(e){}}}
 window.addEventListener("popstate",function(){if(window.__sectRoomOpen){window.__sectRoomOpen=false;closeRooms()}});
@@ -4383,6 +4449,8 @@ function render(){
     renderHall();
     if(state.allocPending&&!window.__rbForced){window.__rbForced=true;setTimeout(function(){openRoom("room-rebirth")},350);}
     if(document.querySelector("#room-rebirth.open"))renderRebirthRoom();
+    if(!window.__hubShown&&state.sectId&&!state.allocPending){window.__hubShown=true;setTimeout(function(){openRoom("room-hub")},420);}
+    if(document.querySelector("#room-hub.open"))renderHub();
   }else{
     $("view-hall").classList.add("hidden");
     $("view-guide").classList.remove("hidden");
