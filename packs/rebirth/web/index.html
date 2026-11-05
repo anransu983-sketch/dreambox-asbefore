@@ -1268,6 +1268,7 @@ function renderHub(){
   if(state.allocPending){
     html+='<div class="card"><h2>🗿 这一世还没开始</h2><div class="desc">上一世的点池（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去配点 · 定这一世</button></div>';
   }else{
+    html+=rbSimHtml();
     html+='<div class="card"><h2>🎛️ 这一世的操作</h2><div class="desc">这一世要做什么都从这里进：修炼与差事在山门，买卖去集市，闯界去万界，终结这一世去轮回殿。</div><div class="hubops">'
       +'<button class="pbtn" data-op="scene">🏔️ 进入山门</button>'
       +'<button class="pbtn" data-op="room-worlds">🌌 诸天万界</button>'
@@ -1294,10 +1295,167 @@ function renderHub(){
     var nb=$("hubBody");var el=nb?nb.querySelector('[data-life="'+lf+'"]'):null;if(el)el.scrollIntoView({block:"center"});
   })});
   rbBindStele(box);
+  rbBindSim(box);
 }
 function bindHubBtn(){var b=$("hubBtn");if(b)b.addEventListener("click",function(){openRoom("room-hub")})}
 
 bindHubBtn();
+/* == 人生路：配点定命，出生开局，一步步选这一世 == */
+var SIM_STAGES=[
+ {key:"birth",name:"出生 · 抓周",intro:"",options:[
+  {t:"抓小剑",d:"周岁抓周，一把抓住小木剑",dim:"gengu",pts:5,ok:"满堂喝彩，都说这孩子将来尚武。",great:"小剑入手竟嗡嗡作响，长辈惊呼：此子骨骼清奇。"},
+  {t:"抓书卷",d:"周岁抓周，抱住书卷不撒手",dim:"wuxing",pts:5,ok:"家里笑成一团：是个读书种子。",great:"书卷无风自动翻了三页——这孩子的悟性，打小就不一样。"},
+  {t:"抓算盘",d:"周岁抓周，拨弄算盘噼啪响",dim:"jiashi",pts:5,ok:"掌柜命，将来饿不着。",great:"算盘珠子自己归了位，账房先生看直了眼。"},
+  {t:"抓玉印",d:"周岁抓周，攥住一枚玉印",dim:"renyuan",pts:5,ok:"见人就笑，人缘打小就好。",great:"玉印温润生光，抱你的人都说沾了福气。"}]},
+ {key:"child",name:"幼年",intro:"童年无忌，性子就是这几年养出来的。",options:[
+  {t:"随父辈做活",d:"下田、学手艺，早早懂持家",dim:"jiashi",pts:10,stones:20,ok:"手脚勤快，家里多了个小帮手。",great:"你做的活计比大人还利落，家里日子眼看着宽裕起来。"},
+  {t:"私塾读书",d:"咬牙供你读几年书",dim:"wuxing",pts:12,ok:"识字明理，先生夸你坐得住。",great:"过目成诵，先生私下说：此子非池中物。"},
+  {t:"满山疯跑",d:"爬树掏鸟、溪里摸鱼",dim:"gengu",pts:12,ok:"身子骨结实得像头小牛犊。",great:"摔下丈高的崖坎只破了皮——这副体魄，山里的猎户都咋舌。"},
+  {t:"帮邻里跑腿",d:"东家送菜、西家传话",dim:"renyuan",pts:10,stones:10,ok:"整条街的人都认识你、疼你。",great:"你随手帮的独居老翁，原来是退隐的老修士，临别塞给你一本旧册子。"}]},
+ {key:"youth",name:"少年",intro:"十五六岁，路要自己选了。",options:[
+  {t:"投考宗门",d:"赶大考，进山门",dim:"linggen",pts:18,ok:"测灵时光芒稳稳过线，你被收下了。",great:"测灵石光芒冲霄，长老亲自下场收徒，同期都看傻了。"},
+  {t:"散修自学",d:"不投宗门，自己摸索",dim:"wuxing",pts:15,ok:"走了许多弯路，也练出一身野路子的扎实。",great:"无师自通悟出第一缕气感，散修圈子里都传开了。"},
+  {t:"族学进修",d:"靠家世进族学、得长辈指点",dim:"jiashi",pts:15,ok:"族学资源稳稳供着，起步比散修顺得多。",great:"族长亲自为你开小灶，还许了你一间静室。"},
+  {t:"远游访山",d:"背起行囊，去看名山大川",dim:"qiyun",pts:16,ok:"一路风霜，也一路见识。",great:"迷路误入一处别府，得前人手札一卷——运气也是实力。"}]},
+ {key:"entry",name:"入门",intro:"踏进修行门，头几年定根基。",options:[
+  {t:"闭关苦修",d:"不问世事，先打根基",dim:"gengu",pts:20,ok:"根基扎实，同门都说你坐得住枯禅。",great:"苦修中竟摸到一丝顿悟的边，修为一日千里。"},
+  {t:"研习丹器",d:"跟着师傅学炼丹炼器",dim:"wuxing",pts:20,stones:15,ok:"手上有了吃饭的本事，丹房器房都缺不了你。",great:"头一炉就出上品丹，师傅破例传你压箱底的控火诀。"},
+  {t:"广交同门",d:"人脉也是修行",dim:"renyuan",pts:18,ok:"谁有难处你都搭把手，名声悄悄传开。",great:"你组的同门小圈子日后成了气候——个个都念你的好。"},
+  {t:"接差攒资",d:"差事跑勤，先富起来",dim:"jiashi",pts:16,stones:60,ok:"腰包渐鼓，修炼资源不再紧巴巴。",great:"一桩差事办得滴水不漏，管事直接把你列进重点栽培名单。"}]},
+ {key:"cult",name:"修炼",intro:"瓶颈在前，人人都要过这一关。",options:[
+  {t:"硬冲瓶颈",d:"以体魄与意志硬闯",dim:"gengu",pts:26,ok:"咬碎牙关冲了过去，醒来时天已亮。",great:"瓶颈如纸糊，一夜连破两重关，守关长老都惊动了。"},
+  {t:"参悟典籍",d:"把典籍读穿再动手",dim:"wuxing",pts:24,ok:"读到某页忽然通透，瓶颈自解。",great:"典籍边注与你心中所悟互相印证——这是著书立说的料子。"},
+  {t:"炼体锻身",d:"药浴、负重、瀑下站桩",dim:"gengu",pts:22,ok:"肉身强横一截，寻常法术难伤。",great:"瀑下站桩三日不倒，体修一脉的前辈特意来看了你一眼。"},
+  {t:"炼器傀儡",d:"把手艺练成战力",dim:"wuxing",pts:22,stones:40,ok:"你的作品在坊间有了名气，订单找上门。",great:"新作一出坊市哄抢，有人开价要买你的图纸。"}]},
+ {key:"trial",name:"历练",intro:"下山历练，江湖与秘境都在眼前。",options:[
+  {t:"闯秘境",d:"险中求宝",dim:"qiyun",pts:30,ok:"秘境归来，储物袋沉了不少，人也沉稳了。",great:"秘境核心让你撞了个正着——这一趟，顶别人十年。"},
+  {t:"除妖护村",d:"为山下村子除害",dim:"renyuan",pts:24,stones:30,ok:"村子立了你的长生牌位，逢年过节都有香火。",great:"除妖那一夜满村灯火为你而亮，你的名字传遍三乡。"},
+  {t:"护送商队",d:"走一趟险路，赚一笔大的",dim:"jiashi",pts:22,stones:80,ok:"商队平安抵达，东家双手奉上谢礼。",great:"半路劫修被你反杀，商队东家与你结成世交。"},
+  {t:"战同辈天骄",d:"擂台上见真章",dim:"gengu",pts:28,ok:"输赢之外，你的名字进了同辈的名单。",great:"三招败尽挑战者——这一代的天骄榜上，添了你的名。"}]},
+ {key:"fame",name:"扬名",intro:"声名渐起，这一世开始留下痕迹。",options:[
+  {t:"收徒传道",d:"把这一身本事传下去",dim:"renyuan",pts:26,ok:"弟子们出息，你的名字被一代代念下去。",great:"门下出了青出于蓝的苗子——师凭徒贵，你这一脉成了气候。"},
+  {t:"著书立说",d:"把所学写成书",dim:"wuxing",pts:26,ok:"书成那日，洛阳纸贵。",great:"此书成了后来者的必读，你在书里活了第二世。"},
+  {t:"争榜夺名",d:"向更高的榜单发起冲击",dim:"gengu",pts:30,ok:"榜上有名，天下知。",great:"绝巅一战封神，连天上的目光都为你停了一瞬。"},
+  {t:"经营产业",d:"洞府、药田、坊市股份",dim:"jiashi",pts:24,stones:120,ok:"产业滚雪球，你成了修行圈里的财神。",great:"你布的局十年后全应验了——这份眼光，比修为更吓人。"}]},
+ {key:"old",name:"暮年",intro:"这一世走到后半程，怎么收尾，也是修行。",options:[
+  {t:"冲击绝巅",d:"向此生最高处再攀一步",dim:"gengu",pts:34,ok:"虽未登顶，气势已惊动四方。",great:"绝巅之上再进一步，天劫都为你改了规矩。"},
+  {t:"安排传承",d:"衣钵、洞府、后人，一一安排",dim:"renyuan",pts:24,ok:"身后事安排得妥帖，人人称善。",great:"你留下的布置在身后数百年还在护着后人——这是活成了传说。"},
+  {t:"云游天下",d:"放下一切，去看没看过的山河",dim:"qiyun",pts:28,ok:"一路走走停停，心境前所未有的通透。",great:"云游途中处处是机缘，仿佛天地都在给你送行。"},
+  {t:"坐镇宗门",d:"做宗门的定海神针",dim:"jiashi",pts:26,stones:60,ok:"有你在，宗门上下心里有底。",great:"外敌压境之夜，你只出了一剑——宗门又安稳了五十年。"}]}];
+var SIM_ENCS=[
+ {key:"chuanshuo",name:"奇遇 · 崖底传承",intro:"山道旁的断崖下，隐约有光华流转——像是一处前人洞府的入口。",options:[
+  {t:"纵身跳崖",d:"富贵险中求",dim:"qiyun",pts:34,ok:"崖底果然别有洞天，你捧着传承玉简爬上来时，腿还在抖。",great:"传承与你的根骨无比契合，仿佛就是为你留的。"},
+  {t:"系绳徐下",d:"稳妥些，慢慢探",dim:"wuxing",pts:20,ok:"探得几件前人遗物，不算空手。",great:"你在崖壁发现第二层暗格——心细的人，运气不会差。"},
+  {t:"绕路而行",d:"命只有一条",dim:"gengu",pts:0,stones:10,ok:"平安绕过。后来听说有人摔死在那崖下，你出了一身冷汗。",great:"平安绕过。后来听说有人摔死在那崖下，你出了一身冷汗。"}]},
+ {key:"lingshou",name:"奇遇 · 受伤的灵兽",intro:"林间一只灵兽奄奄一息，眼睛却亮得惊人，像在求你。",options:[
+  {t:"救它",d:"敷药包扎，守它三夜",dim:"renyuan",pts:26,ok:"灵兽痊愈后衔来一株灵草报恩，转身没入林海。",great:"它认你为主了——这一世的路，多了个生死之交。"},
+  {t:"取其内丹",d:"弱肉强食，怪不得我",dim:"gengu",pts:20,ok:"内丹入手，修为精进，只是夜里总想起那双眼睛。",great:"内丹品相极佳，只是这笔账，轮回里都记着。"}]},
+ {key:"shangren",name:"奇遇 · 神秘商人",intro:"雨夜客栈，一个斗笠商人压低声音：『小友，我这儿有件东西，只卖有缘人。』",options:[
+  {t:"买下残破古物",d:"赌一把眼缘",dim:"qiyun",pts:18,ok:"古物洗去尘垢，竟是件残缺的宝物胚子。",great:"擦亮之后宝光冲天——商人追出三里地想加价赎回，你没卖。"},
+  {t:"帮他护货",d:"不赌，正经赚钱",dim:"jiashi",pts:6,stones:90,ok:"一趟护货，酬金丰厚，商人还欠你一个人情。",great:"护货路上结识了商会核心人物，你的路子一下宽了。"}]},
+ {key:"dongfu",name:"奇遇 · 上古洞府",intro:"地动之后，山体裂开一线，露出上古洞府的石门，阵纹还在流转。",options:[
+  {t:"破阵而入",d:"阵法再古，也有解法",dim:"wuxing",pts:32,ok:"三日破阵，洞府收藏让你眼界大开。",great:"阵眼竟与你所学同源——这洞府，简直像给你留的后门。"},
+  {t:"记下位置",d:"实力不够，先记着",dim:"gengu",pts:14,ok:"你拓下阵纹慢慢参悟，也算没白来。",great:"拓印时你顺手补全了残阵的一角，获益不浅。"}]},
+ {key:"leiyu",name:"奇遇 · 雷雨悟道",intro:"暴雨夜，天雷滚滚，有老修士说：雷声里藏着天道的嗓音。",options:[
+  {t:"立于山巅观雷",d:"险，但近道",dim:"wuxing",pts:30,ok:"一道雷劈在身侧，你却在轰鸣里听清了某种韵律。",great:"雷光入目，那一瞬你看见了功法里从没写过的东西。"},
+  {t:"避入洞中",d:"等雨停",dim:"gengu",pts:8,ok:"洞中避雨时打了个盹，梦里都是雷声。",great:"梦里雷声化作口诀——醒来你默写出半页心得。"}]},
+ {key:"moxiu",name:"奇遇 · 魔修夜袭",intro:"夜宿荒庙，阴气骤盛——有魔修盯上了你的行囊，更盯上了你的人。",options:[
+  {t:"迎战",d:"避无可避，那就战",dim:"gengu",pts:30,ok:"血战至天明，魔修遁走，你也挂了彩，但道心更坚。",great:"你以弱胜强反杀之，缴获的魔功被你付之一炬——烧得干脆。"},
+  {t:"布阵周旋",d:"以智取胜",dim:"wuxing",pts:24,ok:"阵法困他半个时辰，你全身而退。",great:"他至死没走出你的阵——这一战传开，布阵的名声压过了修为。"}]},
+ {key:"lingquan",name:"奇遇 · 灵泉现世",intro:"山涧新涌一口灵泉，泉水过处，枯草返青。消息还没传开。",options:[
+  {t:"畅饮修炼",d:"机不可失",dim:"linggen",pts:26,ok:"泉边打坐三日，灵气洗髓，脱胎换骨。",great:"灵泉与你灵根共鸣，竟引出一眼伴生泉——够你用很多年。"},
+  {t:"引泉济村",d:"独乐乐不如众乐乐",dim:"renyuan",pts:20,stones:20,ok:"山下村子因泉得福，你的长生牌位又多了一个。",great:"村民自发为你守泉护法，泉眼在香火里越涌越旺。"}]},
+ {key:"guren",name:"奇遇 · 故人之后",intro:"一位年轻人对着你的画像长跪不起：『先祖遗言，若遇此人，必以命相报。』——是前世回响找上了门。",options:[
+  {t:"倾囊相授",d:"前世的情，这一世续上",dim:"renyuan",pts:24,ok:"你把一身经验倾囊相授，年轻人跪谢而去，眼里有了光。",great:"他日后成了搅动风云的人物，而所有人都知道，他是你这一世点起来的一盏灯。"},
+  {t:"结伴同行",d:"新账旧情一起走",dim:"qiyun",pts:22,ok:"多了个知根知底的同伴，这一路不再孤单。",great:"同行不过百日，他为你挡了一记暗算——前世的债，这一世命来还。"}]}];
+function rbSimLoad(){
+  var sim=null;
+  try{sim=JSON.parse(localStorage.getItem("rbLifeSim")||"null")}catch(e){}
+  if(!sim||sim.life!==state.life)sim={life:state.life,idx:0,enc:null,usedEnc:[],log:[],flags:{},done:false};
+  return sim;
+}
+function rbSimSave(sim){try{localStorage.setItem("rbLifeSim",JSON.stringify(sim))}catch(e){}}
+function rbSimText(t){return t}
+function rbSimHtml(){
+  if(!state||!state.sectId||state.allocPending)return "";
+  var sim=rbSimLoad();
+  var html='<div class="card"><h2>📜 人生路 · 第 '+state.life+' 世</h2>';
+  if(state.world)html+='<div class="desc">这一世：'+rbWorldName(state.world)+' · '+rbSysName(state.system)+'——配点定下的命，从出生开始一步步走。</div>';
+  if(sim.log.length){
+    html+='<div style="margin-top:8px">'+sim.log.slice(-3).reverse().map(function(en){return '<div class="desc" style="padding:3px 0;border-bottom:1px dashed rgba(128,160,140,.2)">【'+en.h+'】'+en.t+'</div>'}).join("")+'</div>';
+  }
+  if(sim.done){
+    html+='<div class="desc" style="margin-top:8px;line-height:1.8">这一世的人生路走完了。余下的日子可以在山门里自由修行（差事、集市、万界都在下方入口），想终结这一世，去轮回殿选结局结算。</div>'
+      +'<button class="pbtn" data-simgo="room-rebirth" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去轮回殿 · 结算这一世</button>';
+  }else if(sim.enc){
+    var enc=null;SIM_ENCS.forEach(function(x){if(x.key===sim.enc)enc=x});
+    if(enc){
+      html+='<div class="desc" style="margin-top:10px;line-height:1.85"><b style="color:#fbbf24">'+enc.name+'</b><br>'+enc.intro+'</div>'
+        +enc.options.map(function(o,i){return '<button class="pbtn" data-enc="'+i+'" style="display:block;width:100%;margin-top:8px;text-align:left">'+o.t+'<span class="desc" style="display:block">'+o.d+'</span></button>'}).join("");
+    }
+  }else{
+    var st=SIM_STAGES[sim.idx];
+    var intro=sim.idx===0?rbOpeningText(state.alloc||{}):st.intro;
+    html+='<div class="desc" style="margin-top:10px;line-height:1.85"><b style="color:#fbbf24">第 '+(sim.idx+1)+' 步 · '+st.name+'</b><br>'+intro+'</div>'
+      +st.options.map(function(o,i){return '<button class="pbtn" data-sim="'+i+'" style="display:block;width:100%;margin-top:8px;text-align:left">'+o.t+'<span class="desc" style="display:block">'+o.d+'</span></button>'}).join("");
+  }
+  if(hasBridge&&state.rankIndex<6&&state.points>=(BREAK_COSTS[state.rankIndex]||9999)){
+    html+='<button class="pbtn" data-simbreak="1" style="margin-top:10px;width:100%">⬆️ 轮回点已够突破下一境（'+BREAK_COSTS[state.rankIndex]+' 点），点此突破</button>';
+  }
+  html+='</div>';
+  return html;
+}
+function rbSimApply(sim,srcKey,srcName,opt){
+  var alloc=state.alloc||{};
+  var dimVal=alloc[opt.dim]||0;
+  var great=dimVal>=150;
+  var pts=Math.round((opt.pts||0)*(great?1.5:1));
+  var text=(great&&opt.great)?opt.great:opt.ok;
+  if(opt.stones&&typeof addStones==="function"&&opt.stones>0)addStones(opt.stones);
+  sim.log.push({h:srcName,t:text+(pts>0?("（轮回点 +"+pts+"）"):"")+(opt.stones>0?("（灵石 +"+opt.stones+"）"):"")});
+  function after(st){if(st)state=Object.assign(state,st);rbSimSave(sim);renderHub()}
+  if(pts>0){
+    if(hasBridge){callNative("grant",{id:"sim"+state.life+"_"+srcKey,amount:pts}).then(after).catch(function(){after(null)})}
+    else{mockGain(pts);mockDerive();mockSave();after(null)}
+  }else after(null);
+}
+function rbSimChoose(i){
+  var sim=rbSimLoad();if(sim.done||sim.enc)return;
+  var st=SIM_STAGES[sim.idx];var opt=st.options[i];if(!opt)return;
+  sim.idx++;
+  if(sim.idx>=SIM_STAGES.length)sim.done=true;
+  else if(sim.idx>=2&&sim.idx<=6){
+    var alloc=state.alloc||{};
+    var chance=0.22+Math.min(0.45,(alloc.qiyun||0)/400);
+    var maturedEcho=(state.echoes||[]).some(function(ec){return ec.status==="matured"});
+    if(Math.random()<chance){
+      var pool=SIM_ENCS.filter(function(x){return sim.usedEnc.indexOf(x.key)<0});
+      var pick=null;
+      if(maturedEcho)pool.forEach(function(x){if(x.key==="guren")pick=x});
+      if(!pick&&pool.length)pick=pool[Math.floor(Math.random()*pool.length)];
+      if(pick){sim.enc=pick.key;sim.usedEnc.push(pick.key)}
+    }
+  }
+  rbSimSave(sim);
+  rbSimApply(sim,st.key,st.name,opt);
+}
+function rbSimEncChoose(i){
+  var sim=rbSimLoad();if(!sim.enc)return;
+  var enc=null;SIM_ENCS.forEach(function(x){if(x.key===sim.enc)enc=x});
+  if(!enc){sim.enc=null;rbSimSave(sim);renderHub();return}
+  var opt=enc.options[i];if(!opt)return;
+  var key=sim.enc;sim.enc=null;rbSimSave(sim);
+  rbSimApply(sim,"enc_"+key,enc.name,opt);
+}
+function rbBindSim(box){
+  Array.prototype.forEach.call(box.querySelectorAll("[data-sim]"),function(b){b.addEventListener("click",function(){rbSimChoose(+b.getAttribute("data-sim"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-enc]"),function(b){b.addEventListener("click",function(){rbSimEncChoose(+b.getAttribute("data-enc"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-simgo]"),function(b){b.addEventListener("click",function(){openRoom(b.getAttribute("data-simgo"))})});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-simbreak]"),function(b){b.addEventListener("click",function(){
+    callNative("breakthrough",{}).then(function(st){state=Object.assign(state,st);render();renderHub()}).catch(function(){});
+  })});
+}
+
 function refreshState(){
   if(hasBridge){
     return callNative("state",{}).then(function(s){state=Object.assign(state,s);render()});
