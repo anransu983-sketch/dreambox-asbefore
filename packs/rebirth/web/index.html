@@ -616,6 +616,9 @@ body.cg #cgBarT,body.cg #cgBarB{transform:translateY(0)}
 #hubBody .card,#rebirthBody .card{animation:cardIn .34s ease both}
 button.pbtn{transition:transform .13s ease,filter .13s ease,box-shadow .13s ease}
 button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
+#dockOrg{display:none!important}
+#hallGradeText{display:none!important}
+#hallGradeBar{display:none!important}
 </style>
 
 </head>
@@ -682,8 +685,8 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
 
   <div class="dock">
     <button class="p" id="btnCultivate"><b>🧘</b><span id="cultLabel">每日修炼</span></button>
-    <button id="btnSalary"><b>💰</b><span id="salaryLabel">领取俸禄</span></button>
-    <button id="dockFeed"><b>🏮</b>同门动态</button>
+    <button id="btnSalary"><b>💰</b><span id="salaryLabel">领取例银</span></button>
+    <button id="dockFeed"><b>🏮</b>人间动态</button>
     <button id="dockOrg"><b>🏛️</b>宗门架构</button>
   </div>
 
@@ -691,7 +694,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-palace">
     <img class="sbg" id="palaceBg" src="room-palace.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🏯 山门大殿</div><div class="sroom-sub">境界 · 身份 · 职位 · 品级</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">🏯 山门大殿</div><div class="sroom-sub">境界 · 身份 · 职位 · 品级</div></div></div>
 <button class="obj" data-sheet="sheet-palace" style="left:50%;top:46%"><span class="otag">🏯 宝座议事</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-palace" style="left:16%;top:62%"><span class="otag">📜 品级碑</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-palace"><div class="sheet-hd"><div class="sheet-title">🏯 山门大殿</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="card shimmer" style="margin-top:2px">
         <h2>宗门品级</h2>
@@ -727,7 +730,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-cave">
     <img class="sbg" id="caveBg" src="room-cave1.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🏡 我的洞府</div><div class="sroom-sub">点洞里的物件建设</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">🏡 我的洞府</div><div class="sroom-sub">点洞里的物件建设</div></div></div>
     <div class="hud" id="caveHud"></div>
     <div class="arrayfx" id="caveArray" style="display:none;position:absolute;z-index:4"></div>
     <div id="caveObjs"></div>
@@ -736,7 +739,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-lecture">
     <img class="sbg" id="lectureBg" src="room-lecture.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sparks lt"><i style="left:22%"></i><i style="left:38%;animation-delay:.8s"></i><i style="left:55%;animation-delay:1.5s"></i><i style="left:70%;animation-delay:2.1s"></i></div><div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">📖 传功堂</div><div class="sroom-sub">长老讲经 · 点蒲团入座听讲</div></div></div>
+    <div class="sparks lt"><i style="left:22%"></i><i style="left:38%;animation-delay:.8s"></i><i style="left:55%;animation-delay:1.5s"></i><i style="left:70%;animation-delay:2.1s"></i></div><div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">📖 传功堂</div><div class="sroom-sub">长老讲经 · 点蒲团入座听讲</div></div></div>
 <button class="obj" data-sheet="sheet-lecture" style="left:50%;top:48%"><span class="otag">📖 长老讲经</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-lecture" style="left:28%;top:74%"><span class="otag">🧘 蒲团</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-lecture"><div class="sheet-hd"><div class="sheet-title">📖 传功堂</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="scripture" id="scripture"></div>
       <div id="lecAct"></div></div></div>
@@ -744,7 +747,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-spar">
     <img class="sbg" id="sparBg" src="room-spar.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">⚔️ 演武堂</div><div class="sroom-sub">点擂台与同门切磋</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">⚔️ 演武堂</div><div class="sroom-sub">点擂台与同门切磋</div></div></div>
 <button class="obj" data-sheet="sheet-spar" style="left:50%;top:58%"><span class="otag">⚔️ 登台切磋</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-spar" style="left:14%;top:68%"><span class="otag">🗡️ 兵器架</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-spar"><div class="sheet-hd"><div class="sheet-title">⚔️ 演武堂</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="vsrow">
         <div class="vscard"><div class="av">🧑‍🎓</div><div class="vn">你</div><div class="vs2" id="sparMeRank">金丹 · 内门弟子</div></div>
@@ -756,7 +759,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-alchemy">
     <img class="sbg" id="alchemyBg" src="room-alchemy.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🧪 丹堂</div><div class="sroom-sub">点丹炉开炉炼丹</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">🧪 丹堂</div><div class="sroom-sub">点丹炉开炉炼丹</div></div></div>
 <button class="obj" data-sheet="sheet-alchemy" style="left:42%;top:52%"><span class="otag">🧪 青铜丹炉</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-alchemy" style="left:12%;top:42%"><span class="otag">🌿 药架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-alchemy" style="left:83%;top:66%"><span class="otag">💧 灵泉池</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-alchemy"><div class="sheet-hd"><div class="sheet-title">🧪 丹堂</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="furnace"><span class="flame">🔥</span><div style="font-size:52px;line-height:1">🫖</div><div class="desc">丹炉正温，药材已下。盯着火候条，指针进绿区时停火。</div></div>
       <div id="alcAct"></div></div></div>
@@ -764,7 +767,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-patrol">
     <img class="sbg" src="room-patrol.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">⚖️ 执法堂</div><div class="sroom-sub">巡山值守 · 点值守亭领差事</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">⚖️ 执法堂</div><div class="sroom-sub">巡山值守 · 点值守亭领差事</div></div></div>
     <button class="obj" data-sheet="sheet-patrol" style="left:62%;top:42%"><span class="otag">⚖️ 值守亭</span><span class="opin"></span></button>
     <div class="glasspanel"><div id="patrolSvg"></div><div class="desc" id="patrolNote" style="text-align:center;margin-top:4px"></div></div>
     <div class="sheet" id="sheet-patrol"><div class="sheet-hd"><div class="sheet-title">⚖️ 巡山差事</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div id="patAct"></div></div></div>
@@ -772,7 +775,7 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-tome">
     <img class="sbg" id="tomeBg" src="room-tome.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">📚 藏经阁</div><div class="sroom-sub">点书架抽功法、查图鉴</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">📚 藏经阁</div><div class="sroom-sub">点书架抽功法、查图鉴</div></div></div>
 <button class="obj" data-sheet="sheet-tome" style="left:24%;top:50%"><span class="otag">📚 剑诀架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-tome" style="left:53%;top:44%"><span class="otag">📚 心法架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-tome" style="left:80%;top:58%"><span class="otag">🪜 登楼</span><span class="opin"></span></button>
     <button class="obj" data-sheet="sheet-spells" style="left:36%;top:71%"><span class="otag">📜 法术架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-divine" style="left:66%;top:26%"><span class="otag">🌌 神通碑</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-tome"><div class="sheet-hd"><div class="sheet-title">📚 藏经阁</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div id="tomeShelf"></div>
@@ -783,13 +786,13 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
   <div class="room sroom" id="room-forge">
     <img class="sbg" id="forgeBg" src="room-forge.jpg" alt="">
     <div class="sshade"></div><div class="godrays"></div>
-    <div class="sroom-head"><button class="room-back" data-close>← 回山门</button><div><div class="sroom-title">🔨 器峰</div><div class="sroom-sub">点法宝架看图鉴</div></div></div>
+    <div class="sroom-head"><button class="room-back" data-close>← 回此世</button><div><div class="sroom-title">🔨 器峰</div><div class="sroom-sub">点法宝架看图鉴</div></div></div>
 <button class="obj" data-sheet="sheet-forge" style="left:46%;top:54%"><span class="otag">🔥 熔炉</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-forge" style="left:77%;top:50%"><span class="otag">🗡️ 法宝架</span><span class="opin"></span></button><button class="obj" data-sheet="sheet-forge" style="left:20%;top:68%"><span class="otag">⚒️ 铁砧</span><span class="opin"></span></button>
     <div class="sheet" id="sheet-forge"><div class="sheet-hd"><div class="sheet-title">🔨 器峰</div><button class="sheet-x" data-sheetclose>收起</button></div><div class="sheet-body"><div class="forgegrid" id="forgeGrid"></div>
       <div class="card"><div class="desc" id="forgeDetail">点一件法宝看它的来历。图鉴随宗门品级解锁，只是观瞻，不占差事次数。</div></div></div></div>
   </div>
   <div class="room" id="room-cheat">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🛠️ 修改器</div><div class="room-sub">自家后院 · 改完即时生效</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🛠️ 修改器</div><div class="room-sub">自家后院 · 改完即时生效</div></div></div>
     <div class="room-body">
       <div class="card">
         <h2>💰 灵石</h2>
@@ -809,15 +812,15 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
     </div>
   </div>
   <div class="room" id="room-blood">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🩸 血脉</div><div class="room-sub">觉醒一脉 · 血脉之力随阶而涨</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🩸 血脉</div><div class="room-sub">觉醒一脉 · 血脉之力随阶而涨</div></div></div>
     <div class="room-body" id="bloodBody"></div>
   </div>
   <div class="room" id="room-worlds">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🌌 诸天万界</div><div class="room-sub">炼虚开界 · 成仙路争霸</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🌌 诸天万界</div><div class="room-sub">炼虚开界 · 成仙路争霸</div></div></div>
     <div class="room-body" id="worldsBody"></div>
   </div>
   <div class="room" id="room-market">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏮 山门集市</div><div class="room-sub">坊市烟火 · 每日新货</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🏮 集市</div><div class="room-sub">坊市烟火 · 每日新货</div></div></div>
     <div class="room-body" id="marketBody"></div>
   </div>
   <div class="room" id="room-hub">
@@ -825,19 +828,19 @@ button.pbtn:active{transform:scale(.955);filter:brightness(1.18)}
     <div class="room-body" id="hubBody"></div>
   </div>
   <div class="room" id="room-rebirth">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🗿 轮回殿</div><div class="room-sub">转世 · 配点 · 回响 · 碑林 · 百世长卷</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🗿 轮回殿</div><div class="room-sub">转世 · 配点 · 回响 · 碑林 · 百世长卷</div></div></div>
     <div class="room-body" id="rebirthBody"></div>
   </div>
   <div id="npcBox"></div>
   <div id="retreatFx"><div class="sky"></div><div class="breath2">🧘</div><div class="rtxt" id="retreatTxt">入定……</div></div>
   <div class="room" id="room-events">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🎲 今日奇遇</div><div class="room-sub">每日刷新 · 选择决定收获</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🎲 今日奇遇</div><div class="room-sub">每日刷新 · 选择决定收获</div></div></div>
     <div class="room-body"><div id="hallEvents"></div></div>
   </div>
 
   <!-- 同门/架构 -->
   <div class="room" id="room-feed">
-    <div class="room-head"><button class="room-back" data-close>← 回山门</button><div><div class="room-title">🏮 同门动态</div><div class="room-sub">山门告示牌 · 今日新鲜事</div></div></div>
+    <div class="room-head"><button class="room-back" data-close>← 回此世</button><div><div class="room-title">🏮 人间动态</div><div class="room-sub">山门告示牌 · 今日新鲜事</div></div></div>
     <div class="room-body">
       <div id="hallFeed"></div>
       <div class="card">
@@ -1082,7 +1085,7 @@ var RB_ALLOC_DEFS=[
  {k:"wuxing",icon:"💡",name:"悟性",desc:"资质悟性，功法神通的门槛与上限"},
  {k:"qiyun",icon:"🍀",name:"气运",desc:"奇遇更频、掉落更好、绝境逢生"},
  {k:"linggen",icon:"🌱",name:"灵根",desc:"30 点三灵根 · 120 点双灵根 · 300 点天灵根"},
- {k:"jiashi",icon:"🏯",name:"家世",desc:"每点 +50 开局灵石 · 150 点外门起步 · 300 点内门嫡系"},
+ {k:"jiashi",icon:"🏯",name:"家世",desc:"每点 +50 开局灵石 · 150 点大族出身 · 300 点名门之后"},
  {k:"renyuan",icon:"🤝",name:"人缘",desc:"同门故人初始态度更亲近"},
  {k:"xuemai",icon:"🩸",name:"血脉",desc:"里程碑维度 · 每 10 点：转世结算倍率 +2%（上限 +40%）",unlock:10},
  {k:"tianming",icon:"🌌",name:"天命",desc:"里程碑维度 · 每 10 点：结算多留 1% 功绩化作点数（上限 30%）",unlock:50}];
@@ -1139,7 +1142,7 @@ function renderRebirthRoom(){
   if(!state||!state.sectId){box.innerHTML='<div class="card"><h2>账本未立</h2><div class="desc">先在山门选一道入门，轮回账本随门派而立。</div></div>';return}
   var alloc=state.alloc||{};var gs=state.guiyiSystems||[];var html="";
   html+='<img src="world-youming.jpg" style="width:100%;height:150px;object-fit:cover;border-radius:14px;display:block">';
-  html+='<div class="card"><h2>📜 本世 · 第 '+state.life+' 世</h2><div class="desc">境界 <b>'+state.rankName+'</b> · 身份 <b>'+state.title+'</b> · 宗门 <b>'+state.gradeName+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b>（结算倍率 ×'+state.evalMult+'）</div>'
+  html+='<div class="card"><h2>📜 本世 · 第 '+state.life+' 世</h2><div class="desc">本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用轮回点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b>（结算倍率 ×'+state.evalMult+'）</div>'
     +'<div class="desc" style="margin-top:4px">本世配点：'+RB_ALLOC_DEFS.map(function(d){return d.icon+d.name+" "+(alloc[d.k]||0)}).join(" · ")+'</div>'
     +'<div class="desc" style="margin-top:4px">轮回称号 <b style="color:#fbbf24">'+rbTitleFor(state.life)+'</b>'+rbNextMs()+'</div>'
     +(state.world?'<div class="desc" style="margin-top:4px">本世世界 <b>'+rbWorldName(state.world)+'</b> · 修炼体系 <b>'+rbSysName(state.system)+'</b> · 本阶别名 <b>'+rbSysRank(state.system,state.rankIndex)+'</b></div>':"")
@@ -1147,7 +1150,7 @@ function renderRebirthRoom(){
   if(state.allocPending){
     if(!rbAlloc)rbAlloc={gengu:0,wuxing:0,qiyun:0,linggen:0,jiashi:0,renyuan:0,xuemai:0,tianming:0};
     var sum=rbAllocSum(rbAlloc),left=state.pool-sum;
-    html+='<div class="card"><h2>🗿 转世配点 · 点数自选</h2><div class="desc">上一世结算点池共 <b style="color:#fbbf24">'+state.pool+'</b> 点。想给哪一维加多少自己填——没有等级上限，只有池子深浅。用不完的点带进这一世当余额；家世每点折 50 开局灵石，配完托管在本体，回山门即到账。</div>'
+    html+='<div class="card"><h2>🗿 转世配点 · 点数自选</h2><div class="desc">上一世结算点池共 <b style="color:#fbbf24">'+state.pool+'</b> 点。想给哪一维加多少自己填——没有等级上限，只有池子深浅。用不完的点带进这一世当余额；家世每点折 50 开局灵石，配完托管在本体，回此世即到账。</div>'
       +RB_ALLOC_DEFS.map(function(d){
         if(d.unlock&&state.life<d.unlock)return '<div class="rbrow"><span style="font-size:20px">'+d.icon+'</span><span style="flex:1"><b>'+d.name+'</b><div class="desc">'+d.desc+'</div></span><span class="desc">第 '+d.unlock+' 世解锁</span></div>';
         return '<div class="rbrow"><span style="font-size:20px">'+d.icon+'</span><span style="flex:1"><b>'+d.name+'</b><div class="desc">'+d.desc+'</div></span><input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" class="rbnum" data-alloc="'+d.k+'" value="'+(rbAlloc[d.k]||0)+'"></div>'
@@ -1172,7 +1175,7 @@ function renderRebirthRoom(){
   if(rbOpening){
     html+='<div class="card"><h2>🌅 新的一世</h2><div class="desc" style="line-height:1.9">'+rbOpening+'</div>'
       +(state.world?'<div class="desc" style="margin-top:6px;line-height:1.9">🌍 这一世落在 <b>'+rbWorldName(state.world)+'</b>——'+RB_WORLDS[state.world].flavor+' 修 <b>'+rbSysName(state.system)+'</b>：'+RB_SYSTEMS[state.system].flavor+'<br>本体系境界：'+RB_SYSTEMS[state.system].ranks.join(" → ")+'</div>':"")
-      +(state.openingStones>0?'<div class="desc" style="margin-top:6px">开局灵石 <b style="color:#fbbf24">'+state.openingStones+'</b> 已托管：回山门即自动到账。</div>':"")
+      +(state.openingStones>0?'<div class="desc" style="margin-top:6px">开局灵石 <b style="color:#fbbf24">'+state.openingStones+'</b> 已托管：回此世即自动到账。</div>':"")
       +'<button class="pbtn" id="btnRbBack" style="margin-top:10px;width:100%">知道了</button></div>';
     box.innerHTML=html;
     $("btnRbBack").addEventListener("click",function(){rbOpening="";renderRebirthRoom()});
@@ -1276,25 +1279,25 @@ function renderHub(){
   var aeF=document.activeElement;if(aeF&&aeF.id==="dynFree")return;
   if(!hasBridge)rbMockDerive();
   if(!state||!state.sectId){
-    box.innerHTML='<div class="card"><h2>账本未立</h2><div class="desc">先回山门选一道入门——轮回从第一世开始，每一世的操作都记在这里。</div><button class="pbtn" id="hubGo" style="margin-top:10px;width:100%">回山门</button></div>';
+    box.innerHTML='<div class="card"><h2>账本未立</h2><div class="desc">先回此世选一道入门——轮回从第一世开始，每一世的操作都记在这里。</div><button class="pbtn" id="hubGo" style="margin-top:10px;width:100%">回此世</button></div>';
     var g0=$("hubGo");if(g0)g0.addEventListener("click",function(){closeRoomsUI()});
     return;
   }
   var html='<img src="world-youming.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:14px;display:block">';
   html+='<div class="card"><h2>☯️ 第 '+state.life+' 世 · '+rbTitleFor(state.life)+'</h2><div class="desc">'
     +(state.world?('落界 <b>'+rbWorldName(state.world)+'</b> · 体系 <b>'+rbSysName(state.system)+'</b>（本阶 '+rbSysRank(state.system,state.rankIndex)+'）<br>'):"")
-    +'宗门品级 <b>'+state.gradeName+'</b> · 境界 <b>'+state.rankName+'</b> · 身份 <b>'+state.title+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b></div></div>';
+    +'本阶 <b>'+rbDispRank(state)+'</b><br>本世功绩 <b>'+state.earned+'</b> · 可用点 <b style="color:#fbbf24">'+state.points+'</b> · 此世评价 <b>'+state.evalGrade+'</b></div></div>';
   if(state.allocPending){
     html+='<div class="card"><h2>🗿 这一世还没开始</h2><div class="desc">上一世的点池（'+state.pool+' 点）等你分配——配哪一维、落哪个界、修哪门体系，都在配点那一刻定下来。</div><button class="pbtn" id="hubAlloc" style="margin-top:10px;width:100%;background:#f59e0b;color:#111;font-weight:800;border-color:#f59e0b">去配点 · 定这一世</button></div>';
   }else{
     html+=rbSimHtml();
     html+='<div class="card"><h2>🎛️ 这一世的操作</h2><div class="desc">这一世要做什么都从这里进：修炼与差事在山门，买卖去集市，闯界去万界，终结这一世去轮回殿。</div><div class="hubops">'
-      +'<button class="pbtn" data-op="scene">🏔️ 进入山门</button>'
+      +'<button class="pbtn" data-op="scene">🏔️ 进入此世</button>'
       +'<button class="pbtn" data-op="room-worlds">🌌 诸天万界</button>'
-      +'<button class="pbtn" data-op="room-market">🏮 山门集市</button>'
+      +'<button class="pbtn" data-op="room-market">🏮 集市</button>'
       +'<button class="pbtn" data-op="room-events">🎲 今日奇遇</button>'
       +'<button class="pbtn" data-op="room-blood">🩸 血脉</button>'
-      +'<button class="pbtn" data-op="room-feed">🏮 同门动态</button>'
+      +'<button class="pbtn" data-op="room-feed">🏮 人间动态</button>'
       +'</div><button class="pbtn" data-op="room-rebirth" style="margin-top:8px;width:100%">🗿 轮回殿 · 结算这一世</button></div>';
   }
   var lives=[];for(var lf=state.life;lf>=1;lf--)lives.push(lf);
@@ -1995,10 +1998,10 @@ function rbLogDeed(method,res){
     if(!res||!state||!state.sectId)return;
     var sim=rbDynLoad();if(sim.life!==state.life)return;
     var h="",t="";
-    if(method==="cultivate"){h="⛏️ 山门修炼";t="每日修炼，轮回点 +"+(res.cultGain||0)+"——这一世的功课，记上了。"}
-    else if(method==="salary"){h="💰 俸禄";t="俸禄到账，轮回点 +"+(res.salary||0)+"。"}
-    else if(method==="reward"){var d=(res.points||0)-((window.__rbPrevPts!=null)?window.__rbPrevPts:(res.points||0));h="🎁 山门差事";t="差事/演练有成，轮回点 "+(d>=0?"+":"")+d+"。"}
-    else if(method==="breakthrough"){h="⬆️ 突破";t="在山门突破至 "+(res.rankName||"")+"——这一世的境界，碑上会记。"}
+    if(method==="cultivate"){h="⛏️ 每日修炼";t="每日修炼，轮回点 +"+(res.cultGain||0)+"——这一世的功课，记上了。"}
+    else if(method==="salary"){h="💰 例银";t="例银到账，轮回点 +"+(res.salary||0)+"。"}
+    else if(method==="reward"){var d=(res.points||0)-((window.__rbPrevPts!=null)?window.__rbPrevPts:(res.points||0));h="🎁 差事历练";t="差事/演练有成，轮回点 "+(d>=0?"+":"")+d+"。"}
+    else if(method==="breakthrough"){h="⬆️ 突破";t="突破至 "+(res.rankName||"")+"——这一世的境界，碑上会记。"}
     else return;
     sim.log.push({h:h,t:t});
     if(sim.log.length>80)sim.log=sim.log.slice(-80);
@@ -2022,6 +2025,12 @@ function rbRenderLifeBar(){
   bar.innerHTML='<div class="card" style="margin-top:0;display:flex;align-items:center;gap:10px;padding:10px 14px"><span style="flex:1" class="desc">☯️ <b>第 '+state.life+' 世</b> · '+nodeTxt+profTxt+(state.world?(" · "+rbWorldName(state.world)+" · "+rbSysName(state.system)):"")+'</span><button class="pbtn" id="lifeBarBtn">回轮回主页</button></div>';
 }
 document.addEventListener("click",function(e){if(e.target&&e.target.id==="lifeBarBtn")openRoom("room-hub")});
+
+/* == v11: 去宗门化 —— 境界只认本世体系阶名 == */
+function rbDispRank(st){
+  if(st&&st.system&&typeof SYS_LADDERS!=="undefined"&&SYS_LADDERS[st.system])return SYS_LADDERS[st.system][st.rankIndex]||st.rankName;
+  return st?st.rankName:"";
+}
 
 function refreshState(){
   if(hasBridge){
@@ -2074,7 +2083,6 @@ function renderPreview(){
 /* —— 天空之城山门页（1.78 / pack v10）：双景可切换、建筑热点进各自房间、每间房布局与互动各异 —— */
 var HALL_ROOMS=["room-lecture","room-spar","room-alchemy","room-forge","room-patrol","room-tome"];
 var SCENE_SPOTS=[
- {room:"room-palace",icon:"🏯",name:"山门大殿",day:[66,25],night:[46,33]},
  {room:"room-tome",icon:"📚",name:"藏经阁",day:[15,33],night:[19,25]},
  {room:"room-alchemy",icon:"🧪",name:"丹堂",day:[26,47],night:[76,40],play:"alchemy"},
  {room:"room-spar",icon:"⚔️",name:"演武台",day:[74,53],night:[82,51],play:"spar"},
@@ -2082,7 +2090,7 @@ var SCENE_SPOTS=[
  {room:"room-lecture",icon:"📖",name:"传功堂",day:[33,58],night:[63,58],play:"lecture"},
  {room:"room-forge",icon:"🔨",name:"器峰",day:[29,75],night:[71,65]},
  {room:"room-patrol",icon:"⚖️",name:"执法堂",day:[56,68],night:[38,72],play:"patrol"},
- {room:"room-market",icon:"🏮",name:"山门集市",day:[10,80],night:[60,82]},
+ {room:"room-market",icon:"🏮",name:"集市",day:[10,80],night:[60,82]},
  {room:"room-rebirth",icon:"🗿",name:"轮回殿",day:[87,84],night:[85,70]}];
 var SECT_FILTER={jian:"hue-rotate(-14deg) saturate(1.06)",fu:"brightness(1.1) sepia(.22) hue-rotate(-8deg)",zhen:"",ti:"sepia(.28) hue-rotate(-18deg) saturate(1.1)",kuilei:"hue-rotate(38deg) saturate(.92)",gui:"hue-rotate(55deg) saturate(1.05) brightness(.94)",mo:"hue-rotate(-38deg) saturate(1.15) brightness(.92)"};
 var FORGE=[
@@ -2234,10 +2242,10 @@ function renderHall(){
   var s=sectById(state.sectId); if(!s)return;
   applySectTheme(s,state.themeMode);
   $("hallCrest").style.backgroundImage=crestUri(s);
-  $("hallSeal").textContent=s.seal;
-  $("hallTitle").textContent=s.names[state.gradeIndex];
-  $("hallSub").textContent=s.name+" · "+s.sect+"一脉 · 「"+s.motto+"」";
-  $("skyGrade").textContent=state.gradeIndex>=10?"圣地":state.gradeName+"宗门";
+  $("hallSeal").textContent=state.world?"界":"轮";
+  $("hallTitle").textContent=state.world?rbWorldName(state.world):"轮回";
+  $("hallSub").textContent=state.system?(rbSysName(state.system)+" · 本阶 "+rbDispRank(state)):("第 "+state.life+" 世 · 轮回之中");
+  $("skyGrade").textContent=state.world?rbWorldName(state.world):"轮回";
   var pct,expText;
   if(state.nextBreakCost>0){
     pct=Math.max(3,Math.min(100,Math.round((state.points||0)/state.nextBreakCost*100)));
@@ -2246,8 +2254,8 @@ function renderHall(){
   $("hallExpText").textContent=expText;
   $("hallExpBar").style.width=pct+"%";
   $("skyChips").innerHTML='<span class="sky-chip">第 <b>'+state.life+'</b> 世</span>'
-    +'<span class="sky-chip">身份 <b>'+state.title+'</b></span>'
-    +'<span class="sky-chip">职位 <b>'+(state.postName||"暂无")+'</b></span>'
+    +(state.system?'<span class="sky-chip">'+rbSysName(state.system)+' · <b>'+rbDispRank(state)+'</b></span>':"")
+    +(state.world?'<span class="sky-chip">'+rbWorldName(state.world)+'</span>':"")
     +(state.allocPending?'<span class="sky-chip" style="color:#fbbf24">🗿 待转世配点（轮回殿）</span>':"");
   var gText,gPct;
   if(state.nextGradeThreshold>0){
@@ -2258,7 +2266,7 @@ function renderHall(){
   $("hallGradeText").textContent=gText;
   $("hallGradeBar").style.width=Math.max(3,Math.min(100,gPct))+"%";
   $("hallLayoutNote").textContent="当前布局 · 境界："+RANKS[state.rankIndex].note;
-  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就（大殿成就殿领取）、🧘 每日修炼、💰 俸禄、演武 / 炼丹 / 奇遇等互动奖励——不再随天数、配置、插件数自动增长。<br>境界靠<b>花轮回点突破</b>，身份随境界晋升；宗门品级与职位资格看<b>本世功绩</b>（累计获得的轮回点，现 '+state.earned+'）。一世终结后去轮回殿结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
+  $("hallStats").innerHTML='<div class="desc">点数只来自这一世的作为：🏆 成就、🧘 每日修炼、💰 例银、演武 / 炼丹 / 奇遇等互动奖励——不再随天数自动增长。<br>境界靠<b>花轮回点突破</b>，阶名按<b>本世体系</b>走（现本世功绩 '+state.earned+'）。一世终结后去轮回殿结算：此世评价越高、结局越壮烈，下一世配点越多。</div>';
   var realmChips=RANKS.map(function(r,i){
     var cls=i<state.rankIndex?"rchip done":(i===state.rankIndex?"rchip cur":"rchip");
     return '<span class="'+cls+'">'+r.name+" · "+IDENTITIES[Math.min(i,5)].name+'</span>';
@@ -2281,7 +2289,7 @@ function renderHall(){
   var salDone = state.lastSalaryDay && state.today && state.lastSalaryDay===state.today;
   if(state.gradeIndex<=0){
     $("hallResText").innerHTML="本门如今<b>不入流</b>：没有俸禄，修炼也无加成（单次 +20 点）。功绩到 100 晋九品起，俸禄与加成随品级水涨船高，一品俸禄 +36 点/日、圣地 +40 点/日。";
-    $("btnSalary").disabled=true; $("salaryLabel").textContent="不入流 · 无俸禄";
+    $("btnSalary").disabled=true; $("salaryLabel").textContent="例银 · 暂无";
   }else{
     $("hallResText").innerHTML="当前品级 <b>"+state.gradeName+"</b>：每日俸禄 <b>+"+state.salary+" 轮回点</b>，修炼加成 <b>+"+state.gradeIndex+"</b>（单次修炼 +"+state.cultGain+" 点）。品级越高，宗门名号越响、山门排面越大、资源越厚。";
     $("btnSalary").disabled=!!salDone;
@@ -2323,7 +2331,7 @@ function renderHall(){
       if(cur.rank>prev.rank)msgs.push("🎉 破境！"+RANKS[prev.rank].name+" → "+RANKS[cur.rank].name);
       if(cur.ident>prev.ident)msgs.push("🎉 身份晋升："+IDENTITIES[prev.ident].name+" → "+IDENTITIES[cur.ident].name);
       if(cur.postElig>prev.postElig && POSTS[cur.postElig])msgs.push("🎉 新职解锁："+POSTS[cur.postElig].name+"（可在大殿自选就任）");
-      if(msgs.length){var pb=$("promoBanner");pb.innerHTML=msgs.join("<br>");pb.classList.add("show")}
+      if(false&&msgs.length){var pb=$("promoBanner");pb.innerHTML=msgs.join("<br>");pb.classList.add("show")}
     }
     localStorage.setItem("sectPromo2",JSON.stringify(cur));
   }catch(e){}
@@ -2336,7 +2344,7 @@ function renderHall(){
   Array.prototype.forEach.call(document.querySelectorAll("#hallOrg .orgrow"),function(el){
     el.addEventListener("click",function(){openRoom(el.getAttribute("data-room"))});
   });
-  $("sparMeRank").textContent=state.rankName+" · "+state.title;
+  $("sparMeRank").textContent=rbDispRank(state);
   renderPlay(s);
   updateScene(s);
   updateScripture(s);
@@ -2383,7 +2391,7 @@ $("sceneToggle").addEventListener("click",function(){
   var s=sectById(state.sectId);if(s)updateScene(s);
 });
 
-/* ── 1.77 互动批：奇遇 / 堂口差事 / 同门动态 / 洞府建设 ── */
+/* ── 1.77 互动批：奇遇 / 堂口差事 / 人间动态 / 洞府建设 ── */
 var FELLOWS=["林惊羽","苏暮云","楚寒烟","叶孤鸿","沈青禾","陆九川","唐小蛮","白未央","江枫眠","洛清辞","顾长风","萧听雨"];
 var EVENTS=[
  {t:"后山灵草",d:"巡山走到后山石缝，瞥见一株凝灵草，药香扑鼻，周围没人。",a:{x:"摘下服下",r:"草香入腹，灵气顺经脉走了一圈。",amt:15},b:{x:"上交丹堂",r:"丹堂长老捋须点头：懂事。记你一功。",amt:10}},
