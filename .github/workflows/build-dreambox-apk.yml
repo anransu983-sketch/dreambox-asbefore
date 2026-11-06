@@ -75,6 +75,11 @@ jobs:
         shell: bash
         run: |
           set -eu
+          if [ ! -f ~/.android/debug.keystore ]; then
+            mkdir -p ~/.android
+            keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10950 -dname "CN=Android Debug,O=Android,C=US"
+            echo "debug keystore missing (cache lost); generated a fresh one, cache will re-seed it"
+          fi
           cp ~/.android/debug.keystore release.keystore
           keytool -list -keystore release.keystore -storepass android -alias androiddebugkey > /dev/null
           printf 'keystore.password=android\nkey.alias=androiddebugkey\nkey.password=android\n' > signing.properties
@@ -161,6 +166,26 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           compression-level: 0
+
+      - name: Publish version release (draft)
+        if: ${{ !inputs.custom_icon }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          ver=$(grep -E '^project\.version\.name=' gradle.properties | cut -d= -f2)
+          ts=$(date +%Y%m%d%H%M)
+          sha=$(git rev-parse --short=6 HEAD)
+          src=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          asset="DreamBox-builtin-arm64-v8a-release-${ts}-${sha}.apk"
+          cp "$src" "$asset"
+          if gh release view "v${ver}" >/dev/null 2>&1; then
+            gh release upload "v${ver}" "$asset" --clobber
+          else
+            gh release create "v${ver}" --draft --title "梦盒 ${ver}" --notes "CI 构建完成，待验包后转正。" "$asset"
+          fi
+          echo "draft release v${ver} now carries ${asset}"
 
       - name: Publish custom icon build
         if: ${{ inputs.custom_icon }}
