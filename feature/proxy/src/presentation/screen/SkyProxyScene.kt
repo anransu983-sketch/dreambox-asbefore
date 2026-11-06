@@ -29,6 +29,9 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,6 +60,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -86,12 +91,14 @@ import java.time.LocalTime
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 private const val SKY_PROXY_URI = "file:///android_asset/sky_proxy_harbor.webp"
 
 /** 五盏系泊灯的横坐标（图比例，定稿画实测）。 */
-private val LANTERN_X = listOf(0.350f, 0.472f, 0.603f, 0.727f, 0.838f)
+private val LANTERN_X = listOf(0.341f, 0.488f, 0.624f, 0.748f, 0.846f)
 private const val LANTERN_HEAD_Y = 0.337f
 private const val LANTERN_NAME_Y = 0.449f
 
@@ -171,6 +178,19 @@ internal fun SkyProxyScene(
             groupCount = groups.size,
             nodeCount = selectedGroup?.proxies?.size ?: talkState.nodeCount,
         )
+    // 对答是长驻协程，抓的是启动那一刻的状态会过时；这份永远读最新值
+    val latestTalkState = rememberUpdatedState(talkState)
+    val latestSelectedGroup = rememberUpdatedState(selectedGroup)
+    val latestTesting = rememberUpdatedState(testingGroupNames)
+    val latestGroups = rememberUpdatedState(groups)
+    fun freshTalk(): HarborTalkState =
+        latestTalkState.value.copy(
+            hour = LocalTime.now().hour,
+            testing = latestTesting.value.isNotEmpty(),
+            groupName = latestSelectedGroup.value?.name ?: latestTalkState.value.groupName,
+            groupCount = latestGroups.value.size,
+            nodeCount = latestSelectedGroup.value?.proxies?.size ?: latestTalkState.value.nodeCount,
+        )
     LaunchedEffect(bubble?.id) {
         val b = bubble ?: return@LaunchedEffect
         delay(4600)
@@ -193,7 +213,7 @@ internal fun SkyProxyScene(
             val (a, b) = pairs[idx % pairs.size]
             idx++
             if (bubble == null) {
-                val (first, second) = talker.chat(a, b, talkNow())
+                val (first, second) = talker.chat(a, b, freshTalk())
                 say(first.first, first.second)
                 delay(2600)
                 say(second.first, second.second)
@@ -214,14 +234,14 @@ internal fun SkyProxyScene(
             remember(w, h) {
                 SkyShotMap(w.toFloat(), h.toFloat(), w.toFloat(), h.toFloat(), 1f, 0.5f, 0.5f, aspect = 1120f / 2240f)
             }
-        val t = clock.floatValue
         if (!fallback) {
             Box(
                 Modifier.fillMaxSize().graphicsLayer {
-                    translationX = sin(2.0 * PI * (t / 11f)).toFloat() * size.width * 0.0035f
-                    translationY = sin(2.0 * PI * (t / 7f)).toFloat() * size.height * 0.0055f
-                    rotationZ = sin(2.0 * PI * (t / 9f)).toFloat() * 0.3f
-                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 13f)).toFloat()
+                    val t = clock.floatValue
+                    translationX = sin(2.0 * PI * (t / 12f)).toFloat() * size.width * 0.0035f
+                    translationY = sin(2.0 * PI * (t / 8f)).toFloat() * size.height * 0.0055f
+                    rotationZ = sin(2.0 * PI * (t / 10f)).toFloat() * 0.3f
+                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 15f)).toFloat()
                     scaleX = breathe
                     scaleY = breathe
                 },
@@ -240,7 +260,7 @@ internal fun SkyProxyScene(
                     testing = testingGroupNames.isNotEmpty(),
                     nodeView = selectedGroup != null,
                 )
-                HarborNpcLayer(map = map, t = t)
+                HarborNpcLayer(map = map, clock = clock)
             }
         } else {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SkyNightBase, SkyDeepBase))))
@@ -306,11 +326,7 @@ internal fun SkyProxyScene(
                 if (!fallback) {
                     pageGroups.forEachIndexed { index, group ->
                         val cx = LANTERN_X[index]
-                        SkyGlowName(
-                            center = map.at(Offset(cx, LANTERN_NAME_Y)),
-                            text = group.name,
-                            gold = false,
-                        )
+                        HarborLanternName(map = map, cx = cx, name = group.name)
                         ProxyHotspot(
                             center = map.at(Offset(cx, LANTERN_HEAD_Y)),
                             wDp = 92.dp,
@@ -467,8 +483,7 @@ internal fun SkyProxyScene(
             // 气泡：浮在说话人头顶（走动的人会带着气泡一起走）
             val b = bubble
             if (b != null && !fallback) {
-                val anchor = npcAnchor(b.npc, t)
-                HarborBubble(center = map.at(anchor), text = b.text)
+                HarborBubble(text = b.text, centerAt = { map.at(npcAnchor(b.npc, clock.floatValue)) })
             }
         }
     }
@@ -508,62 +523,68 @@ private fun npcFacingLeft(npc: HarborNpc, t: Float): Boolean =
         else -> false
     }
 
-/** NPC 画片层：五人按各自的路数动（走、扛、盘绳、瞭望、坐船）。 */
+/** NPC 画片层：五人按各自的路数动（走、扛、盘绳、瞭望、坐船）。时钟只在 offset/layer 阶段读，不触发重组。 */
 @Composable
-private fun HarborNpcLayer(map: SkyShotMap, t: Float) {
+private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
     @Composable
     fun sprite(npc: HarborNpc, uri: String, heightDp: Dp, bobAmp: Float, bobPeriod: Float) {
-        val anchor = npcAnchor(npc, t)
-        val bob = sin(2.0 * PI * (t / bobPeriod)).toFloat() * bobAmp
-        val pos = map.at(Offset(anchor.x, anchor.y + bob))
-        val flip = npcFacingLeft(npc, t)
         HarborSpriteImage(
             assetUri = uri,
             modifier =
                 Modifier.offset {
-                    IntOffset((pos.x - heightDp.toPx() / 2f).roundToInt(), (pos.y - heightDp.toPx()).roundToInt())
-                }
+                        val tt = clock.floatValue
+                        val anchor = npcAnchor(npc, tt)
+                        val bob = sin(2.0 * PI * (tt / bobPeriod)).toFloat() * bobAmp
+                        val pos = map.at(Offset(anchor.x, anchor.y + bob))
+                        IntOffset((pos.x - heightDp.toPx() / 2f).roundToInt(), (pos.y - heightDp.toPx()).roundToInt())
+                    }
                     .height(heightDp)
                     .graphicsLayer {
-                        scaleX = if (flip) -1f else 1f
+                        val tt = clock.floatValue
+                        scaleX = if (npcFacingLeft(npc, tt)) -1f else 1f
                         rotationZ =
                             when (npc) {
-                                HarborNpc.Rope -> sin(2.0 * PI * (t / 2.6f)).toFloat() * 1.4f
-                                HarborNpc.Boat -> sin(2.0 * PI * (t / 5.5f)).toFloat() * 1.1f
+                                HarborNpc.Rope -> sin(2.0 * PI * (tt / 2.5f)).toFloat() * 1.4f
+                                HarborNpc.Boat -> sin(2.0 * PI * (tt / 6f)).toFloat() * 1.1f
                                 else -> 0f
                             }
                     },
         )
     }
-    sprite(HarborNpc.Lookout, "file:///android_asset/npc_lookout.webp", 58.dp, 0.0006f, 7f)
-    sprite(HarborNpc.Lantern, "file:///android_asset/npc_lantern.webp", 62.dp, 0.0016f, 0.85f)
+    sprite(HarborNpc.Lookout, "file:///android_asset/npc_lookout.webp", 58.dp, 0.0006f, 8f)
+    sprite(HarborNpc.Lantern, "file:///android_asset/npc_lantern.webp", 62.dp, 0.0016f, 0.8f)
     sprite(HarborNpc.Crate, "file:///android_asset/npc_crate.webp", 60.dp, 0.0018f, 0.8f)
-    sprite(HarborNpc.Rope, "file:///android_asset/npc_rope.webp", 60.dp, 0.0012f, 2.6f)
-    sprite(HarborNpc.Boat, "file:///android_asset/npc_boat.webp", 54.dp, 0.0022f, 5.5f)
+    sprite(HarborNpc.Rope, "file:///android_asset/npc_rope.webp", 60.dp, 0.0012f, 2.5f)
+    sprite(HarborNpc.Boat, "file:///android_asset/npc_boat.webp", 54.dp, 0.0022f, 6f)
 }
 
 
-/** NPC 画片：直接解码合并后的 asset（不走图片库，零依赖风险）。 */
+/** NPC 画片：IO 线程解码合并后的 asset（不走图片库，零依赖风险）。 */
 @Composable
 private fun HarborSpriteImage(assetUri: String, modifier: Modifier) {
     val ctx = LocalContext.current
-    val bitmap =
-        remember(assetUri) {
-            runCatching {
-                ctx.assets.open(assetUri.removePrefix("file:///android_asset/")).use { BitmapFactory.decodeStream(it) }
-                    ?.asImageBitmap()
-            }.getOrNull()
+    val bitmap by
+        produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, assetUri) {
+            value =
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        ctx.assets.open(assetUri.removePrefix("file:///android_asset/")).use { BitmapFactory.decodeStream(it) }
+                            ?.asImageBitmap()
+                    }.getOrNull()
+                }
         }
-    if (bitmap != null) {
-        Image(bitmap = bitmap, contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
+    val bmp = bitmap
+    if (bmp != null) {
+        Image(bitmap = bmp, contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
     }
 }
 
 /** 羊皮纸小气泡：港口的人说话的地方。 */
 @Composable
-private fun HarborBubble(center: Offset, text: String) {
+private fun HarborBubble(centerAt: () -> Offset, text: String) {
     Box(
         Modifier.offset {
+                val center = centerAt()
                 IntOffset((center.x - 95.dp.toPx()).roundToInt(), (center.y - 118.dp.toPx()).roundToInt())
             }
             .width(190.dp)
@@ -752,30 +773,90 @@ private fun NodeLightRow(
     }
 }
 
-/** 灯下的组名光字。 */
+/** 灯名：组名开头的符号（emoji 等）做灯头上方的徽记，正名沿灯柱竖排。 */
 @Composable
-private fun SkyGlowName(center: Offset, text: String, gold: Boolean) {
+private fun HarborLanternName(map: SkyShotMap, cx: Float, name: String) {
+    val badge = name.takeWhile { !it.isLetterOrDigit() }.trim()
+    val rawRest = name.drop(badge.length).trim()
+    val rest = rawRest.ifEmpty { name.trim() }
+    if (badge.isNotEmpty() && rawRest.isNotEmpty()) {
+        val pos = map.at(Offset(cx, 0.303f))
+        Box(
+            Modifier.offset { IntOffset((pos.x - 15.dp.toPx()).roundToInt(), (pos.y - 13.dp.toPx()).roundToInt()) }
+                .width(30.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText(
+                badge,
+                style =
+                    TextStyle(
+                        fontSize = 15.sp,
+                        textAlign = TextAlign.Center,
+                        shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.6f), blurRadius = 8f),
+                    ),
+                maxLines = 1,
+            )
+        }
+    }
+    VerticalGlowText(topCenter = map.at(Offset(cx, 0.358f)), text = rest, maxHeight = 78.dp)
+}
+
+/** 竖排光字：汉字逐字正立成列；连续的拉丁/数字作一格整体顺时针转 90°，自上而下读；纯符号格正立。超高末尾收「…」。 */
+@Composable
+private fun VerticalGlowText(topCenter: Offset, text: String, maxHeight: Dp) {
+    val fontSize = 12.5.sp
+    val cells = remember(text) { glowCells(text) }
+    val cellH = (fontSize.value * 1.3f).dp
+    var used = 0.dp
+    val shown = mutableListOf<String>()
+    for (c in cells) {
+        val h = if (glowCellRotated(c)) (c.length * fontSize.value * 0.55f).dp else cellH
+        if (used + h > maxHeight) {
+            shown.add("…")
+            break
+        }
+        shown.add(c)
+        used += h
+    }
     Box(
-        Modifier.offset { IntOffset((center.x - 60.dp.toPx()).roundToInt(), (center.y - 16.dp.toPx()).roundToInt()) }
-            .width(120.dp),
-        contentAlignment = Alignment.Center,
+        Modifier.offset { IntOffset((topCenter.x - 12.dp.toPx()).roundToInt(), topCenter.y.roundToInt()) }
+            .width(24.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        BasicText(
-            text,
-            style =
-                TextStyle(
-                    fontFamily = FontFamily.Serif,
-                    fontSize = 14.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (gold) SkyBadgeGold else SkyLabelCore,
-                    textAlign = TextAlign.Center,
-                    shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.65f), blurRadius = 9f),
-                ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            shown.forEach { c ->
+                BasicText(
+                    c,
+                    style =
+                        TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = fontSize,
+                            fontWeight = FontWeight.SemiBold,
+                            color = SkyLabelCore,
+                            textAlign = TextAlign.Center,
+                            shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.65f), blurRadius = 9f),
+                        ),
+                    maxLines = 1,
+                    modifier = if (glowCellRotated(c)) Modifier.verticalCell() else Modifier,
+                )
+            }
+        }
     }
 }
+
+/** 切格：单个汉字一格；其余连续字符一格。 */
+private fun glowCells(text: String): List<String> =
+    Regex("[\u4e00-\u9fff]|[^\u4e00-\u9fff]+").findAll(text).map { it.value }.filter { it.isNotBlank() }.toList()
+
+/** 拉丁/数字格旋转成竖排；单字与纯符号格正立。 */
+private fun glowCellRotated(cell: String): Boolean = cell.length > 1 && cell.any { it.isLetterOrDigit() }
+
+/** 把一行横字转成竖排一格：测量宽高互换，内容顺时针转 90°。 */
+private fun Modifier.verticalCell(): Modifier =
+    layout { measurable, constraints ->
+        val p = measurable.measure(Constraints(maxWidth = 120.dp.roundToPx()))
+        layout(p.height, p.width) { p.placeWithLayer((p.height - p.width) / 2, (p.width - p.height) / 2) { rotationZ = 90f } }
+    }
 
 @Composable
 private fun GlowCenterText(center: Offset, text: String, size: Int) {

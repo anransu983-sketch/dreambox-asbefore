@@ -363,10 +363,10 @@ private fun SkySettingScene(
             Box(
                 Modifier.fillMaxSize().graphicsLayer {
                     val t = clock.floatValue
-                    translationX = sin(2.0 * PI * (t / 11f)).toFloat() * size.width * 0.0035f
-                    translationY = sin(2.0 * PI * (t / 7f)).toFloat() * size.height * 0.0055f
-                    rotationZ = sin(2.0 * PI * (t / 9f)).toFloat() * 0.3f
-                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 13f)).toFloat()
+                    translationX = sin(2.0 * PI * (t / 12f)).toFloat() * size.width * 0.0035f
+                    translationY = sin(2.0 * PI * (t / 8f)).toFloat() * size.height * 0.0055f
+                    rotationZ = sin(2.0 * PI * (t / 10f)).toFloat() * 0.3f
+                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 15f)).toFloat()
                     scaleX = breathe
                     scaleY = breathe
                 },
@@ -615,7 +615,7 @@ private fun SkyShipAmbient(
         val bloomV = bloom()
         // 气球内光：船的心脏，慢呼吸
         run {
-            val breathe = 0.5f + 0.5f * sin(2.0 * PI * (t / 9f)).toFloat()
+            val breathe = 0.5f + 0.5f * sin(2.0 * PI * (t / 10f)).toFloat()
             val a = (0.045f + 0.025f * breathe) * lampMul
             val c = Offset(0.52f * w, 0.315f * h)
             drawCircle(

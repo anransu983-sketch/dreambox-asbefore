@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -233,7 +234,7 @@ fun SkyBackdropFull(
             contentDescription = null,
             modifier =
                 Modifier.offset { map.imageOffset }
-                    .size(with(density) { map.iwS.toDp() }, with(density) { map.ihS.toDp() }),
+                    .requiredSize(with(density) { map.iwS.toDp() }, with(density) { map.ihS.toDp() }),
             contentScale = ContentScale.FillBounds,
             colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(sat) }),
         )

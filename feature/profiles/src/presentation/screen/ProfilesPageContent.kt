@@ -97,6 +97,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -316,8 +317,7 @@ private val SealRed = Color(0xFFB33A2B)
 
 /** 四卷的位置（图比例，定稿画实测：右墙 2×2 卷轴架）。 */
 private val PROFILE_SLOTS: List<Offset> =
-    listOf(
-        Offset(0.698f, 0.322f),
+    listOf(Offset(0.695f, 0.332f), Offset(0.877f, 0.332f), Offset(0.695f, 0.552f), Offset(0.877f, 0.552f)),
         Offset(0.878f, 0.322f),
         Offset(0.698f, 0.548f),
         Offset(0.878f, 0.548f),
@@ -388,10 +388,10 @@ private fun SkyProfileScene(
             Box(
                 Modifier.fillMaxSize().graphicsLayer {
                     val t = clock.floatValue
-                    translationX = sin(2.0 * PI * (t / 11f)).toFloat() * size.width * 0.0035f
-                    translationY = sin(2.0 * PI * (t / 7f)).toFloat() * size.height * 0.0055f
-                    rotationZ = sin(2.0 * PI * (t / 9f)).toFloat() * 0.3f
-                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 13f)).toFloat()
+                    translationX = sin(2.0 * PI * (t / 12f)).toFloat() * size.width * 0.0035f
+                    translationY = sin(2.0 * PI * (t / 8f)).toFloat() * size.height * 0.0055f
+                    rotationZ = sin(2.0 * PI * (t / 10f)).toFloat() * 0.3f
+                    val breathe = 1.045f + 0.008f * sin(2.0 * PI * (t / 15f)).toFloat()
                     scaleX = breathe
                     scaleY = breathe
                 },
@@ -570,62 +570,28 @@ private fun SkyProfileScene(
     }
 }
 
-/** 卷面上的墨字：名字、来源、流量；当前配置盖红印。停用的卷轴墨色减半。卷面窄，字框只取卷面宽。 */
+/** 卷面上的墨字（竖排）：右列名字、左列来源与流量，红印盖在卷面右下。停用的卷轴墨色减半。 */
 @Composable
 private fun ScrollInkLabel(center: Offset, profile: Profile) {
     Box(
         Modifier.offset {
-                IntOffset((center.x - 24.dp.toPx()).roundToInt(), (center.y - 79.dp.toPx()).roundToInt())
+                IntOffset((center.x - 22.dp.toPx()).roundToInt(), (center.y - 75.dp.toPx()).roundToInt())
             }
-            .size(48.dp, 158.dp),
-        contentAlignment = Alignment.Center,
+            .size(44.dp, 150.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.alpha(if (profile.enabled) 1f else 0.45f),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.alpha(if (profile.enabled) 1f else 0.45f).padding(top = 8.dp),
         ) {
-            BasicText(
-                profile.name,
-                style =
-                    TextStyle(
-                        fontFamily = FontFamily.Serif,
-                        fontSize = 12.5.sp,
-                        lineHeight = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = InkBrown,
-                        textAlign = TextAlign.Center,
-                    ),
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            BasicText(
-                profile.getDisplayProvider(),
-                style =
-                    TextStyle(
-                        fontFamily = FontFamily.Serif,
-                        fontSize = 9.5.sp,
-                        color = InkBrown.copy(alpha = 0.78f),
-                        textAlign = TextAlign.Center,
-                    ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 3.dp),
-            )
-            val total = profile.totalBytes
-            if (total != null && total > 0) {
-                BasicText(
-                    "${compactBytes(profile.usedBytes)}/${compactBytes(total)}",
-                    style =
-                        TextStyle(
-                            fontFamily = FontFamily.Serif,
-                            fontSize = 9.sp,
-                            color = InkBrown.copy(alpha = 0.66f),
-                            textAlign = TextAlign.Center,
-                        ),
-                    maxLines = 1,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                VerticalInkText(profile.getDisplayProvider(), 9.5.sp, InkBrown.copy(alpha = 0.78f), 54.dp)
+                val total = profile.totalBytes
+                if (total != null && total > 0) {
+                    VerticalInkText("${compactBytes(profile.usedBytes)}/${compactBytes(total)}", 9.sp, InkBrown.copy(alpha = 0.66f), 54.dp)
+                }
             }
+            VerticalInkText(profile.name, 13.sp, InkBrown, 108.dp, bold = true)
         }
         if (profile.active) {
             Box(
@@ -651,6 +617,69 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
         }
     }
 }
+
+/** 竖排墨字：汉字逐字正立成列；连续的拉丁/数字作一格整体顺时针转 90°，自上而下读；纯符号格（如旗帜 emoji）正立。超高末尾收「…」。 */
+@Composable
+private fun VerticalInkText(text: String, fontSize: TextUnit, color: Color, maxHeight: Dp, bold: Boolean = false) {
+    val cells = remember(text) { inkCells(text) }
+    val cellH = (fontSize.value * 1.3f).dp
+    var used = 0.dp
+    val shown = mutableListOf<String>()
+    for (c in cells) {
+        val h = if (inkCellRotated(c)) (c.length * fontSize.value * 0.55f).dp else cellH
+        if (used + h > maxHeight) {
+            shown.add("…")
+            break
+        }
+        shown.add(c)
+        used += h
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        shown.forEach { c ->
+            if (inkCellRotated(c)) {
+                BasicText(
+                    c,
+                    style =
+                        TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = fontSize,
+                            fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
+                            color = color,
+                            textAlign = TextAlign.Center,
+                        ),
+                    maxLines = 1,
+                    modifier = Modifier.verticalCell(),
+                )
+            } else {
+                BasicText(
+                    c,
+                    style =
+                        TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = fontSize,
+                            fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
+                            color = color,
+                            textAlign = TextAlign.Center,
+                        ),
+                )
+            }
+        }
+    }
+}
+
+/** 切格：单个汉字一格；其余连续字符一格。 */
+private fun inkCells(text: String): List<String> =
+    Regex("[\u4e00-\u9fff]|[^\u4e00-\u9fff]+").findAll(text).map { it.value }.filter { it.isNotBlank() }.toList()
+
+/** 拉丁/数字格旋转成竖排；单字与纯符号格正立。 */
+private fun inkCellRotated(cell: String): Boolean = cell.length > 1 && cell.any { it.isLetterOrDigit() }
+
+/** 把一行横字转成竖排一格：测量宽高互换，内容顺时针转 90°。 */
+private fun Modifier.verticalCell(): Modifier =
+    layout { measurable, constraints ->
+        val p = measurable.measure(Constraints(maxWidth = 120.dp.roundToPx()))
+        layout(p.height, p.width) { p.placeWithLayer((p.height - p.width) / 2, (p.width - p.height) / 2) { rotationZ = 90f } }
+    }
 
 /** 卷面太窄，流量写短：0B/820GB。 */
 private fun compactBytes(v: Long): String = ByteFormatter.format(v).replace(" ", "").replace(".00", "")
