@@ -196,6 +196,37 @@ internal fun SkyProxyScene(
         delay(4600)
         if (bubble?.id == b.id) bubble = null
     }
+    // 换套 UI（她令）：组名不做标签贴灯。点灯＝问名：瞭望手出声报幕，组名同时被灯光
+    // 投在甲板前的云海上，几秒后被云气冲散；进港时瞭望手报当前组一次。
+    var projectedName by remember { mutableStateOf<String?>(null) }
+    var projectionSeq by remember { mutableIntStateOf(0) }
+    fun announceGroup(name: String) {
+        say(HarborNpc.Lookout, name)
+        projectionSeq++
+        projectedName = name
+    }
+    LaunchedEffect(projectionSeq) {
+        if (projectionSeq > 0) {
+            delay(3700)
+            projectedName = null
+        }
+    }
+    var entryAnnounced by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedGroup?.name, groups.size, active) {
+        if (selectedGroup != null) {
+            entryAnnounced = false
+        } else if (active && !fallback && !entryAnnounced && groups.isNotEmpty()) {
+            delay(800)
+            val cur =
+                groups.firstOrNull { it.now != null && it.now == latestTalkState.value.nodeName }?.name
+                    ?: groups.firstOrNull { it.name == "Proxy" }?.name
+                    ?: groups.firstOrNull()?.name
+            if (cur != null) {
+                announceGroup(cur)
+                entryAnnounced = true
+            }
+        }
+    }
     // 碰头对答：页面活跃且在组视图时，每隔一阵随机挑一对邻人聊两句
     LaunchedEffect(active, selectedGroup?.name, fallback) {
         if (!active || selectedGroup != null || fallback) return@LaunchedEffect
@@ -326,7 +357,6 @@ internal fun SkyProxyScene(
                 if (!fallback) {
                     pageGroups.forEachIndexed { index, group ->
                         val cx = LANTERN_X[index]
-                        HarborLanternName(map = map, cx = cx, name = group.name)
                         ProxyHotspot(
                             center = map.at(Offset(cx, LANTERN_HEAD_Y)),
                             wDp = 92.dp,
@@ -336,7 +366,7 @@ internal fun SkyProxyScene(
                             onPressedChange = { p ->
                                 pressedKey = if (p) "lan$index" else if (pressedKey == "lan$index") null else pressedKey
                             },
-                            onClick = { onSelectGroup(group) },
+                            onClick = { announceGroup(group.name); onSelectGroup(group) },
                             onLongClick = { onTestGroup(group.name) },
                         )
                     }
@@ -480,12 +510,71 @@ internal fun SkyProxyScene(
                 }
             }
 
+            // 云海投影：被点到的组名投在下层甲板前的云气上
+            val pn = projectedName
+            if (pn != null && !fallback) {
+                HarborNameProjection(map = map, name = pn, seq = projectionSeq)
+            }
+
             // 气泡：浮在说话人头顶（走动的人会带着气泡一起走）
             val b = bubble
             if (b != null && !fallback) {
                 HarborBubble(text = b.text, centerAt = { map.at(npcAnchor(b.npc, clock.floatValue)) })
             }
         }
+    }
+}
+
+/**
+ * 组名投影：灯光把名字投到甲板前的云气上——大衬线字、微斜、略压扁像贴着云面，
+ * 先在云上晕出一片光，再浮字，停一会儿被云气冲淡散去。名字只在被问时出现。
+ */
+@Composable
+private fun HarborNameProjection(map: SkyShotMap, name: String, seq: Int) {
+    val alphaAnim = remember(seq) { Animatable(0f) }
+    LaunchedEffect(seq) {
+        alphaAnim.animateTo(1f, tween(450))
+        delay(2400)
+        alphaAnim.animateTo(0f, tween(800))
+    }
+    val center = map.at(Offset(0.635f, 0.470f))
+    Box(
+        Modifier.offset { IntOffset((center.x - 170.dp.toPx()).roundToInt(), (center.y - 40.dp.toPx()).roundToInt()) }
+            .width(340.dp)
+            .height(80.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer {
+                    scaleY = 0.55f
+                    this.alpha = alphaAnim.value * 0.55f
+                }
+                .background(
+                    Brush.radialGradient(
+                        listOf(Color(0xFFBFE0FF).copy(alpha = 0.38f), Color.Transparent),
+                    ),
+                ),
+        )
+        BasicText(
+            name,
+            style =
+                TextStyle(
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SkyLabelCore,
+                    textAlign = TextAlign.Center,
+                    shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.85f), blurRadius = 16f),
+                ),
+            maxLines = 1,
+            modifier =
+                Modifier.graphicsLayer {
+                    rotationZ = -2.5f
+                    scaleY = 0.88f
+                    this.alpha = alphaAnim.value
+                },
+        )
     }
 }
 
@@ -772,91 +861,6 @@ private fun NodeLightRow(
         )
     }
 }
-
-/** 灯名：组名开头的符号（emoji 等）做灯头上方的徽记，正名沿灯柱竖排。 */
-@Composable
-private fun HarborLanternName(map: SkyShotMap, cx: Float, name: String) {
-    val badge = name.takeWhile { !it.isLetterOrDigit() }.trim()
-    val rawRest = name.drop(badge.length).trim()
-    val rest = rawRest.ifEmpty { name.trim() }
-    if (badge.isNotEmpty() && rawRest.isNotEmpty()) {
-        val pos = map.at(Offset(cx, 0.303f))
-        Box(
-            Modifier.offset { IntOffset((pos.x - 15.dp.toPx()).roundToInt(), (pos.y - 13.dp.toPx()).roundToInt()) }
-                .width(30.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            BasicText(
-                badge,
-                style =
-                    TextStyle(
-                        fontSize = 15.sp,
-                        textAlign = TextAlign.Center,
-                        shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.6f), blurRadius = 8f),
-                    ),
-                maxLines = 1,
-            )
-        }
-    }
-    VerticalGlowText(topCenter = map.at(Offset(cx, 0.358f)), text = rest, maxHeight = 78.dp)
-}
-
-/** 竖排光字：汉字逐字正立成列；连续的拉丁/数字作一格整体顺时针转 90°，自上而下读；纯符号格正立。超高末尾收「…」。 */
-@Composable
-private fun VerticalGlowText(topCenter: Offset, text: String, maxHeight: Dp) {
-    val fontSize = 12.5.sp
-    val cells = remember(text) { glowCells(text) }
-    val cellH = (fontSize.value * 1.3f).dp
-    var used = 0.dp
-    val shown = mutableListOf<String>()
-    for (c in cells) {
-        val h = if (glowCellRotated(c)) (c.length * fontSize.value * 0.55f).dp else cellH
-        if (used + h > maxHeight) {
-            shown.add("…")
-            break
-        }
-        shown.add(c)
-        used += h
-    }
-    Box(
-        Modifier.offset { IntOffset((topCenter.x - 12.dp.toPx()).roundToInt(), topCenter.y.roundToInt()) }
-            .width(24.dp),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            shown.forEach { c ->
-                BasicText(
-                    c,
-                    style =
-                        TextStyle(
-                            fontFamily = FontFamily.Serif,
-                            fontSize = fontSize,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SkyLabelCore,
-                            textAlign = TextAlign.Center,
-                            shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.65f), blurRadius = 9f),
-                        ),
-                    maxLines = 1,
-                    modifier = if (glowCellRotated(c)) Modifier.verticalCell() else Modifier,
-                )
-            }
-        }
-    }
-}
-
-/** 切格：单个汉字一格；其余连续字符一格。 */
-private fun glowCells(text: String): List<String> =
-    Regex("[\u4e00-\u9fff]|[^\u4e00-\u9fff]+").findAll(text).map { it.value }.filter { it.isNotBlank() }.toList()
-
-/** 拉丁/数字格旋转成竖排；单字与纯符号格正立。 */
-private fun glowCellRotated(cell: String): Boolean = cell.length > 1 && cell.any { it.isLetterOrDigit() }
-
-/** 把一行横字转成竖排一格：测量宽高互换，内容顺时针转 90°。 */
-private fun Modifier.verticalCell(): Modifier =
-    layout { measurable, constraints ->
-        val p = measurable.measure(Constraints(maxWidth = 120.dp.roundToPx()))
-        layout(p.height, p.width) { p.placeWithLayer((p.height - p.width) / 2, (p.width - p.height) / 2) { rotationZ = 90f } }
-    }
 
 @Composable
 private fun GlowCenterText(center: Offset, text: String, size: Int) {
