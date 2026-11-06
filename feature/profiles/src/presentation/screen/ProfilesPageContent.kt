@@ -38,10 +38,12 @@ import com.suanran.dreambox.presentation.component.card.ProfileCard
 import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.misc.CenteredText
+import com.suanran.dreambox.presentation.component.navigation.LocalNavigator
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.icon.FlyCat
 import com.suanran.dreambox.presentation.icon.flycat.BadgePlus
 import com.suanran.dreambox.presentation.icon.flycat.CircleFadingArrowUp
+import com.suanran.dreambox.presentation.navigation.Route
 import com.suanran.dreambox.presentation.theme.UiDp
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -338,6 +340,7 @@ private fun SkyProfileScene(
     onToggleProfile: (Profile) -> Unit,
 ) {
     val pager = LocalMainPagerState.current
+    val navigator = LocalNavigator.current
     val active = pager.selectedPage == BottomBarDestination.Config.ordinal
     SkyStatusBarIcons(active)
     val handlePageChange = LocalHandlePageChange.current
@@ -509,6 +512,19 @@ private fun SkyProfileScene(
                         pressedKey = if (p) "add" else if (pressedKey == "add") null else pressedKey
                     },
                     onClick = onAddProfile,
+                    onLongClick = {},
+                )
+                // 归位（清单第 5 条）：覆写搬进工坊，针线角（针筒与线轴的小台）是它的家
+                ProfileHotspot(
+                    center = map.at(Offset(0.665f, 0.618f)),
+                    wDp = 115.dp,
+                    hDp = 125.dp,
+                    index = 10,
+                    contentDescription = "覆写",
+                    onPressedChange = { p ->
+                        pressedKey = if (p) "sewing" else if (pressedKey == "sewing") null else pressedKey
+                    },
+                    onClick = { navigator.push(Route.Override) },
                     onLongClick = {},
                 )
             } else {
@@ -782,6 +798,9 @@ private fun SkyWorkshopAmbient(
         }
         val flick = 0.86f + 0.14f * sin(2.0 * PI * (t / 3.7f)).toFloat()
         glow(Offset(0.660f, 0.112f), size.width * 0.16f, Color(0xFFFFC978), 0.30f * flick)
+        // 针线角微光：线轴接光、慢呼吸——覆写住在这里的记号
+        val sewGlint = 0.5f + 0.5f * sin(2.0 * PI * (t / 5f) + 1.3f).toFloat()
+        glow(Offset(0.665f, 0.618f), size.width * 0.06f, Color(0xFFFFD98A), 0.06f + 0.10f * sewGlint)
         // 窗外星光
         val starSeeds =
             listOf(
@@ -808,6 +827,7 @@ private fun SkyWorkshopAmbient(
             when {
                 bk == "update" -> glow(Offset(0.562f, 0.47f), size.width * 0.15f, Color(0xFFFFC978), 0.34f * bv)
                 bk == "add" -> glow(Offset(0.795f, 0.932f), size.width * 0.13f, Color(0xFFFFC978), 0.34f * bv)
+                bk == "sewing" -> glow(Offset(0.665f, 0.618f), size.width * 0.11f, Color(0xFFFFC978), 0.34f * bv)
                 bk.startsWith("slot") ->
                     PROFILE_SLOTS.getOrNull(bk.removePrefix("slot").toIntOrNull() ?: -1)?.let {
                         glow(it, size.width * 0.16f, SkyBadgeGold, 0.30f * bv)
