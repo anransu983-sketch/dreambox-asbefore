@@ -81,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -95,6 +96,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
@@ -317,11 +319,7 @@ private val SealRed = Color(0xFFB33A2B)
 
 /** 四卷的位置（图比例，定稿画实测：右墙 2×2 卷轴架）。 */
 private val PROFILE_SLOTS: List<Offset> =
-    listOf(Offset(0.695f, 0.332f), Offset(0.877f, 0.332f), Offset(0.695f, 0.552f), Offset(0.877f, 0.552f)),
-        Offset(0.878f, 0.322f),
-        Offset(0.698f, 0.548f),
-        Offset(0.878f, 0.548f),
-    )
+    listOf(Offset(0.695f, 0.332f), Offset(0.877f, 0.332f), Offset(0.695f, 0.552f), Offset(0.877f, 0.552f))
 
 /**
  * 配置页 · 天空版：齿轮工坊整屏画。配置是右墙卷轴架上的卷轴，名字用墨写在卷面上
