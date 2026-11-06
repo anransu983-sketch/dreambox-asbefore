@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -89,6 +90,8 @@ import com.suanran.dreambox.presentation.component.sky.rememberSkyClock
 import com.suanran.dreambox.presentation.component.sky.skyLatencyColor
 import java.time.LocalTime
 import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlinx.coroutines.Dispatchers
@@ -584,18 +587,15 @@ private fun npcAnchor(npc: HarborNpc, t: Float): Offset =
         HarborNpc.Lantern -> {
             val cyc = (t % 60f) / 60f
             val tri = if (cyc < 0.5f) cyc * 2f else 2f - cyc * 2f
-            Offset(0.295f + 0.58f * tri, 0.404f)
+            Offset(0.295f + 0.58f * tri, 0.404f + sin(PI * tri).toFloat() * 0.008f)
         }
         HarborNpc.Crate -> {
-            val cyc = (t % 40f) / 40f
-            val k =
-                when {
-                    cyc < 0.4f -> cyc / 0.4f
-                    cyc < 0.5f -> 1f
-                    cyc < 0.9f -> 1f - (cyc - 0.5f) / 0.4f
-                    else -> 0f
-                }
-            Offset(0.475f + (0.262f - 0.475f) * k, 0.720f + (0.550f - 0.720f) * k)
+            val k = crateProgress(t)
+            val s = k * 7f
+            val i = floor(s)
+            val f = s - i
+            val kk = ((i + f * f * (3f - 2f * f)) / 7f).coerceIn(0f, 1f)
+            Offset(0.475f + (0.262f - 0.475f) * kk, 0.720f + (0.550f - 0.720f) * kk)
         }
         HarborNpc.Rope -> Offset(0.618f, 0.690f)
         HarborNpc.Lookout -> Offset(0.207f, 0.270f)
@@ -612,19 +612,83 @@ private fun npcFacingLeft(npc: HarborNpc, t: Float): Boolean =
         else -> false
     }
 
+/** 扛货人的行程进度（0..1）：两端各停一会儿，中途匀速。 */
+private fun crateProgress(t: Float): Float {
+    val cyc = (t % 40f) / 40f
+    return when {
+        cyc < 0.4f -> cyc / 0.4f
+        cyc < 0.5f -> 1f
+        cyc < 0.9f -> 1f - (cyc - 0.5f) / 0.4f
+        else -> 0f
+    }
+}
+
+/**
+ * 行走步态：（向上的脚步起伏 图比例，身体摇摆角）。走路是抬脚-落地，不是平滑滑行：
+ * 起伏取 |sin| 一步一落，摇摆随步频。只有走路的两人有步态，其余返回 null 沿用呼吸浮动。
+ */
+private fun npcStepMotion(npc: HarborNpc, t: Float): Pair<Float, Float>? =
+    when (npc) {
+        HarborNpc.Lantern -> {
+            val cyc = (t % 60f) / 60f
+            val tri = if (cyc < 0.5f) cyc * 2f else 2f - cyc * 2f
+            val phase = tri * 30f
+            val dir = if (cyc < 0.5f) 1f else -1f
+            (abs(sin(PI * phase)).toFloat() * 0.0021f) to (sin(2.0 * PI * phase).toFloat() * 1.1f * dir)
+        }
+        HarborNpc.Crate -> {
+            val k = crateProgress(t)
+            if (k <= 0f || k >= 1f) {
+                0f to 0f
+            } else {
+                val phase = k * 12f
+                (abs(sin(PI * phase)).toFloat() * 0.0016f) to (sin(2.0 * PI * phase).toFloat() * 0.8f)
+            }
+        }
+        else -> null
+    }
+
 /** NPC 画片层：五人按各自的路数动（走、扛、盘绳、瞭望、坐船）。时钟只在 offset/layer 阶段读，不触发重组。 */
 @Composable
 private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
     @Composable
     fun sprite(npc: HarborNpc, uri: String, heightDp: Dp, bobAmp: Float, bobPeriod: Float) {
+        // 脚下贴地影：独立钉在锚点（脚底）不随步态起伏——人是踩在甲板上的，影子先落地。
+        // 船夫坐在云海小船里，船下是云，不画影。
+        if (npc != HarborNpc.Boat) {
+            Box(
+                Modifier.offset {
+                        val pos = map.at(npcAnchor(npc, clock.floatValue))
+                        val w = heightDp.toPx() * 0.68f
+                        val h = heightDp.toPx() * 0.15f
+                        IntOffset((pos.x - w / 2f).roundToInt(), (pos.y - h * 0.6f).roundToInt())
+                    }
+                    .size(heightDp * 0.68f, heightDp * 0.15f)
+                    .drawBehind {
+                        drawOval(
+                            brush =
+                                Brush.radialGradient(
+                                    colors = listOf(Color.Black.copy(alpha = 0.34f), Color.Transparent),
+                                    center = center,
+                                    radius = size.width / 2f,
+                                ),
+                            topLeft = Offset.Zero,
+                            size = size,
+                        )
+                    },
+            )
+        }
         HarborSpriteImage(
             assetUri = uri,
             modifier =
                 Modifier.offset {
                         val tt = clock.floatValue
                         val anchor = npcAnchor(npc, tt)
-                        val bob = sin(2.0 * PI * (tt / bobPeriod)).toFloat() * bobAmp
-                        val pos = map.at(Offset(anchor.x, anchor.y + bob))
+                        val step = npcStepMotion(npc, tt)
+                        val yOff =
+                            step?.let { -it.first }
+                                ?: (sin(2.0 * PI * (tt / bobPeriod)).toFloat() * bobAmp)
+                        val pos = map.at(Offset(anchor.x, anchor.y + yOff))
                         IntOffset((pos.x - heightDp.toPx() / 2f).roundToInt(), (pos.y - heightDp.toPx()).roundToInt())
                     }
                     .height(heightDp)
@@ -632,11 +696,12 @@ private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
                         val tt = clock.floatValue
                         scaleX = if (npcFacingLeft(npc, tt)) -1f else 1f
                         rotationZ =
-                            when (npc) {
-                                HarborNpc.Rope -> sin(2.0 * PI * (tt / 2.5f)).toFloat() * 1.4f
-                                HarborNpc.Boat -> sin(2.0 * PI * (tt / 6f)).toFloat() * 1.1f
-                                else -> 0f
-                            }
+                            (npcStepMotion(npc, tt)?.second ?: 0f) +
+                                when (npc) {
+                                    HarborNpc.Rope -> sin(2.0 * PI * (tt / 2.5f)).toFloat() * 1.4f
+                                    HarborNpc.Boat -> sin(2.0 * PI * (tt / 6f)).toFloat() * 1.1f
+                                    else -> 0f
+                                }
                     },
         )
     }
