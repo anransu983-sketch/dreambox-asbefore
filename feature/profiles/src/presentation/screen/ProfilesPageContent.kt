@@ -570,14 +570,14 @@ private fun SkyProfileScene(
     }
 }
 
-/** 卷面上的墨字：名字、来源、流量；当前配置盖红印。停用的卷轴墨色减半。 */
+/** 卷面上的墨字：名字、来源、流量；当前配置盖红印。停用的卷轴墨色减半。卷面窄，字框只取卷面宽。 */
 @Composable
 private fun ScrollInkLabel(center: Offset, profile: Profile) {
     Box(
         Modifier.offset {
-                IntOffset((center.x - 44.dp.toPx()).roundToInt(), (center.y - 79.dp.toPx()).roundToInt())
+                IntOffset((center.x - 24.dp.toPx()).roundToInt(), (center.y - 79.dp.toPx()).roundToInt())
             }
-            .size(88.dp, 158.dp),
+            .size(48.dp, 158.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -589,12 +589,13 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
                 style =
                     TextStyle(
                         fontFamily = FontFamily.Serif,
-                        fontSize = 15.sp,
+                        fontSize = 12.5.sp,
+                        lineHeight = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = InkBrown,
                         textAlign = TextAlign.Center,
                     ),
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
             BasicText(
@@ -602,7 +603,7 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
                 style =
                     TextStyle(
                         fontFamily = FontFamily.Serif,
-                        fontSize = 10.5.sp,
+                        fontSize = 9.5.sp,
                         color = InkBrown.copy(alpha = 0.78f),
                         textAlign = TextAlign.Center,
                     ),
@@ -613,11 +614,11 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
             val total = profile.totalBytes
             if (total != null && total > 0) {
                 BasicText(
-                    "${ByteFormatter.format(profile.usedBytes)} / ${ByteFormatter.format(total)}",
+                    "${compactBytes(profile.usedBytes)}/${compactBytes(total)}",
                     style =
                         TextStyle(
                             fontFamily = FontFamily.Serif,
-                            fontSize = 9.5.sp,
+                            fontSize = 9.sp,
                             color = InkBrown.copy(alpha = 0.66f),
                             textAlign = TextAlign.Center,
                         ),
@@ -629,10 +630,10 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
         if (profile.active) {
             Box(
                 Modifier.align(Alignment.BottomEnd)
-                    .padding(end = 2.dp, bottom = 6.dp)
+                    .padding(end = 1.dp, bottom = 12.dp)
                     .rotate(-10f)
                     .background(SealRed, RoundedCornerShape(4.dp))
-                    .size(21.dp),
+                    .size(19.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 BasicText(
@@ -640,7 +641,7 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
                     style =
                         TextStyle(
                             fontFamily = FontFamily.Serif,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             textAlign = TextAlign.Center,
@@ -650,6 +651,9 @@ private fun ScrollInkLabel(center: Offset, profile: Profile) {
         }
     }
 }
+
+/** 卷面太窄，流量写短：0B/820GB。 */
+private fun compactBytes(v: Long): String = ByteFormatter.format(v).replace(" ", "").replace(".00", "")
 
 /** 翻页箭头：画架两侧的光字。 */
 @Composable
