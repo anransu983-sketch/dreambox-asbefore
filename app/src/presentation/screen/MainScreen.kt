@@ -150,6 +150,7 @@ fun MainScreen(
                     mainPagerState.selectedPage == 0 -> false
                     mainPagerState.selectedPage == 3 && !windowLayoutMode.usesSplitShell -> false
                     mainPagerState.selectedPage == 2 && !windowLayoutMode.usesSplitShell -> false
+                    mainPagerState.selectedPage == 1 && !windowLayoutMode.usesSplitShell -> false
                     settledMainPage != 0 -> true
                     else -> false
                 }

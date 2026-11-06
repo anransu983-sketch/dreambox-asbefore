@@ -349,6 +349,9 @@ fun ProxyPager(
     Scaffold(
         floatingActionButton = {},
         topBar = {
+            if (!inSplitShell && SKY_PROXY_PAGE) {
+                Box(Modifier.fillMaxWidth().height(0.dp))
+            } else {
             PagerTopBar(
                 scrollBehavior = groupScrollBehavior,
                 onNavigateToProviders = if (inSplitShell) null else onNavigateToProviders,
@@ -385,8 +388,37 @@ fun ProxyPager(
                     }
                 },
             )
+            }
         },
     ) {
+        if (!inSplitShell && SKY_PROXY_PAGE) {
+            SkyProxyScene(
+                isActive = isActive,
+                groups = proxyGroups,
+                selectedGroup = selectedGroupName?.let { groupSelection.selectedGroup ?: displayGroup },
+                testingGroupNames = testingGroupNames,
+                testingProxyNames = testingProxyNames,
+                talkState = HarborTalkState(
+                    running = isProxyRunning,
+                    nodeName = primaryNode?.name,
+                    pingMs = primaryNode?.let { pn -> proxyGroups.flatMap { it.proxies }.firstOrNull { it.name == pn.name }?.delay } ?: -1,
+                    groupName = null,
+                    groupCount = proxyGroups.size,
+                    nodeCount = 0,
+                ),
+                searchQuery = nodeSearchQuery,
+                onSearchQueryChange = { nodeSearchQuery = it },
+                onSelectGroup = groupSelection.selectGroup,
+                onBackToGroups = groupSelection.clearSelection,
+                onSelectProxy = { g, p -> proxyViewModel.selectProxy(g, p) },
+                onForceSelectProxy = { g, p -> proxyViewModel.forceSelectProxy(g, p) },
+                onTestAll = { proxyViewModel.testDelay() },
+                onTestGroup = { proxyViewModel.testDelay(it) },
+                onNavigateToProviders = onNavigateToProviders,
+                searchVisible = nodeSearchVisible,
+                onSearchVisibleChange = { nodeSearchVisible = it },
+            )
+        } else {
         Box(
             modifier = Modifier.fillMaxSize().let { mod -> if (topBarHazeState != null) mod.hazeSource(state = topBarHazeState) else mod }
         ) {
@@ -492,6 +524,7 @@ fun ProxyPager(
                     }
                 }
             } // else (phone mode)
+        }
         }
     }
 }
@@ -1220,3 +1253,5 @@ private fun DelayBigSparkline(history: List<Int>, color: androidx.compose.ui.gra
         )
     }
 }
+
+private const val SKY_PROXY_PAGE = true
