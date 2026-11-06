@@ -634,7 +634,7 @@ private fun npcStepMotion(npc: HarborNpc, t: Float): Pair<Float, Float>? =
             val tri = if (cyc < 0.5f) cyc * 2f else 2f - cyc * 2f
             val phase = tri * 30f
             val dir = if (cyc < 0.5f) 1f else -1f
-            (abs(sin(PI * phase)).toFloat() * 0.0021f) to (sin(2.0 * PI * phase).toFloat() * 1.1f * dir)
+            (abs(sin(PI * phase)).toFloat() * 0.0012f) to (sin(2.0 * PI * phase).toFloat() * 0.8f * dir)
         }
         HarborNpc.Crate -> {
             val k = crateProgress(t)
@@ -642,7 +642,7 @@ private fun npcStepMotion(npc: HarborNpc, t: Float): Pair<Float, Float>? =
                 0f to 0f
             } else {
                 val phase = k * 12f
-                (abs(sin(PI * phase)).toFloat() * 0.0016f) to (sin(2.0 * PI * phase).toFloat() * 0.8f)
+                (abs(sin(PI * phase)).toFloat() * 0.0011f) to (sin(2.0 * PI * phase).toFloat() * 0.6f)
             }
         }
         else -> null
@@ -668,7 +668,7 @@ private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
                         drawOval(
                             brush =
                                 Brush.radialGradient(
-                                    colors = listOf(Color.Black.copy(alpha = 0.34f), Color.Transparent),
+                                    colors = listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent),
                                     center = center,
                                     radius = size.width / 2f,
                                 ),
