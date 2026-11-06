@@ -33,6 +33,7 @@ jobs:
       - name: Upload pack artifact
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: iptest-pack
           path: packs/iptest/iptest-pack-v*.zip
 

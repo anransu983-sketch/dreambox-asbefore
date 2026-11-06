@@ -33,6 +33,7 @@ jobs:
       - name: Upload pack artifact
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: sshtty-pack
           path: packs/sshtty/sshtty-pack-v*.zip
 

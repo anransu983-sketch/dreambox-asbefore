@@ -140,6 +140,7 @@ jobs:
       - name: Upload ABI artifact
         uses: actions/upload-artifact@v7
         with:
+          retention-days: 3
           name: native-${{ inputs.channel }}-${{ inputs.abi }}
           path: |
             jniLibs/${{ inputs.abi }}/libmihomo.so
@@ -150,6 +151,7 @@ jobs:
       - name: Upload core version stamp
         uses: actions/upload-artifact@v7
         with:
+          retention-days: 3
           name: native-${{ inputs.channel }}-core-stamp
           path: build/generated/core-version.properties
           if-no-files-found: error
