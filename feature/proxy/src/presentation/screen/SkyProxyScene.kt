@@ -304,7 +304,7 @@ internal fun SkyProxyScene(
             if (!fallback && selectedGroup == null) {
                 // 提灯人巡逻带（上层甲板）：点到他就说话
                 NpcTouchZone(
-                    center = map.at(Offset(0.585f, 0.404f)),
+                    center = map.at(Offset(0.585f, 0.443f)),
                     wDp = 340.dp,
                     hDp = 62.dp,
                     index = 20,
@@ -470,6 +470,17 @@ internal fun SkyProxyScene(
                             group.proxies.filter { it.name.contains(searchQuery, ignoreCase = true) }
                         }
                     }
+                Box(
+                    Modifier.fillMaxSize()
+                        .padding(
+                            top = with(androidx.compose.ui.platform.LocalDensity.current) { (h * if (searchVisible) 0.545f else 0.512f).toDp() },
+                        )
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, SkyDeepBase.copy(alpha = 0.52f), SkyDeepBase.copy(alpha = 0.66f)),
+                            ),
+                        ),
+                )
                 LazyColumn(
                     modifier =
                         Modifier.fillMaxSize()
@@ -587,7 +598,7 @@ private fun npcAnchor(npc: HarborNpc, t: Float): Offset =
         HarborNpc.Lantern -> {
             val cyc = (t % 60f) / 60f
             val tri = if (cyc < 0.5f) cyc * 2f else 2f - cyc * 2f
-            Offset(0.295f + 0.58f * tri, 0.404f + sin(PI * tri).toFloat() * 0.008f)
+            Offset(0.295f + 0.58f * tri, 0.448f - 0.010f * tri + sin(PI * tri).toFloat() * 0.004f)
         }
         HarborNpc.Crate -> {
             val k = crateProgress(t)
@@ -733,7 +744,7 @@ private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
         if (uriB != null) frame(uriB, aspectB, 1)
     }
     sprite(HarborNpc.Lookout, "file:///android_asset/npc_lookout.webp", 58.dp, 0.0006f, 8f, aspect = 0.5786f)
-    sprite(HarborNpc.Lantern, "file:///android_asset/npc_lantern.webp", 62.dp, 0.0016f, 0.8f, aspect = 0.4734f, uriB = "file:///android_asset/npc_lantern_b.webp", aspectB = 0.3984f)
+    sprite(HarborNpc.Lantern, "file:///android_asset/npc_lantern.webp", 66.dp, 0.0016f, 0.8f, aspect = 0.4734f, uriB = "file:///android_asset/npc_lantern_b.webp", aspectB = 0.3984f)
     sprite(HarborNpc.Crate, "file:///android_asset/npc_crate.webp", 60.dp, 0.0018f, 0.8f, aspect = 0.4906f, uriB = "file:///android_asset/npc_crate_b.webp", aspectB = 0.5141f)
     sprite(HarborNpc.Rope, "file:///android_asset/npc_rope.webp", 60.dp, 0.0012f, 2.5f, aspect = 0.6976f)
     sprite(HarborNpc.Boat, "file:///android_asset/npc_boat.webp", 54.dp, 0.0022f, 6f, aspect = 1.0643f)
@@ -897,17 +908,28 @@ private fun NodeLightRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier.fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 3.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    when {
+                        pressed -> SkyBadgeGold.copy(alpha = 0.22f)
+                        selected -> SkyBadgeGold.copy(alpha = 0.12f)
+                        else -> Color.Transparent
+                    },
+                )
                 .combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() },
+                    interactionSource = interaction,
                     indication = null,
                     onClick = onClick,
                     onLongClick = onLongClick,
                 )
-                .padding(horizontal = 22.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 15.dp),
     ) {
         if (selected) {
             Canvas(Modifier.size(8.dp)) {
@@ -920,7 +942,7 @@ private fun NodeLightRow(
             style =
                 TextStyle(
                     fontFamily = FontFamily.Serif,
-                    fontSize = 15.5.sp,
+                    fontSize = 16.5.sp,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (selected) SkyBadgeGold else SkyLabelCore,
                     shadow = Shadow(color = Color(0xFF8FC8FF).copy(alpha = 0.45f), blurRadius = 7f),
