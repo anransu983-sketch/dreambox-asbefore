@@ -123,6 +123,16 @@ data class SkyHomeState(
     /** 已格式化的速率，如「4.1 KB」；空闲传 null（该项不显示）。 */
     val downText: String? = null,
     val upText: String? = null,
+    /** 当前节点名（未拆拼的原名）。居民：提灯姑娘用。 */
+    val nodeName: String? = null,
+    /** 已连接时长「00:42:17」。居民：提灯姑娘用。 */
+    val uptimeText: String? = null,
+    /** 今日流量，已格式化「1.23 GB」。居民：守树人用。 */
+    val todayTrafficText: String? = null,
+    /** 当前配置名。居民：铁匠用。 */
+    val profileName: String? = null,
+    /** 订阅剩余流量，已格式化。居民：铁匠用。 */
+    val quotaLeftText: String? = null,
 )
 
 /** 一处地点。所有坐标都是「图比例」（0..1，相对原图宽高），不是屏幕比例。 */
@@ -201,6 +211,8 @@ fun SkyIslandScene(
     /** 岛上的浮石入口点（接入方生成；左石插件、右石流量统计）；点了走 [onOpenPack] 按 id 分流。 */
     packSpots: List<SkyPackSpot> = emptyList(),
     onOpenPack: (String) -> Unit = {},
+    /** 岛上居民（走动/说话/点按汇报）；关掉即回到没有居民的首页。 */
+    showResidents: Boolean = true,
 ) {
     val mainPager = LocalMainPagerState.current
     val handlePageChange = LocalHandlePageChange.current
@@ -388,11 +400,15 @@ fun SkyIslandScene(
         val ih = 1f
         val map = remember(w, h, iw, ih) { SkyMap(w, h, iw, ih) }
 
+        // 底图与居民层共用同一个浮沉 lambda：同变换才不会相对地面滑动
+        val skyFloatY: () -> Float =
+            { if (reduceMotion) 0f else sin(2.0 * PI * floatPhase).toFloat() * 0.0035f * map.ihS }
+
         SkyBackdrop(
             painter = painter,
             sat = sat,
             dusk = dusk,
-            floatY = { if (reduceMotion) 0f else sin(2.0 * PI * floatPhase).toFloat() * 0.0035f * map.ihS },
+            floatY = skyFloatY,
         )
 
         // 环境层：灯火渐次亮起、炊烟、云雾横漂、瀑布微光、远空航灯（只叠光与雾）
@@ -604,6 +620,22 @@ fun SkyIslandScene(
                     )
                 }
             }
+        }
+
+        // 居民层：浮石之上、信号焰之下；和底图同一变换（放大＋浮沉），脚钉在画里的地面上
+        if (showResidents) {
+            ResidentLayer(
+                map = map,
+                screenW = w,
+                state = state,
+                active = active,
+                reduceMotion = reduceMotion,
+                fade = { labelsFade },
+                sat = { sat },
+                dusk = { dusk },
+                floatY = skyFloatY,
+                debug = debug,
+            )
         }
 
         flare?.let { shot -> FlareLayer(shot, map, reduceMotion) { if (flare?.id == shot.id) flare = null } }

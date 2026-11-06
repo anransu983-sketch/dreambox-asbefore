@@ -32,6 +32,8 @@ import com.suanran.dreambox.core.model.IpMonitoringState
 import com.suanran.dreambox.core.model.profile.Profile
 import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.traffic.TrafficData
+import com.suanran.dreambox.core.contract.TrafficStatisticsRepository
+import com.suanran.dreambox.core.model.traffic.StatisticsTimeRange
 import com.suanran.dreambox.core.model.tunnel.RunMode
 import com.suanran.dreambox.core.model.tunnel.TunnelState
 import com.suanran.dreambox.core.util.coroutine.AutoStartSessionGate
@@ -87,6 +89,7 @@ class HomeViewModel(
     private val remoteControllerStore: RemoteControllerStoreReader,
     private val profileUseCase: ProfileManagementUseCase,
     private val lifecycleUseCase: ProxyLifecycleUseCase,
+    private val trafficStatisticsRepository: TrafficStatisticsRepository,
 ) :
     AndroidContractStateViewModel<HomeViewModel.HomeUiState, HomeViewModel.HomeUiEffect>(
         application,
@@ -135,6 +138,19 @@ class HomeViewModel(
     val homeProfileState: StateFlow<HomeProfileState> = combine(profiles, profilesLoaded, recommendedProfile, hasEnabledProfile, currentProfile) { p, loaded, recommended, hasEnabled, current -> HomeProfileState(p, loaded, recommended, hasEnabled, current) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeProfileState(profiles.value, profilesLoaded.value, recommendedProfile.value, hasEnabledProfile.value, currentProfile.value))
 
     val trafficData: StateFlow<TrafficData> = proxyFacade.trafficNow.map(TrafficData::from).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TrafficData.zero)
+
+    /** 今日流量总字节（上+下）；统计仓里还没有今天的行就给 null（居民会走无数据的台词，不报假数）。 */
+    val todayTrafficBytes: StateFlow<Long?> =
+        trafficStatisticsRepository.getDailyTrafficFlow(StatisticsTimeRange.DAY)
+            .map { days ->
+                val now = java.util.Calendar.getInstance()
+                days.firstOrNull { d ->
+                    val c = java.util.Calendar.getInstance().apply { timeInMillis = d.dateMillis }
+                    c.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR) &&
+                        c.get(java.util.Calendar.DAY_OF_YEAR) == now.get(java.util.Calendar.DAY_OF_YEAR)
+                }?.let { it.totalUpload + it.totalDownload }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val vpnController = VpnProxyController(viewModelScope, proxyFacade)
 

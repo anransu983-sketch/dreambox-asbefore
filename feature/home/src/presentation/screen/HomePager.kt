@@ -187,6 +187,8 @@ private fun HomeSkyScene(
     val name by homeViewModel.selectedServerName.collectAsStateWithLifecycle()
     val ping by homeViewModel.selectedServerPing.collectAsStateWithLifecycle()
     val traffic by homeViewModel.trafficData.collectAsStateWithLifecycle()
+    val todayBytes by homeViewModel.todayTrafficBytes.collectAsStateWithLifecycle()
+    val currentProfile by homeViewModel.currentProfile.collectAsStateWithLifecycle()
     val snapshot by homeViewModel.runtimeSnapshot.collectAsStateWithLifecycle()
 
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -234,6 +236,18 @@ private fun HomeSkyScene(
                 latencyMs = ping?.takeIf { isRunning && it in 1..5000 },
                 downText = speed(traffic.download),
                 upText = speed(traffic.upload),
+                nodeName = if (isRunning) name else null,
+                uptimeText = uptime,
+                todayTrafficText = todayBytes?.let { formatBytesForDisplay(it).let { (v, u) -> "$v $u" } },
+                profileName = currentProfile?.name,
+                quotaLeftText =
+                    currentProfile?.let { p ->
+                        if (p.total > 0) {
+                            formatBytesForDisplay((p.total - p.upload - p.download).coerceAtLeast(0)).let { (v, u) -> "$v $u" }
+                        } else {
+                            null
+                        }
+                    },
             ),
         art = remember { skyNightArt("file:///android_asset/sky_island_night.webp") },
         onHomeClick = onHomeClick,
