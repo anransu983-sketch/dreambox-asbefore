@@ -648,11 +648,27 @@ private fun npcStepMotion(npc: HarborNpc, t: Float): Pair<Float, Float>? =
         else -> null
     }
 
+
+/** 步态帧号：与 npcStepMotion 的相位同源，相位每过一个整数换一帧（那一刻正好落脚、起伏为零）。 */
+private fun npcStepFrame(npc: HarborNpc, t: Float): Int =
+    when (npc) {
+        HarborNpc.Lantern -> {
+            val cyc = (t % 60f) / 60f
+            val tri = if (cyc < 0.5f) cyc * 2f else 2f - cyc * 2f
+            floor(tri * 30f).toInt() % 2
+        }
+        HarborNpc.Crate -> {
+            val k = crateProgress(t)
+            if (k <= 0f || k >= 1f) 0 else floor(k * 12f).toInt() % 2
+        }
+        else -> 0
+    }
+
 /** NPC 画片层：五人按各自的路数动（走、扛、盘绳、瞭望、坐船）。时钟只在 offset/layer 阶段读，不触发重组。 */
 @Composable
 private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
     @Composable
-    fun sprite(npc: HarborNpc, uri: String, heightDp: Dp, bobAmp: Float, bobPeriod: Float) {
+    fun sprite(npc: HarborNpc, uri: String, heightDp: Dp, bobAmp: Float, bobPeriod: Float, aspect: Float, uriB: String? = null, aspectB: Float = 0f) {
         // 脚下贴地影：独立钉在锚点（脚底）不随步态起伏——人是踩在甲板上的，影子先落地。
         // 船夫坐在云海小船里，船下是云，不画影。
         if (npc != HarborNpc.Boat) {
@@ -678,38 +694,49 @@ private fun HarborNpcLayer(map: SkyShotMap, clock: MutableFloatState) {
                     },
             )
         }
-        HarborSpriteImage(
-            assetUri = uri,
-            modifier =
-                Modifier.offset {
-                        val tt = clock.floatValue
-                        val anchor = npcAnchor(npc, tt)
-                        val step = npcStepMotion(npc, tt)
-                        val yOff =
-                            step?.let { -it.first }
-                                ?: (sin(2.0 * PI * (tt / bobPeriod)).toFloat() * bobAmp)
-                        val pos = map.at(Offset(anchor.x, anchor.y + yOff))
-                        IntOffset((pos.x - heightDp.toPx() / 2f).roundToInt(), (pos.y - heightDp.toPx()).roundToInt())
-                    }
-                    .height(heightDp)
-                    .graphicsLayer {
-                        val tt = clock.floatValue
-                        scaleX = if (npcFacingLeft(npc, tt)) -1f else 1f
-                        rotationZ =
-                            (npcStepMotion(npc, tt)?.second ?: 0f) +
-                                when (npc) {
-                                    HarborNpc.Rope -> sin(2.0 * PI * (tt / 2.5f)).toFloat() * 1.4f
-                                    HarborNpc.Boat -> sin(2.0 * PI * (tt / 6f)).toFloat() * 1.1f
-                                    else -> 0f
-                                }
-                    },
-        )
+        // 两帧步态：走路的两人有 A/B 两张姿势画片，按步频相位切换，相位整数点换帧（那一刻正好落脚）。
+        // 居中按每张画片的真实宽高比算，脚底中心对准锚点——旧写法按正方形估，脚和脚下影子错位一截，人像贴纸。
+        @Composable
+        fun frame(uriX: String, aspectX: Float, frameIdx: Int) {
+            HarborSpriteImage(
+                assetUri = uriX,
+                modifier =
+                    Modifier.offset {
+                            val tt = clock.floatValue
+                            val anchor = npcAnchor(npc, tt)
+                            val step = npcStepMotion(npc, tt)
+                            val yOff =
+                                step?.let { -it.first }
+                                    ?: (sin(2.0 * PI * (tt / bobPeriod)).toFloat() * bobAmp)
+                            val pos = map.at(Offset(anchor.x, anchor.y + yOff))
+                            IntOffset(
+                                (pos.x - heightDp.toPx() * aspectX / 2f).roundToInt(),
+                                (pos.y - heightDp.toPx()).roundToInt(),
+                            )
+                        }
+                        .height(heightDp)
+                        .graphicsLayer {
+                            val tt = clock.floatValue
+                            scaleX = if (npcFacingLeft(npc, tt)) -1f else 1f
+                            rotationZ =
+                                (npcStepMotion(npc, tt)?.second ?: 0f) +
+                                    when (npc) {
+                                        HarborNpc.Rope -> sin(2.0 * PI * (tt / 2.5f)).toFloat() * 1.4f
+                                        HarborNpc.Boat -> sin(2.0 * PI * (tt / 6f)).toFloat() * 1.1f
+                                        else -> 0f
+                                    }
+                            if (uriB != null) alpha = if (npcStepFrame(npc, tt) == frameIdx) 1f else 0f
+                        },
+            )
+        }
+        frame(uri, aspect, 0)
+        if (uriB != null) frame(uriB, aspectB, 1)
     }
-    sprite(HarborNpc.Lookout, "file:///android_asset/npc_lookout.webp", 58.dp, 0.0006f, 8f)
-    sprite(HarborNpc.Lantern, "file:///android_asset/npc_lantern.webp", 62.dp, 0.0016f, 0.8f)
-    sprite(HarborNpc.Crate, "file:///android_asset/npc_crate.webp", 60.dp, 0.0018f, 0.8f)
-    sprite(HarborNpc.Rope, "file:///android_asset/npc_rope.webp", 60.dp, 0.0012f, 2.5f)
-    sprite(HarborNpc.Boat, "file:///android_asset/npc_boat.webp", 54.dp, 0.0022f, 6f)
+    sprite(HarborNpc.Lookout, "file:///android_asset/npc_lookout.webp", 58.dp, 0.0006f, 8f, aspect = 0.5786f)
+    sprite(HarborNpc.Lantern, "file:///android_asset/npc_lantern.webp", 62.dp, 0.0016f, 0.8f, aspect = 0.4734f, uriB = "file:///android_asset/npc_lantern_b.webp", aspectB = 0.3984f)
+    sprite(HarborNpc.Crate, "file:///android_asset/npc_crate.webp", 60.dp, 0.0018f, 0.8f, aspect = 0.4906f, uriB = "file:///android_asset/npc_crate_b.webp", aspectB = 0.5141f)
+    sprite(HarborNpc.Rope, "file:///android_asset/npc_rope.webp", 60.dp, 0.0012f, 2.5f, aspect = 0.6976f)
+    sprite(HarborNpc.Boat, "file:///android_asset/npc_boat.webp", 54.dp, 0.0022f, 6f, aspect = 1.0643f)
 }
 
 
