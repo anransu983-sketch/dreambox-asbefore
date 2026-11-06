@@ -312,7 +312,7 @@ private fun ProfilesList(
     }
 }
 
-private const val SKY_PROFILES_PAGE = true
+private const val SKY_PROFILES_PAGE = false
 
 private const val SKY_PROFILES_URI = "file:///android_asset/sky_profiles_workshop.webp"
 

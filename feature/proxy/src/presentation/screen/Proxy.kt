@@ -1254,4 +1254,4 @@ private fun DelayBigSparkline(history: List<Int>, color: androidx.compose.ui.gra
     }
 }
 
-private const val SKY_PROXY_PAGE = true
+private const val SKY_PROXY_PAGE = false
