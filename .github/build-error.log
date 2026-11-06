@@ -2,10 +2,10 @@
 * What went wrong:
 Execution failed for task ':feature:profiles:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_REFERENCE
+   > Kotlin compiler: SYNTAX
        Kotlin compiler error
-         Unresolved reference 'Profiles'.
-         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:339
+         Syntax error: Property getter or setter expected.
+         Location: /home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:320
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -19,17 +19,42 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 52s
-598 actionable tasks: 331 executed, 267 from cache
+BUILD FAILED in 1m 26s
+559 actionable tasks: 317 executed, 242 from cache
 Configuration cache entry stored.
 
 === e: / FAILED lines ===
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:339:61 Unresolved reference 'Profiles'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:581:51 Unresolved reference 'enabled' on receiver of type 'Profile'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:597:25 Unresolved reference 'getDisplayProvider' on receiver of type 'Profile'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:609:33 Unresolved reference 'totalBytes' on receiver of type 'Profile'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:610:40 Unresolved reference 'compareTo' on receiver of type 'Any'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:612:53 Unresolved reference 'usedBytes' on receiver of type 'Profile'.
-e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:612:90 Argument type mismatch: actual type is 'Any', but 'Long' was expected.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:320:107 Syntax error: Property getter or setter expected.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:9 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:15 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:16 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:22 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:24 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:30 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:321:31 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:9 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:15 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:16 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:22 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:24 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:30 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:322:31 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:9 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:15 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:16 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:22 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:24 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:30 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:323:31 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:324:5 Syntax error: Expecting a top level declaration.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:679:5 Unresolved reference 'layout'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:679:14 Cannot infer type for value parameter 'measurable'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:679:26 Cannot infer type for value parameter 'constraints'. Specify it explicitly.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:680:28 Unresolved reference 'measure'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:680:36 Unresolved reference 'Constraints'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:680:66 Unresolved reference 'roundToPx' on receiver of type 'Dp'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:681:9 Unresolved reference 'layout'.
+e: file:///home/runner/work/dreambox-asbefore/dreambox-asbefore/feature/profiles/src/presentation/screen/ProfilesPageContent.kt:681:108 Unresolved reference 'rotationZ'.
 > Task :feature:profiles:compileReleaseKotlin FAILED
-BUILD FAILED in 52s
+         Syntax error: Property getter or setter expected.
+BUILD FAILED in 1m 26s
