@@ -398,12 +398,7 @@
   try { showIp = localStorage.getItem('sshtty_show_ip') === '1'; } catch (e) {}
   function maskHost(h) {
     if (showIp || !h) return h;
-    var parts = String(h).split('.');
-    if (parts.length === 4 && parts.every(function (p) { return /^\d+$/.test(p); })) {
-      return parts[0] + '.***.***.' + parts[3];
-    }
-    if (h.length <= 4) return '***';
-    return h.slice(0, 2) + '***' + h.slice(-4);
+    return '***';
   }
   function syncHeadSub() {
     var el = $('head-sub');
