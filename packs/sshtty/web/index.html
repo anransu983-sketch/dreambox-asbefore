@@ -18,6 +18,9 @@
   input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #3a3054;
           background: #171226; color: #fff; font-size: 15px; outline: none; }
   input:focus { border-color: #e88bb0; }
+  textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #3a3054;
+          background: #171226; color: #fff; font-size: 12px; font-family: monospace; outline: none; }
+  textarea:focus { border-color: #e88bb0; }
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
   button.main { width: 100%; padding: 13px; border: 0; border-radius: 12px; margin-top: 14px;
@@ -65,6 +68,27 @@
   <div id="srv-list"></div>
   <button class="main" id="btn-add">＋ 添加服务器</button>
   <div class="err" id="list-err"></div>
+  <div class="card">
+    <div class="srv-name">🧳 迁移备份</div>
+    <p class="sub" style="margin-top:6px">换手机、卸载重装时，本机保存靠系统密钥、普通备份解不开。用你自己设的口令导出一份迁移包，存到安全的地方；新机打开这里粘贴导入，全部服务器和私钥一起恢复，服务器端什么都不用改。口令忘了就解不开，务必记牢。</p>
+    <label>导出：设置备份口令（至少 8 位）</label>
+    <input id="mig-pass1" type="password" placeholder="备份口令" autocomplete="off">
+    <label>再输一遍</label>
+    <input id="mig-pass2" type="password" placeholder="重复备份口令" autocomplete="off">
+    <button class="mini primary" id="btn-mig-export">导出迁移包</button>
+    <div id="mig-out-box" class="hidden">
+      <label>迁移包（整段复制，存到安全的地方）</label>
+      <textarea id="mig-out" rows="5" readonly></textarea>
+      <button class="mini" id="btn-mig-copy" style="margin-top:8px">复制迁移包</button>
+    </div>
+    <label>导入：粘贴迁移包</label>
+    <textarea id="mig-in" rows="5" placeholder="把导出的迁移包整段粘贴到这里"></textarea>
+    <label>备份口令</label>
+    <input id="mig-pass3" type="password" placeholder="导出时设的口令" autocomplete="off">
+    <button class="mini primary" id="btn-mig-import">导入（与现有合并）</button>
+    <div class="ok" id="mig-ok"></div>
+    <div class="err" id="mig-err"></div>
+  </div>
 </div>
 
 <!-- ═══ 表单 ═══ -->
@@ -807,6 +831,44 @@
       try { fitAddon.fit(); } catch (e) {}
     }
   });
+
+  // ── 迁移备份 ─────────────────────────────────────
+  $('btn-mig-export').onclick = function () {
+    var p1 = $('mig-pass1').value, p2 = $('mig-pass2').value;
+    $('mig-ok').textContent = ''; $('mig-err').textContent = '';
+    if (p1.length < 8) { $('mig-err').textContent = '备份口令至少 8 位'; return; }
+    if (p1 !== p2) { $('mig-err').textContent = '两次输入的口令不一致'; return; }
+    this.disabled = true;
+    var btn = this;
+    callNative('exportBackup', { password: p1 }).then(function (r) {
+      btn.disabled = false;
+      $('mig-out').value = r.blob || '';
+      $('mig-out-box').classList.remove('hidden');
+      $('mig-ok').textContent = '已导出 ' + (r.count || 0) + ' 台服务器的迁移包，复制后存到安全的地方。';
+    }).catch(function (e) {
+      btn.disabled = false;
+      $('mig-err').textContent = e.message;
+    });
+  };
+  $('btn-mig-copy').onclick = function () { copyText($('mig-out').value, this); };
+  $('btn-mig-import').onclick = function () {
+    var blob = $('mig-in').value.trim(), pw = $('mig-pass3').value;
+    $('mig-ok').textContent = ''; $('mig-err').textContent = '';
+    if (!blob) { $('mig-err').textContent = '先粘贴迁移包'; return; }
+    if (!pw) { $('mig-err').textContent = '请输入备份口令'; return; }
+    this.disabled = true;
+    var btn = this;
+    callNative('importBackup', { blob: blob, password: pw }).then(function (r) {
+      btn.disabled = false;
+      servers = r.servers || [];
+      renderList();
+      $('mig-pass1').value = ''; $('mig-pass2').value = ''; $('mig-pass3').value = '';
+      $('mig-ok').textContent = '已导入 ' + (r.imported || 0) + ' 台服务器，现有共 ' + (r.total || servers.length) + ' 台。';
+    }).catch(function (e) {
+      btn.disabled = false;
+      $('mig-err').textContent = e.message;
+    });
+  };
 
   syncIpToggle();
   show('view-list');

@@ -173,10 +173,10 @@ class PackStore(context: Context) {
             PackDef(
                 id = "sshtty",
                 name = "VPS 终端",
-                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）",
-                version = "10",
+                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；v11 新增迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复",
+                version = "11",
                 sizeText = "约 340 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v10.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v11.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
             ),
         )

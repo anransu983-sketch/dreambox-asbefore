@@ -24,6 +24,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,7 +34,10 @@ import java.util.concurrent.Executors;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import kotlin.Unit;
 import kotlin.jvm.functions.Function3;
@@ -40,6 +46,9 @@ import kotlin.jvm.functions.Function3;
  * VPS 终端功能包入口：JuiceSSH 式 SSH 终端。
  * - 服务器列表落盘加密保存（AES-256-GCM，密钥在 AndroidKeyStore），
  *   存 filesDir/sshtty-data/（功能包卸载不误删），密码永不回传网页、列表只给安全视图。
+ * - 迁移备份（v11）：AndroidKeyStore 主密钥不进任何文件备份、卸载重装/换机即失，
+ *   故另给一条可迁移路：用户口令经 PBKDF2 派生密钥、AES-GCM 加密导出全部条目
+ *   （含密码/私钥/主机指纹）为一段文本，新机粘贴+口令导入即恢复（合并去重）。
  * - 连接走 JSch shell 通道 + PTY（xterm-256color），输出经宿主 emit 实时推给网页的
  *   xterm.js；输入/改尺寸走桥方法。主机指纹 TOFU：首次记录、之后比对、不一致断开报错。
  * - 同时只保留一个会话（v1）；release()/disconnect 即断开。
@@ -48,6 +57,8 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
 
     private static final String PLUGIN = "SshTerm";
     private static final String KEY_ALIAS = "sshtty.store.v1";
+    private static final String PORTABLE_MAGIC = "SSHTTY-BACKUP";
+    private static final int PORTABLE_ITER = 120000;
 
     private static Context appContext;
     private Function3<? super String, ? super String, ? super String, Unit> emitFn;
@@ -138,6 +149,24 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                         callback.onResult(true, resultWithServers(store).toString(), null);
                     } catch (Exception e) {
                         callback.onResult(false, null, "删除失败：" + msg(e));
+                    }
+                });
+                return true;
+            case "exportBackup":
+                io.execute(() -> {
+                    try {
+                        callback.onResult(true, doExportBackup(opts).toString(), null);
+                    } catch (Exception e) {
+                        callback.onResult(false, null, "导出迁移包失败：" + msg(e));
+                    }
+                });
+                return true;
+            case "importBackup":
+                io.execute(() -> {
+                    try {
+                        callback.onResult(true, doImportBackup(opts).toString(), null);
+                    } catch (Exception e) {
+                        callback.onResult(false, null, "导入迁移包失败：" + msg(e));
                     }
                 });
                 return true;
@@ -256,6 +285,132 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         try (OutputStream out = new FileOutputStream(f)) {
             out.write(env.toString().getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    // ── 迁移备份（口令加密，不依赖 AndroidKeyStore，换机/卸载重装可恢复） ──
+
+    private SecretKey derivePortableKey(String pw, byte[] salt, int iter) throws Exception {
+        SecretKeyFactory f = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        PBEKeySpec spec = new PBEKeySpec(pw.toCharArray(), salt, iter, 256);
+        return new SecretKeySpec(f.generateSecret(spec).getEncoded(), "AES");
+    }
+
+    private JSONObject doExportBackup(JSONObject opts) throws Exception {
+        String pw = opts.optString("password", "");
+        if (pw.length() < 8) throw new Exception("备份口令至少 8 位");
+        JSONObject store = loadStore();
+        JSONArray arr = store.optJSONArray("servers");
+        if (arr == null || arr.length() == 0) throw new Exception("还没有保存的服务器，先添加再导出");
+        SecureRandom rnd = new SecureRandom();
+        byte[] salt = new byte[16];
+        rnd.nextBytes(salt);
+        byte[] iv = new byte[12];
+        rnd.nextBytes(iv);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, derivePortableKey(pw, salt, PORTABLE_ITER), new GCMParameterSpec(128, iv));
+        byte[] ct = c.doFinal(store.toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject blob = new JSONObject()
+                .put("magic", PORTABLE_MAGIC)
+                .put("v", 1)
+                .put("kdf", "PBKDF2WithHmacSHA256")
+                .put("iter", PORTABLE_ITER)
+                .put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+                .put("iv", Base64.encodeToString(iv, Base64.NO_WRAP))
+                .put("ct", Base64.encodeToString(ct, Base64.NO_WRAP));
+        return new JSONObject().put("blob", blob.toString()).put("count", arr.length());
+    }
+
+    private JSONObject doImportBackup(JSONObject opts) throws Exception {
+        String pw = opts.optString("password", "");
+        if (pw.length() == 0) throw new Exception("请输入备份口令");
+        String text = opts.optString("blob", "").trim();
+        if (text.length() == 0) throw new Exception("请先粘贴迁移包");
+        JSONObject blob;
+        try {
+            blob = new JSONObject(text);
+        } catch (Exception e) {
+            throw new Exception("迁移包格式不对：请粘贴完整的导出内容");
+        }
+        if (!PORTABLE_MAGIC.equals(blob.optString("magic", "")) || blob.optInt("v", 0) != 1) {
+            throw new Exception("这不是 sshtty 的迁移包");
+        }
+        int iter = blob.optInt("iter", PORTABLE_ITER);
+        if (iter < 10000 || iter > 1000000) throw new Exception("迁移包参数异常");
+        byte[] salt = Base64.decode(blob.optString("salt", ""), Base64.DEFAULT);
+        byte[] iv = Base64.decode(blob.optString("iv", ""), Base64.DEFAULT);
+        byte[] ct = Base64.decode(blob.optString("ct", ""), Base64.DEFAULT);
+        byte[] plain;
+        try {
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(Cipher.DECRYPT_MODE, derivePortableKey(pw, salt, iter), new GCMParameterSpec(128, iv));
+            plain = c.doFinal(ct);
+        } catch (Exception e) {
+            throw new Exception("备份口令错误，或迁移包已损坏");
+        }
+        JSONObject imported;
+        try {
+            imported = new JSONObject(new String(plain, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new Exception("迁移包内容损坏");
+        }
+        JSONArray impArr = imported.optJSONArray("servers");
+        if (impArr == null) throw new Exception("迁移包里没有服务器数据");
+
+        JSONObject cur = loadStore();
+        JSONArray curArr = cur.optJSONArray("servers");
+        if (curArr == null) {
+            curArr = new JSONArray();
+            cur.put("servers", curArr);
+        }
+        Map<String, Integer> byId = new HashMap<>();
+        Map<String, Integer> byEndpoint = new HashMap<>();
+        for (int i = 0; i < curArr.length(); i++) {
+            JSONObject s = curArr.optJSONObject(i);
+            if (s == null) continue;
+            if (s.optString("id", "").length() > 0) byId.put(s.optString("id"), i);
+            byEndpoint.put(endpointKey(s), i);
+        }
+        int importedCount = 0;
+        for (int i = 0; i < impArr.length(); i++) {
+            JSONObject s = impArr.optJSONObject(i);
+            if (s == null || s.optString("host", "").trim().length() == 0) continue;
+            if (s.optString("id", "").length() == 0) s.put("id", UUID.randomUUID().toString());
+            Integer idx = byId.get(s.optString("id"));
+            if (idx == null) idx = byEndpoint.get(endpointKey(s));
+            if (idx != null) {
+                curArr.put(idx, s);
+            } else {
+                idx = curArr.length();
+                curArr.put(s);
+            }
+            byId.put(s.optString("id"), idx);
+            byEndpoint.put(endpointKey(s), idx);
+            importedCount++;
+        }
+        JSONObject impKeys = imported.optJSONObject("hostKeys");
+        if (impKeys != null) {
+            JSONObject curKeys = cur.optJSONObject("hostKeys");
+            if (curKeys == null) {
+                curKeys = new JSONObject();
+                cur.put("hostKeys", curKeys);
+            }
+            JSONArray names = impKeys.names();
+            if (names != null) {
+                for (int i = 0; i < names.length(); i++) {
+                    String k = names.optString(i);
+                    curKeys.put(k, impKeys.opt(k));
+                }
+            }
+        }
+        saveStore(cur);
+        JSONObject out = resultWithServers(cur);
+        out.put("imported", importedCount);
+        out.put("total", curArr.length());
+        return out;
+    }
+
+    private static String endpointKey(JSONObject s) {
+        return s.optString("host", "") + "|" + s.optInt("port", 22) + "|" + s.optString("user", "");
     }
 
     private JSONObject resultWithServers(JSONObject store) throws Exception {
