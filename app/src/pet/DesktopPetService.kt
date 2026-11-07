@@ -61,14 +61,6 @@ class DesktopPetService : Service() {
     private var bubbleStart = 0L
     private var bubbleUntil = 0L
 
-    // 猫追逐战
-    private var catRoot: FrameLayout? = null
-    private var catImg: ImageView? = null
-    private lateinit var catLp: WindowManager.LayoutParams
-    private var catState = 0 // 0=不在场 1=追逐中 2=坐下歇会儿
-    private var chaseUntil = 0L
-    private var catSitUntil = 0L
-    private var lastDodge = 0L
 
     // 点按连击与长按
     private var tapStreak = 0
@@ -143,21 +135,6 @@ class DesktopPetService : Service() {
         lp.x = lp.x.coerceIn(0, maxX())
         lp.y = lp.y.coerceAtMost(groundY()).coerceAtLeast(0)
         applyLp()
-        // 猫在场（追逐/坐下）时同步刷新猫的尺寸与地面线，别等下一段追逐才对
-        if (catState != 0) {
-            if (catState == 1) {
-                catLp.width = catW()
-                catLp.height = catRunH()
-                catLp.y = catGroundY()
-            } else {
-                val sitW = (catW() * 0.62f).toInt()
-                catLp.width = sitW
-                catLp.height = (sitW * 619f / 420f).toInt()
-                catLp.y = groundY() + petH - catLp.height
-            }
-            catLp.x = catLp.x.coerceIn(0, (screenW() - catLp.width).coerceAtLeast(0))
-            applyCatLp()
-        }
     }
     private fun screenW(): Int = resources.displayMetrics.widthPixels
     private fun screenH(): Int = resources.displayMetrics.heightPixels
@@ -177,7 +154,6 @@ class DesktopPetService : Service() {
             return
         }
         applyAppearance()
-        buildCat()
         chooseNext(initial = true)
         handler.post(tick)
     }
@@ -203,11 +179,6 @@ class DesktopPetService : Service() {
         } catch (_: Exception) {
         }
         root = null
-        try {
-            catRoot?.let { wm?.removeViewImmediate(it) }
-        } catch (_: Exception) {
-        }
-        catRoot = null
         super.onDestroy()
     }
 
@@ -258,7 +229,7 @@ class DesktopPetService : Service() {
     private fun frame(name: String): Bitmap? {
         frames[name]?.let { return it }
         val breed = getSharedPreferences("desktop_pet", MODE_PRIVATE).getString("breed", "golden") ?: "golden"
-        val path = if (breed == "golden" || name.startsWith("cat-")) "pet/$name.png" else "pet/$breed/$name.png"
+        val path = if (breed == "golden") "pet/$name.png" else "pet/$breed/$name.png"
         return try {
             assets.open(path).use { BitmapFactory.decodeStream(it) }?.also { frames[name] = it }
         } catch (_: Exception) {
@@ -523,117 +494,6 @@ class DesktopPetService : Service() {
         bubble?.text = ""
     }
 
-    // ---------- 猫追逐战 ----------
-
-    private fun catW(): Int = (petW * 1.25).toInt()
-    private fun catRunH(): Int = (catW() * 183f / 420f).toInt()
-    private fun catSitH(): Int = (catW() * 619f / 420f).toInt()
-    private fun catGroundY(): Int = groundY() + petH - catRunH()
-
-    private fun buildCat() {
-        val iv = ImageView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            )
-            scaleType = ImageView.ScaleType.FIT_CENTER
-        }
-        val container = FrameLayout(this)
-        container.addView(iv)
-        container.visibility = View.GONE
-        catLp = WindowManager.LayoutParams(
-            catW(),
-            catRunH(),
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 0
-            y = catGroundY()
-        }
-        catImg = iv
-        catRoot = container
-        try {
-            wm?.addView(container, catLp)
-        } catch (_: Exception) {
-            catRoot = null
-        }
-    }
-
-    private fun applyCatLp() {
-        try {
-            catRoot?.let { wm?.updateViewLayout(it, catLp) }
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun startChase(roam: Boolean = false) {
-        if (catState != 0 || catRoot == null) return
-        catState = 1
-        chaseUntil = SystemClock.uptimeMillis() + Random.nextLong(7000, 11000)
-        catLp.width = catW()
-        catLp.height = catRunH()
-        catLp.y = catGroundY()
-        catLp.x = if (lp.x + petW / 2 < screenW() / 2) (screenW() - catW()).coerceAtLeast(0) else 0
-        catRoot?.visibility = View.VISIBLE
-        catImg?.alpha = 1f
-        applyCatLp()
-        if (!roam) {
-            if (lp.y < groundY()) {
-                falling = true
-                fallV = 0
-            }
-            startAct(Act.FLEE)
-        }
-    }
-
-    private fun endChase(caught: Boolean) {
-        catState = 2
-        catSitUntil = SystemClock.uptimeMillis() + 2000
-        frame("cat-sit")?.let { catImg?.setImageBitmap(it) }
-        catImg?.scaleX = 1f
-        val sitW = (catW() * 0.62f).toInt()
-        catLp.x = (catLp.x + (catW() - sitW) / 2).coerceIn(0, (screenW() - sitW).coerceAtLeast(0))
-        catLp.width = sitW
-        catLp.height = (sitW * 619f / 420f).toInt()
-        catLp.y = groundY() + petH - catLp.height
-        applyCatLp()
-        if (caught) {
-            startAct(Act.ROLL)
-            if (Random.nextInt(100) < 50) showBubble("吓死宝宝了！")
-        }
-    }
-
-    private fun stepCat(now: Long) {
-        if (catState == 1) {
-            val targetX = lp.x + petW / 2 - catW() / 2
-            val dx = targetX - catLp.x
-            val sp = dp(4.8f)
-            catLp.x = (catLp.x + dx.coerceIn(-sp, sp)).coerceIn(0, (screenW() - catW()).coerceAtLeast(0))
-            catLp.y = catGroundY()
-            applyCatLp()
-            frame(if ((now / 140) % 2 == 0L) "cat-run0" else "cat-run1")?.let { catImg?.setImageBitmap(it) }
-            if (dx != 0) catImg?.scaleX = if (dx < 0) -1f else 1f
-            val dist = kotlin.math.abs((lp.x + petW / 2) - (catLp.x + catW() / 2))
-            val onGround = lp.y >= groundY() - 2
-            val dodged = dist < petW * 0.95f && onGround && !grabbed && act != Act.ROLL &&
-                now - lastDodge > 2600 && Random.nextInt(100) < 30
-            if (dodged) {
-                lastDodge = now
-                startAct(Act.ROLL)
-                rollDir = if (lp.x + petW / 2 >= catLp.x + catW() / 2) 1 else -1
-            } else if (dist < petW * 0.42f && onGround) {
-                endChase(caught = true)
-            } else if (now > chaseUntil) {
-                endChase(caught = false)
-            }
-        } else if (catState == 2 && now > catSitUntil) {
-            catState = 0
-            catRoot?.visibility = View.GONE
-        }
-    }
-
     private fun applyLp() {
         try {
             root?.let { wm?.updateViewLayout(it, lp) }
@@ -686,7 +546,6 @@ class DesktopPetService : Service() {
             Act.ROAM -> roamTarget = nearestCornerClockwise()
             else -> {}
         }
-        if (a == Act.ROAM && catState == 0 && Random.nextInt(100) < 40) startChase(roam = true)
     }
 
     private fun pickDir(): Int =
@@ -714,16 +573,6 @@ class DesktopPetService : Service() {
     private fun chooseNext(initial: Boolean = false) {
         if (initial) {
             startAct(Act.IDLE)
-            return
-        }
-        if (catState == 1) {
-            // chooseNext 只在当前动作到期/撞边时被调：追逐中一律续逃。
-            // 此前 ROAM 到期被直接 return 晾着，满屏跑会赖到追逐超时才停。
-            startAct(Act.FLEE)
-            return
-        }
-        if (catState == 0 && Random.nextInt(100) < 4) {
-            startChase()
             return
         }
         val roll = Random.nextInt(100)
@@ -779,7 +628,6 @@ class DesktopPetService : Service() {
     private fun step() {
         val now = SystemClock.uptimeMillis()
         val iv = img ?: return
-        stepCat(now)
 
         // —— 被揪着：挣扎（蹬腿帧快切＋身体摇摆＋轻微拉长）——
         if (grabbed) {
@@ -891,10 +739,7 @@ class DesktopPetService : Service() {
             }
             Act.FLEE -> {
                 if (!dragging) {
-                    if (catState == 1) {
-                        walkDir = if (lp.x + petW / 2 >= catLp.x + catW() / 2) 1 else -1
-                    }
-                    val fleeSp = if (catState == 1) dp(3.3f) else dp(2.1f)
+                    val fleeSp = dp(2.1f)
                     var nx = lp.x + fleeSp * walkDir
                     if (nx <= 0) {
                         nx = 0
