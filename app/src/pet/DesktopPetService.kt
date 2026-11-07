@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
@@ -13,6 +14,10 @@ import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.GradientDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
@@ -30,6 +35,7 @@ import android.widget.TextView
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import java.util.Calendar
 import kotlin.random.Random
 
 /**
@@ -82,7 +88,7 @@ class DesktopPetService : Service() {
         IDLE, WALK, RUB, WASH, FRY, SEED,
         DRINK, LATIAO, LOLLIPOP, SAUSAGE, MALATANG, CRAYFISH, ICECREAM, HOTPOT,
         BASKETBALL, SWIM, RIDE, SKATE, SKI, GAME, MUSIC, SMOKE,
-        SLEEP, STRETCH, ROLL, FLEE, ROAM,
+        SLEEP, STRETCH, ROLL, FLEE, ROAM, PEEK, HANG, SPIN, DIZZY,
     }
 
     private fun isFood(a: Act): Boolean = when (a) {
@@ -118,6 +124,33 @@ class DesktopPetService : Service() {
     private var downLpY = 0
     private var downAt = 0L
     private var moved = false
+    private var downTapY = 0f
+    private var pokeAt = 0L
+
+    // 摇一摇：加速度突变 → 晕乎乎
+    private var sensorManager: SensorManager? = null
+    private var lastAccelMag = 9.8f
+    private var lastShakeAt = 0L
+    private val shakeListener = object : SensorEventListener {
+        override fun onSensorChanged(e: SensorEvent) {
+            if (powerManager?.isInteractive == false) return
+            val x = e.values[0]
+            val y = e.values[1]
+            val z = e.values[2]
+            val mag = kotlin.math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+            val delta = abs(mag - lastAccelMag)
+            lastAccelMag = mag
+            val now = SystemClock.uptimeMillis()
+            if (delta > 11f && now - lastShakeAt > 1800 && !grabbed && !dragging && !falling && act != Act.ROAM) {
+                lastShakeAt = now
+                bumpAffinity(1)
+                startAct(Act.DIZZY)
+                say(PetTalk.Pool.DIZZY, 90)
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()
 
@@ -156,6 +189,9 @@ class DesktopPetService : Service() {
         applyAppearance()
         chooseNext(initial = true)
         handler.post(tick)
+        registerShake()
+        // 开场按时段打个招呼
+        handler.postDelayed({ say(PetTalk.timePool()) }, 1400)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -179,7 +215,15 @@ class DesktopPetService : Service() {
         } catch (_: Exception) {
         }
         root = null
+        sensorManager?.unregisterListener(shakeListener)
         super.onDestroy()
+    }
+
+    private fun registerShake() {
+        val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
+        sensorManager = sm
+        val acc = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return
+        sm.registerListener(shakeListener, acc, SensorManager.SENSOR_DELAY_GAME)
     }
 
     // ---------- 前台通知 ----------
@@ -385,11 +429,15 @@ class DesktopPetService : Service() {
                 downLpX = lp.x
                 downLpY = lp.y
                 downAt = SystemClock.uptimeMillis()
+                downTapY = ev.y
                 if (!grabbed) {
                     longPressed = false
                     handler.postDelayed(longPressRun, 550)
                 }
-                if (grabbed) zzz?.visibility = View.GONE
+                if (grabbed) {
+                    zzz?.visibility = View.GONE
+                    say(PetTalk.Pool.GRAB, 50)
+                }
                 return true
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
@@ -439,12 +487,20 @@ class DesktopPetService : Service() {
                         tapStreak = if (nowU - lastTapAt < 400) tapStreak + 1 else 1
                         lastTapAt = nowU
                         hopStart = nowU
+                        bumpAffinity(1)
                         when {
-                            tapStreak >= 3 -> {
+                            tapStreak >= 4 -> {
+                                // 连点四下：原地转圈圈，转完发晕
+                                tapStreak = 0
+                                startAct(Act.SPIN)
+                                handler.postDelayed({ say(PetTalk.Pool.DIZZY, 85) }, 980)
+                            }
+                            tapStreak == 3 -> {
                                 tapStreak = 0
                                 startAct(Act.ROLL)
                             }
                             tapStreak == 2 -> {
+                                bumpAffinity(1)
                                 startAct(
                                     listOf(
                                         Act.FRY, Act.SEED, Act.DRINK, Act.LATIAO,
@@ -453,7 +509,19 @@ class DesktopPetService : Service() {
                                 )
                                 showHeart()
                             }
-                            else -> startAct(listOf(Act.RUB, Act.FRY, Act.SEED, Act.WASH).random())
+                            downTapY > petH * 0.62f -> {
+                                // 挠脚心：笑得打滚或赶紧洗脸
+                                startAct(if (Random.nextBoolean()) Act.ROLL else Act.WASH)
+                                say(PetTalk.Pool.TICKLE, 65)
+                            }
+                            else -> {
+                                // 戳肚子：弹一下，偶尔换个小动作
+                                pokeAt = nowU
+                                if (Random.nextInt(100) < 45) {
+                                    startAct(listOf(Act.RUB, Act.STRETCH, Act.WASH).random())
+                                }
+                                say(PetTalk.Pool.POKE, 65)
+                            }
                         }
                     } else if (lp.y < groundY()) {
                         settling = true
@@ -478,12 +546,7 @@ class DesktopPetService : Service() {
         val raw = getSharedPreferences("desktop_pet", MODE_PRIVATE).getString("bubble_lines", null)
         val custom = raw?.split('\n', '；', ';')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
         if (custom.isNotEmpty()) return custom.random()
-        return listOf(
-            "谢谢主人，愿主人天天开心^_^",
-            "谢谢主人，愿主人天天开心^_^",
-            "吃饱啦，谢谢主人！",
-            "好好吃！谢谢主人～",
-        ).random()
+        return PetTalk.line(PetTalk.Pool.FED)
     }
 
     private fun showBubble(text: String) {
@@ -492,6 +555,25 @@ class DesktopPetService : Service() {
         bubbleUntil = bubbleStart + 900 + text.length * 75L + 1700
         bubble?.visibility = View.VISIBLE
         bubble?.text = ""
+    }
+
+    /** 按场景池说话：气泡正显示时不抢，chance 为开口概率（百分比）。 */
+    private fun say(pool: PetTalk.Pool, chance: Int = 100) {
+        if (bubble?.visibility == View.VISIBLE) return
+        if (chance < 100 && Random.nextInt(100) >= chance) return
+        showBubble(PetTalk.line(pool))
+    }
+
+    /** 亲密度：互动攒数，攒到里程碑冒爱心庆祝。存 desktop_pet 偏好，实验室卡片可见。 */
+    private fun bumpAffinity(n: Int) {
+        val prefs = getSharedPreferences("desktop_pet", MODE_PRIVATE)
+        val v = prefs.getInt("affinity", 0) + n
+        prefs.edit().putInt("affinity", v).apply()
+        val milestones = intArrayOf(50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000)
+        if (milestones.contains(v)) {
+            showHeart()
+            handler.postDelayed({ showBubble(PetTalk.milestone(v)) }, 350)
+        }
     }
 
     private fun applyLp() {
@@ -533,6 +615,10 @@ class DesktopPetService : Service() {
             Act.GAME -> Random.nextLong(3000, 4500)
             Act.MUSIC -> Random.nextLong(3400, 5000)
             Act.SMOKE -> Random.nextLong(3800, 5200)
+            Act.PEEK -> Random.nextLong(2600, 4000)
+            Act.HANG -> Random.nextLong(3000, 4600)
+            Act.SPIN -> 900L
+            Act.DIZZY -> Random.nextLong(2400, 3200)
             Act.IDLE -> Random.nextLong(2200, 4200)
         }
         when (a) {
@@ -542,8 +628,11 @@ class DesktopPetService : Service() {
             }
             Act.FLEE -> walkDir = pickDir()
             Act.RIDE, Act.SKATE, Act.SKI, Act.SWIM -> walkDir = pickDir()
-            Act.ROLL -> rollDir = pickDir()
+            Act.ROLL, Act.SPIN -> rollDir = pickDir()
             Act.ROAM -> roamTarget = nearestCornerClockwise()
+            Act.PEEK -> say(PetTalk.Pool.PEEK, 50)
+            Act.HANG -> say(PetTalk.Pool.HANG, 50)
+            Act.SLEEP -> say(PetTalk.Pool.SLEEPY, 30)
             else -> {}
         }
     }
@@ -601,11 +690,18 @@ class DesktopPetService : Service() {
                 roll < 84 -> Act.SLEEP
                 roll < 88 -> Act.STRETCH
                 roll < 91 -> Act.ROLL
-                roll < 96 -> Act.ROAM
+                roll < 93 -> Act.PEEK
+                roll < 94 -> Act.HANG
+                roll < 97 -> Act.ROAM
                 roll < 98 -> Act.SMOKE
                 else -> Act.IDLE
             },
         )
+        // 深夜更容易犯困
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        if ((hour >= 23 || hour < 7) && act != Act.SLEEP && act != Act.ROAM && Random.nextInt(100) < 20) {
+            startAct(Act.SLEEP)
+        }
     }
 
     private val tick = object : Runnable {
@@ -675,7 +771,7 @@ class DesktopPetService : Service() {
         // —— 通用兜底：点按/长按会清掉 settling/falling，仓鼠被留在半空做地面
         // 动作（悬空睡觉/吃东西）。不在地面、又不在掉落/滑落/满屏跑/被抓拖时，
         // 恢复滑落回地面；用 settling 而非 falling，不触发落地逃跑那套、不打断当前动作。
-        if (!grabbed && !dragging && !falling && !settling && act != Act.ROAM && lp.y < groundY()) {
+        if (!grabbed && !dragging && !falling && !settling && act != Act.ROAM && act != Act.HANG && lp.y < groundY()) {
             settling = true
         }
 
@@ -698,7 +794,26 @@ class DesktopPetService : Service() {
                 fallV = 0
                 grabCount = 0
             }
-            if (isFood(act) && Random.nextInt(100) < 50) showBubble(pickBubbleLine())
+            if (act == Act.PEEK) {
+                // 探头结束先收回原位，别带着偏移进下一个动作
+                lp.y = groundY()
+                applyLp()
+            }
+            if (act == Act.HANG) {
+                // 倒挂结束：松手掉下去（落地那套逃跑逻辑接着演）
+                root?.rotation = 0f
+                falling = true
+                fallV = 0
+                grabCount = 0
+            }
+            when {
+                isFood(act) -> {
+                    bumpAffinity(1)
+                    if (Random.nextInt(100) < 50) showBubble(pickBubbleLine())
+                }
+                act == Act.SLEEP -> {}
+                else -> say(PetTalk.idlePool(), 20)
+            }
             chooseNext()
         }
 
@@ -788,6 +903,49 @@ class DesktopPetService : Service() {
                 setFrame("ham-f1")
                 iv.scaleX = 1f
                 if (p >= 1f) root?.rotation = 0f
+            }
+            Act.PEEK -> {
+                if (!dragging) {
+                    val p = (elapsed.toFloat() / actDur).coerceIn(0f, 1f)
+                    val depth = when {
+                        p < 0.18f -> p / 0.18f
+                        p > 0.82f -> (1f - p) / 0.18f
+                        else -> 1f
+                    }
+                    val targetY = groundY() + (petH * 0.58f * depth).toInt()
+                    if (lp.y != targetY) {
+                        lp.y = targetY
+                        applyLp()
+                    }
+                }
+                setFrame(if (now % 3600 < 160) "ham-f7" else "ham-f0")
+                iv.scaleX = 1f
+            }
+            Act.HANG -> {
+                val ascend = (elapsed / 380f).coerceIn(0f, 1f)
+                if (!dragging) {
+                    val targetY = (groundY() * (1f - ascend)).toInt()
+                    if (lp.y != targetY) {
+                        lp.y = targetY
+                        applyLp()
+                    }
+                }
+                root?.rotation = 180f * ascend
+                iv.rotation = (sin(elapsed / 380.0) * 5 * ascend).toFloat()
+                setFrame("ham-f3")
+                iv.scaleX = 1f
+            }
+            Act.SPIN -> {
+                val p = (elapsed.toFloat() / actDur).coerceIn(0f, 1f)
+                root?.rotation = 720f * p * rollDir
+                setFrame("ham-f3")
+                iv.scaleX = 1f
+                if (p >= 1f) root?.rotation = 0f
+            }
+            Act.DIZZY -> {
+                setFrame(if ((elapsed / 300) % 2 == 0L) "ham-f7" else "ham-f0")
+                iv.rotation = (sin(elapsed / 160.0) * 10 * (1.0 - elapsed.toFloat() / actDur)).toFloat()
+                iv.scaleX = 1f
             }
             Act.DRINK -> {
                 setFrame("food-drink")
@@ -960,10 +1118,11 @@ class DesktopPetService : Service() {
                 iv.scaleX = 1f
             }
         }
-        if (act != Act.ROLL) root?.rotation = 0f
+        if (act != Act.ROLL && act != Act.SPIN && act != Act.HANG) root?.rotation = 0f
 
         // 落地瞬间压扁（盖过睡姿压扁判定之前先算，再让 SLEEP 的值优先）
         if (landAt > 0 && now - landAt < 180 && act != Act.SLEEP) squash = 0.78f
+        if (pokeAt > 0 && now - pokeAt < 160 && act != Act.SLEEP) squash = 0.82f
         if (iv.scaleY != squash) {
             iv.pivotY = iv.height.toFloat()
             iv.scaleY = squash

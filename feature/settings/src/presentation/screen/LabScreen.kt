@@ -243,6 +243,7 @@ fun LabScreen(navigator: Navigator) {
                 // 桌面宠物：独立悬浮窗服务，开关自带状态存储，不依赖任何现有设置项
                 val petPrefs = remember { context.getSharedPreferences("desktop_pet", android.content.Context.MODE_PRIVATE) }
                 var petEnabled by remember { mutableStateOf(petPrefs.getBoolean("enabled", false)) }
+                var petAffinity by remember { mutableStateOf(petPrefs.getInt("affinity", 0)) }
                 // 从通知「抱回梦盒」停宠时服务侧会写回 enabled=false；回到本页时
                 // 按 prefs 实时刷新开关，别停在旧状态上（此前要离开重进才对）。
                 val petOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -250,6 +251,7 @@ fun LabScreen(navigator: Navigator) {
                     val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                         if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                             petEnabled = petPrefs.getBoolean("enabled", false)
+                            petAffinity = petPrefs.getInt("affinity", 0)
                         }
                     }
                     petOwner.lifecycle.addObserver(observer)
@@ -273,7 +275,7 @@ fun LabScreen(navigator: Navigator) {
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "光点仓鼠住到手机桌面：会乱跑，揪耳朵会挣扎",
+                                text = "亲密度 ♥ $petAffinity · 点它、揪它、摇手机都有反应",
                                 fontSize = 11.sp,
                                 color = BocchiTextGray,
                                 maxLines = 1,
