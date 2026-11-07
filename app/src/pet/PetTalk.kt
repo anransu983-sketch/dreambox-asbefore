@@ -9,7 +9,7 @@ import kotlin.random.Random
  */
 object PetTalk {
 
-    enum class Pool { IDLE, MORNING, NOON, EVENING, NIGHT, POKE, TICKLE, GRAB, FED, SLEEPY, DIZZY, PEEK, HANG }
+    enum class Pool { IDLE, MORNING, NOON, EVENING, NIGHT, POKE, TICKLE, GRAB, FED, SLEEPY, DIZZY, PEEK, HANG, LONELY, UNLOCK, CHARGE }
 
     private val recent = ArrayDeque<String>()
 
@@ -40,6 +40,13 @@ object PetTalk {
 
     /** 日常碎碎念：六成日常池，四成当前时段池。 */
     fun idlePool(): Pool = if (Random.nextInt(100) < 62) Pool.IDLE else timePool()
+
+    fun chime(hour12: Int): String = listOf(
+        "叮～%d 点啦。",
+        "%d 点了，主人歇一歇。",
+        "整点报时：%d 点整。",
+        "%d 点啦，喝口水吧。",
+    ).random().format(hour12)
 
     fun milestone(n: Int): String = listOf(
         "我们互动 %d 次啦！",
@@ -221,6 +228,29 @@ object PetTalk {
             "下面安全，出来玩。",
             "探头探脑，就是我。",
             "看看有没有好吃的。",
+        )
+        Pool.LONELY -> listOf(
+            "主人好久没理我啦。",
+            "无聊到数瓜子了。",
+            "你去哪啦？我来找你了。",
+            "想主人了，过来看看。",
+            "一个鼠玩得没意思。",
+            "理理我嘛，就一下。",
+            "我把桌面巡逻三遍了。",
+            "是不是把我忘了呀？",
+        )
+        Pool.UNLOCK -> listOf(
+            "主人回来啦！",
+            "等你好久啦。",
+            "解锁啦，陪我玩一会儿。",
+            "你回来啦，我一直在。",
+            "想你啦，快看看我。",
+        )
+        Pool.CHARGE -> listOf(
+            "充电啦，我也充满电！",
+            "有电了，安心啦。",
+            "充电时间，适合睡一觉。",
+            "电量满满，心情满满。",
         )
         Pool.HANG -> listOf(
             "倒挂金钩，厉害吧！",

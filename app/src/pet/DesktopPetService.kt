@@ -5,7 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
@@ -127,6 +129,19 @@ class DesktopPetService : Service() {
     private var downTapY = 0f
     private var pokeAt = 0L
 
+    // 活气：情绪（活力值）随互动涨、随时间落；好久没人理会自己跑出来找人
+    private var mood = 60
+    private var lastInteractAt = SystemClock.uptimeMillis()
+    private var lastChimeHour = -1
+    private val lifeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_USER_PRESENT -> say(PetTalk.Pool.UNLOCK, 55)
+                Intent.ACTION_POWER_CONNECTED -> say(PetTalk.Pool.CHARGE, 80)
+            }
+        }
+    }
+
     // 摇一摇：加速度突变 → 晕乎乎
     private var sensorManager: SensorManager? = null
     private var lastAccelMag = 9.8f
@@ -190,6 +205,18 @@ class DesktopPetService : Service() {
         chooseNext(initial = true)
         handler.post(tick)
         registerShake()
+        // 活气：解锁/插上充电时搭句话（系统广播，免导出）
+        val lifeFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_POWER_CONNECTED)
+        }
+        try {
+            androidx.core.content.ContextCompat.registerReceiver(
+                this, lifeReceiver, lifeFilter,
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        } catch (_: Exception) {
+        }
         // 开场按时段打个招呼
         handler.postDelayed({ say(PetTalk.timePool()) }, 1400)
     }
@@ -216,6 +243,10 @@ class DesktopPetService : Service() {
         }
         root = null
         sensorManager?.unregisterListener(shakeListener)
+        try {
+            unregisterReceiver(lifeReceiver)
+        } catch (_: Exception) {
+        }
         super.onDestroy()
     }
 
@@ -403,6 +434,7 @@ class DesktopPetService : Service() {
             val now = SystemClock.uptimeMillis()
             grabCount = if (now - lastGrabAt < 20000) grabCount + 1 else 1
             lastGrabAt = now
+            lastInteractAt = now
         }
         if (dragging) {
             dragging = false
@@ -478,6 +510,7 @@ class DesktopPetService : Service() {
                     val now = SystemClock.uptimeMillis()
                     grabCount = if (now - lastGrabAt < 20000) grabCount + 1 else 1
                     lastGrabAt = now
+            lastInteractAt = now
                 } else if (dragging) {
                     dragging = false
                     if (longPressed) {
@@ -566,6 +599,8 @@ class DesktopPetService : Service() {
 
     /** 亲密度：互动攒数，攒到里程碑冒爱心庆祝。存 desktop_pet 偏好，实验室卡片可见。 */
     private fun bumpAffinity(n: Int) {
+        lastInteractAt = SystemClock.uptimeMillis()
+        mood = (mood + n * 3).coerceAtMost(100)
         val prefs = getSharedPreferences("desktop_pet", MODE_PRIVATE)
         val v = prefs.getInt("affinity", 0) + n
         prefs.edit().putInt("affinity", v).apply()
@@ -702,6 +737,13 @@ class DesktopPetService : Service() {
         if ((hour >= 23 || hour < 7) && act != Act.SLEEP && act != Act.ROAM && Random.nextInt(100) < 20) {
             startAct(Act.SLEEP)
         }
+        // 情绪偏向：活力高时把发呆/睡觉换成活动，活力低时更容易歇着
+        when {
+            mood >= 65 && (act == Act.IDLE || act == Act.SLEEP) && Random.nextInt(100) < 55 ->
+                startAct(listOf(Act.WALK, Act.ROLL, Act.RUB, Act.BASKETBALL, Act.GAME).random())
+            mood <= 30 && act != Act.SLEEP && act != Act.ROAM && Random.nextInt(100) < 35 ->
+                startAct(listOf(Act.SLEEP, Act.IDLE, Act.SEED).random())
+        }
     }
 
     private val tick = object : Runnable {
@@ -787,6 +829,16 @@ class DesktopPetService : Service() {
         }
         root?.translationY = hopOff.toFloat()
 
+        // 整点报时（每小时只报一次）
+        val calNow = Calendar.getInstance()
+        if (calNow.get(Calendar.MINUTE) == 0 && calNow.get(Calendar.HOUR_OF_DAY) != lastChimeHour) {
+            lastChimeHour = calNow.get(Calendar.HOUR_OF_DAY)
+            if (Random.nextInt(100) < 75 && bubble?.visibility != View.VISIBLE) {
+                val h12 = when (val h = lastChimeHour % 12) { 0 -> 12; else -> h }
+                showBubble(PetTalk.chime(h12))
+            }
+        }
+
         if (!dragging && now - actStart > actDur) {
             if (act == Act.ROAM && lp.y < groundY()) {
                 // 满屏跑结束时若不在地面，掉下去再继续过日子
@@ -809,12 +861,21 @@ class DesktopPetService : Service() {
             when {
                 isFood(act) -> {
                     bumpAffinity(1)
+                    mood = (mood + 10).coerceAtMost(100)
                     if (Random.nextInt(100) < 50) showBubble(pickBubbleLine())
                 }
                 act == Act.SLEEP -> {}
                 else -> say(PetTalk.idlePool(), 20)
             }
-            chooseNext()
+            mood = (mood - 3).coerceAtLeast(0)
+            // 好久没人理：自己满屏跑出来找主人
+            if (now - lastInteractAt > 240_000 && Random.nextInt(100) < 40) {
+                lastInteractAt = now
+                startAct(Act.ROAM)
+                say(PetTalk.Pool.LONELY, 85)
+            } else {
+                chooseNext()
+            }
         }
 
         val elapsed = now - actStart
@@ -1115,6 +1176,9 @@ class DesktopPetService : Service() {
             }
             Act.IDLE -> {
                 setFrame(if (now % 3400 < 150) "ham-f7" else "ham-f0")
+                // 呼吸感：待机也微微起伏摇摆，永远不会完全静止
+                iv.translationY = (sin(now / 900.0) * dp(1.2f)).toFloat()
+                iv.rotation = (sin(now / 1500.0) * 0.8).toFloat()
                 iv.scaleX = 1f
             }
         }
