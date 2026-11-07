@@ -430,6 +430,16 @@ class GitHubUpdateManager(
         return 0
     }
     private fun isNonLatestNewer(candidate: UpdateCandidate): Boolean {
+        // 先看版本号：tag 是语义版本且明确高于本地版本时直接算新版，不走时间戳比较。
+        // （历史教训：资产名时间戳曾是 UTC、UI 构建号是北京时间，8 小时内连发会被误判为旧版。）
+        val tagVersion = normalizeVersion(candidate.tag)
+        val localVersion = normalizeVersion(buildConfig.versionName)
+        if (tagVersion.isNotBlank() && localVersion.isNotBlank() &&
+            tagVersion.split('.', '-', '_').all { it.toIntOrNull() != null } &&
+            compareSemanticVersion(tagVersion, localVersion) > 0
+        ) {
+            return true
+        }
         val remoteAssetName = candidate.manifest.resolveBestPackageFileName().ifBlank {
             candidate.manifest.packages.firstOrNull()?.fileName.orEmpty()
         }
