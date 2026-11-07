@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.drawable.GradientDrawable
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
@@ -53,13 +54,48 @@ class DesktopPetService : Service() {
     private var root: FrameLayout? = null
     private var img: ImageView? = null
     private var zzz: TextView? = null
+    private var heart: TextView? = null
+    private var bubble: TextView? = null
+    private var bubbleFull = ""
+    private var bubbleStart = 0L
+    private var bubbleUntil = 0L
+
+    // 猫追逐战
+    private var catRoot: FrameLayout? = null
+    private var catImg: ImageView? = null
+    private lateinit var catLp: WindowManager.LayoutParams
+    private var catState = 0 // 0=不在场 1=追逐中 2=坐下歇会儿
+    private var chaseUntil = 0L
+    private var catSitUntil = 0L
+
+    // 点按连击与长按
+    private var tapStreak = 0
+    private var lastTapAt = 0L
+    private var longPressed = false
+    private val longPressRun = Runnable {
+        if (dragging && !moved && !grabbed) {
+            longPressed = true
+            startAct(Act.SLEEP)
+        }
+    }
     private lateinit var lp: WindowManager.LayoutParams
     private val frames = HashMap<String, Bitmap>()
 
     private var petW = 0
     private var petH = 0
 
-    private enum class Act { IDLE, WALK, RUB, WASH, FRY, SEED, SLEEP, STRETCH, ROLL, FLEE, ROAM }
+    private enum class Act {
+        IDLE, WALK, RUB, WASH, FRY, SEED,
+        DRINK, LATIAO, LOLLIPOP, SAUSAGE, MALATANG, CRAYFISH, ICECREAM, HOTPOT,
+        BASKETBALL, SWIM, RIDE, SKATE, SKI, GAME, MUSIC,
+        SLEEP, STRETCH, ROLL, FLEE, ROAM,
+    }
+
+    private fun isFood(a: Act): Boolean = when (a) {
+        Act.FRY, Act.SEED, Act.DRINK, Act.LATIAO, Act.LOLLIPOP, Act.SAUSAGE,
+        Act.MALATANG, Act.CRAYFISH, Act.ICECREAM, Act.HOTPOT -> true
+        else -> false
+    }
 
     private var act = Act.IDLE
     private var actStart = 0L
@@ -122,6 +158,7 @@ class DesktopPetService : Service() {
             return
         }
         applyAppearance()
+        buildCat()
         chooseNext(initial = true)
         handler.post(tick)
     }
@@ -147,6 +184,11 @@ class DesktopPetService : Service() {
         } catch (_: Exception) {
         }
         root = null
+        try {
+            catRoot?.let { wm?.removeViewImmediate(it) }
+        } catch (_: Exception) {
+        }
+        catRoot = null
         super.onDestroy()
     }
 
@@ -197,7 +239,7 @@ class DesktopPetService : Service() {
     private fun frame(name: String): Bitmap? {
         frames[name]?.let { return it }
         val breed = getSharedPreferences("desktop_pet", MODE_PRIVATE).getString("breed", "golden") ?: "golden"
-        val path = if (breed == "golden") "pet/$name.png" else "pet/$breed/$name.png"
+        val path = if (breed == "golden" || name.startsWith("cat-")) "pet/$name.png" else "pet/$breed/$name.png"
         return try {
             assets.open(path).use { BitmapFactory.decodeStream(it) }?.also { frames[name] = it }
         } catch (_: Exception) {
@@ -260,6 +302,37 @@ class DesktopPetService : Service() {
         }
         container.addView(iv)
         container.addView(z)
+        val hv = TextView(this).apply {
+            text = "♥"
+            setTextColor(0xFFF472A0.toInt())
+            textSize = 19f
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.START,
+            )
+            alpha = 0f
+        }
+        container.addView(hv)
+        heart = hv
+        val bb = TextView(this).apply {
+            setTextColor(0xFF3A2E2A.toInt())
+            textSize = 10.5f
+            setPadding(dp(8f), dp(5f), dp(8f), dp(5f))
+            background = GradientDrawable().apply {
+                setColor(0xF2FFFFFF.toInt())
+                cornerRadius = dp(10f).toFloat()
+            }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+            )
+            maxWidth = dp(190f)
+            visibility = View.GONE
+        }
+        container.addView(bb)
+        bubble = bb
         img = iv
         zzz = z
         root = container
@@ -302,6 +375,10 @@ class DesktopPetService : Service() {
                 downLpX = lp.x
                 downLpY = lp.y
                 downAt = SystemClock.uptimeMillis()
+                if (!grabbed) {
+                    longPressed = false
+                    handler.postDelayed(longPressRun, 550)
+                }
                 if (grabbed) zzz?.visibility = View.GONE
                 return true
             }
@@ -313,7 +390,10 @@ class DesktopPetService : Service() {
                 } else if (dragging) {
                     val dx = (ev.rawX - downRawX).toInt()
                     val dy = (ev.rawY - downRawY).toInt()
-                    if (abs(dx) > dp(6f) || abs(dy) > dp(6f)) moved = true
+                    if (abs(dx) > dp(6f) || abs(dy) > dp(6f)) {
+                        if (!moved) handler.removeCallbacks(longPressRun)
+                        moved = true
+                    }
                     if (moved) {
                         lp.x = (downLpX + dx).coerceIn(0, maxX())
                         lp.y = (downLpY + dy).coerceIn(0, maxY())
@@ -323,6 +403,7 @@ class DesktopPetService : Service() {
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                handler.removeCallbacks(longPressRun)
                 if (grabbed) {
                     grabbed = false
                     root?.rotation = 0f
@@ -335,15 +416,29 @@ class DesktopPetService : Service() {
                     lastGrabAt = now
                 } else if (dragging) {
                     dragging = false
-                    if (!moved && SystemClock.uptimeMillis() - downAt < 350) {
-                        hopStart = SystemClock.uptimeMillis()
-                        startAct(
-                            when (Random.nextInt(3)) {
-                                0 -> Act.RUB
-                                1 -> Act.FRY
-                                else -> Act.SEED
-                            },
-                        )
+                    if (longPressed) {
+                        longPressed = false
+                    } else if (!moved && SystemClock.uptimeMillis() - downAt < 350) {
+                        val nowU = SystemClock.uptimeMillis()
+                        tapStreak = if (nowU - lastTapAt < 400) tapStreak + 1 else 1
+                        lastTapAt = nowU
+                        hopStart = nowU
+                        when {
+                            tapStreak >= 3 -> {
+                                tapStreak = 0
+                                startAct(Act.ROLL)
+                            }
+                            tapStreak == 2 -> {
+                                startAct(
+                                    listOf(
+                                        Act.FRY, Act.SEED, Act.DRINK, Act.LATIAO,
+                                        Act.LOLLIPOP, Act.SAUSAGE, Act.ICECREAM,
+                                    ).random(),
+                                )
+                                showHeart()
+                            }
+                            else -> startAct(listOf(Act.RUB, Act.FRY, Act.SEED, Act.WASH).random())
+                        }
                     } else if (lp.y < groundY()) {
                         settling = true
                     }
@@ -352,6 +447,134 @@ class DesktopPetService : Service() {
             }
         }
         return false
+    }
+
+    private fun showHeart() {
+        heart?.apply {
+            animate().cancel()
+            alpha = 1f
+            translationY = dp(8f).toFloat()
+            animate().translationY(-dp(20f).toFloat()).alpha(0f).setDuration(1000).start()
+        }
+    }
+
+    private fun pickBubbleLine(): String {
+        val raw = getSharedPreferences("desktop_pet", MODE_PRIVATE).getString("bubble_lines", null)
+        val custom = raw?.split('\n', '；', ';')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        if (custom.isNotEmpty()) return custom.random()
+        return listOf(
+            "谢谢主人，愿主人天天开心^_^",
+            "谢谢主人，愿主人天天开心^_^",
+            "吃饱啦，谢谢主人！",
+            "好好吃！谢谢主人～",
+        ).random()
+    }
+
+    private fun showBubble(text: String) {
+        bubbleFull = text
+        bubbleStart = SystemClock.uptimeMillis()
+        bubbleUntil = bubbleStart + 900 + text.length * 75L + 1700
+        bubble?.visibility = View.VISIBLE
+        bubble?.text = ""
+    }
+
+    // ---------- 猫追逐战 ----------
+
+    private fun catW(): Int = (petW * 1.5).toInt()
+    private fun catRunH(): Int = (catW() * 183f / 420f).toInt()
+    private fun catSitH(): Int = (catW() * 619f / 420f).toInt()
+    private fun catGroundY(): Int = groundY() + petH - catRunH()
+
+    private fun buildCat() {
+        val iv = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            )
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+        val container = FrameLayout(this)
+        container.addView(iv)
+        container.visibility = View.GONE
+        catLp = WindowManager.LayoutParams(
+            catW(),
+            catRunH(),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 0
+            y = catGroundY()
+        }
+        catImg = iv
+        catRoot = container
+        try {
+            wm?.addView(container, catLp)
+        } catch (_: Exception) {
+            catRoot = null
+        }
+    }
+
+    private fun applyCatLp() {
+        try {
+            catRoot?.let { wm?.updateViewLayout(it, catLp) }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun startChase() {
+        if (catState != 0 || catRoot == null) return
+        catState = 1
+        chaseUntil = SystemClock.uptimeMillis() + Random.nextLong(7000, 11000)
+        catLp.width = catW()
+        catLp.height = catRunH()
+        catLp.y = catGroundY()
+        catLp.x = if (lp.x + petW / 2 < screenW() / 2) (screenW() - catW()).coerceAtLeast(0) else 0
+        catRoot?.visibility = View.VISIBLE
+        catImg?.alpha = 1f
+        applyCatLp()
+        if (lp.y < groundY()) {
+            falling = true
+            fallV = 0
+        }
+        startAct(Act.FLEE)
+    }
+
+    private fun endChase(caught: Boolean) {
+        catState = 2
+        catSitUntil = SystemClock.uptimeMillis() + 2400
+        frame("cat-sit")?.let { catImg?.setImageBitmap(it) }
+        catImg?.scaleX = 1f
+        catLp.height = catSitH()
+        catLp.y = groundY() + petH - catSitH()
+        applyCatLp()
+        if (caught) {
+            startAct(Act.ROLL)
+            if (Random.nextInt(100) < 50) showBubble("吓死宝宝了！")
+        }
+    }
+
+    private fun stepCat(now: Long) {
+        if (catState == 1) {
+            val targetX = lp.x + petW / 2 - catW() / 2
+            val dx = targetX - catLp.x
+            val sp = dp(3.05f)
+            catLp.x = (catLp.x + dx.coerceIn(-sp, sp)).coerceIn(0, (screenW() - catW()).coerceAtLeast(0))
+            catLp.y = catGroundY()
+            applyCatLp()
+            frame(if ((now / 140) % 2 == 0L) "cat-run0" else "cat-run1")?.let { catImg?.setImageBitmap(it) }
+            if (dx != 0) catImg?.scaleX = if (dx < 0) -1f else 1f
+            val dist = kotlin.math.abs((lp.x + petW / 2) - (catLp.x + catW() / 2))
+            if (dist < petW * 0.42f) {
+                endChase(caught = true)
+            } else if (now > chaseUntil) {
+                endChase(caught = false)
+            }
+        } else if (catState == 2 && now > catSitUntil) {
+            catState = 0
+            catRoot?.visibility = View.GONE
+        }
     }
 
     private fun applyLp() {
@@ -376,7 +599,22 @@ class DesktopPetService : Service() {
             Act.STRETCH -> Random.nextLong(2000, 2600)
             Act.ROLL -> 720L
             Act.FLEE -> Random.nextLong(1500, 2400)
-            Act.ROAM -> Random.nextLong(9000, 15000)
+            Act.ROAM -> Random.nextLong(28000, 36000)
+            Act.DRINK -> Random.nextLong(2600, 4200)
+            Act.LATIAO -> Random.nextLong(2600, 4000)
+            Act.LOLLIPOP -> Random.nextLong(2600, 3800)
+            Act.SAUSAGE -> Random.nextLong(2600, 4000)
+            Act.MALATANG -> Random.nextLong(3400, 5000)
+            Act.CRAYFISH -> Random.nextLong(2800, 4200)
+            Act.ICECREAM -> Random.nextLong(2600, 3800)
+            Act.HOTPOT -> Random.nextLong(3400, 5000)
+            Act.BASKETBALL -> Random.nextLong(3000, 4500)
+            Act.SWIM -> Random.nextLong(5000, 8000)
+            Act.RIDE -> Random.nextLong(6000, 9000)
+            Act.SKATE -> Random.nextLong(5000, 8000)
+            Act.SKI -> Random.nextLong(5000, 8000)
+            Act.GAME -> Random.nextLong(3000, 4500)
+            Act.MUSIC -> Random.nextLong(3400, 5000)
             Act.IDLE -> Random.nextLong(2200, 4200)
         }
         when (a) {
@@ -385,6 +623,7 @@ class DesktopPetService : Service() {
                 walkDir = pickDir()
             }
             Act.FLEE -> walkDir = pickDir()
+            Act.RIDE, Act.SKATE, Act.SKI, Act.SWIM -> walkDir = pickDir()
             Act.ROLL -> rollDir = pickDir()
             Act.ROAM -> roamTarget = nearestCornerClockwise()
             else -> {}
@@ -418,17 +657,36 @@ class DesktopPetService : Service() {
             startAct(Act.IDLE)
             return
         }
+        if (catState == 0 && Random.nextInt(100) < 4) {
+            startChase()
+            return
+        }
         val roll = Random.nextInt(100)
         startAct(
             when {
-                roll < 26 -> Act.WALK
-                roll < 37 -> Act.RUB
-                roll < 46 -> Act.WASH
-                roll < 59 -> Act.FRY
-                roll < 70 -> Act.SEED
-                roll < 79 -> Act.SLEEP
-                roll < 87 -> Act.STRETCH
-                roll < 93 -> Act.ROLL
+                roll < 14 -> Act.WALK
+                roll < 20 -> Act.RUB
+                roll < 25 -> Act.WASH
+                roll < 31 -> Act.FRY
+                roll < 36 -> Act.SEED
+                roll < 40 -> Act.DRINK
+                roll < 43 -> Act.LATIAO
+                roll < 46 -> Act.LOLLIPOP
+                roll < 49 -> Act.SAUSAGE
+                roll < 51 -> Act.MALATANG
+                roll < 53 -> Act.CRAYFISH
+                roll < 56 -> Act.ICECREAM
+                roll < 58 -> Act.HOTPOT
+                roll < 61 -> Act.BASKETBALL
+                roll < 64 -> Act.SWIM
+                roll < 67 -> Act.RIDE
+                roll < 70 -> Act.SKATE
+                roll < 72 -> Act.SKI
+                roll < 75 -> Act.GAME
+                roll < 78 -> Act.MUSIC
+                roll < 84 -> Act.SLEEP
+                roll < 88 -> Act.STRETCH
+                roll < 91 -> Act.ROLL
                 roll < 96 -> Act.ROAM
                 else -> Act.IDLE
             },
@@ -449,6 +707,7 @@ class DesktopPetService : Service() {
     private fun step() {
         val now = SystemClock.uptimeMillis()
         val iv = img ?: return
+        stepCat(now)
 
         // —— 被揪着：挣扎（蹬腿帧快切＋身体摇摆＋轻微拉长）——
         if (grabbed) {
@@ -512,12 +771,16 @@ class DesktopPetService : Service() {
                 fallV = 0
                 grabCount = 0
             }
+            if (isFood(act) && Random.nextInt(100) < 50) showBubble(pickBubbleLine())
             chooseNext()
         }
 
         val elapsed = now - actStart
         var squash = 1f
         var stretchX = 1f
+        iv.translationX = 0f
+        iv.translationY = 0f
+        iv.rotation = 0f
 
         when (act) {
             Act.WALK -> {
@@ -549,7 +812,11 @@ class DesktopPetService : Service() {
             }
             Act.FLEE -> {
                 if (!dragging) {
-                    var nx = lp.x + dp(2.1f) * walkDir
+                    if (catState == 1) {
+                        walkDir = if (lp.x + petW / 2 >= catLp.x + catW() / 2) 1 else -1
+                    }
+                    val fleeSp = if (catState == 1) dp(3.3f) else dp(2.1f)
+                    var nx = lp.x + fleeSp * walkDir
                     if (nx <= 0) {
                         nx = 0
                         walkDir = 1
@@ -567,7 +834,7 @@ class DesktopPetService : Service() {
             }
             Act.ROAM -> {
                 val (tx, ty) = cornerXY(roamTarget)
-                val sp = dp(2.6f)
+                val sp = dp(6.5f)
                 val dx = tx - lp.x
                 val dy = ty - lp.y
                 if (abs(dx) <= sp && abs(dy) <= sp) {
@@ -595,6 +862,122 @@ class DesktopPetService : Service() {
                 setFrame("ham-f1")
                 iv.scaleX = 1f
                 if (p >= 1f) root?.rotation = 0f
+            }
+            Act.DRINK -> {
+                setFrame("food-drink")
+                iv.translationY = (sin(elapsed / 170.0) * dp(2f)).toFloat()
+                iv.scaleX = 1f
+            }
+            Act.LATIAO, Act.SAUSAGE, Act.CRAYFISH -> {
+                setFrame("food-" + act.name.lowercase())
+                squash = if ((elapsed / 260) % 2 == 0L) 0.95f else 1f
+                iv.scaleX = 1f
+            }
+            Act.MALATANG, Act.HOTPOT -> {
+                setFrame("food-" + act.name.lowercase())
+                squash = if ((elapsed / 300) % 2 == 0L) 0.93f else 1f
+                iv.scaleX = 1f
+            }
+            Act.ICECREAM -> {
+                setFrame("food-icecream")
+                squash = if ((elapsed / 480) % 2 == 0L) 0.97f else 1f
+                iv.scaleX = 1f
+            }
+            Act.LOLLIPOP -> {
+                setFrame("food-lollipop")
+                iv.rotation = (sin(elapsed / 320.0) * 3).toFloat()
+                iv.scaleX = 1f
+            }
+            Act.BASKETBALL -> {
+                setFrame("food-basketball")
+                if (elapsed % 950 < 95 && hopStart == 0L) hopStart = now
+                iv.scaleX = 1f
+            }
+            Act.SWIM -> {
+                if (!dragging) {
+                    var nx = lp.x + dp(0.5f) * walkDir
+                    if (nx <= 0) {
+                        nx = 0
+                        walkDir = 1
+                    } else if (nx >= maxX()) {
+                        nx = maxX()
+                        walkDir = -1
+                    }
+                    if (nx != lp.x) {
+                        lp.x = nx
+                        applyLp()
+                    }
+                }
+                setFrame("food-swim")
+                iv.translationY = (sin(elapsed / 420.0) * dp(3f)).toFloat()
+                iv.scaleX = if (walkDir < 0) -1f else 1f
+            }
+            Act.RIDE -> {
+                if (!dragging) {
+                    var nx = lp.x + dp(3.6f) * walkDir
+                    if (nx <= 0) {
+                        nx = 0
+                        walkDir = 1
+                    } else if (nx >= maxX()) {
+                        nx = maxX()
+                        walkDir = -1
+                    }
+                    if (nx != lp.x) {
+                        lp.x = nx
+                        applyLp()
+                    }
+                }
+                setFrame("food-ride")
+                iv.translationY = if ((elapsed / 90) % 2 == 0L) -dp(1f).toFloat() else 0f
+                iv.scaleX = if (walkDir < 0) -1f else 1f
+            }
+            Act.SKATE -> {
+                if (!dragging) {
+                    var nx = lp.x + dp(2.2f) * walkDir
+                    if (nx <= 0) {
+                        nx = 0
+                        walkDir = 1
+                    } else if (nx >= maxX()) {
+                        nx = maxX()
+                        walkDir = -1
+                    }
+                    if (nx != lp.x) {
+                        lp.x = nx
+                        applyLp()
+                    }
+                }
+                setFrame("food-skate")
+                iv.rotation = (sin(elapsed / 300.0) * 2).toFloat()
+                iv.scaleX = if (walkDir < 0) -1f else 1f
+            }
+            Act.SKI -> {
+                if (!dragging) {
+                    var nx = lp.x + dp(2.6f) * walkDir
+                    if (nx <= 0) {
+                        nx = 0
+                        walkDir = 1
+                    } else if (nx >= maxX()) {
+                        nx = maxX()
+                        walkDir = -1
+                    }
+                    if (nx != lp.x) {
+                        lp.x = nx
+                        applyLp()
+                    }
+                }
+                setFrame("food-ski")
+                iv.scaleX = if (walkDir < 0) -1f else 1f
+            }
+            Act.GAME -> {
+                setFrame("food-game")
+                iv.translationX = (((elapsed / 70) % 3) - 1) * dp(1.2f).toFloat()
+                iv.scaleX = 1f
+            }
+            Act.MUSIC -> {
+                setFrame("food-music")
+                squash = if ((elapsed / 450) % 2 == 0L) 0.96f else 1f
+                iv.rotation = (sin(elapsed / 450.0) * 2.5).toFloat()
+                iv.scaleX = 1f
             }
             Act.RUB -> {
                 setFrame(if ((elapsed / 240) % 2 == 0L) "ham-f1" else "ham-f2")
@@ -653,7 +1036,7 @@ class DesktopPetService : Service() {
             iv.pivotY = iv.height.toFloat()
             iv.scaleY = squash
         }
-        if (act != Act.STRETCH && iv.scaleX != 1f && act != Act.WALK && act != Act.FLEE && act != Act.ROAM) {
+        if (act != Act.STRETCH && iv.scaleX != 1f && act != Act.WALK && act != Act.FLEE && act != Act.ROAM && act != Act.RIDE && act != Act.SKATE && act != Act.SKI && act != Act.SWIM) {
             iv.scaleX = 1f
         }
 
@@ -667,6 +1050,18 @@ class DesktopPetService : Service() {
                 z.translationY = -phase * dp(10f)
             } else if (z.visibility == View.VISIBLE) {
                 z.visibility = View.GONE
+            }
+        }
+
+        // 谢谢气泡：逐字打出，到时收起
+        val b = bubble
+        if (b != null && b.visibility == View.VISIBLE) {
+            if (now > bubbleUntil) {
+                b.visibility = View.GONE
+            } else {
+                val n = ((now - bubbleStart) / 70).toInt().coerceIn(0, bubbleFull.length)
+                val t = bubbleFull.substring(0, n)
+                if (b.text.toString() != t) b.text = t
             }
         }
     }

@@ -2,6 +2,7 @@ package com.suanran.dreambox.feature.settings.presentation.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -71,6 +72,7 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 
 private data class LabEntry(
     val title: String,
@@ -305,7 +307,7 @@ fun LabScreen(navigator: Navigator) {
                             color = BocchiTextGray,
                         )
                         Spacer(modifier = Modifier.width(spacing.space12))
-                        listOf(72 to "小", 96 to "中", 128 to "大").forEach { (dpVal, label) ->
+                        listOf(72 to "小", 96 to "中", 128 to "大", 208 to "巨大").forEach { (dpVal, label) ->
                             val selected = petSize == dpVal
                             Box(
                                 modifier = Modifier
@@ -417,6 +419,40 @@ fun LabScreen(navigator: Navigator) {
                             ) {}
                             Spacer(modifier = Modifier.width(10.dp))
                         }
+                    }
+                    Text(
+                        text = "吃饱后的谢谢话（一行一句，留空用默认）",
+                        fontSize = 12.sp,
+                        color = BocchiTextGray,
+                        modifier = Modifier.padding(start = spacing.space16, bottom = 6.dp),
+                    )
+                    var petLines by remember { mutableStateOf(petPrefs.getString("bubble_lines", "") ?: "") }
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = spacing.space16, end = spacing.space16, bottom = spacing.space14)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(BocchiBlueBg)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        BasicTextField(
+                            value = petLines,
+                            onValueChange = {
+                                petLines = it
+                                petPrefs.edit().putString("bubble_lines", it).apply()
+                            },
+                            textStyle = TextStyle(fontSize = 13.sp, color = BocchiTextDark),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (petLines.isEmpty()) {
+                                    Text(
+                                        text = "谢谢主人，愿主人天天开心^_^",
+                                        fontSize = 13.sp,
+                                        color = BocchiTextGray,
+                                    )
+                                }
+                                inner()
+                            },
+                        )
                     }
                 }
             }
