@@ -9,63 +9,140 @@
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body { margin: 0; padding: 12px; font-family: sans-serif; color: #f2eef8;
-         background: radial-gradient(120% 60% at 50% -10%, #2a2148 0%, #14101c 55%) fixed, #14101c; }
-  h1 { font-size: 20px; margin: 2px 0 2px; }
-  .sub { color: #b9aed0; font-size: 12.5px; line-height: 1.55; margin-bottom: 12px; }
-  .card { background: linear-gradient(180deg, #251c3d, #1d1730); border: 1px solid #352b55;
-          border-radius: 16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
-  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .pill { color: #9d90c2; font-size: 12px; border: 1px solid #3a3054; border-radius: 999px; padding: 6px 10px; background: #1b152c; }
-  label { display: block; font-size: 12.5px; color: #b9aed0; margin: 10px 0 5px; }
+  body { margin: 0; padding: 14px; font-family: sans-serif; color: #eaf6ff;
+         background: radial-gradient(130% 70% at 50% -10%, #173a5e 0%, #0a1430 55%) fixed, #070d24; }
+  h1 { font-size: 20px; margin: 2px 0 2px; display: flex; align-items: center; gap: 10px; }
+  .logo { width: 38px; height: 38px; flex: none; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 35% 28%, rgba(56,189,248,.35), rgba(10,26,50,.9) 78%);
+    border: 1.5px solid rgba(103,232,249,.45); border-radius: 46% 54% 52% 48% / 55% 48% 52% 45%;
+    box-shadow: 0 0 14px rgba(56,189,248,.30); }
+  .logo svg { stroke: #67e8f9; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .sub { color: #8fb4d8; font-size: 12.5px; line-height: 1.55; margin-bottom: 12px; }
+  .iptool { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .tabs { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
+  .tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 20px; font-size: 14.5px; color: #8fb4d8;
+    background: rgba(10,25,47,.8); border: 1.5px solid rgba(56,189,248,.3); cursor: pointer;
+    border-radius: 52% 48% 55% 45% / 68% 64% 36% 32%; }
+  .tab.on { color: #fff; border-color: rgba(103,232,249,.8);
+    background: radial-gradient(circle at 38% 30%, rgba(56,189,248,.30), rgba(10,25,47,.88) 78%);
+    box-shadow: 0 0 18px rgba(34,211,238,.35); }
+  .tab .cnt { font-size: 11px; color: #a5f3fc; margin-left: 2px; }
+  .tabham { width: auto; filter: drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
+  .card { position: relative; border-radius: 22px; padding: 14px; margin-bottom: 12px;
+    background: linear-gradient(180deg, rgba(21,42,80,.88), rgba(10,22,48,.94));
+    border: 1px solid rgba(103,232,249,.28); box-shadow: 0 0 22px rgba(56,120,220,.16), 0 10px 24px rgba(0,0,0,.35); }
+  label { display: block; font-size: 12.5px; color: #8fb4d8; margin: 10px 0 5px; }
   label:first-child { margin-top: 0; }
-  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #3a3054;
-          background: #171226; color: #fff; font-size: 15px; outline: none; }
-  input:focus { border-color: #e88bb0; }
-  textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #3a3054;
-          background: #171226; color: #fff; font-size: 12px; font-family: monospace; outline: none; }
-  textarea:focus { border-color: #e88bb0; }
+  input, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(125,211,252,.25);
+          background: #0d1834; color: #fff; font-size: 15px; outline: none; }
+  input:focus, select:focus { border-color: #f9a8d4; }
+  textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(125,211,252,.25);
+          background: #0d1834; color: #fff; font-size: 12px; font-family: monospace; outline: none; }
+  textarea:focus { border-color: #f9a8d4; }
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
-  button.main { width: 100%; padding: 12px; border: 0; border-radius: 14px; margin: 2px 0 12px;
-    background: linear-gradient(90deg, #e88bb0, #a678e8); color: #fff; font-size: 15.5px; font-weight: 600; }
+  button.main { width: 100%; padding: 12px; border: 0; border-radius: 999px; margin: 2px 0 12px;
+    background: linear-gradient(90deg, #f9a8d4, #22d3ee); color: #0b1226; font-size: 15.5px; font-weight: 700;
+    box-shadow: 0 0 16px rgba(34,211,238,.35); }
   button.main:disabled { opacity: .45; }
-  button.mini { padding: 8px 13px; border-radius: 9px; border: 1px solid #4a3d6e; background: #2a2142;
-    color: #e8defc; font-size: 13px; margin: 8px 8px 0 0; }
-  button.mini.primary { background: linear-gradient(90deg, #e88bb0, #a678e8); border: 0; color: #fff; font-weight: 600; }
-  button.mini.danger { border-color: #7a3049; color: #ff9db4; }
-  .srv-name { font-size: 16px; font-weight: 600; }
-  .srv-meta { color: #b9aed0; font-size: 12.5px; margin-top: 3px; word-break: break-all; }
-  .srv-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-  .srv-actions button.mini { margin: 0; width: 100%; min-height: 42px; padding: 9px 6px; font-size: 13.5px; border-radius: 11px; }
-  .srv-actions .srv-connect { grid-column: 1 / -1; min-height: 48px; font-size: 15.5px; }
-  .srv-actions .srv-del { grid-column: 1 / -1; min-height: 38px; background: transparent; }
-  .srv-section { grid-column: 1 / -1; color: #9d90c2; font-size: 11px; letter-spacing: .12em; margin-top: 4px; }
-  .seg { display: flex; background: #171226; border: 1px solid #3a3054; padding: 4px; border-radius: 12px; margin: 12px 0 2px; }
-  .seg-btn { flex: 1; border: 0; background: transparent; color: #b9aed0; padding: 9px; border-radius: 9px; font-size: 14px; }
-  .seg-btn.active { background: linear-gradient(90deg, #e88bb0, #a678e8); color: #fff; font-weight: 600; }
-  .empty { color: #b9aed0; font-size: 13.5px; text-align: center; padding: 26px 0 8px; line-height: 1.7; }
-  .err { color: #ff9db4; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
-  .warn { color: #ffb86b; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
-  .ok { color: #8be3b0; font-size: 13px; margin-top: 10px; }
+  button.mini { padding: 9px 14px; border: 1.5px solid rgba(125,211,252,.35); color: #dbeafe; font-size: 13px;
+    margin: 8px 8px 0 0; cursor: pointer;
+    background: radial-gradient(circle at 35% 26%, rgba(56,120,190,.5), rgba(10,26,50,.92) 78%);
+    border-radius: 58% 42% 55% 45% / 62% 58% 42% 38%; }
+  button.mini.primary { background: linear-gradient(90deg, #f9a8d4, #22d3ee); border: 0; color: #0b1226; font-weight: 700; }
+  button.mini.danger { border-color: rgba(251,113,133,.55); color: #fda4af; }
+  .top { display: flex; align-items: flex-start; gap: 8px; }
+  .srv-head { min-width: 0; padding-top: 4px; }
+  .srv-name { font-size: 16.5px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .srv-name .dot { width: 9px; height: 9px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; flex: none; }
+  .srv-meta { color: #8fb4d8; font-size: 12.5px; margin-top: 4px; word-break: break-all; line-height: 1.5; }
+  .petzone { margin-left: auto; flex: none; width: 124px; text-align: center; position: relative; z-index: 3; }
+  .petmove { will-change: transform; transform-origin: 50% 100%; position: relative; z-index: 2; }
+  .petmove img { width: 124px; display: block; filter: drop-shadow(0 0 9px rgba(250,205,130,.35)); }
+  .conn-pill { margin-top: 3px; border: 0; cursor: pointer; padding: 9px 26px; font-size: 15px; font-weight: 700;
+    color: #0b1226; background: linear-gradient(90deg, #f9a8d4, #22d3ee); border-radius: 999px;
+    box-shadow: 0 0 16px rgba(34,211,238,.45); position: relative; z-index: 2; }
+  .z { position: absolute; font-weight: 800; color: #7dd3fc; text-shadow: 0 0 9px rgba(125,211,252,.85); opacity: 0; pointer-events: none; z-index: 5; }
+  .z1 { right: 30px; top: 2px; font-size: 15px; }
+  .z2 { right: 15px; top: -12px; font-size: 20px; }
+  .z3 { right: -2px; top: -28px; font-size: 26px; }
+  .sleeping .z { animation: zfloat 2.4s ease-in-out infinite; }
+  .sleeping .z2 { animation-delay: .8s; }
+  .sleeping .z3 { animation-delay: 1.6s; }
+  @keyframes zfloat { 0% { opacity: 0; transform: translateY(8px) scale(.7) rotate(-6deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-24px) scale(1.15) rotate(9deg); } }
+  .sec { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #a9cdec; letter-spacing: .14em; margin: 14px 0 10px; position: relative; z-index: 1; }
+  .mk-dot { width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+  .units { display: flex; justify-content: center; gap: 15px; position: relative; z-index: 1; }
+  .unit { width: 72px; text-align: center; animation: bob 2s ease-in-out infinite; }
+  .unit:nth-child(2) { animation-delay: .28s; }
+  .unit:nth-child(3) { animation-delay: .56s; }
+  .unit:nth-child(4) { animation-delay: .84s; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  .stack { position: relative; width: 60px; margin: 0 auto; }
+  .blob { width: 60px; height: 58px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+    background: radial-gradient(circle at 35% 26%, rgba(56,120,190,.55), rgba(10,26,50,.92) 76%);
+    border: 1.5px solid rgba(125,211,252,.4); box-shadow: 0 0 13px rgba(56,189,248,.18); position: relative; }
+  .b1 { border-radius: 47% 53% 50% 50% / 55% 47% 53% 45%; }
+  .b2 { border-radius: 54% 46% 44% 56% / 46% 56% 44% 54%; }
+  .b3 { border-radius: 50% 50% 56% 44% / 52% 44% 56% 48%; }
+  .b4 { border-radius: 44% 56% 48% 52% / 56% 48% 52% 44%; }
+  .hamico { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); z-index: 2; pointer-events: none; filter: drop-shadow(0 3px 8px rgba(0,0,0,.45)); }
+  .bud { position: absolute; right: -10px; bottom: -8px; width: 29px; height: 29px; padding: 0; cursor: pointer; overflow: hidden; z-index: 3;
+    background: radial-gradient(circle at 35% 28%, rgba(38,110,180,.75), rgba(10,26,50,.95) 80%);
+    border: 1.5px solid rgba(103,232,249,.55); border-radius: 62% 38% 55% 45% / 48% 60% 40% 52%;
+    box-shadow: 0 0 10px rgba(56,189,248,.35); }
+  .budface { width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%; display: block; }
+  .stack.nq::before { content: ""; position: absolute; left: 50%; top: -10px; width: 78px; height: 78px; margin-left: -39px;
+    border: 2px dashed rgba(253,230,138,.4); border-radius: 50%; animation: spin 16s linear infinite; z-index: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .unit .lab { font-size: 11.5px; color: #a9cdec; margin-top: 13px; }
+  .unit .lab small { display: block; font-size: 10px; color: #6488ad; margin-top: 1px; }
+  .mgmt { display: flex; gap: 18px; padding: 0 4px; position: relative; z-index: 1; }
+  .morb { text-align: center; }
+  .mblob { width: 47px; height: 45px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; position: relative;
+    background: radial-gradient(circle at 35% 26%, rgba(56,120,190,.45), rgba(10,26,50,.92) 76%);
+    border: 1.5px solid rgba(196,181,253,.45); border-radius: 50% 50% 46% 54% / 58% 55% 45% 42%;
+    box-shadow: 0 0 10px rgba(167,139,250,.20); }
+  .morb.del .mblob { border-color: rgba(251,113,133,.5); box-shadow: 0 0 10px rgba(251,113,133,.22); }
+  .mham { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); z-index: 2; pointer-events: none; filter: drop-shadow(0 3px 7px rgba(0,0,0,.45)); }
+  .morb .lab { font-size: 11px; color: #a9cdec; margin-top: 9px; }
+  .addwrap { display: flex; justify-content: flex-end; align-items: center; gap: 11px; margin-top: 14px; padding-right: 4px; }
+  .addwrap .lab { font-size: 12.5px; color: #7dd3fc; }
+  .addw { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+  .add { width: 54px; height: 52px; position: relative; overflow: visible; cursor: pointer; padding: 0;
+    background: radial-gradient(circle at 35% 26%, rgba(56,120,190,.5), rgba(10,26,50,.94) 76%);
+    border: 1.5px dashed rgba(103,232,249,.6); border-radius: 50%; box-shadow: 0 0 16px rgba(56,189,248,.35); }
+  .addham { position: absolute; left: 50%; top: -11px; transform: translateX(-50%); z-index: 2; pointer-events: none; filter: drop-shadow(0 3px 8px rgba(0,0,0,.45)); }
+  .seg { display: flex; justify-content: center; gap: 14px; margin: 12px 0 4px; }
+  .seg-btn { flex: 0 1 auto; padding: 10px 26px; font-size: 14px; color: #8fb4d8; cursor: pointer;
+    background: rgba(10,25,47,.8); border: 1.5px solid rgba(56,189,248,.3);
+    border-radius: 52% 48% 55% 45% / 68% 64% 36% 32%; }
+  .seg-btn.active { color: #fff; font-weight: 600; border-color: rgba(103,232,249,.8);
+    background: radial-gradient(circle at 38% 30%, rgba(56,189,248,.30), rgba(10,25,47,.88) 78%);
+    box-shadow: 0 0 16px rgba(34,211,238,.3); }
+  .empty { color: #8fb4d8; font-size: 13.5px; text-align: center; padding: 26px 0 8px; line-height: 1.7; }
+  .err { color: #fda4af; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
+  .warn { color: #fcd34d; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #6ee7b7; font-size: 13px; margin-top: 10px; }
   pre.log { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; line-height: 1.5;
-    background: #100c1a; border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; margin: 10px 0 0; }
-  .linkbox { background: #100c1a; border: 1px solid #4a3d6e; border-radius: 10px; padding: 12px; margin-top: 12px; }
-  .linkbox .url { color: #8be3b0; font-size: 14px; word-break: break-all; line-height: 1.6; }
+    background: #0a1128; border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; margin: 10px 0 0; }
+  .linkbox { background: #0a1128; border: 1px solid rgba(103,232,249,.3); border-radius: 10px; padding: 12px; margin-top: 12px; }
+  .linkbox .url { color: #6ee7b7; font-size: 14px; word-break: break-all; line-height: 1.6; }
   .hidden { display: none !important; }
 
   /* ── 终端视图 ─────────────────────────── */
-  #view-term { position: fixed; inset: 0; background: #0b0910; display: flex; flex-direction: column; }
-  #term-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #1f1930; }
+  #view-term { position: fixed; inset: 0; background: #070d1f; display: flex; flex-direction: column; }
+  #term-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #101c3a; }
   #term-title { flex: 1; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #term-state { font-size: 12px; color: #8be3b0; }
   #term-state.off { color: #ff9db4; }
-  #btn-disconnect { padding: 7px 14px; border-radius: 9px; border: 1px solid #7a3049; background: #2a2142; color: #ff9db4; font-size: 13px; }
-  .term-act { padding: 7px 10px; border-radius: 9px; border: 1px solid #4a3d6e; background: #2a2142; color: #e8defc; font-size: 12.5px; }
+  #btn-disconnect { padding: 7px 14px; border-radius: 9px; border: 1px solid rgba(251,113,133,.55); background: #16264d; color: #ff9db4; font-size: 13px; }
+  .term-act { padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(125,211,252,.35); background: #16264d; color: #e8defc; font-size: 12.5px; }
   #terminal { flex: 1; padding: 4px 2px 0 6px; overflow: hidden; }
-  #keybar { display: flex; gap: 6px; padding: 8px; background: #171226; overflow-x: auto; }
-  #keybar button { flex: 0 0 auto; min-width: 44px; padding: 9px 10px; border-radius: 8px; border: 1px solid #3a3054;
-    background: #241b3d; color: #e8defc; font-size: 13px; font-family: monospace; }
+  #keybar { display: flex; gap: 6px; padding: 8px; background: #0d1834; overflow-x: auto; }
+  #keybar button { flex: 0 0 auto; min-width: 44px; padding: 9px 10px; border-radius: 8px; border: 1px solid rgba(125,211,252,.25);
+    background: #16264d; color: #e8defc; font-size: 13px; font-family: monospace; }
   #keybar button.on { background: #e88bb0; color: #14101c; font-weight: 700; }
 </style>
 </head>
@@ -73,18 +150,23 @@
 
 <!-- ═══ 列表 ═══ -->
 <div id="view-list">
-  <h1>🖥️ VPS 终端</h1>
-  <p class="sub">服务器只输一次，下次点「连接」直接进终端；测试与调优都在服务器卡片里。</p>
-  <div class="toolbar">
+  <h1><span class="logo"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3.5 3L7 15"/><line x1="12.5" y1="15.5" x2="17" y2="15.5"/></svg></span>SSH 终端</h1>
+  <p class="sub" id="head-sub">已保存 0 台 · 显示 IP 关</p>
+  <div class="iptool">
     <button class="mini" id="btn-toggle-ip" style="margin:0">🙈 IP 已隐藏</button>
-    <span class="pill" id="srv-count">已保存 0 台</span>
   </div>
-  <div id="srv-list"></div>
-  <button class="main" id="btn-add">＋ 添加服务器</button>
-  <div class="err" id="list-err"></div>
-  <div class="warn" id="store-notice"></div>
-  <div class="card">
-    <div class="srv-name">🧳 迁移备份</div>
+  <div class="tabs">
+    <div class="tab on" id="tab-servers"><img class="tabham" src="ico-tab-srv.png" style="height:31px" alt="">服务器<span class="cnt" id="tab-count">0 台</span></div>
+    <div class="tab" id="tab-mig"><img class="tabham" src="ico-tab-mig.png" style="height:35px" alt="">迁移备份</div>
+  </div>
+  <div id="pane-servers">
+    <div id="srv-list"></div>
+    <div class="addwrap"><span class="lab">添加服务器</span><div class="addw"><button class="add" id="btn-add" aria-label="添加服务器"><img class="addham" src="ico-add.png" style="width:58px" alt=""></button></div></div>
+    <div class="err" id="list-err"></div>
+    <div class="warn" id="store-notice"></div>
+  </div>
+  <div class="card hidden" id="pane-mig">
+    <div class="srv-name"><span class="dot"></span>迁移备份</div>
     <p class="sub" style="margin:6px 0 0">换机或卸载重装时用：迁移包由你的口令加密，导入后服务器和私钥一起恢复，服务器端不用改。口令忘了无法恢复。</p>
     <div class="seg">
       <button class="seg-btn active" id="mig-tab-export">导出</button>
@@ -323,8 +405,13 @@
     if (h.length <= 4) return '***';
     return h.slice(0, 2) + '***' + h.slice(-4);
   }
+  function syncHeadSub() {
+    var el = $('head-sub');
+    if (el) el.textContent = '已保存 ' + servers.length + ' 台 · 显示 IP ' + (showIp ? '开' : '关');
+  }
   function syncIpToggle() {
     $('btn-toggle-ip').textContent = showIp ? '👁 IP 显示中' : '🙈 IP 已隐藏';
+    syncHeadSub();
   }
   $('btn-toggle-ip').onclick = function () {
     showIp = !showIp;
@@ -340,86 +427,219 @@
   };
 
   // ── 列表 ─────────────────────────────────────
+  // ── 列表 ─────────────────────────────────────
+  var pets = [];
   function renderList() {
     var box = $('srv-list');
     box.innerHTML = '';
-    $('srv-count').textContent = '已保存 ' + servers.length + ' 台';
+    pets = [];
+    $('tab-count').textContent = servers.length + ' 台';
+    syncHeadSub();
     if (!servers.length) {
-      box.innerHTML = '<div class="empty">还没有保存的服务器<br>点下面「＋ 添加服务器」加第一台</div>';
+      box.innerHTML = '<div class="empty">还没有保存的服务器<br>点右下角的小仓鼠加第一台</div>';
       return;
     }
     servers.forEach(function (s) {
       var card = document.createElement('div');
       card.className = 'card';
-      var title = document.createElement('div');
-      title.className = 'srv-name';
-      title.textContent = '🖥️ ' + (s.name || s.host);
-      var meta = document.createElement('div');
-      meta.className = 'srv-meta';
-      meta.textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasKey ? (' · 🔑 私钥' + (s.authMode === 'key' ? '登录' : '已存')) : (s.hasPassword ? ' · 密码已保存' : ' · 无密码'));
-      card.appendChild(title);
-      card.appendChild(meta);
-      var actions = document.createElement('div');
-      actions.className = 'srv-actions';
-      function sectionLabel(t) {
-        var d = document.createElement('div');
-        d.className = 'srv-section'; d.textContent = t;
-        return d;
-      }
-      var bConn = document.createElement('button');
-      bConn.className = 'mini primary srv-connect'; bConn.textContent = '连接';
-      bConn.onclick = function () { openTerminal(s); };
-      var bTq = document.createElement('button');
-      bTq.className = 'mini'; bTq.textContent = '一键TQ';
-      bTq.onclick = function () { openTq(s, true); };
-      var bTune = document.createElement('button');
-      bTune.className = 'mini'; bTune.textContent = '一键调优';
-      bTune.onclick = function () { openTune(s); };
-      var bTqView = document.createElement('button');
-      bTqView.className = 'mini'; bTqView.textContent = 'TQ 结果';
-      bTqView.onclick = function () { openTq(s, false); };
-      var bEcs = document.createElement('button');
-      bEcs.className = 'mini'; bEcs.textContent = '一键融合怪';
-      bEcs.onclick = function () { openTest('ecs', s, true); };
-      var bEcsView = document.createElement('button');
-      bEcsView.className = 'mini'; bEcsView.textContent = '融合怪结果';
-      bEcsView.onclick = function () { openTest('ecs', s, false); };
-      var bIpq = document.createElement('button');
-      bIpq.className = 'mini'; bIpq.textContent = 'IP 体检';
-      bIpq.onclick = function () { openTest('ipq', s, true); };
-      var bIpqView = document.createElement('button');
-      bIpqView.className = 'mini'; bIpqView.textContent = 'IP 结果';
-      bIpqView.onclick = function () { openTest('ipq', s, false); };
-      var bNq = document.createElement('button');
-      bNq.className = 'mini'; bNq.textContent = '一键 NQ';
-      bNq.onclick = function () { openTest('nq', s, true); };
-      var bNqView = document.createElement('button');
-      bNqView.className = 'mini'; bNqView.textContent = 'NQ 结果';
-      bNqView.onclick = function () { openTest('nq', s, false); };
-      var bEdit = document.createElement('button');
-      bEdit.className = 'mini'; bEdit.textContent = '编辑';
-      bEdit.onclick = function () { openForm(s); };
-      var bDel = document.createElement('button');
-      bDel.className = 'mini danger srv-del'; bDel.textContent = '删除';
-      bDel.onclick = function () {
-        if (!confirm('删除这台服务器的保存记录？')) return;
-        callNative('deleteServer', { id: s.id }).then(function (r) {
-          servers = r.servers || []; renderList();
-        }).catch(function (e) { $('list-err').textContent = e.message; });
-      };
-      actions.appendChild(bConn);
-      actions.appendChild(sectionLabel('一键测试'));
-      actions.appendChild(bTq); actions.appendChild(bTqView);
-      actions.appendChild(bEcs); actions.appendChild(bEcsView);
-      actions.appendChild(bIpq); actions.appendChild(bIpqView);
-      actions.appendChild(bNq); actions.appendChild(bNqView);
-      actions.appendChild(sectionLabel('管理'));
-      actions.appendChild(bTune); actions.appendChild(bEdit);
-      actions.appendChild(bDel);
-      card.appendChild(actions);
+      card.innerHTML =
+        '<div class="top"><div class="srv-head"><div class="srv-name"><span class="dot"></span><span class="nm"></span></div><div class="srv-meta"></div></div>' +
+        '<div class="petzone"><div class="petmove"><img src="ham-f0.png" alt=""></div><span class="z z1">Z</span><span class="z z2">Z</span><span class="z z3">Z</span><button class="conn-pill" type="button">连接</button></div></div>' +
+        '<div class="sec"><span class="mk-dot"></span>一键测试</div><div class="units"></div>' +
+        '<div class="sec"><span class="mk-dot"></span>管理</div><div class="mgmt"></div>';
+      card.querySelector('.nm').textContent = s.name || s.host;
+      card.querySelector('.srv-meta').textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasKey ? (' · 🔑 私钥' + (s.authMode === 'key' ? '登录' : '已存')) : (s.hasPassword ? ' · 密码已保存' : ' · 无密码'));
+      card.querySelector('.conn-pill').onclick = function () { openTerminal(s); };
+      var units = card.querySelector('.units');
+      var defs = [
+        { img: 'ico-tq.png', w: 78, cls: 'b1', ic: '#f9a8d4', lab: 'TcpQuality', sub: '回程路由',
+          run: function () { openTq(s, true); }, view: function () { openTq(s, false); } },
+        { img: 'ico-fuse.png', w: 61, cls: 'b2', ic: '#6ee7b7', lab: '融合怪', sub: '综合体检',
+          run: function () { openTest('ecs', s, true); }, view: function () { openTest('ecs', s, false); } },
+        { img: 'ico-ip.png', w: 55, cls: 'b3', ic: '#7dd3fc', lab: 'IP 体检', sub: '质量评分',
+          run: function () { openTest('ipq', s, true); }, view: function () { openTest('ipq', s, false); } },
+        { img: 'ico-nq.png', w: 80, cls: 'b4', ic: '#fde68a', lab: '一键 NQ', sub: '硬件质量', nq: true,
+          run: function () { openTest('nq', s, true); }, view: function () { openTest('nq', s, false); } }
+      ];
+      defs.forEach(function (d) {
+        var u = document.createElement('div');
+        u.className = 'unit';
+        u.innerHTML = '<div class="stack' + (d.nq ? ' nq' : '') + '"><button class="blob ' + d.cls + '" type="button" style="border-color:' + d.ic + '66"><img class="hamico" src="' + d.img + '" style="width:' + d.w + 'px" alt=""></button><button class="bud" type="button" aria-label="查看结果"><img class="budface" src="ico-del.png" alt=""></button></div><div class="lab">' + d.lab + '<small>' + d.sub + '</small></div>';
+        u.querySelector('.blob').onclick = d.run;
+        u.querySelector('.bud').onclick = d.view;
+        units.appendChild(u);
+      });
+      var mgmt = card.querySelector('.mgmt');
+      var mdefs = [
+        { img: 'ico-tune.png', w: 45, lab: '调优', fn: function () { openTune(s); } },
+        { img: 'ico-edit.png', w: 51, lab: '编辑', fn: function () { openForm(s); } },
+        { img: 'ico-del.png', w: 59, lab: '删除', del: true, fn: function () {
+            if (!confirm('删除这台服务器的保存记录？')) return;
+            callNative('deleteServer', { id: s.id }).then(function (r) {
+              servers = r.servers || []; renderList();
+            }).catch(function (e) { $('list-err').textContent = e.message; });
+          } }
+      ];
+      mdefs.forEach(function (d) {
+        var m = document.createElement('div');
+        m.className = 'morb' + (d.del ? ' del' : '');
+        m.innerHTML = '<button class="mblob" type="button"><img class="mham" src="' + d.img + '" style="width:' + d.w + 'px" alt=""></button><div class="lab">' + d.lab + '</div>';
+        m.querySelector('.mblob').onclick = d.fn;
+        mgmt.appendChild(m);
+      });
       box.appendChild(card);
+      pets.push(makePet(card, card.querySelector('.petmove'), card.querySelector('.petmove img'), card.querySelector('.petzone')));
     });
   }
+
+  // ── 仓鼠：随机过日子（不固定循环） ──
+  var HAMF = ['ham-f0.png', 'ham-f1.png', 'ham-f2.png', 'ham-f3.png', 'ham-f4.png', 'ham-f5.png', 'ham-f6.png', 'ham-f7.png', 'ham-e0.png', 'ham-e1.png', 'ham-e2.png', 'ham-g0.png', 'ham-g1.png', 'ham-g2.png', 'ham-p0.png', 'ham-r0.png', 'ham-r1.png'];
+  HAMF.forEach(function (f) { var im = new Image(); im.src = f; });
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function pickWeighted(items) {
+    var sum = 0, i;
+    for (i = 0; i < items.length; i++) sum += items[i][1];
+    var r = Math.random() * sum;
+    for (i = 0; i < items.length; i++) { r -= items[i][1]; if (r <= 0) return items[i][0]; }
+    return items[items.length - 1][0];
+  }
+  function makePet(cardEl, moveEl, imgEl, zoneEl) {
+    return { cardEl: cardEl, moveEl: moveEl, imgEl: imgEl, zoneEl: zoneEl, seg: null, curX: 0,
+      lastF: -1, nextBlink: performance.now() + rnd(1200, 3000), lastAction: '', sinceLap: 99,
+      path: null, segs: null, total: 0 };
+  }
+  function petStart(p, name, dur, data) {
+    p.seg = { name: name, t0: performance.now(), dur: dur * 1000, data: data || {} };
+    p.zoneEl.classList.toggle('sleeping', name === 'nap');
+  }
+  function petChoose(p, now) {
+    var pool = [['rub', 18], ['wash', 14], ['fry', 16], ['seed', 14], ['nap', 12], ['crawl', 14], ['idle', 12]];
+    if (p.sinceLap >= 4) pool.push(['lap', 5]);
+    var name = pickWeighted(pool);
+    if (name === p.lastAction) name = pickWeighted(pool);
+    p.lastAction = name; p.sinceLap++;
+    if (name === 'rub') petStart(p, 'rub', rnd(1.5, 2.4));
+    else if (name === 'wash') petStart(p, 'wash', rnd(1.8, 2.6));
+    else if (name === 'fry') petStart(p, 'fry', 3.4);
+    else if (name === 'seed') petStart(p, 'seed', 2.8);
+    else if (name === 'nap') petStart(p, 'nap', rnd(4, 7));
+    else if (name === 'crawl') {
+      var target = pickWeighted([[-52, 1], [-84, 1], [-118, 1], [0, 0.7]]);
+      if (target === p.curX) target = -84;
+      petStart(p, 'crawlGo', Math.abs(target - p.curX) / 62, { from: p.curX, to: target });
+    }
+    else if (name === 'lap') { p.sinceLap = 0; petStart(p, 'pack', 0.9); }
+    else petStart(p, 'idle', rnd(1.4, 3.2));
+  }
+  function lapPathFor(p) {
+    var cr = p.cardEl.getBoundingClientRect(), pr = p.moveEl.getBoundingClientRect();
+    var cx = pr.left + pr.width / 2, cy = pr.top + pr.height / 2;
+    var dxR = cr.right - cx - 2, dxL = cr.left - cx + 2, dyT = cr.top - cy + 2, dyB = cr.bottom - cy - 2;
+    return [[0, 0, 0], [dxR, dyT, -4], [dxL + 40, dyT, -6], [dxL, dyT + 42, 3], [dxL, dyB - 42, 3], [dxL + 40, dyB, 6], [dxR - 40, dyB, 6], [dxR, dyB - 42, -4], [dxR, dyT + 42, -4], [0, 0, 0]];
+  }
+  function lapSetup(p) {
+    p.path = lapPathFor(p); p.segs = []; p.total = 0;
+    for (var i = 0; i < p.path.length - 1; i++) {
+      var dx = p.path[i + 1][0] - p.path[i][0], dy = p.path[i + 1][1] - p.path[i][1];
+      var len = Math.sqrt(dx * dx + dy * dy); p.segs.push(len); p.total += len;
+    }
+  }
+  function lapPos(p, pr) {
+    var dist = pr * p.total, i = 0;
+    while (i < p.segs.length - 1 && dist > p.segs[i]) { dist -= p.segs[i]; i++; }
+    var q = p.segs[i] ? dist / p.segs[i] : 0;
+    q = q < .5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
+    return [p.path[i][0] + (p.path[i + 1][0] - p.path[i][0]) * q,
+            p.path[i][1] + (p.path[i + 1][1] - p.path[i][1]) * q,
+            p.path[i][2] + (p.path[i + 1][2] - p.path[i][2]) * q];
+  }
+  function petFrame(p, t, now) {
+    var sg = p.seg, pr = (now - sg.t0) / sg.dur;
+    switch (sg.name) {
+      case 'idle': return (Math.floor(t / 0.28) % 5 === 4) ? 2 : 0;
+      case 'rub': return [0, 2, 0, 1][Math.floor(t / 0.2) % 4];
+      case 'wash': return (Math.floor(t / 0.22) % 2) ? 6 : 5;
+      case 'fry':
+        if (pr < 0.15) return 1;
+        if (pr < 0.32) return 8;
+        if (pr < 0.82) return (Math.floor(t / 0.25) % 2) ? 9 : 8;
+        if (pr < 0.93) return 10;
+        return 7;
+      case 'seed':
+        if (pr < 0.2) return 11;
+        if (pr < 0.85) return (Math.floor(t / 0.25) % 2) ? 12 : 11;
+        return 13;
+      case 'nap': return 7;
+      case 'crawlGo': case 'crawlBack': return (Math.floor(t / 0.15) % 2) ? 4 : 3;
+      case 'crawlStay': return 0;
+      case 'pack': return (Math.floor(t / 0.3) % 2) ? 14 : 1;
+      case 'lap': return (Math.floor(t / 0.12) % 2) ? 16 : 15;
+    }
+    return 0;
+  }
+  function petPose(p, t, now) {
+    var sg = p.seg, pr = (now - sg.t0) / sg.dur;
+    var x = p.curX, y = 0, rot = Math.sin(t * 2) * 1.1, sx = 1, sy = 1;
+    if (sg.name === 'wash') rot = Math.sin(t * 6) * 1.8;
+    if (sg.name === 'fry' && pr >= 0.32 && pr < 0.82) y = (Math.floor(t / 0.25) % 2) ? 2 : 0;
+    if (sg.name === 'seed' && pr >= 0.2 && pr < 0.85) y = (Math.floor(t / 0.25) % 2) ? 2 : 0;
+    if (sg.name === 'nap') { sy = 0.83 + 0.02 * Math.sin(t * 3); sx = 1.05; rot = 0; }
+    if (sg.name === 'crawlGo' || sg.name === 'crawlBack') {
+      var q = pr < .5 ? 2 * pr * pr : 1 - Math.pow(-2 * pr + 2, 2) / 2;
+      x = sg.data.from + (sg.data.to - sg.data.from) * q;
+      y = Math.sin(t * 22) * 1.6; rot = Math.sin(t * 13) * 2.2;
+    }
+    if (sg.name === 'lap' && p.path) { var pos = lapPos(p, pr); x = pos[0]; y = pos[1]; rot = pos[2]; }
+    return [x, y, rot, sx, sy];
+  }
+  function petAdvance(p, now) {
+    if (!p.seg) { petStart(p, 'idle', rnd(1.2, 2.4)); return; }
+    if (now - p.seg.t0 < p.seg.dur) return;
+    var name = p.seg.name;
+    if (name === 'crawlGo') { p.curX = p.seg.data.to; petStart(p, 'crawlStay', rnd(0.6, 1.8)); }
+    else if (name === 'crawlStay') {
+      if (Math.random() < 0.25 && p.curX !== 0) {
+        var nt = pickWeighted([[-52, 1], [-118, 1], [0, 1]]);
+        if (nt !== p.curX) { petStart(p, 'crawlGo', Math.abs(nt - p.curX) / 62, { from: p.curX, to: nt }); return; }
+      }
+      if (p.curX !== 0) petStart(p, 'crawlBack', Math.abs(p.curX) / 62, { from: p.curX, to: 0 });
+      else petChoose(p, now);
+    }
+    else if (name === 'crawlBack') { p.curX = 0; petStart(p, 'idle', rnd(0.8, 1.8)); }
+    else if (name === 'pack') { lapSetup(p); petStart(p, 'lap', 3.4); }
+    else if (name === 'lap') { p.path = null; petStart(p, 'idle', rnd(1.0, 2.0)); }
+    else if (name === 'idle') petChoose(p, now);
+    else petStart(p, 'idle', rnd(0.9, 2.2));
+  }
+  function stepPet(p, now) {
+    petAdvance(p, now);
+    if (!p.seg) return;
+    var t = now / 1000;
+    var f = petFrame(p, t, now);
+    if (p.seg.name !== 'nap' && p.seg.name !== 'lap') {
+      if (now > p.nextBlink && now < p.nextBlink + 130) f = 7;
+      if (now >= p.nextBlink + 130) p.nextBlink = now + rnd(1800, 4600);
+    }
+    if (f !== p.lastF) { p.imgEl.src = HAMF[f]; p.lastF = f; }
+    var pose = petPose(p, t, now);
+    p.moveEl.style.transform = 'translate(' + pose[0].toFixed(1) + 'px,' + pose[1].toFixed(1) + 'px) rotate(' + pose[2].toFixed(2) + 'deg) scale(' + pose[3] + ',' + pose[4].toFixed(3) + ')';
+  }
+  function tickPets(now) {
+    for (var i = 0; i < pets.length; i++) stepPet(pets[i], now);
+    requestAnimationFrame(tickPets);
+  }
+  requestAnimationFrame(tickPets);
+
+  // ── 顶部页签（服务器 / 迁移备份） ──
+  function setMainTab(which) {
+    $('tab-servers').classList.toggle('on', which === 'servers');
+    $('tab-mig').classList.toggle('on', which === 'mig');
+    $('pane-servers').classList.toggle('hidden', which !== 'servers');
+    $('pane-mig').classList.toggle('hidden', which !== 'mig');
+  }
+  $('tab-servers').onclick = function () { setMainTab('servers'); };
+  $('tab-mig').onclick = function () { setMainTab('mig'); };
+
   function refreshList() {
     callNative('listServers', {}).then(function (r) {
       servers = r.servers || []; renderList();
@@ -769,7 +989,7 @@
     term = new Terminal({
       fontSize: 13,
       fontFamily: 'Menlo, Consolas, monospace',
-      theme: { background: '#0b0910', foreground: '#e8e3f5', cursor: '#e88bb0' },
+      theme: { background: '#070d1f', foreground: '#e8e3f5', cursor: '#e88bb0' },
       cursorBlink: true,
       scrollback: 4000
     });

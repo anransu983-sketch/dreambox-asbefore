@@ -173,10 +173,10 @@ class PackStore(context: Context) {
             PackDef(
                 id = "sshtty",
                 name = "VPS 终端",
-                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复；本机存档解不开时自动隔离自愈；v13 列表页布局改版（按钮网格化、迁移备份分页签）",
-                version = "13",
-                sizeText = "约 340 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v13.zip",
+                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复；本机存档解不开时自动隔离自愈；v14 仓鼠全家福：列表页主角仓鼠随机过日子（揉爪/洗脸/啃薯条/抱瓜子/睡觉冒 Zzz/打包绕框跑路），全部按钮换不同品种仓鼠图标，霓虹夜航底",
+                version = "14",
+                sizeText = "约 1.3 MB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v14.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
             ),
         )
