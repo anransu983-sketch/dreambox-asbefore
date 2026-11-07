@@ -39,6 +39,7 @@ import com.suanran.dreambox.core.contract.SubStoreBackupSupport
 import com.suanran.dreambox.core.contract.SubStoreSettings
 import com.suanran.dreambox.core.importedDir
 import com.suanran.dreambox.core.model.backup.AppSettingsBackup
+import com.suanran.dreambox.core.model.backup.SectStateBackup
 import com.suanran.dreambox.core.model.backup.BackupManifest
 import com.suanran.dreambox.core.model.backup.BackupPayload
 import com.suanran.dreambox.core.model.backup.FeatureSettingsBackup
@@ -147,6 +148,10 @@ class BackupRepository(
                             "overrides",
                             "substore_data",
                             "moe_wallpaper",
+                            "packs",
+                            "sshtty_data",
+                            "webdav_data",
+                            "sect_state",
                         ),
                 ),
             payload = collectPayload(),
@@ -249,6 +254,34 @@ class BackupRepository(
                     profileOrder = profileStore.loadProfileOrder().map(UUID::toString),
                 ),
             service = ServiceBackup(activeProfile = serviceState.activeProfile?.toString()),
+            sectState =
+                SectStateBackup(
+                    sectPathId = appSettings.sectPathId.value,
+                    sectJoinedAt = appSettings.sectJoinedAt.value,
+                    sectExpBonus = appSettings.sectExpBonus.value,
+                    sectLastCultivateDay = appSettings.sectLastCultivateDay.value,
+                    sectLastSalaryDay = appSettings.sectLastSalaryDay.value,
+                    sectPostChoice = appSettings.sectPostChoice.value,
+                    sectPostMigrated = appSettings.sectPostMigrated.value,
+                    sectRewardLog = appSettings.sectRewardLog.value,
+                    sectSeriesClaimed = appSettings.sectSeriesClaimed.value,
+                    sectSeriesBonus = appSettings.sectSeriesBonus.value,
+                    sectPtBalance = appSettings.sectPtBalance.value,
+                    sectPtEarned = appSettings.sectPtEarned.value,
+                    sectPtLife = appSettings.sectPtLife.value,
+                    sectPtPool = appSettings.sectPtPool.value,
+                    sectAlloc = appSettings.sectAlloc.value,
+                    sectGranted = appSettings.sectGranted.value,
+                    sectRankIdx = appSettings.sectRankIdx.value,
+                    sectPtMigrated = appSettings.sectPtMigrated.value,
+                    sectAllocPending = appSettings.sectAllocPending.value,
+                    sectOpeningStones = appSettings.sectOpeningStones.value,
+                    sectLifeLog = appSettings.sectLifeLog.value,
+                    sectEchoClaimed = appSettings.sectEchoClaimed.value,
+                    sectWorldId = appSettings.sectWorldId.value,
+                    sectSystemId = appSettings.sectSystemId.value,
+                    sectGuiyi = appSettings.sectGuiyi.value,
+                ),
         )
 
     private suspend fun applyBackup(extracted: BackupArchiveManager.ExtractedBackup) {
@@ -267,6 +300,9 @@ class BackupRepository(
         replaceBackupDirectory(extracted.importedDir, application.importedDir)
         replaceBackupDirectory(extracted.overridesDir, application.filesDir.resolve("overrides"))
         replaceBackupDirectory(extracted.subStoreDataDir, subStoreBackupSupport.dataDir)
+        replaceBackupDirectory(extracted.packsDir, application.filesDir.resolve("packs"))
+        replaceBackupDirectory(extracted.sshttyDataDir, application.filesDir.resolve("sshtty-data"))
+        replaceBackupDirectory(extracted.webdavDataDir, application.filesDir.resolve("webdav-data"))
         if (wallpaperFile != null) {
             application.moeWallpaperFile().also { target ->
                 target.parentFile?.mkdirs()
@@ -288,6 +324,10 @@ class BackupRepository(
         applyRemoteController(extracted.payload.remoteController)
         applyWebDav(extracted.payload.webDav)
         applyProfiles(extracted.payload.profiles)
+        // 旧备份（1.157 及以前导出）不含 sect_state：清单里没有就不动现存进度，防把进度抹回默认值
+        if ("sect_state" in extracted.manifest.includes) {
+            applySectState(extracted.payload.sectState)
+        }
         serviceState.activeProfile = extracted.payload.service.activeProfile?.let(UUID::fromString)
     }
 
@@ -480,12 +520,43 @@ class BackupRepository(
         profileStore.saveProfileOrder(value.profileOrder.map(UUID::fromString))
     }
 
+    private fun applySectState(value: SectStateBackup) {
+        appSettings.sectPathId.set(value.sectPathId)
+        appSettings.sectJoinedAt.set(value.sectJoinedAt)
+        appSettings.sectExpBonus.set(value.sectExpBonus)
+        appSettings.sectLastCultivateDay.set(value.sectLastCultivateDay)
+        appSettings.sectLastSalaryDay.set(value.sectLastSalaryDay)
+        appSettings.sectPostChoice.set(value.sectPostChoice)
+        appSettings.sectPostMigrated.set(value.sectPostMigrated)
+        appSettings.sectRewardLog.set(value.sectRewardLog)
+        appSettings.sectSeriesClaimed.set(value.sectSeriesClaimed)
+        appSettings.sectSeriesBonus.set(value.sectSeriesBonus)
+        appSettings.sectPtBalance.set(value.sectPtBalance)
+        appSettings.sectPtEarned.set(value.sectPtEarned)
+        appSettings.sectPtLife.set(value.sectPtLife)
+        appSettings.sectPtPool.set(value.sectPtPool)
+        appSettings.sectAlloc.set(value.sectAlloc)
+        appSettings.sectGranted.set(value.sectGranted)
+        appSettings.sectRankIdx.set(value.sectRankIdx)
+        appSettings.sectPtMigrated.set(value.sectPtMigrated)
+        appSettings.sectAllocPending.set(value.sectAllocPending)
+        appSettings.sectOpeningStones.set(value.sectOpeningStones)
+        appSettings.sectLifeLog.set(value.sectLifeLog)
+        appSettings.sectEchoClaimed.set(value.sectEchoClaimed)
+        appSettings.sectWorldId.set(value.sectWorldId)
+        appSettings.sectSystemId.set(value.sectSystemId)
+        appSettings.sectGuiyi.set(value.sectGuiyi)
+    }
+
     private fun currentFiles(): BackupArchiveManager.BackupFiles =
         BackupArchiveManager.BackupFiles(
             importedDir = application.importedDir,
             overridesDir = application.filesDir.resolve("overrides"),
             subStoreDataDir = subStoreBackupSupport.dataDir,
             moeWallpaperFile = application.moeWallpaperFile(),
+            packsDir = application.filesDir.resolve("packs"),
+            sshttyDataDir = application.filesDir.resolve("sshtty-data"),
+            webdavDataDir = application.filesDir.resolve("webdav-data"),
         )
 
     private fun freshCacheDir(name: String): File =

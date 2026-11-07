@@ -61,6 +61,38 @@ data class BackupPayload(
     val webDav: WebDavBackup = WebDavBackup(),
     val profiles: ProfilesBackup = ProfilesBackup(),
     val service: ServiceBackup = ServiceBackup(),
+    val sectState: SectStateBackup = SectStateBackup(),
+)
+
+/** 功能包宿主状态（sect/轮回）：存在 AppSettingsStore 里，旧版备份没带它们，
+ *  换机/卸载重装后进度全失（1.156 换签名实测）。字段与默认值与 AppSettingsStore 一一对应。 */
+@Serializable
+data class SectStateBackup(
+    val sectPathId: String = "",
+    val sectJoinedAt: Long = 0L,
+    val sectExpBonus: Int = 0,
+    val sectLastCultivateDay: String = "",
+    val sectLastSalaryDay: String = "",
+    val sectPostChoice: Int = -1,
+    val sectPostMigrated: Boolean = false,
+    val sectRewardLog: String = "",
+    val sectSeriesClaimed: String = "",
+    val sectSeriesBonus: Int = 0,
+    val sectPtBalance: Int = 0,
+    val sectPtEarned: Int = 0,
+    val sectPtLife: Int = 1,
+    val sectPtPool: Int = 0,
+    val sectAlloc: String = "",
+    val sectGranted: String = "",
+    val sectRankIdx: Int = -1,
+    val sectPtMigrated: Boolean = false,
+    val sectAllocPending: Boolean = false,
+    val sectOpeningStones: Int = 0,
+    val sectLifeLog: String = "",
+    val sectEchoClaimed: String = "",
+    val sectWorldId: String = "",
+    val sectSystemId: String = "",
+    val sectGuiyi: Boolean = false,
 )
 
 @Serializable

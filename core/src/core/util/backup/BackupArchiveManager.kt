@@ -45,6 +45,9 @@ class BackupArchiveManager(
         val overridesDir: File,
         val subStoreDataDir: File,
         val moeWallpaperFile: File,
+        val packsDir: File,
+        val sshttyDataDir: File,
+        val webdavDataDir: File,
     )
 
     data class ExtractedBackup(
@@ -63,6 +66,15 @@ class BackupArchiveManager(
 
         val moeWallpaperFile: File
             get() = rootDir.resolve(FILES_DIR).resolve(MOE_WALLPAPER_DIR).resolve(WALLPAPER_FILE)
+
+        val packsDir: File
+            get() = rootDir.resolve(FILES_DIR).resolve(PACKS_DIR)
+
+        val sshttyDataDir: File
+            get() = rootDir.resolve(FILES_DIR).resolve(SSHTTY_DATA_DIR)
+
+        val webdavDataDir: File
+            get() = rootDir.resolve(FILES_DIR).resolve(WEBDAV_DATA_DIR)
     }
 
     fun writeArchive(
@@ -77,6 +89,10 @@ class BackupArchiveManager(
             zip.writeDirectory(files.importedDir, "$FILES_DIR/$IMPORTED_DIR")
             zip.writeDirectory(files.overridesDir, "$FILES_DIR/$OVERRIDES_DIR")
             zip.writeDirectory(files.subStoreDataDir, "$FILES_DIR/$SUBSTORE_DATA_DIR")
+            // 功能包本体与数据（旧版备份不含：卸载重装后包内数据全失，1.156 实测）
+            zip.writeDirectory(files.packsDir, "$FILES_DIR/$PACKS_DIR")
+            zip.writeDirectory(files.sshttyDataDir, "$FILES_DIR/$SSHTTY_DATA_DIR")
+            zip.writeDirectory(files.webdavDataDir, "$FILES_DIR/$WEBDAV_DATA_DIR")
             if (files.moeWallpaperFile.isFile) {
                 zip.writeFile(
                     file = files.moeWallpaperFile,
@@ -159,6 +175,9 @@ class BackupArchiveManager(
         private const val OVERRIDES_DIR = "overrides"
         private const val SUBSTORE_DATA_DIR = "substore-data"
         private const val MOE_WALLPAPER_DIR = "moe-wallpaper"
+        private const val PACKS_DIR = "packs"
+        private const val SSHTTY_DATA_DIR = "sshtty-data"
+        private const val WEBDAV_DATA_DIR = "webdav-data"
         private const val WALLPAPER_FILE = "wallpaper.dat"
     }
 }

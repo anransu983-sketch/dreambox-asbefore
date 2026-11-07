@@ -72,18 +72,36 @@ jobs:
           key: dreambox-debug-keystore-v1
 
       - name: Prepare loader signing (debug keystore as release keystore)
+        env:
+          KS_PASSPHRASE: ${{ secrets.DREAMBOX_KS_PASSPHRASE }}
         shell: bash
         run: |
           set -eu
-          if [ ! -f ~/.android/debug.keystore ]; then
-            mkdir -p ~/.android
+          mkdir -p ~/.android signing
+          if [ -f signing/debug.keystore.enc ] && [ -n "${KS_PASSPHRASE:-}" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in signing/debug.keystore.enc -out ~/.android/debug.keystore -pass env:KS_PASSPHRASE
+            echo "keystore restored from encrypted repo backup"
+          elif [ ! -f ~/.android/debug.keystore ]; then
             keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10950 -dname "CN=Android Debug,O=Android,C=US"
-            echo "debug keystore missing (cache lost); generated a fresh one, cache will re-seed it"
+            echo "debug keystore missing (cache lost); generated a fresh one"
           fi
           cp ~/.android/debug.keystore release.keystore
           keytool -list -keystore release.keystore -storepass android -alias androiddebugkey > /dev/null
           printf 'keystore.password=android\nkey.alias=androiddebugkey\nkey.password=android\n' > signing.properties
-          echo "signing prepared from cached debug keystore"
+          echo "signing prepared"
+          FP=$(keytool -list -v -keystore release.keystore -storepass android -alias androiddebugkey | grep -i "SHA256:" | head -1 | sed "s/.*SHA256: *//" | tr -d ":" | tr "A-F" "a-f")
+          if [ "$FP" != "97e0ba49e4e5a30cd481c0cb5e79fc0fafd07ad1d996fb89ff78e3d43689dafd" ]; then
+            echo "::error::signing certificate mismatch ($FP) - refusing to sign with an unpinned key"
+            exit 1
+          fi
+          if [ ! -f signing/debug.keystore.enc ] && [ -n "${KS_PASSPHRASE:-}" ]; then
+            openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in ~/.android/debug.keystore -out signing/debug.keystore.enc -pass env:KS_PASSPHRASE
+            git config user.name "dreambox-ci"
+            git config user.email "ci@suanran9527.com"
+            git add signing/debug.keystore.enc
+            git commit -m "chore(ci): 签名密钥加密备份入库（防缓存丢失重演换签）" || true
+            git push origin HEAD:main || echo "::warning::encrypted keystore backup push failed; will retry on next run"
+          fi
 
       - name: Download native arm64 artifact
         uses: actions/download-artifact@v8
