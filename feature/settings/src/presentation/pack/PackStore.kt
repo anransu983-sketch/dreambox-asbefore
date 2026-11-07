@@ -173,10 +173,10 @@ class PackStore(context: Context) {
             PackDef(
                 id = "sshtty",
                 name = "VPS 终端",
-                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复；本机存档解不开时自动隔离自愈；v15：IP 隐藏改全隐藏（列表与终端标题只剩 ***，点开关才显示）；含 v14 仓鼠全家福（随机过日子＋全按钮仓鼠图标、霓虹夜航）",
-                version = "15",
+                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复；本机存档解不开时自动隔离自愈；v16：隐藏时端口也一并隐藏（只剩 user@***）；含 v15 全隐藏 IP 与 v14 仓鼠全家福（随机过日子＋全按钮仓鼠图标、霓虹夜航）",
+                version = "16",
                 sizeText = "约 1.3 MB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v15.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v16.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
             ),
         )

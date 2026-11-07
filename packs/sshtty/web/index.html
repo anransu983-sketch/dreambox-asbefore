@@ -400,6 +400,10 @@
     if (showIp || !h) return h;
     return '***';
   }
+  function addrText(sv) {
+    if (!showIp) return sv.user + '@***';
+    return sv.user + '@' + sv.host + ':' + sv.port;
+  }
   function syncHeadSub() {
     var el = $('head-sub');
     if (el) el.textContent = '已保存 ' + servers.length + ' 台 · 显示 IP ' + (showIp ? '开' : '关');
@@ -443,7 +447,7 @@
         '<div class="sec"><span class="mk-dot"></span>一键测试</div><div class="units"></div>' +
         '<div class="sec"><span class="mk-dot"></span>管理</div><div class="mgmt"></div>';
       card.querySelector('.nm').textContent = s.name || s.host;
-      card.querySelector('.srv-meta').textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasKey ? (' · 🔑 私钥' + (s.authMode === 'key' ? '登录' : '已存')) : (s.hasPassword ? ' · 密码已保存' : ' · 无密码'));
+      card.querySelector('.srv-meta').textContent = addrText(s) + (s.hasKey ? (' · 🔑 私钥' + (s.authMode === 'key' ? '登录' : '已存')) : (s.hasPassword ? ' · 密码已保存' : ' · 无密码'));
       card.querySelector('.conn-pill').onclick = function () { openTerminal(s); };
       var units = card.querySelector('.units');
       var defs = [
@@ -976,7 +980,7 @@
   function openTerminal(s) {
     currentSrv = s;
     show('view-term');
-    $('term-title').textContent = (s.name || maskHost(s.host)) + ' · ' + s.user + '@' + maskHost(s.host) + ':' + s.port;
+    $('term-title').textContent = (s.name || maskHost(s.host)) + ' · ' + addrText(s);
     $('term-state').textContent = '连接中…';
     $('term-state').className = '';
     if (term) { try { term.dispose(); } catch (e) {} term = null; }
