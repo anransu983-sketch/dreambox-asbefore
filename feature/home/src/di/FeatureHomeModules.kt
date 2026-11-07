@@ -34,7 +34,7 @@ val featureHomeDomainModule = module {
 }
 
 val featureHomeViewModelModule = module {
-    viewModel { HomeViewModel(androidApplication(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(androidApplication(), get(), get(), get(), get(), get(), get(), get()) }
 }
 
 val featureHomeModules = listOf(featureHomeDomainModule, featureHomeViewModelModule)
