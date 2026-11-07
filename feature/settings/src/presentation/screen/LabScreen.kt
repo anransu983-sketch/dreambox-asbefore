@@ -1,6 +1,8 @@
 package com.suanran.dreambox.feature.settings.presentation.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -257,7 +259,7 @@ fun LabScreen(navigator: Navigator) {
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "光点仓鼠住到手机桌面：散步、啃薯条、睡觉，能拖动",
+                                text = "光点仓鼠住到手机桌面：会乱跑，揪耳朵会挣扎",
                                 fontSize = 11.sp,
                                 color = BocchiTextGray,
                                 maxLines = 1,
@@ -289,6 +291,132 @@ fun LabScreen(navigator: Navigator) {
                                 }
                             },
                         )
+                    }
+                    // 大小三档：改完即时生效（服务在运行就重新发一次启动意图让它应用新尺寸）
+                    var petSize by remember { mutableStateOf(petPrefs.getInt("size_dp", 96)) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = spacing.space16, end = spacing.space16, bottom = spacing.space14),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "大小",
+                            fontSize = 12.sp,
+                            color = BocchiTextGray,
+                        )
+                        Spacer(modifier = Modifier.width(spacing.space12))
+                        listOf(72 to "小", 96 to "中", 128 to "大").forEach { (dpVal, label) ->
+                            val selected = petSize == dpVal
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (selected) BocchiPink else BocchiBlueBg)
+                                    .clickable {
+                                        petSize = dpVal
+                                        petPrefs.edit().putInt("size_dp", dpVal).apply()
+                                        if (petEnabled) {
+                                            val svcIntent2 = android.content.Intent().setClassName(
+                                                context.packageName,
+                                                "com.suanran.dreambox.pet.DesktopPetService",
+                                            )
+                                            androidx.core.content.ContextCompat.startForegroundService(context, svcIntent2)
+                                        }
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 5.dp),
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 12.sp,
+                                    color = if (selected) Color.White else BocchiTextDark,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    }
+                    // 品种与颜色：改完即时换（服务在运行就重新发一次启动意图应用）
+                    var petBreed by remember { mutableStateOf(petPrefs.getString("breed", "golden") ?: "golden") }
+                    var petTint by remember { mutableStateOf(petPrefs.getInt("tint", 0)) }
+                    fun applyPetLook() {
+                        if (petEnabled) {
+                            val svcIntent3 = android.content.Intent().setClassName(
+                                context.packageName,
+                                "com.suanran.dreambox.pet.DesktopPetService",
+                            )
+                            androidx.core.content.ContextCompat.startForegroundService(context, svcIntent3)
+                        }
+                    }
+                    Text(
+                        text = "品种",
+                        fontSize = 12.sp,
+                        color = BocchiTextGray,
+                        modifier = Modifier.padding(start = spacing.space16, top = 2.dp, bottom = 6.dp),
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(start = spacing.space16, end = spacing.space16, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        listOf(
+                            "golden" to "金丝熊",
+                            "sanxian" to "三线",
+                            "niunai" to "奶牛",
+                            "yinhu" to "银狐",
+                            "heixiong" to "黑熊",
+                        ).forEach { (key, label) ->
+                            val selected = petBreed == key
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (selected) BocchiPink else BocchiBlueBg)
+                                    .clickable {
+                                        petBreed = key
+                                        petPrefs.edit().putString("breed", key).apply()
+                                        applyPetLook()
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 5.dp),
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 12.sp,
+                                    color = if (selected) Color.White else BocchiTextDark,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    }
+                    Text(
+                        text = "颜色",
+                        fontSize = 12.sp,
+                        color = BocchiTextGray,
+                        modifier = Modifier.padding(start = spacing.space16, bottom = 6.dp),
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = spacing.space16, end = spacing.space16, bottom = spacing.space14),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        listOf(
+                            0 to Color(0xFFE8B04B),
+                            1 to Color(0xFFF9A8D4),
+                            2 to Color(0xFF7DD3FC),
+                            3 to Color(0xFF6EE7B7),
+                            4 to Color(0xFFC4B5FD),
+                        ).forEach { (idx, col) ->
+                            val selected = petTint == idx
+                            Box(
+                                modifier = Modifier
+                                    .size(if (selected) 26.dp else 22.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(col)
+                                    .clickable {
+                                        petTint = idx
+                                        petPrefs.edit().putInt("tint", idx).apply()
+                                        applyPetLook()
+                                    },
+                            ) {}
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
                     }
                 }
             }
