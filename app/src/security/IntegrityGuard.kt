@@ -13,10 +13,10 @@ import java.security.MessageDigest
 object IntegrityGuard {
 
     private val expected: String by lazy {
-        val a = "6d36efd38983ad01"
-        val b = "1a68bfd951340908"
-        val c = "495d6aedf67fb36a"
-        val d = "f1d178c47956e34c"
+        val a = "97e0ba49e4e5a30c"
+        val b = "d481c0cb5e79fc0f"
+        val c = "afd07ad1d996fb89"
+        val d = "ff78e3d43689dafd"
         a + b + c + d
     }
 
