@@ -18,6 +18,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.MotionEvent
@@ -117,6 +118,7 @@ class DesktopPetService : Service() {
     private var fallV = 0
     private var landAt = 0L
     private var settling = false
+    private var powerManager: PowerManager? = null
     private var hopStart = 0L
     private var downRawX = 0f
     private var downRawY = 0f
@@ -152,6 +154,7 @@ class DesktopPetService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        powerManager = getSystemService(POWER_SERVICE) as? PowerManager
         applySize()
         startAsForeground()
         if (!buildOverlay()) {
@@ -673,7 +676,9 @@ class DesktopPetService : Service() {
             return
         }
         if (catState == 1) {
-            if (act != Act.ROAM) startAct(Act.FLEE)
+            // chooseNext 只在当前动作到期/撞边时被调：追逐中一律续逃。
+            // 此前 ROAM 到期被直接 return 晾着，满屏跑会赖到追逐超时才停。
+            startAct(Act.FLEE)
             return
         }
         if (catState == 0 && Random.nextInt(100) < 4) {
@@ -715,8 +720,14 @@ class DesktopPetService : Service() {
 
     private val tick = object : Runnable {
         override fun run() {
-            step()
-            handler.postDelayed(this, TICK_MS)
+            // 熄屏时不跑状态机、不刷窗口（此前 90ms 整夜空转耗电）；低频探活，亮屏自动恢复
+            val screenOn = powerManager?.isInteractive ?: true
+            if (screenOn) {
+                step()
+                handler.postDelayed(this, TICK_MS)
+            } else {
+                handler.postDelayed(this, 1000L)
+            }
         }
     }
 
@@ -770,6 +781,13 @@ class DesktopPetService : Service() {
             } else {
                 settling = false
             }
+        }
+
+        // —— 通用兜底：点按/长按会清掉 settling/falling，仓鼠被留在半空做地面
+        // 动作（悬空睡觉/吃东西）。不在地面、又不在掉落/滑落/满屏跑/被抓拖时，
+        // 恢复滑落回地面；用 settling 而非 falling，不触发落地逃跑那套、不打断当前动作。
+        if (!grabbed && !dragging && !falling && !settling && act != Act.ROAM && lp.y < groundY()) {
+            settling = true
         }
 
         // —— 点击小跳 ——
@@ -857,15 +875,17 @@ class DesktopPetService : Service() {
                 val sp = dp(6.5f)
                 val dx = tx - lp.x
                 val dy = ty - lp.y
-                if (abs(dx) <= sp && abs(dy) <= sp) {
-                    lp.x = tx
-                    lp.y = ty
-                    roamTarget = (roamTarget + 1) % 4
-                } else {
-                    lp.x += dx.coerceIn(-sp, sp)
-                    lp.y += dy.coerceIn(-sp, sp)
+                if (!dragging) {
+                    if (abs(dx) <= sp && abs(dy) <= sp) {
+                        lp.x = tx
+                        lp.y = ty
+                        roamTarget = (roamTarget + 1) % 4
+                    } else {
+                        lp.x += dx.coerceIn(-sp, sp)
+                        lp.y += dy.coerceIn(-sp, sp)
+                    }
+                    applyLp()
                 }
-                applyLp()
                 setFrame(if ((elapsed / 130) % 2 == 0L) "ham-f3" else "ham-f4")
                 if (dx != 0) iv.scaleX = if (dx < 0) -1f else 1f
             }

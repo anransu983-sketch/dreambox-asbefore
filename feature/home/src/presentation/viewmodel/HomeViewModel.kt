@@ -23,12 +23,10 @@ package com.suanran.dreambox.feature.home.presentation.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
-import com.suanran.dreambox.core.contract.NetworkInfoReader
 import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.ProxySyncPriority
 import com.suanran.dreambox.core.contract.RemoteControllerStoreReader
 import com.suanran.dreambox.core.model.ConnectionInfo
-import com.suanran.dreambox.core.model.IpMonitoringState
 import com.suanran.dreambox.core.model.profile.Profile
 import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.traffic.TrafficData
@@ -84,7 +82,6 @@ class HomeViewModel(
     application: Application,
     private val proxyFacade: ProxyControlContract,
     private val profilesRepository: ProfileRepositoryContract,
-    private val networkInfoService: NetworkInfoReader,
     private val networkSettingsStore: NetworkSettingsReader,
     private val remoteControllerStore: RemoteControllerStoreReader,
     private val profileUseCase: ProfileManagementUseCase,
@@ -200,29 +197,12 @@ class HomeViewModel(
             .map { node -> node?.delay?.takeIf { delay -> delay > 0 } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val ipMonitoringState: StateFlow<IpMonitoringState> =
-        isRunning
-            .flatMapLatest { running ->
-                if (running) {
-                    networkInfoService.startIpMonitoring(
-                        isProxyActiveFlow = isRunning,
-                    )
-                } else {
-                    flowOf(IpMonitoringState.Loading)
-                }
-            }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                IpMonitoringState.Loading,
-            )
-
     init {
         refreshProfiles()
         reconcileRuntimeState()
         observeControlState()
         vpnController.observeRuntimeState()
+        observeControllerMessages()
         observeRuntimeFailures()
         syncRunModeState()
         startSpeedSampling()
@@ -235,6 +215,14 @@ class HomeViewModel(
             _profiles.value = snapshot.profiles
             _recommendedProfile.value = snapshot.recommendedProfile
             _profilesLoaded.value = snapshot.loaded
+        }
+    }
+
+    // 控制器消息流此前无人收集：启动失败/授权被拒只进日志、界面零反馈。
+    // 接进现有的错误通道（showError），失败原因直接上屏。
+    private fun observeControllerMessages() {
+        viewModelScope.launch {
+            vpnController.messages.collect { message -> showError(message) }
         }
     }
 
@@ -379,6 +367,14 @@ class HomeViewModel(
                 profileId = profileId,
                 mode = mode ?: networkSettingsStore.runMode.value,
             )
+        startProxyInternal(request)
+    }
+
+    // 内部启动口：跳过 controlState 守卫。VPN 授权回调是同步栈，controlState
+    // （stateIn 缓存）此刻还停在 Connecting，公开入口的守卫会把重试静默吞掉
+    // （首次连接必须再点一次的根源）；授权重试由控制器侧的
+    // AwaitingPermission 状态把关，不需要再过一遍 UI 状态守卫。
+    private fun startProxyInternal(request: PendingStartRequest) {
         pendingStartRequest = request
         vpnController.startProxy(
             mode = request.mode,
@@ -399,8 +395,13 @@ class HomeViewModel(
 
     fun onVpnPermissionResult(granted: Boolean) {
         val request = pendingStartRequest ?: return
-        vpnController.onVpnPermissionResult(granted) {
-            startProxy(request.profileId, request.mode)
+        if (!granted) {
+            clearPendingStart()
+            vpnController.onVpnPermissionResult(false) {}
+            return
+        }
+        vpnController.onVpnPermissionResult(true) {
+            startProxyInternal(request)
         }
     }
 

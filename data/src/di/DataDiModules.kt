@@ -26,7 +26,6 @@ import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.core.contract.BackupDataSource
 import com.suanran.dreambox.core.contract.FeatureStoreReader
 import com.suanran.dreambox.core.contract.KeyValueCache
-import com.suanran.dreambox.core.contract.NetworkInfoReader
 import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.ProxyDisplaySettingsReader
 import com.suanran.dreambox.core.contract.SubStoreBackupSupport
@@ -35,7 +34,6 @@ import com.suanran.dreambox.core.contract.TrafficStatisticsRepository
 import com.suanran.dreambox.core.contract.UpdateSettings
 import com.suanran.dreambox.core.util.backup.BackupArchiveManager
 import com.suanran.dreambox.data.backup.BackupRepository
-import com.suanran.dreambox.data.datasource.NetworkInfoService
 import com.suanran.dreambox.data.logging.AppLogBuffer
 import com.suanran.dreambox.data.store.AppSettingsStore
 import com.suanran.dreambox.data.store.FeatureStore

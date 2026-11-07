@@ -7,6 +7,9 @@ import android.util.Base64;
 
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.HostKey;
+import com.jcraft.jsch.HostKeyRepository;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.UserInfo;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
@@ -53,6 +56,10 @@ import kotlin.jvm.functions.Function3;
  *   避免一处坏档把列表/保存/导入全堵死；恢复走迁移包导入或重新添加。
  * - 连接走 JSch shell 通道 + PTY（xterm-256color），输出经宿主 emit 实时推给网页的
  *   xterm.js；输入/改尺寸走桥方法。主机指纹 TOFU：首次记录、之后比对、不一致断开报错。
+ * - 指纹前置校验＋存档原子写（v17）：TOFU 比对改走 JSch HostKeyRepository，在密钥
+ *   交换阶段、认证之前完成（此前是认证后才比对，冒充服务器能先收走密码）；一键
+ *   测速/调优的 exec 通道同样受检。saveStore 改临时文件＋rename 原子写，避免写一半
+ *   坏档；readLoop 只收拾自己那条会话，旧读线程不再误杀重连后的新会话。
  * - 同时只保留一个会话（v1）；release()/disconnect 即断开。
  */
 public class SshTermPackEntry implements PackBridgeDispatcher {
@@ -262,15 +269,17 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         if (!f.exists()) {
             return emptyStore();
         }
+        byte[] all;
+        try (InputStream in = new FileInputStream(f)) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+            all = bos.toByteArray();
+        }
+        // 读文件本身失败（IO）直接抛给上层报错：好档不能因一次读抖动
+        // 就被当成坏档隔离清空。
         try {
-            byte[] all;
-            try (InputStream in = new FileInputStream(f)) {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
-                all = bos.toByteArray();
-            }
             JSONObject env = new JSONObject(new String(all, StandardCharsets.UTF_8));
             byte[] iv = Base64.decode(env.getString("iv"), Base64.NO_WRAP);
             byte[] ct = Base64.decode(env.getString("ct"), Base64.NO_WRAP);
@@ -290,17 +299,27 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             boolean moved = f.renameTo(q);
             if (!moved) {
                 try (InputStream in = new FileInputStream(f);
-                     OutputStream out = new FileOutputStream(q)) {
+                     FileOutputStream out = new FileOutputStream(q)) {
                     byte[] buf = new byte[8192];
                     int n;
                     while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                    moved = true;
-                    //noinspection ResultOfMethodCallIgnored
-                    f.delete();
+                    out.flush();
+                    out.getFD().sync();
+                    // 拷贝须逐字节完整才算隔离成功，之后才删原件
+                    moved = q.length() == f.length();
+                    if (moved) {
+                        //noinspection ResultOfMethodCallIgnored
+                        f.delete();
+                    }
                 } catch (Exception ignored) {
                 }
             }
-            if (moved) storeIsolatedName = q.getName();
+            if (!moved) {
+                // 隔离失败绝不返回空存档：一旦后续保存，原档会被新空档原子
+                // 覆盖、唯一密文永久丢失。宁可整条链报错停住，也不碰原文件。
+                throw new Exception("存档损坏且隔离失败，已停止加载以保护原数据");
+            }
+            storeIsolatedName = q.getName();
             return emptyStore();
         }
     }
@@ -313,8 +332,23 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                 .put("iv", Base64.encodeToString(c.getIV(), Base64.NO_WRAP))
                 .put("ct", Base64.encodeToString(ct, Base64.NO_WRAP));
         File f = storeFile();
-        try (OutputStream out = new FileOutputStream(f)) {
+        // 原子写：先写同目录临时文件、fsync，再 rename 覆盖。原地截断写一旦
+        // 进程被杀/磁盘满就是半截坏档（自愈只能隔离、数据靠迁移包往回捞）。
+        File tmp = new File(f.getParentFile(), f.getName() + ".tmp");
+        try (FileOutputStream out = new FileOutputStream(tmp)) {
             out.write(env.toString().getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            out.getFD().sync();
+        }
+        if (!tmp.renameTo(f)) {
+            try (InputStream in = new FileInputStream(tmp);
+                 OutputStream out = new FileOutputStream(f)) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            }
+            //noinspection ResultOfMethodCallIgnored
+            tmp.delete();
         }
         storeIsolatedName = null;
     }
@@ -645,6 +679,107 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         if (pw != null && pw.length() > 0) ss.setPassword(pw);
     }
 
+    // ── TOFU 指纹校验（认证前） ─────────────────────────────
+    // JSch 在密钥交换后、发认证包之前调 check()：有存档指纹时必须一致，
+    // 否则返回 CHANGED、JSch 立即抛错断开，密码/私钥根本不会发出去。
+    // 无存档（首次）返回 NOT_INCLUDED，JSch（StrictHostKeyChecking=no）
+    // 随后调 add() 把指纹落盘——与旧「连上后记录」同格式（同一个
+    // HostKey.getFingerPrint），旧记录可直接沿用。
+    private final class TofuHostKeys implements HostKeyRepository {
+        private final JSch jsch;
+        private final String hkKey; // host:port，存档 hostKeys 的键
+        private final boolean acceptNew; // 用户已在页面确认信任新指纹
+        volatile String mismatchKnown;
+        volatile String mismatchActual;
+
+        TofuHostKeys(JSch jsch, String host, int port, boolean acceptNew) {
+            this.jsch = jsch;
+            this.hkKey = host + ":" + port;
+            this.acceptNew = acceptNew;
+        }
+
+        private String knownFp() {
+            try {
+                JSONObject keys = loadStore().optJSONObject("hostKeys");
+                return keys == null ? "" : keys.optString(hkKey, "");
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        private void persistFp(String fp) {
+            if (fp == null || fp.length() == 0) return;
+            try {
+                JSONObject store = loadStore();
+                JSONObject keys = store.optJSONObject("hostKeys");
+                if (keys == null) {
+                    keys = new JSONObject();
+                    store.put("hostKeys", keys);
+                }
+                keys.put(hkKey, fp);
+                saveStore(store);
+            } catch (Exception ignore) {
+            }
+        }
+
+        @Override
+        public int check(String host, byte[] key) {
+            String known = knownFp();
+            if (known.length() == 0) return NOT_INCLUDED;
+            final String actual;
+            try {
+                actual = new HostKey(host, key).getFingerPrint(jsch);
+            } catch (Exception e) {
+                // 远端指纹算不出来：已有存档指纹时按不一致处理（fail-closed）
+                if (!acceptNew) {
+                    mismatchKnown = known;
+                    mismatchActual = "(无法计算)";
+                    return CHANGED;
+                }
+                return OK;
+            }
+            if (known.equals(actual)) return OK;
+            if (acceptNew) {
+                persistFp(actual);
+                return OK;
+            }
+            mismatchKnown = known;
+            mismatchActual = actual;
+            return CHANGED;
+        }
+
+        @Override
+        public void add(HostKey hostkey, UserInfo ui) {
+            try {
+                persistFp(hostkey.getFingerPrint(jsch));
+            } catch (Exception ignore) {
+            }
+        }
+
+        @Override
+        public void remove(String host, String type) {
+        }
+
+        @Override
+        public void remove(String host, String type, byte[] key) {
+        }
+
+        @Override
+        public String getKnownHostsRepositoryID() {
+            return "sshtty-tofu";
+        }
+
+        @Override
+        public HostKey[] getHostKey() {
+            return new HostKey[0];
+        }
+
+        @Override
+        public HostKey[] getHostKey(String host, String type) {
+            return new HostKey[0];
+        }
+    }
+
     private void doConnect(JSONObject opts, PackCallback callback) {
         try {
             String host, user, pw, keyPem, keyPass, authMode;
@@ -692,40 +827,25 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             java.util.Properties cfg = new java.util.Properties();
             cfg.put("StrictHostKeyChecking", "no");
             ss.setConfig(cfg);
-            ss.connect(20000);
-
-            // TOFU 指纹校验
+            // 指纹校验前置到密钥交换阶段（认证之前）：不一致 JSch 直接抛错，
+            // 密码/私钥不会发给冒充的服务器（旧实现是认证后才比对、且异常静默放行）。
+            TofuHostKeys tofu = new TofuHostKeys(jsch, host, port,
+                    opts.optBoolean("acceptNewHostKey", false));
+            ss.setHostKeyRepository(tofu);
             try {
-                HostKey hk = ss.getHostKey();
-                String fp = hk == null ? "" : hk.getFingerPrint(jsch);
-                if (fp != null && fp.length() > 0) {
-                    JSONObject store = loadStore();
-                    JSONObject keys = store.optJSONObject("hostKeys");
-                    if (keys == null) {
-                        keys = new JSONObject();
-                        store.put("hostKeys", keys);
+                ss.connect(20000);
+            } catch (JSchException e) {
+                if (tofu.mismatchActual != null) {
+                    try {
+                        ss.disconnect();
+                    } catch (Exception ignore) {
                     }
-                    String hkKey = host + ":" + port;
-                    String known = keys.optString(hkKey, "");
-                    if (known.length() > 0 && !known.equals(fp)) {
-                        if (opts.optBoolean("acceptNewHostKey", false)) {
-                            // 用户已在页面确认信任新指纹：更新记录，继续本次连接。
-                            keys.put(hkKey, fp);
-                            saveStore(store);
-                        } else {
-                            ss.disconnect();
-                            callback.onResult(false, null,
-                                    "主机指纹与上次记录不一致，已断开防冒充。\n记录：" + known + "\n现在：" + fp);
-                            return;
-                        }
-                    }
-                    if (known.length() == 0) {
-                        keys.put(hkKey, fp);
-                        saveStore(store);
-                    }
+                    callback.onResult(false, null,
+                            "主机指纹与上次记录不一致，已在认证前断开防冒充。\n记录："
+                                    + tofu.mismatchKnown + "\n现在：" + tofu.mismatchActual);
+                    return;
                 }
-            } catch (Exception ignore) {
-                // 指纹读取失败不阻断连接（TOFU 是加固项，不是连接前提）
+                throw e;
             }
 
             ChannelShell ch = (ChannelShell) ss.openChannel("shell");
@@ -740,7 +860,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             channel = ch;
             alive = true;
             startFlusher();
-            Thread reader = new Thread(() -> readLoop(in), "sshtty-reader");
+            Thread reader = new Thread(() -> readLoop(in, ss, ch), "sshtty-reader");
             reader.setDaemon(true);
             reader.start();
             callback.onResult(true, new JSONObject().put("connected", true).put("name", label).toString(), null);
@@ -750,7 +870,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         }
     }
 
-    private void readLoop(InputStream in) {
+    private void readLoop(InputStream in, Session mySs, ChannelShell myCh) {
         byte[] buf = new byte[8192];
         try {
             int n;
@@ -763,16 +883,24 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             }
         } catch (Exception ignore) {
         } finally {
-            boolean was = alive;
-            alive = false;
-            flushPending();
-            if (was) emit("termClosed", new JSONObject().toString());
+            // 只收拾自己这条会话：断线后快速重连时，旧读线程退出不能再碰
+            // 实例字段去误杀新会话、也不能给网页误报 termClosed。
+            boolean mine = (session == mySs);
+            if (mine) {
+                boolean was = alive;
+                alive = false;
+                flushPending();
+                if (was) emit("termClosed", new JSONObject().toString());
+                if (channel == myCh) channel = null;
+                if (session == mySs) session = null;
+                chanOut = null;
+            }
             try {
-                if (channel != null) channel.disconnect();
+                myCh.disconnect();
             } catch (Exception ignore) {
             }
             try {
-                if (session != null) session.disconnect();
+                mySs.disconnect();
             } catch (Exception ignore) {
             }
         }
@@ -883,6 +1011,10 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         java.util.Properties cfg = new java.util.Properties();
         cfg.put("StrictHostKeyChecking", "no");
         ss.setConfig(cfg);
+        // 一键测速/调优走同一套认证前指纹校验：不一致直接抛错拒绝执行
+        // （此前这条通道完全不验指纹，冒充服务器能伪造全部回显与报告）。
+        ss.setHostKeyRepository(new TofuHostKeys(jsch,
+                srv.optString("host"), srv.optInt("port", 22), false));
         ss.connect(20000);
         try {
             com.jcraft.jsch.ChannelExec ch =

@@ -423,6 +423,17 @@ fun SkyIslandScene(
             farSpec = { farSpec },
         )
 
+        // 世界层：天空垫、地点热区/题字、浮石与底图、居民共用同一变换
+        // （1.03 放大＋浮沉）。此前只有居民跟了变换，地点热区留在未变换的
+        // 坐标系里、与底图错位最高约图宽 1.5%（1080 宽 ≈16px）再叠浮沉，
+        // 点画里的本体常点空/点偏；现统一收进同层，命中区随画一起动。
+        Box(
+            Modifier.fillMaxSize().graphicsLayer {
+                scaleX = SKY_WORLD_SCALE
+                scaleY = SKY_WORLD_SCALE
+                translationY = skyFloatY()
+            }
+        ) {
         // 天空垫：点岛顶空天放信号焰（已连接才响应）；无语义，不拦翻页手势
         val padSrc = remember { MutableInteractionSource() }
         Box(
@@ -621,6 +632,8 @@ fun SkyIslandScene(
                 }
             }
         }
+
+        } // 世界层结束（天空垫/地点/浮石）
 
         // 居民层：浮石之上、信号焰之下；和底图同一变换（放大＋浮沉），脚钉在画里的地面上
         if (showResidents) {

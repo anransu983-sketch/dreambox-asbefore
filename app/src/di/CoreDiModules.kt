@@ -34,7 +34,6 @@ import com.suanran.dreambox.core.contract.ConnectionRepository
 import com.suanran.dreambox.core.contract.FeatureStoreReader
 import com.suanran.dreambox.core.contract.LanguageApplier
 import com.suanran.dreambox.core.contract.LogStoreReader
-import com.suanran.dreambox.core.contract.NetworkInfoReader
 import com.suanran.dreambox.core.contract.NetworkSettingsControllerContract
 import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.OverrideApplier
@@ -65,7 +64,6 @@ import com.suanran.dreambox.data.controller.NetworkSettingsCommandExecutor
 import com.suanran.dreambox.data.controller.NetworkSettingsController
 import com.suanran.dreambox.data.controller.OverrideApplicator
 import com.suanran.dreambox.data.controller.ProvidersController
-import com.suanran.dreambox.data.datasource.NetworkInfoService
 import com.suanran.dreambox.data.logging.AppLogBuffer
 import com.suanran.dreambox.data.repository.AppIdentityResolver
 import com.suanran.dreambox.data.repository.OverrideBindingRepository
@@ -151,8 +149,6 @@ val appFoundationModule = module {
     single { createTrafficStatisticsDao(androidApplication()) }
     single { LogStore(androidApplication(), get()) }
     single<LogStoreReader> { get<LogStore>() }
-    single { NetworkInfoService() }
-    single<NetworkInfoReader> { get<NetworkInfoService>() }
     single<AssetDownloader> { HttpAssetDownloader() }
     single {
         AppStateManager(
@@ -331,9 +327,6 @@ val appRuntimeModule = module {
     }
     single<AppShutdownHandler>(qualifier = named("identity_resolver_shutdown")) {
         AppShutdownHandler { get<AppIdentityResolver>().close() }
-    }
-    single<AppShutdownHandler>(qualifier = named("network_info_shutdown")) {
-        AppShutdownHandler { get<NetworkInfoService>().close() }
     }
 }
 

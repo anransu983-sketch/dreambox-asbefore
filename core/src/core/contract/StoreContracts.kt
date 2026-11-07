@@ -22,7 +22,6 @@
 package com.suanran.dreambox.core.contract
 
 import com.suanran.dreambox.core.model.AppIdentity
-import com.suanran.dreambox.core.model.IpMonitoringState
 import com.suanran.dreambox.core.model.LogEntry
 import com.suanran.dreambox.core.model.LogFileInfo
 import com.suanran.dreambox.core.model.Provider
@@ -58,12 +57,6 @@ interface UpdateSettings {
 interface AppIdentityReader {
     fun resolve(metadata: JsonObject): AppIdentity
     companion object { const val UNKNOWN_APP_NAME = "\u672a\u77e5\u5e94\u7528" }
-}
-
-/** Read-only contract for network info monitoring. */
-interface NetworkInfoReader {
-    fun triggerRefresh()
-    fun startIpMonitoring(isProxyActiveFlow: Flow<Boolean>, externalRefreshFlow: Flow<Unit> = emptyFlow()): Flow<IpMonitoringState>
 }
 
 /** Read/write contract for app log buffer settings. */
