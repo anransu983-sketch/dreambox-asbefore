@@ -1129,7 +1129,9 @@
       renderList();
       $('store-notice').textContent = r.storeNotice || '';
       $('mig-pass1').value = ''; $('mig-pass2').value = ''; $('mig-pass3').value = '';
-      $('mig-ok').textContent = '已导入 ' + (r.imported || 0) + ' 台服务器，现有共 ' + (r.total || servers.length) + ' 台。';
+      $('mig-ok').textContent = '已导入 ' + (r.imported || 0) + ' 台服务器，现有共 ' + (r.total || servers.length) + ' 台。'
+        + ((r.replaced || 0) > 0 ? '其中覆盖了本机已有的 ' + r.replaced + ' 台（以迁移包内容为准）。' : '')
+        + ((r.keysReplaced || 0) > 0 ? '另有 ' + r.keysReplaced + ' 台的主机指纹被迁移包覆盖。' : '');
     }).catch(function (e) {
       btn.disabled = false;
       $('mig-err').textContent = e.message;

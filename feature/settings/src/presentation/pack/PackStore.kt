@@ -173,10 +173,10 @@ class PackStore(context: Context) {
             PackDef(
                 id = "sshtty",
                 name = "VPS 终端",
-                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复；本机存档解不开时自动隔离自愈；v17：指纹校验前置到认证之前（exec 通道同样受检）、存档原子写、重连竞态修复；含 v16 端口一并隐藏（只剩 user@***）；含 v15 全隐藏 IP 与 v14 仓鼠全家福（随机过日子＋全按钮仓鼠图标、霓虹夜航）",
-                version = "17",
+                summary = "JuiceSSH 式 SSH 终端：服务器 IP/密码/私钥输一次加密保存，下次点一下直接进终端（xterm + 功能键条）；支持私钥登录，密钥可在插件里生成；另带一键 TQ 测速、一键融合怪、一键 IP 体检（报告默认给 IP 打码）、一键 NodeQuality 全家桶（硬件/IP/网络/回程四合一）（跑完报告链接都自动提取成卡，可复制可直接打开，日志自动洗掉颜色码）与一键调优（Tcpfit 审计版，哈希校验＋可回滚）；迁移备份：口令加密导出/导入全部服务器与私钥，卸载重装/换机可恢复；本机存档解不开时自动隔离自愈；v18：迁移包口令迭代升至 60 万、导入覆盖本机记录会明示计数、构建依赖钉哈希；含 v17 指纹校验前置到认证之前（exec 通道同样受检）、存档原子写、重连竞态修复；含 v16 端口一并隐藏（只剩 user@***）；含 v15 全隐藏 IP 与 v14 仓鼠全家福（随机过日子＋全按钮仓鼠图标、霓虹夜航）",
+                version = "18",
                 sizeText = "约 1.3 MB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v17.zip",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v18.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
             ),
         )

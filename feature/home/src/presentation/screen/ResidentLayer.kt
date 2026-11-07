@@ -229,13 +229,20 @@ internal fun ResidentLayer(
                     roster[i].stops.forEach { drawCircle(Color.Yellow, 5f, map.at(Offset(it.at.x, it.at.y))) }
                     val w = world.walkers[i]
                     drawCircle(Color.Red, 4f, map.at(Offset(w.footX, w.footY)))
-                    if (clipY[i] >= 0f) drawLine(Color.Magenta, Offset(0f, clipY[i]), Offset(size.width, clipY[i]), 1.5f)
+                    // 洋红线画真实裁剪线（每帧脚底跟随），不是 Roster 里的门控参考值
+                    if (clipY[i] >= 0f) {
+                        val realClipY = map.at(Offset(w.footX, w.footY)).y - bodyPx[i] * 0.045f
+                        drawLine(Color.Magenta, Offset(0f, realClipY), Offset(size.width, realClipY), 1.5f)
+                    }
                 }
             }
         }
 
         // 点击区：只盖精灵本体（宽按实测帧宽，高按身高），不够 minDp 才补到 minDp
         roster.forEachIndexed { i, spec ->
+            // 精灵没加载到（IO 失败/未就绪）就不设点击区：此前人没画出来、
+            // 点那块空地照样触发汇报气泡，等于对着空气说话。
+            if (sprites.getOrNull(i) == null) return@forEachIndexed
             key(spec.id) {
                 val spriteW = sprites.getOrNull(i)?.stand?.w?.toFloat() ?: (bodyPx[i] * 0.5f)
                 val minPx = spec.hitMinDp * density.density

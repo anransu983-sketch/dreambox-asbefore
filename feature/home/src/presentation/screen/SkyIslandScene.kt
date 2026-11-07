@@ -211,8 +211,6 @@ fun SkyIslandScene(
     /** 岛上的浮石入口点（接入方生成；左石插件、右石流量统计）；点了走 [onOpenPack] 按 id 分流。 */
     packSpots: List<SkyPackSpot> = emptyList(),
     onOpenPack: (String) -> Unit = {},
-    /** 岛上居民（走动/说话/点按汇报）；关掉即回到没有居民的首页。 */
-    showResidents: Boolean = true,
 ) {
     val mainPager = LocalMainPagerState.current
     val handlePageChange = LocalHandlePageChange.current
@@ -636,7 +634,7 @@ fun SkyIslandScene(
         } // 世界层结束（天空垫/地点/浮石）
 
         // 居民层：浮石之上、信号焰之下；和底图同一变换（放大＋浮沉），脚钉在画里的地面上
-        if (showResidents) {
+        run {
             ResidentLayer(
                 map = map,
                 screenW = w,

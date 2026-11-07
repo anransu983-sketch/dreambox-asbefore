@@ -143,6 +143,21 @@ class DesktopPetService : Service() {
         lp.x = lp.x.coerceIn(0, maxX())
         lp.y = lp.y.coerceAtMost(groundY()).coerceAtLeast(0)
         applyLp()
+        // 猫在场（追逐/坐下）时同步刷新猫的尺寸与地面线，别等下一段追逐才对
+        if (catState != 0) {
+            if (catState == 1) {
+                catLp.width = catW()
+                catLp.height = catRunH()
+                catLp.y = catGroundY()
+            } else {
+                val sitW = (catW() * 0.62f).toInt()
+                catLp.width = sitW
+                catLp.height = (sitW * 619f / 420f).toInt()
+                catLp.y = groundY() + petH - catLp.height
+            }
+            catLp.x = catLp.x.coerceIn(0, (screenW() - catLp.width).coerceAtLeast(0))
+            applyCatLp()
+        }
     }
     private fun screenW(): Int = resources.displayMetrics.widthPixels
     private fun screenH(): Int = resources.displayMetrics.heightPixels
@@ -361,6 +376,26 @@ class DesktopPetService : Service() {
         }
     }
 
+    /** 多指介入时把手势按取消收尾：揪着的放下（掉落）、拖动的停住（不算点按）。 */
+    private fun finishGestureAsCancel() {
+        handler.removeCallbacks(longPressRun)
+        if (grabbed) {
+            grabbed = false
+            root?.rotation = 0f
+            img?.scaleY = 1f
+            falling = true
+            fallV = 0
+            val now = SystemClock.uptimeMillis()
+            grabCount = if (now - lastGrabAt < 20000) grabCount + 1 else 1
+            lastGrabAt = now
+        }
+        if (dragging) {
+            dragging = false
+            longPressed = false
+            if (lp.y < groundY()) settling = true
+        }
+    }
+
     private fun onTouch(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -384,6 +419,12 @@ class DesktopPetService : Service() {
                     handler.postDelayed(longPressRun, 550)
                 }
                 if (grabbed) zzz?.visibility = View.GONE
+                return true
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                // 第二根手指落下：当前手势按取消收尾。否则第一根手指先抬起后，
+                // 坐标基准还停在旧手指上，MOVE 会把宠物拽跳位。
+                finishGestureAsCancel()
                 return true
             }
             MotionEvent.ACTION_MOVE -> {

@@ -239,9 +239,9 @@ private fun HomeSkyScene(
                 nodeName = if (isRunning) name else null,
                 uptimeText = uptime,
                 todayTrafficText = todayBytes?.let { formatBytesForDisplay(it).let { (v, u) -> "$v $u" } },
-                profileName = currentProfile?.name,
+                profileName = if (isRunning) currentProfile?.name else null,
                 quotaLeftText =
-                    currentProfile?.let { p ->
+                    (if (isRunning) currentProfile else null)?.let { p ->
                         if (p.total > 0) {
                             formatBytesForDisplay((p.total - p.upload - p.download).coerceAtLeast(0)).let { (v, u) -> "$v $u" }
                         } else {

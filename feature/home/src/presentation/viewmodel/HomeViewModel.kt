@@ -26,7 +26,6 @@ import androidx.lifecycle.viewModelScope
 import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.ProxySyncPriority
 import com.suanran.dreambox.core.contract.RemoteControllerStoreReader
-import com.suanran.dreambox.core.model.ConnectionInfo
 import com.suanran.dreambox.core.model.profile.Profile
 import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.traffic.TrafficData
@@ -56,9 +55,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -120,14 +117,6 @@ class HomeViewModel(
                 SharingStarted.WhileSubscribed(5000),
                 runtimeSnapshot.value.owner == RuntimeOwner.RemoteController,
             )
-    val controllerBackendName: StateFlow<String?> =
-        combine(
-                remoteControllerStore.activeBackendId.state,
-                remoteControllerStore.backends.state,
-            ) { id, list ->
-                list.firstOrNull { it.id == id }?.let { it.name.ifBlank { "${it.host}:${it.port}" } }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val currentProfile = proxyFacade.currentProfile
 
     data class HomeProfileState(val profiles: List<Profile>, val profilesLoaded: Boolean, val recommendedProfile: Profile?, val hasEnabledProfile: Boolean, val currentProfile: Profile?)
@@ -172,14 +161,6 @@ class HomeViewModel(
                 ),
             )
 
-    private val _speedHistory = MutableStateFlow<List<TrafficData>>(emptyList())
-    val speedHistory: StateFlow<List<TrafficData>> = _speedHistory.asStateFlow()
-    private val _homeScreenActive = MutableStateFlow(false)
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val connections: StateFlow<List<ConnectionInfo>> = _homeScreenActive.flatMapLatest { active ->
-        if (!active) flowOf(emptyList())
-        else combine(proxyFacade.connectionSnapshot, runtimeSnapshot.map { it.phase.running }.distinctUntilChanged()) { snapshot, running -> if (running) snapshot.connections.take(256) else emptyList() }
-    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val tunnelMode: StateFlow<TunnelState.Mode?> = proxyFacade.tunnelMode
     private var reconcileJob: Job? = null
     private var lastReconcileTime = 0L
@@ -205,7 +186,6 @@ class HomeViewModel(
         observeControllerMessages()
         observeRuntimeFailures()
         syncRunModeState()
-        startSpeedSampling()
         observeProfileChanges()
     }
 
@@ -239,7 +219,6 @@ class HomeViewModel(
         viewModelScope.launch {
             controlState.collect { state ->
                 if (state != HomeProxyControlState.Running) {
-                    _speedHistory.value = List(24) { TrafficData.zero }
                 }
                 _uiState.update {
                     it.copy(
@@ -285,8 +264,9 @@ class HomeViewModel(
         _runMode.value = lifecycleUseCase.resolveDisplayMode(runtimeSnapshot.value)
     }
 
+    // 首页活跃态只剩同步优先级这一件实事（原先喂的 speedHistory/connections
+    // 两个状态流已无任何消费方，随死流一并删除）。
     fun setHomeScreenActive(isActive: Boolean) {
-        _homeScreenActive.value = isActive
         proxyFacade.setProxyGroupSyncPriority(
             priority = if (isActive) ProxySyncPriority.SLOW else ProxySyncPriority.OFF,
             source = "home",
@@ -418,40 +398,6 @@ class HomeViewModel(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun startSpeedSampling(sampleLimit: Int = 24) {
-        // Pre-allocate a mutable list to use as a ring buffer, avoiding per-second allocation.
-        val ringBuffer = MutableList(sampleLimit) { TrafficData.zero }
-        // Pre-allocated scratch list for building snapshots without intermediate subList/concat.
-        val scratchList = ArrayList<TrafficData>(sampleLimit)
-        var writeIndex = 0
-        var fillCount = 0
-        var lastEmittedAllZero = false
-        viewModelScope.launch {
-            _homeScreenActive.flatMapLatest { active -> if (active) trafficData else emptyFlow() }.collect { sample ->
-                val snapshot = runtimeSnapshot.value
-                val data = when {
-                    snapshot.phase.running -> sample
-                    else -> TrafficData.zero
-                }
-                // Skip StateFlow update when idle: all samples are zero and list content won't change.
-                if (data == TrafficData.zero && lastEmittedAllZero && fillCount >= sampleLimit) return@collect
-                ringBuffer[writeIndex] = data
-                writeIndex = (writeIndex + 1) % sampleLimit
-                fillCount = (fillCount + 1).coerceAtMost(sampleLimit)
-                // Build snapshot in scratch list, then copy to a new list for StateFlow identity change.
-                scratchList.clear()
-                if (fillCount < sampleLimit) {
-                    for (i in 0 until fillCount) scratchList.add(ringBuffer[i])
-                } else {
-                    for (i in writeIndex until sampleLimit) scratchList.add(ringBuffer[i])
-                    for (i in 0 until writeIndex) scratchList.add(ringBuffer[i])
-                }
-                lastEmittedAllZero = scratchList.all { it == TrafficData.zero }
-                _speedHistory.value = ArrayList(scratchList)
-            }
-        }
-    }
-
     private fun showError(error: String) = postError(error, HomeUiEffect.ShowError(error))
 
     private fun showMessage(message: String) = postMessage(message, HomeUiEffect.ShowMessage(message))

@@ -44,6 +44,18 @@ JSCH_JAR="$TOOLS_DIR/jsch-$JSCH_VERSION.jar"
 KOTLIN_JAR="$TOOLS_DIR/kotlin-stdlib-$KOTLIN_VERSION.jar"
 fetch "https://repo1.maven.org/maven2/com/github/mwiede/jsch/$JSCH_VERSION/jsch-$JSCH_VERSION.jar" "$JSCH_JAR"
 fetch "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/$KOTLIN_VERSION/kotlin-stdlib-$KOTLIN_VERSION.jar" "$KOTLIN_JAR"
+# 依赖完整性钉死：两个 jar 校验 sha256，不符拒绝打包（防下载被劫持/损坏）
+JSCH_SHA256="c45ff978dd4c1d4890e2524f0cb382cbad9477a87dab0e9c5a9e019d9353ea48"
+KOTLIN_SHA256="f31cc53f105a7e48c093683bbd5437561d1233920513774b470805641bedbc09"
+verify_sha() { # $1=file $2=expected
+    actual="$(sha256sum "$1" | awk '{print $1}')"
+    if [ "$actual" != "$2" ]; then
+        echo "ERROR: $1 sha256 不符，拒绝继续（期望 $2，实际 $actual）" >&2
+        exit 1
+    fi
+}
+verify_sha "$JSCH_JAR" "$JSCH_SHA256"
+verify_sha "$KOTLIN_JAR" "$KOTLIN_SHA256"
 
 echo ">> 编译 stubs"
 rm -rf "$BUILD_DIR/stub-classes" "$BUILD_DIR/pack-classes" "$BUILD_DIR/dex"

@@ -243,6 +243,18 @@ fun LabScreen(navigator: Navigator) {
                 // 桌面宠物：独立悬浮窗服务，开关自带状态存储，不依赖任何现有设置项
                 val petPrefs = remember { context.getSharedPreferences("desktop_pet", android.content.Context.MODE_PRIVATE) }
                 var petEnabled by remember { mutableStateOf(petPrefs.getBoolean("enabled", false)) }
+                // 从通知「抱回梦盒」停宠时服务侧会写回 enabled=false；回到本页时
+                // 按 prefs 实时刷新开关，别停在旧状态上（此前要离开重进才对）。
+                val petOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                androidx.compose.runtime.DisposableEffect(petOwner) {
+                    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                            petEnabled = petPrefs.getBoolean("enabled", false)
+                        }
+                    }
+                    petOwner.lifecycle.addObserver(observer)
+                    onDispose { petOwner.lifecycle.removeObserver(observer) }
+                }
                 BocchiCard {
                     Row(
                         modifier = Modifier.fillMaxWidth()

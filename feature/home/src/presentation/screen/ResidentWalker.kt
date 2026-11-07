@@ -166,7 +166,11 @@ internal class ResidentSpec(
     val gait: GaitSpec,
     val sprites: SpriteManifest,
     val actions: List<ActionSpec> = emptyList(),
-    /** 栏杆/岩石遮挡线（图比例 y）：这条线以下的精灵和影子不画。null = 不遮。 */
+    /**
+     * 遮挡门控（图比例 y，仅作开关）：设了值则身体按每帧脚底线
+     * （foot.y − 身高×0.045）裁剪（1.157 脚底跟随，提灯姑娘舷墙遮腿用）；
+     * 影子不裁。y 值本身只是 debug 参考，不再是裁剪位置。null = 不裁。
+     */
     val occludeBelowY: Float? = null,
     val shadowWidthBh: Float = 0.62f,
     val shadowHeightBh: Float = 0.13f,
@@ -332,7 +336,10 @@ internal class ResidentWalker(val spec: ResidentSpec, aspect: Float, seed: Long)
         val len = abs(to - sNow)
         targetIdx = target
         if (len < 0.002f) {
-            arrive(target, 0f, to)
+            // 极短腿直接到达：把待用的 holdAfterArrive 一并带走并清零，
+            // 别让它残留到下一次无关的到达上当额外停留。
+            arrive(target, holdAfterArrive, to)
+            holdAfterArrive = 0f
             return
         }
         legFrom = sNow

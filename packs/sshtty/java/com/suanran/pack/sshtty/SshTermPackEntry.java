@@ -56,6 +56,8 @@ import kotlin.jvm.functions.Function3;
  *   避免一处坏档把列表/保存/导入全堵死；恢复走迁移包导入或重新添加。
  * - 连接走 JSch shell 通道 + PTY（xterm-256color），输出经宿主 emit 实时推给网页的
  *   xterm.js；输入/改尺寸走桥方法。主机指纹 TOFU：首次记录、之后比对、不一致断开报错。
+ * - 低危收尾（v18）：迁移包导出 PBKDF2 迭代升到 60 万；导入覆盖本机已有条目/
+ *   指纹时计数并在结果里明示，不再静默回滚；构建脚本给两个依赖 jar 钉了 sha256。
  * - 指纹前置校验＋存档原子写（v17）：TOFU 比对改走 JSch HostKeyRepository，在密钥
  *   交换阶段、认证之前完成（此前是认证后才比对，冒充服务器能先收走密码）；一键
  *   测速/调优的 exec 通道同样受检。saveStore 改临时文件＋rename 原子写，避免写一半
@@ -67,7 +69,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
     private static final String PLUGIN = "SshTerm";
     private static final String KEY_ALIAS = "sshtty.store.v1";
     private static final String PORTABLE_MAGIC = "SSHTTY-BACKUP";
-    private static final int PORTABLE_ITER = 120000;
+    private static final int PORTABLE_ITER = 600000; // v18：导出迭代 12 万→60 万（现行口径）；旧包 12 万仍可导入（见导入下限）
     /** 本机存档解不开被隔离时，被改名的文件名（进程内提示用，保存成功后清）。 */
     private static volatile String storeIsolatedName;
 
@@ -401,7 +403,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             throw new Exception("这不是 sshtty 的迁移包");
         }
         int iter = blob.optInt("iter", PORTABLE_ITER);
-        if (iter < 10000 || iter > 1000000) throw new Exception("迁移包参数异常");
+        if (iter < 100000 || iter > 1000000) throw new Exception("迁移包参数异常");
         byte[] salt = Base64.decode(blob.optString("salt", ""), Base64.DEFAULT);
         byte[] iv = Base64.decode(blob.optString("iv", ""), Base64.DEFAULT);
         byte[] ct = Base64.decode(blob.optString("ct", ""), Base64.DEFAULT);
@@ -437,6 +439,8 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             byEndpoint.put(endpointKey(s), i);
         }
         int importedCount = 0;
+        int replacedCount = 0;
+        final int sizeBefore = curArr.length();
         for (int i = 0; i < impArr.length(); i++) {
             JSONObject s = impArr.optJSONObject(i);
             if (s == null || s.optString("host", "").trim().length() == 0) continue;
@@ -444,6 +448,8 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             Integer idx = byId.get(s.optString("id"));
             if (idx == null) idx = byEndpoint.get(endpointKey(s));
             if (idx != null) {
+                // 覆盖本机已有条目要计数并在结果里提示，不再静默回滚新凭据
+                if (idx < sizeBefore) replacedCount++;
                 curArr.put(idx, s);
             } else {
                 idx = curArr.length();
@@ -461,16 +467,27 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                 cur.put("hostKeys", curKeys);
             }
             JSONArray names = impKeys.names();
+            int keysReplaced = 0;
             if (names != null) {
                 for (int i = 0; i < names.length(); i++) {
                     String k = names.optString(i);
-                    curKeys.put(k, impKeys.opt(k));
+                    Object oldV = curKeys.opt(k);
+                    Object newV = impKeys.opt(k);
+                    if (oldV != null && newV != null && !String.valueOf(oldV).equals(String.valueOf(newV))) {
+                        keysReplaced++;
+                    }
+                    curKeys.put(k, newV);
                 }
             }
+            cur.put("__keysReplaced", keysReplaced);
         }
+        int keysReplaced = cur.optInt("__keysReplaced", 0);
+        cur.remove("__keysReplaced");
         saveStore(cur);
         JSONObject out = resultWithServers(cur);
         out.put("imported", importedCount);
+        out.put("replaced", replacedCount);
+        out.put("keysReplaced", keysReplaced);
         out.put("total", curArr.length());
         return out;
     }
