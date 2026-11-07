@@ -67,6 +67,7 @@ class DesktopPetService : Service() {
     private var catState = 0 // 0=不在场 1=追逐中 2=坐下歇会儿
     private var chaseUntil = 0L
     private var catSitUntil = 0L
+    private var lastDodge = 0L
 
     // 点按连击与长按
     private var tapStreak = 0
@@ -87,7 +88,7 @@ class DesktopPetService : Service() {
     private enum class Act {
         IDLE, WALK, RUB, WASH, FRY, SEED,
         DRINK, LATIAO, LOLLIPOP, SAUSAGE, MALATANG, CRAYFISH, ICECREAM, HOTPOT,
-        BASKETBALL, SWIM, RIDE, SKATE, SKI, GAME, MUSIC,
+        BASKETBALL, SWIM, RIDE, SKATE, SKI, GAME, MUSIC, SMOKE,
         SLEEP, STRETCH, ROLL, FLEE, ROAM,
     }
 
@@ -480,7 +481,7 @@ class DesktopPetService : Service() {
 
     // ---------- 猫追逐战 ----------
 
-    private fun catW(): Int = (petW * 1.5).toInt()
+    private fun catW(): Int = (petW * 1.25).toInt()
     private fun catRunH(): Int = (catW() * 183f / 420f).toInt()
     private fun catSitH(): Int = (catW() * 619f / 420f).toInt()
     private fun catGroundY(): Int = groundY() + petH - catRunH()
@@ -523,7 +524,7 @@ class DesktopPetService : Service() {
         }
     }
 
-    private fun startChase() {
+    private fun startChase(roam: Boolean = false) {
         if (catState != 0 || catRoot == null) return
         catState = 1
         chaseUntil = SystemClock.uptimeMillis() + Random.nextLong(7000, 11000)
@@ -534,20 +535,25 @@ class DesktopPetService : Service() {
         catRoot?.visibility = View.VISIBLE
         catImg?.alpha = 1f
         applyCatLp()
-        if (lp.y < groundY()) {
-            falling = true
-            fallV = 0
+        if (!roam) {
+            if (lp.y < groundY()) {
+                falling = true
+                fallV = 0
+            }
+            startAct(Act.FLEE)
         }
-        startAct(Act.FLEE)
     }
 
     private fun endChase(caught: Boolean) {
         catState = 2
-        catSitUntil = SystemClock.uptimeMillis() + 2400
+        catSitUntil = SystemClock.uptimeMillis() + 2000
         frame("cat-sit")?.let { catImg?.setImageBitmap(it) }
         catImg?.scaleX = 1f
-        catLp.height = catSitH()
-        catLp.y = groundY() + petH - catSitH()
+        val sitW = (catW() * 0.62f).toInt()
+        catLp.x = (catLp.x + (catW() - sitW) / 2).coerceIn(0, (screenW() - sitW).coerceAtLeast(0))
+        catLp.width = sitW
+        catLp.height = (sitW * 619f / 420f).toInt()
+        catLp.y = groundY() + petH - catLp.height
         applyCatLp()
         if (caught) {
             startAct(Act.ROLL)
@@ -559,14 +565,21 @@ class DesktopPetService : Service() {
         if (catState == 1) {
             val targetX = lp.x + petW / 2 - catW() / 2
             val dx = targetX - catLp.x
-            val sp = dp(3.05f)
+            val sp = dp(4.8f)
             catLp.x = (catLp.x + dx.coerceIn(-sp, sp)).coerceIn(0, (screenW() - catW()).coerceAtLeast(0))
             catLp.y = catGroundY()
             applyCatLp()
             frame(if ((now / 140) % 2 == 0L) "cat-run0" else "cat-run1")?.let { catImg?.setImageBitmap(it) }
             if (dx != 0) catImg?.scaleX = if (dx < 0) -1f else 1f
             val dist = kotlin.math.abs((lp.x + petW / 2) - (catLp.x + catW() / 2))
-            if (dist < petW * 0.42f) {
+            val onGround = lp.y >= groundY() - 2
+            val dodged = dist < petW * 0.95f && onGround && !grabbed && act != Act.ROLL &&
+                now - lastDodge > 2600 && Random.nextInt(100) < 30
+            if (dodged) {
+                lastDodge = now
+                startAct(Act.ROLL)
+                rollDir = if (lp.x + petW / 2 >= catLp.x + catW() / 2) 1 else -1
+            } else if (dist < petW * 0.42f && onGround) {
                 endChase(caught = true)
             } else if (now > chaseUntil) {
                 endChase(caught = false)
@@ -615,6 +628,7 @@ class DesktopPetService : Service() {
             Act.SKI -> Random.nextLong(5000, 8000)
             Act.GAME -> Random.nextLong(3000, 4500)
             Act.MUSIC -> Random.nextLong(3400, 5000)
+            Act.SMOKE -> Random.nextLong(3800, 5200)
             Act.IDLE -> Random.nextLong(2200, 4200)
         }
         when (a) {
@@ -628,6 +642,7 @@ class DesktopPetService : Service() {
             Act.ROAM -> roamTarget = nearestCornerClockwise()
             else -> {}
         }
+        if (a == Act.ROAM && catState == 0 && Random.nextInt(100) < 40) startChase(roam = true)
     }
 
     private fun pickDir(): Int =
@@ -655,6 +670,10 @@ class DesktopPetService : Service() {
     private fun chooseNext(initial: Boolean = false) {
         if (initial) {
             startAct(Act.IDLE)
+            return
+        }
+        if (catState == 1) {
+            if (act != Act.ROAM) startAct(Act.FLEE)
             return
         }
         if (catState == 0 && Random.nextInt(100) < 4) {
@@ -688,6 +707,7 @@ class DesktopPetService : Service() {
                 roll < 88 -> Act.STRETCH
                 roll < 91 -> Act.ROLL
                 roll < 96 -> Act.ROAM
+                roll < 98 -> Act.SMOKE
                 else -> Act.IDLE
             },
         )
@@ -977,6 +997,12 @@ class DesktopPetService : Service() {
                 setFrame("food-music")
                 squash = if ((elapsed / 450) % 2 == 0L) 0.96f else 1f
                 iv.rotation = (sin(elapsed / 450.0) * 2.5).toFloat()
+                iv.scaleX = 1f
+            }
+            Act.SMOKE -> {
+                setFrame("food-smoke")
+                squash = 1.02f
+                iv.rotation = (sin(elapsed / 900.0) * 1.5).toFloat()
                 iv.scaleX = 1f
             }
             Act.RUB -> {
