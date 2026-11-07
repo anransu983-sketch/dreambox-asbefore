@@ -9,10 +9,14 @@
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body { margin: 0; padding: 16px; font-family: sans-serif; background: #14101c; color: #f2eef8; }
-  h1 { font-size: 19px; margin: 4px 0 2px; }
-  .sub { color: #b9aed0; font-size: 12.5px; line-height: 1.55; margin-bottom: 14px; }
-  .card { background: #1f1930; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  body { margin: 0; padding: 12px; font-family: sans-serif; color: #f2eef8;
+         background: radial-gradient(120% 60% at 50% -10%, #2a2148 0%, #14101c 55%) fixed, #14101c; }
+  h1 { font-size: 20px; margin: 2px 0 2px; }
+  .sub { color: #b9aed0; font-size: 12.5px; line-height: 1.55; margin-bottom: 12px; }
+  .card { background: linear-gradient(180deg, #251c3d, #1d1730); border: 1px solid #352b55;
+          border-radius: 16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .pill { color: #9d90c2; font-size: 12px; border: 1px solid #3a3054; border-radius: 999px; padding: 6px 10px; background: #1b152c; }
   label { display: block; font-size: 12.5px; color: #b9aed0; margin: 10px 0 5px; }
   label:first-child { margin-top: 0; }
   input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #3a3054;
@@ -23,8 +27,8 @@
   textarea:focus { border-color: #e88bb0; }
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
-  button.main { width: 100%; padding: 13px; border: 0; border-radius: 12px; margin-top: 14px;
-    background: linear-gradient(90deg, #e88bb0, #a678e8); color: #fff; font-size: 16px; font-weight: 600; }
+  button.main { width: 100%; padding: 12px; border: 0; border-radius: 14px; margin: 2px 0 12px;
+    background: linear-gradient(90deg, #e88bb0, #a678e8); color: #fff; font-size: 15.5px; font-weight: 600; }
   button.main:disabled { opacity: .45; }
   button.mini { padding: 8px 13px; border-radius: 9px; border: 1px solid #4a3d6e; background: #2a2142;
     color: #e8defc; font-size: 13px; margin: 8px 8px 0 0; }
@@ -32,6 +36,14 @@
   button.mini.danger { border-color: #7a3049; color: #ff9db4; }
   .srv-name { font-size: 16px; font-weight: 600; }
   .srv-meta { color: #b9aed0; font-size: 12.5px; margin-top: 3px; word-break: break-all; }
+  .srv-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .srv-actions button.mini { margin: 0; width: 100%; min-height: 42px; padding: 9px 6px; font-size: 13.5px; border-radius: 11px; }
+  .srv-actions .srv-connect { grid-column: 1 / -1; min-height: 48px; font-size: 15.5px; }
+  .srv-actions .srv-del { grid-column: 1 / -1; min-height: 38px; background: transparent; }
+  .srv-section { grid-column: 1 / -1; color: #9d90c2; font-size: 11px; letter-spacing: .12em; margin-top: 4px; }
+  .seg { display: flex; background: #171226; border: 1px solid #3a3054; padding: 4px; border-radius: 12px; margin: 12px 0 2px; }
+  .seg-btn { flex: 1; border: 0; background: transparent; color: #b9aed0; padding: 9px; border-radius: 9px; font-size: 14px; }
+  .seg-btn.active { background: linear-gradient(90deg, #e88bb0, #a678e8); color: #fff; font-weight: 600; }
   .empty { color: #b9aed0; font-size: 13.5px; text-align: center; padding: 26px 0 8px; line-height: 1.7; }
   .err { color: #ff9db4; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
   .warn { color: #ffb86b; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
@@ -62,9 +74,10 @@
 <!-- ═══ 列表 ═══ -->
 <div id="view-list">
   <h1>🖥️ VPS 终端</h1>
-  <p class="sub">服务器只输一次：IP、端口、用户名、密码保存后（系统密钥加密），下次点「连接」直接进终端。另带一键 TQ 测速（报告链接自动提取可复制）、一键融合怪、一键 IP 体检与一键调优（Tcpfit 审计版，可回滚）。IP 默认打码，点上面按钮可切换显示。</p>
-  <div style="margin-bottom:12px">
+  <p class="sub">服务器只输一次，下次点「连接」直接进终端；测试与调优都在服务器卡片里。</p>
+  <div class="toolbar">
     <button class="mini" id="btn-toggle-ip" style="margin:0">🙈 IP 已隐藏</button>
+    <span class="pill" id="srv-count">已保存 0 台</span>
   </div>
   <div id="srv-list"></div>
   <button class="main" id="btn-add">＋ 添加服务器</button>
@@ -72,22 +85,30 @@
   <div class="warn" id="store-notice"></div>
   <div class="card">
     <div class="srv-name">🧳 迁移备份</div>
-    <p class="sub" style="margin-top:6px">换手机、卸载重装时，本机保存靠系统密钥、普通备份解不开。用你自己设的口令导出一份迁移包，存到安全的地方；新机打开这里粘贴导入，全部服务器和私钥一起恢复，服务器端什么都不用改。口令忘了就解不开，务必记牢。</p>
-    <label>导出：设置备份口令（至少 8 位）</label>
-    <input id="mig-pass1" type="password" placeholder="备份口令" autocomplete="off">
-    <label>再输一遍</label>
-    <input id="mig-pass2" type="password" placeholder="重复备份口令" autocomplete="off">
-    <button class="mini primary" id="btn-mig-export">导出迁移包</button>
-    <div id="mig-out-box" class="hidden">
-      <label>迁移包（整段复制，存到安全的地方）</label>
-      <textarea id="mig-out" rows="5" readonly></textarea>
-      <button class="mini" id="btn-mig-copy" style="margin-top:8px">复制迁移包</button>
+    <p class="sub" style="margin:6px 0 0">换机或卸载重装时用：迁移包由你的口令加密，导入后服务器和私钥一起恢复，服务器端不用改。口令忘了无法恢复。</p>
+    <div class="seg">
+      <button class="seg-btn active" id="mig-tab-export">导出</button>
+      <button class="seg-btn" id="mig-tab-import">导入</button>
     </div>
-    <label>导入：粘贴迁移包</label>
-    <textarea id="mig-in" rows="5" placeholder="把导出的迁移包整段粘贴到这里"></textarea>
-    <label>备份口令</label>
-    <input id="mig-pass3" type="password" placeholder="导出时设的口令" autocomplete="off">
-    <button class="mini primary" id="btn-mig-import">导入（与现有合并）</button>
+    <div id="mig-pane-export">
+      <label>设置备份口令（至少 8 位）</label>
+      <input id="mig-pass1" type="password" placeholder="备份口令" autocomplete="off">
+      <label>再输一遍</label>
+      <input id="mig-pass2" type="password" placeholder="重复备份口令" autocomplete="off">
+      <button class="mini primary" id="btn-mig-export" style="margin-top:12px">导出迁移包</button>
+      <div id="mig-out-box" class="hidden">
+        <label>迁移包（整段复制，存到安全的地方）</label>
+        <textarea id="mig-out" rows="4" readonly></textarea>
+        <button class="mini" id="btn-mig-copy" style="margin-top:8px">复制迁移包</button>
+      </div>
+    </div>
+    <div id="mig-pane-import" class="hidden">
+      <label>粘贴迁移包</label>
+      <textarea id="mig-in" rows="5" placeholder="把导出的迁移包整段粘贴到这里"></textarea>
+      <label>备份口令</label>
+      <input id="mig-pass3" type="password" placeholder="导出时设的口令" autocomplete="off">
+      <button class="mini primary" id="btn-mig-import" style="margin-top:12px">导入（与现有合并）</button>
+    </div>
     <div class="ok" id="mig-ok"></div>
     <div class="err" id="mig-err"></div>
   </div>
@@ -322,6 +343,7 @@
   function renderList() {
     var box = $('srv-list');
     box.innerHTML = '';
+    $('srv-count').textContent = '已保存 ' + servers.length + ' 台';
     if (!servers.length) {
       box.innerHTML = '<div class="empty">还没有保存的服务器<br>点下面「＋ 添加服务器」加第一台</div>';
       return;
@@ -337,8 +359,15 @@
       meta.textContent = s.user + '@' + maskHost(s.host) + ':' + s.port + (s.hasKey ? (' · 🔑 私钥' + (s.authMode === 'key' ? '登录' : '已存')) : (s.hasPassword ? ' · 密码已保存' : ' · 无密码'));
       card.appendChild(title);
       card.appendChild(meta);
+      var actions = document.createElement('div');
+      actions.className = 'srv-actions';
+      function sectionLabel(t) {
+        var d = document.createElement('div');
+        d.className = 'srv-section'; d.textContent = t;
+        return d;
+      }
       var bConn = document.createElement('button');
-      bConn.className = 'mini primary'; bConn.textContent = '连接';
+      bConn.className = 'mini primary srv-connect'; bConn.textContent = '连接';
       bConn.onclick = function () { openTerminal(s); };
       var bTq = document.createElement('button');
       bTq.className = 'mini'; bTq.textContent = '一键TQ';
@@ -347,7 +376,7 @@
       bTune.className = 'mini'; bTune.textContent = '一键调优';
       bTune.onclick = function () { openTune(s); };
       var bTqView = document.createElement('button');
-      bTqView.className = 'mini'; bTqView.textContent = 'TQ结果';
+      bTqView.className = 'mini'; bTqView.textContent = 'TQ 结果';
       bTqView.onclick = function () { openTq(s, false); };
       var bEcs = document.createElement('button');
       bEcs.className = 'mini'; bEcs.textContent = '一键融合怪';
@@ -356,33 +385,38 @@
       bEcsView.className = 'mini'; bEcsView.textContent = '融合怪结果';
       bEcsView.onclick = function () { openTest('ecs', s, false); };
       var bIpq = document.createElement('button');
-      bIpq.className = 'mini'; bIpq.textContent = '一键IP体检';
+      bIpq.className = 'mini'; bIpq.textContent = 'IP 体检';
       bIpq.onclick = function () { openTest('ipq', s, true); };
       var bIpqView = document.createElement('button');
-      bIpqView.className = 'mini'; bIpqView.textContent = 'IP结果';
+      bIpqView.className = 'mini'; bIpqView.textContent = 'IP 结果';
       bIpqView.onclick = function () { openTest('ipq', s, false); };
       var bNq = document.createElement('button');
-      bNq.className = 'mini'; bNq.textContent = '一键NQ';
+      bNq.className = 'mini'; bNq.textContent = '一键 NQ';
       bNq.onclick = function () { openTest('nq', s, true); };
       var bNqView = document.createElement('button');
-      bNqView.className = 'mini'; bNqView.textContent = 'NQ结果';
+      bNqView.className = 'mini'; bNqView.textContent = 'NQ 结果';
       bNqView.onclick = function () { openTest('nq', s, false); };
       var bEdit = document.createElement('button');
       bEdit.className = 'mini'; bEdit.textContent = '编辑';
       bEdit.onclick = function () { openForm(s); };
       var bDel = document.createElement('button');
-      bDel.className = 'mini danger'; bDel.textContent = '删除';
+      bDel.className = 'mini danger srv-del'; bDel.textContent = '删除';
       bDel.onclick = function () {
         if (!confirm('删除这台服务器的保存记录？')) return;
         callNative('deleteServer', { id: s.id }).then(function (r) {
           servers = r.servers || []; renderList();
         }).catch(function (e) { $('list-err').textContent = e.message; });
       };
-      card.appendChild(bConn); card.appendChild(bTq); card.appendChild(bTqView);
-      card.appendChild(bEcs); card.appendChild(bEcsView);
-      card.appendChild(bIpq); card.appendChild(bIpqView);
-      card.appendChild(bNq); card.appendChild(bNqView);
-      card.appendChild(bTune); card.appendChild(bEdit); card.appendChild(bDel);
+      actions.appendChild(bConn);
+      actions.appendChild(sectionLabel('一键测试'));
+      actions.appendChild(bTq); actions.appendChild(bTqView);
+      actions.appendChild(bEcs); actions.appendChild(bEcsView);
+      actions.appendChild(bIpq); actions.appendChild(bIpqView);
+      actions.appendChild(bNq); actions.appendChild(bNqView);
+      actions.appendChild(sectionLabel('管理'));
+      actions.appendChild(bTune); actions.appendChild(bEdit);
+      actions.appendChild(bDel);
+      card.appendChild(actions);
       box.appendChild(card);
     });
   }
@@ -836,6 +870,15 @@
   });
 
   // ── 迁移备份 ─────────────────────────────────────
+  function setMigTab(which) {
+    $('mig-tab-export').classList.toggle('active', which === 'export');
+    $('mig-tab-import').classList.toggle('active', which === 'import');
+    $('mig-pane-export').classList.toggle('hidden', which !== 'export');
+    $('mig-pane-import').classList.toggle('hidden', which !== 'import');
+    $('mig-ok').textContent = ''; $('mig-err').textContent = '';
+  }
+  $('mig-tab-export').onclick = function () { setMigTab('export'); };
+  $('mig-tab-import').onclick = function () { setMigTab('import'); };
   $('btn-mig-export').onclick = function () {
     var p1 = $('mig-pass1').value, p2 = $('mig-pass2').value;
     $('mig-ok').textContent = ''; $('mig-err').textContent = '';
