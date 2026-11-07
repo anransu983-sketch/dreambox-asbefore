@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -64,6 +65,7 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.ui.graphics.Color
@@ -229,6 +231,63 @@ fun LabScreen(navigator: Navigator) {
                             contentDescription = null,
                             tint = BocchiTextGray,
                             modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+            item {
+                // 桌面宠物：独立悬浮窗服务，开关自带状态存储，不依赖任何现有设置项
+                val petPrefs = remember { context.getSharedPreferences("desktop_pet", android.content.Context.MODE_PRIVATE) }
+                var petEnabled by remember { mutableStateOf(petPrefs.getBoolean("enabled", false)) }
+                BocchiCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(horizontal = spacing.space16, vertical = spacing.space14),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        LabEntryIcon(icon = Icons.Filled.Pets, key = "pet")
+                        Spacer(modifier = Modifier.width(spacing.space12))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "桌面宠物",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BocchiTextDark,
+                                maxLines = 1,
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "光点仓鼠住到手机桌面：散步、啃薯条、睡觉，能拖动",
+                                fontSize = 11.sp,
+                                color = BocchiTextGray,
+                                maxLines = 1,
+                            )
+                        }
+                        Switch(
+                            checked = petEnabled,
+                            onCheckedChange = { want ->
+                                val svcIntent = android.content.Intent().setClassName(
+                                    context.packageName,
+                                    "com.suanran.dreambox.pet.DesktopPetService",
+                                )
+                                if (want) {
+                                    if (!android.provider.Settings.canDrawOverlays(context)) {
+                                        val permIntent = android.content.Intent(
+                                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            android.net.Uri.parse("package:" + context.packageName),
+                                        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(permIntent)
+                                    } else {
+                                        petPrefs.edit().putBoolean("enabled", true).apply()
+                                        petEnabled = true
+                                        androidx.core.content.ContextCompat.startForegroundService(context, svcIntent)
+                                    }
+                                } else {
+                                    petPrefs.edit().putBoolean("enabled", false).apply()
+                                    petEnabled = false
+                                    context.stopService(svcIntent)
+                                }
+                            },
                         )
                     }
                 }
