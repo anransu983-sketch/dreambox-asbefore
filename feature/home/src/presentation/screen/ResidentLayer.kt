@@ -193,15 +193,18 @@ internal fun ResidentLayer(
                 val spec = roster[i]
                 val body = bodyPx[i]
                 val foot = map.at(Offset(w.footX, w.footY)) // 脚底 = 地面线上的点，唯一来源
-                val cb = if (clipY[i] >= 0f) clipY[i] else size.height
+                // 遮挡居民（提灯姑娘）：裁剪线不许用全程一条水平线——甲板是斜的，平线在左端
+                // 会悬在舷墙上方、把她的脚和影子全剪掉，人就像滑着走（1.156 真机被指出「还在飘」）。
+                // 改为每帧跟随她自己的脚底线：裁到脚踝上方一点点，裙摆永远正好落在她站的那处甲板上。
+                val cb = if (clipY[i] >= 0f) foot.y - body * 0.045f else size.height
+                // 接触影画在裁剪之外：影子落在甲板上，是她「踩住地」的凭据，绝不能被舷墙剪掉
+                withTransform({
+                    translate(foot.x, foot.y)
+                    scale(1f, spec.shadowHeightBh / spec.shadowWidthBh, pivot = Offset.Zero)
+                }) {
+                    drawCircle(shadowBrushes[i], radius = spec.shadowWidthBh * body / 2f, center = Offset.Zero)
+                }
                 withTransform({ clipRect(0f, 0f, size.width, cb) }) {
-                    // 接触影：钉在脚底地面点，只随位置变，不吃起伏
-                    withTransform({
-                        translate(foot.x, foot.y)
-                        scale(1f, spec.shadowHeightBh / spec.shadowWidthBh, pivot = Offset.Zero)
-                    }) {
-                        drawCircle(shadowBrushes[i], radius = spec.shadowWidthBh * body / 2f, center = Offset.Zero)
-                    }
                     val fr =
                         when (w.pose) {
                             Pose.Walk -> s.walkFrame(w.frame)
