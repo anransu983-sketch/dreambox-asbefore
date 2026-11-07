@@ -49,6 +49,8 @@ import kotlin.jvm.functions.Function3;
  * - 迁移备份（v11）：AndroidKeyStore 主密钥不进任何文件备份、卸载重装/换机即失，
  *   故另给一条可迁移路：用户口令经 PBKDF2 派生密钥、AES-GCM 加密导出全部条目
  *   （含密码/私钥/主机指纹）为一段文本，新机粘贴+口令导入即恢复（合并去重）。
+ * - 本机存档自愈（v12）：旧存档解不开时隔离改名保留并从空存档起步（loadStore），
+ *   避免一处坏档把列表/保存/导入全堵死；恢复走迁移包导入或重新添加。
  * - 连接走 JSch shell 通道 + PTY（xterm-256color），输出经宿主 emit 实时推给网页的
  *   xterm.js；输入/改尺寸走桥方法。主机指纹 TOFU：首次记录、之后比对、不一致断开报错。
  * - 同时只保留一个会话（v1）；release()/disconnect 即断开。
@@ -59,6 +61,8 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
     private static final String KEY_ALIAS = "sshtty.store.v1";
     private static final String PORTABLE_MAGIC = "SSHTTY-BACKUP";
     private static final int PORTABLE_ITER = 120000;
+    /** 本机存档解不开被隔离时，被改名的文件名（进程内提示用，保存成功后清）。 */
+    private static volatile String storeIsolatedName;
 
     private static Context appContext;
     private Function3<? super String, ? super String, ? super String, Unit> emitFn;
@@ -249,29 +253,56 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         return kg.generateKey();
     }
 
+    private static JSONObject emptyStore() throws Exception {
+        return new JSONObject().put("servers", new JSONArray()).put("hostKeys", new JSONObject());
+    }
+
     private synchronized JSONObject loadStore() throws Exception {
         File f = storeFile();
         if (!f.exists()) {
-            return new JSONObject().put("servers", new JSONArray()).put("hostKeys", new JSONObject());
+            return emptyStore();
         }
-        byte[] all;
-        try (InputStream in = new FileInputStream(f)) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
-            all = bos.toByteArray();
+        try {
+            byte[] all;
+            try (InputStream in = new FileInputStream(f)) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+                all = bos.toByteArray();
+            }
+            JSONObject env = new JSONObject(new String(all, StandardCharsets.UTF_8));
+            byte[] iv = Base64.decode(env.getString("iv"), Base64.NO_WRAP);
+            byte[] ct = Base64.decode(env.getString("ct"), Base64.NO_WRAP);
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(Cipher.DECRYPT_MODE, storeKey(), new GCMParameterSpec(128, iv));
+            String plain = new String(c.doFinal(ct), StandardCharsets.UTF_8);
+            JSONObject store = new JSONObject(plain);
+            if (!store.has("servers")) store.put("servers", new JSONArray());
+            if (!store.has("hostKeys")) store.put("hostKeys", new JSONObject());
+            return store;
+        } catch (Exception e) {
+            // v12 自愈：系统密钥已换/丢失时旧存档永远解不开（AEADBadTag），此前会把
+            // 列表、保存、迁移导入全部堵死。改为隔离旧档（改名保留、不删）并从空
+            // 存档起步，让导入迁移包/重新添加成为可行的恢复路。
+            File q = new File(f.getParentFile(),
+                    "store.json.enc.undecryptable-" + System.currentTimeMillis());
+            boolean moved = f.renameTo(q);
+            if (!moved) {
+                try (InputStream in = new FileInputStream(f);
+                     OutputStream out = new FileOutputStream(q)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                    moved = true;
+                    //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+                } catch (Exception ignored) {
+                }
+            }
+            if (moved) storeIsolatedName = q.getName();
+            return emptyStore();
         }
-        JSONObject env = new JSONObject(new String(all, StandardCharsets.UTF_8));
-        byte[] iv = Base64.decode(env.getString("iv"), Base64.NO_WRAP);
-        byte[] ct = Base64.decode(env.getString("ct"), Base64.NO_WRAP);
-        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
-        c.init(Cipher.DECRYPT_MODE, storeKey(), new GCMParameterSpec(128, iv));
-        String plain = new String(c.doFinal(ct), StandardCharsets.UTF_8);
-        JSONObject store = new JSONObject(plain);
-        if (!store.has("servers")) store.put("servers", new JSONArray());
-        if (!store.has("hostKeys")) store.put("hostKeys", new JSONObject());
-        return store;
     }
 
     private synchronized void saveStore(JSONObject store) throws Exception {
@@ -285,6 +316,7 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         try (OutputStream out = new FileOutputStream(f)) {
             out.write(env.toString().getBytes(StandardCharsets.UTF_8));
         }
+        storeIsolatedName = null;
     }
 
     // ── 迁移备份（口令加密，不依赖 AndroidKeyStore，换机/卸载重装可恢复） ──
@@ -432,7 +464,12 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                         .put("authMode", s.optString("authMode", "password")));
             }
         }
-        return new JSONObject().put("servers", safe);
+        JSONObject out = new JSONObject().put("servers", safe);
+        if (storeIsolatedName != null) {
+            out.put("storeNotice", "本机旧存档因系统密钥变更已无法解密，已隔离保留（" + storeIsolatedName
+                    + "）。服务器和私钥请用迁移包导入恢复，或重新添加。");
+        }
+        return out;
     }
 
     private void upsertServer(JSONObject store, JSONObject o) throws Exception {

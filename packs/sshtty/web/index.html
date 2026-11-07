@@ -34,6 +34,7 @@
   .srv-meta { color: #b9aed0; font-size: 12.5px; margin-top: 3px; word-break: break-all; }
   .empty { color: #b9aed0; font-size: 13.5px; text-align: center; padding: 26px 0 8px; line-height: 1.7; }
   .err { color: #ff9db4; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
+  .warn { color: #ffb86b; font-size: 13px; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
   .ok { color: #8be3b0; font-size: 13px; margin-top: 10px; }
   pre.log { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; line-height: 1.5;
     background: #100c1a; border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; margin: 10px 0 0; }
@@ -68,6 +69,7 @@
   <div id="srv-list"></div>
   <button class="main" id="btn-add">＋ 添加服务器</button>
   <div class="err" id="list-err"></div>
+  <div class="warn" id="store-notice"></div>
   <div class="card">
     <div class="srv-name">🧳 迁移备份</div>
     <p class="sub" style="margin-top:6px">换手机、卸载重装时，本机保存靠系统密钥、普通备份解不开。用你自己设的口令导出一份迁移包，存到安全的地方；新机打开这里粘贴导入，全部服务器和私钥一起恢复，服务器端什么都不用改。口令忘了就解不开，务必记牢。</p>
@@ -387,6 +389,7 @@
   function refreshList() {
     callNative('listServers', {}).then(function (r) {
       servers = r.servers || []; renderList();
+      $('store-notice').textContent = r.storeNotice || '';
     }).catch(function (e) { $('list-err').textContent = e.message; });
   }
 
@@ -862,6 +865,7 @@
       btn.disabled = false;
       servers = r.servers || [];
       renderList();
+      $('store-notice').textContent = r.storeNotice || '';
       $('mig-pass1').value = ''; $('mig-pass2').value = ''; $('mig-pass3').value = '';
       $('mig-ok').textContent = '已导入 ' + (r.imported || 0) + ' 台服务器，现有共 ' + (r.total || servers.length) + ' 台。';
     }).catch(function (e) {
