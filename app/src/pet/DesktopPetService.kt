@@ -15,7 +15,10 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.Path
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ShapeDrawable
+import android.graphics.drawable.shapes.PathShape
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -33,6 +36,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import kotlin.math.abs
 import kotlin.math.cos
@@ -64,7 +68,12 @@ class DesktopPetService : Service() {
     private var img: ImageView? = null
     private var zzz: TextView? = null
     private var heart: TextView? = null
-    private var bubble: TextView? = null
+    // 台词气泡：独立悬浮窗，浮在仓鼠头顶上方（带小尾巴），不挤在宠物窗里遮耳朵
+    private var bubbleRoot: LinearLayout? = null
+    private var bubbleText: TextView? = null
+    private var bubbleTail: View? = null
+    private var bubbleLp: WindowManager.LayoutParams? = null
+    private var bubbleFlipped = false // 头顶空间不够（仓鼠爬到屏幕顶）时翻到下方
     private var bubbleFull = ""
     private var bubbleStart = 0L
     private var bubbleUntil = 0L
@@ -241,6 +250,11 @@ class DesktopPetService : Service() {
             root?.let { wm?.removeViewImmediate(it) }
         } catch (_: Exception) {
         }
+        try {
+            bubbleRoot?.let { wm?.removeViewImmediate(it) }
+        } catch (_: Exception) {
+        }
+        bubbleRoot = null
         root = null
         sensorManager?.unregisterListener(shakeListener)
         try {
@@ -380,24 +394,6 @@ class DesktopPetService : Service() {
         }
         container.addView(hv)
         heart = hv
-        val bb = TextView(this).apply {
-            setTextColor(0xFF3A2E2A.toInt())
-            textSize = 10.5f
-            setPadding(dp(8f), dp(5f), dp(8f), dp(5f))
-            background = GradientDrawable().apply {
-                setColor(0xF2FFFFFF.toInt())
-                cornerRadius = dp(10f).toFloat()
-            }
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.CENTER_HORIZONTAL,
-            )
-            maxWidth = dp(190f)
-            visibility = View.GONE
-        }
-        container.addView(bb)
-        bubble = bb
         img = iv
         zzz = z
         root = container
@@ -416,9 +412,127 @@ class DesktopPetService : Service() {
         container.setOnTouchListener { _, ev -> onTouch(ev) }
         return try {
             wm?.addView(container, lp)
+            buildBubbleWindow()
             true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    /** 气泡小尾巴：白色三角，气泡在上方时朝下指着仓鼠，翻到下方时朝上。 */
+    private fun tailDrawable(pointDown: Boolean): ShapeDrawable {
+        val p = Path()
+        if (pointDown) {
+            p.moveTo(0f, 0f)
+            p.lineTo(100f, 0f)
+            p.lineTo(50f, 100f)
+        } else {
+            p.moveTo(0f, 100f)
+            p.lineTo(100f, 100f)
+            p.lineTo(50f, 0f)
+        }
+        p.close()
+        return ShapeDrawable(PathShape(p, 100f, 100f)).apply {
+            paint.color = 0xF7FFFFFF.toInt()
+            paint.isAntiAlias = true
+        }
+    }
+
+    private fun setBubbleFlipped(flipped: Boolean) {
+        bubbleFlipped = flipped
+        val rootL = bubbleRoot ?: return
+        val tv = bubbleText ?: return
+        val tail = bubbleTail ?: return
+        rootL.removeAllViews()
+        if (flipped) {
+            rootL.addView(tail)
+            rootL.addView(tv)
+        } else {
+            rootL.addView(tv)
+            rootL.addView(tail)
+        }
+        tail.background = tailDrawable(pointDown = !flipped)
+    }
+
+    /** 台词气泡单独一个悬浮窗：不抢触摸（手指能穿过去点下面的 App），位置每帧跟随仓鼠。 */
+    private fun buildBubbleWindow() {
+        val tv = TextView(this).apply {
+            setTextColor(0xFF3A2E2A.toInt())
+            textSize = 13f
+            setPadding(dp(11f), dp(7f), dp(11f), dp(7f))
+            background = GradientDrawable().apply {
+                setColor(0xF7FFFFFF.toInt())
+                cornerRadius = dp(14f).toFloat()
+            }
+            maxWidth = dp(220f)
+        }
+        val tail = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(14f), dp(9f))
+        }
+        val rootL = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            visibility = View.GONE
+        }
+        bubbleText = tv
+        bubbleTail = tail
+        bubbleRoot = rootL
+        setBubbleFlipped(false)
+        val blp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 0
+            y = 0
+        }
+        bubbleLp = blp
+        try {
+            wm?.addView(rootL, blp)
+        } catch (_: Exception) {
+            bubbleRoot = null
+            bubbleText = null
+            bubbleTail = null
+            bubbleLp = null
+        }
+    }
+
+    /** 把气泡摆到仓鼠头顶上方：水平对着仓鼠中心、贴屏幕边自动收，尾巴始终指向仓鼠。 */
+    private fun updateBubblePosition() {
+        val rootL = bubbleRoot ?: return
+        if (rootL.visibility != View.VISIBLE) return
+        val blp = bubbleLp ?: return
+        val unspec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        rootL.measure(unspec, unspec)
+        var bw = rootL.measuredWidth
+        var bh = rootL.measuredHeight
+        if (bw <= 0 || bh <= 0) return
+        val flipped = lp.y - bh - dp(2f) < dp(4f)
+        if (flipped != bubbleFlipped) {
+            setBubbleFlipped(flipped)
+            rootL.measure(unspec, unspec)
+            bw = rootL.measuredWidth
+            bh = rootL.measuredHeight
+        }
+        val petCenterX = lp.x + petW / 2
+        val margin = dp(6f)
+        val targetX = (petCenterX - bw / 2).coerceIn(margin, (screenW() - bw - margin).coerceAtLeast(margin))
+        val targetY = if (flipped) lp.y + petH + dp(2f) else lp.y - bh - dp(2f)
+        // 气泡被屏幕边挤偏时，尾巴横移补偿，尖端仍对准仓鼠
+        val tailShift = (petCenterX - (targetX + bw / 2)).toFloat()
+            .coerceIn(-(bw / 2 - dp(22f)).toFloat().coerceAtLeast(0f), (bw / 2 - dp(22f)).toFloat().coerceAtLeast(0f))
+        bubbleTail?.translationX = tailShift
+        if (blp.x != targetX || blp.y != targetY) {
+            blp.x = targetX
+            blp.y = targetY
+            try {
+                wm?.updateViewLayout(rootL, blp)
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -586,13 +700,14 @@ class DesktopPetService : Service() {
         bubbleFull = text
         bubbleStart = SystemClock.uptimeMillis()
         bubbleUntil = bubbleStart + 900 + text.length * 75L + 1700
-        bubble?.visibility = View.VISIBLE
-        bubble?.text = ""
+        bubbleText?.text = ""
+        bubbleRoot?.visibility = View.VISIBLE
+        updateBubblePosition()
     }
 
     /** 按场景池说话：气泡正显示时不抢，chance 为开口概率（百分比）。 */
     private fun say(pool: PetTalk.Pool, chance: Int = 100) {
-        if (bubble?.visibility == View.VISIBLE) return
+        if (bubbleRoot?.visibility == View.VISIBLE) return
         if (chance < 100 && Random.nextInt(100) >= chance) return
         showBubble(PetTalk.line(pool))
     }
@@ -616,6 +731,7 @@ class DesktopPetService : Service() {
             root?.let { wm?.updateViewLayout(it, lp) }
         } catch (_: Exception) {
         }
+        updateBubblePosition()
     }
 
     // ---------- 行为引擎 ----------
@@ -833,7 +949,7 @@ class DesktopPetService : Service() {
         val calNow = Calendar.getInstance()
         if (calNow.get(Calendar.MINUTE) == 0 && calNow.get(Calendar.HOUR_OF_DAY) != lastChimeHour) {
             lastChimeHour = calNow.get(Calendar.HOUR_OF_DAY)
-            if (Random.nextInt(100) < 75 && bubble?.visibility != View.VISIBLE) {
+            if (Random.nextInt(100) < 75 && bubbleRoot?.visibility != View.VISIBLE) {
                 val h12 = when (val h = lastChimeHour % 12) { 0 -> 12; else -> h }
                 showBubble(PetTalk.chime(h12))
             }
@@ -1208,15 +1324,17 @@ class DesktopPetService : Service() {
             }
         }
 
-        // 谢谢气泡：逐字打出，到时收起
-        val b = bubble
-        if (b != null && b.visibility == View.VISIBLE) {
+        // 台词气泡：逐字打出，到时收起；显示期间位置每帧跟随仓鼠
+        val br = bubbleRoot
+        val bt = bubbleText
+        if (br != null && bt != null && br.visibility == View.VISIBLE) {
             if (now > bubbleUntil) {
-                b.visibility = View.GONE
+                br.visibility = View.GONE
             } else {
                 val n = ((now - bubbleStart) / 70).toInt().coerceIn(0, bubbleFull.length)
                 val t = bubbleFull.substring(0, n)
-                if (b.text.toString() != t) b.text = t
+                if (bt.text.toString() != t) bt.text = t
+                updateBubblePosition()
             }
         }
     }
