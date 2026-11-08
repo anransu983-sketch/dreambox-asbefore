@@ -73,6 +73,8 @@ class DesktopPetService : Service() {
     private var bubbleText: TextView? = null
     private var bubbleTail: View? = null
     private var bubbleLp: WindowManager.LayoutParams? = null
+    private var bubbleW = 0 // 气泡整句量好的宽高：窗口用显式尺寸，不随逐字打字塌缩
+    private var bubbleH = 0
     private var bubbleFlipped = false // 头顶空间不够（仓鼠爬到屏幕顶）时翻到下方
     private var bubbleFull = ""
     private var bubbleStart = 0L
@@ -506,17 +508,12 @@ class DesktopPetService : Service() {
         val rootL = bubbleRoot ?: return
         if (rootL.visibility != View.VISIBLE) return
         val blp = bubbleLp ?: return
-        val unspec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        rootL.measure(unspec, unspec)
-        var bw = rootL.measuredWidth
-        var bh = rootL.measuredHeight
+        val bw = bubbleW
+        val bh = bubbleH
         if (bw <= 0 || bh <= 0) return
         val flipped = lp.y - bh - dp(2f) < dp(4f)
         if (flipped != bubbleFlipped) {
             setBubbleFlipped(flipped)
-            rootL.measure(unspec, unspec)
-            bw = rootL.measuredWidth
-            bh = rootL.measuredHeight
         }
         val petCenterX = lp.x + petW / 2
         val margin = dp(6f)
@@ -700,8 +697,25 @@ class DesktopPetService : Service() {
         bubbleFull = text
         bubbleStart = SystemClock.uptimeMillis()
         bubbleUntil = bubbleStart + 900 + text.length * 75L + 1700
-        bubbleText?.text = ""
-        bubbleRoot?.visibility = View.VISIBLE
+        val rootL = bubbleRoot ?: return
+        val bt = bubbleText ?: return
+        val blp = bubbleLp ?: return
+        // 先按整句量好尺寸、把窗口宽高写死，再开始逐字打字：
+        // 1.175 的气泡窗用 WRAP_CONTENT 随逐字文本量宽，真机上塌成一条空壳、字被挤没（她截图实证）
+        bt.text = text
+        val wSpec = View.MeasureSpec.makeMeasureSpec(dp(244f), View.MeasureSpec.AT_MOST)
+        val hSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        rootL.measure(wSpec, hSpec)
+        bubbleW = rootL.measuredWidth
+        bubbleH = rootL.measuredHeight
+        bt.text = ""
+        blp.width = bubbleW
+        blp.height = bubbleH
+        rootL.visibility = View.VISIBLE
+        try {
+            wm?.updateViewLayout(rootL, blp)
+        } catch (_: Exception) {
+        }
         updateBubblePosition()
     }
 
