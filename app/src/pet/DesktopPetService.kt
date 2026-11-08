@@ -15,7 +15,13 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.PathShape
@@ -72,6 +78,9 @@ class DesktopPetService : Service() {
     private var bubbleRoot: LinearLayout? = null
     private var bubbleText: TextView? = null
     private var bubbleTail: View? = null
+    private var bubbleEars: View? = null // 胖团子款的熊耳朵（云朵款不用）
+    private var bubbleDots: LinearLayout? = null // 云朵款的圆点小尾巴（胖团子款用三角尾）
+    private var bubbleStyleCloud = true // 本次气泡款式：云朵团 / 胖团子，两款随机轮换（她点选 A+C）
     private var bubbleLp: WindowManager.LayoutParams? = null
     private var bubbleW = 0 // 气泡整句量好的宽高：窗口用显式尺寸，不随逐字打字塌缩
     private var bubbleH = 0
@@ -421,8 +430,8 @@ class DesktopPetService : Service() {
         }
     }
 
-    /** 气泡小尾巴：白色三角，气泡在上方时朝下指着仓鼠，翻到下方时朝上。 */
-    private fun tailDrawable(pointDown: Boolean): ShapeDrawable {
+    /** 气泡小尾巴：三角，气泡在上方时朝下指着仓鼠，翻到下方时朝上。 */
+    private fun tailDrawable(pointDown: Boolean, color: Int): ShapeDrawable {
         val p = Path()
         if (pointDown) {
             p.moveTo(0f, 0f)
@@ -435,41 +444,99 @@ class DesktopPetService : Service() {
         }
         p.close()
         return ShapeDrawable(PathShape(p, 100f, 100f)).apply {
-            paint.color = 0xF7FFFFFF.toInt()
+            paint.color = color
             paint.isAntiAlias = true
+        }
+    }
+
+    /** 当前款式的小尾巴控件：云朵款是圆点串，胖团子款是三角。 */
+    private fun currentTailView(): View? = if (bubbleStyleCloud) bubbleDots else bubbleTail
+
+    /**
+     * 按当前款式＋翻转状态重排气泡内部：
+     * 云朵团＝白云朵身（蓝边波浪）＋两颗圆点滴向仓鼠；胖团子＝奶油胖方身＋熊耳朵＋三角尾。
+     * 翻到下方时尾巴转到上边，耳朵收起（不然像脚）。
+     */
+    private fun layoutBubble() {
+        val rootL = bubbleRoot ?: return
+        val tv = bubbleText ?: return
+        val tail = bubbleTail ?: return
+        val dots = bubbleDots ?: return
+        val ears = bubbleEars ?: return
+        if (bubbleStyleCloud) {
+            tv.background = CloudDrawable(0xFFFFFFFF.toInt(), 0xFFA8C7E8.toInt(), resources.displayMetrics.density)
+            tv.setPadding(dp(17f), dp(13f), dp(17f), dp(13f))
+            tail.visibility = View.GONE
+            dots.visibility = View.VISIBLE
+            ears.visibility = View.GONE
+        } else {
+            tv.background = GradientDrawable().apply {
+                setColor(0xFFFFFBF0.toInt())
+                cornerRadius = dp(24f).toFloat()
+                setStroke(dp(1.5f), 0xFFC9955C.toInt())
+            }
+            tv.setPadding(dp(15f), dp(10f), dp(15f), dp(10f))
+            tail.background = tailDrawable(pointDown = !bubbleFlipped, color = 0xFFFFFBF0.toInt())
+            tail.visibility = View.VISIBLE
+            dots.visibility = View.GONE
+            ears.visibility = if (bubbleFlipped) View.GONE else View.VISIBLE
+        }
+        rootL.removeAllViews()
+        val tailNow = currentTailView() ?: tail
+        if (bubbleFlipped) {
+            rootL.addView(tailNow)
+            rootL.addView(tv)
+        } else {
+            if (!bubbleStyleCloud) rootL.addView(ears)
+            rootL.addView(tv)
+            rootL.addView(tailNow)
         }
     }
 
     private fun setBubbleFlipped(flipped: Boolean) {
         bubbleFlipped = flipped
-        val rootL = bubbleRoot ?: return
-        val tv = bubbleText ?: return
-        val tail = bubbleTail ?: return
-        rootL.removeAllViews()
-        if (flipped) {
-            rootL.addView(tail)
-            rootL.addView(tv)
-        } else {
-            rootL.addView(tv)
-            rootL.addView(tail)
-        }
-        tail.background = tailDrawable(pointDown = !flipped)
+        layoutBubble()
     }
 
     /** 台词气泡单独一个悬浮窗：不抢触摸（手指能穿过去点下面的 App），位置每帧跟随仓鼠。 */
     private fun buildBubbleWindow() {
         val tv = TextView(this).apply {
-            setTextColor(0xFF3A2E2A.toInt())
+            setTextColor(0xFF4A362C.toInt())
             textSize = 13f
-            setPadding(dp(11f), dp(7f), dp(11f), dp(7f))
-            background = GradientDrawable().apply {
-                setColor(0xF7FFFFFF.toInt())
-                cornerRadius = dp(14f).toFloat()
-            }
-            maxWidth = dp(220f)
+            gravity = Gravity.CENTER
+            maxWidth = dp(172f)
         }
         val tail = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(dp(14f), dp(9f))
+        }
+        // 胖团子款的熊耳朵：两只圆耳朵压在气泡顶边上（负边距与气泡身重叠 7dp）
+        val ears = BearEarsView(this, dp(10f), dp(15f), resources.displayMetrics.density).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(14f),
+            ).apply { bottomMargin = -dp(7f) }
+        }
+        // 云朵款的圆点小尾巴：一大一小两颗圆点从云朵滴向仓鼠
+        val dots = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            val d1 = View(this@DesktopPetService).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(9f), dp(9f)).apply { topMargin = dp(3f) }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(0xFFFFFFFF.toInt())
+                    setStroke(dp(1.2f), 0xFFA8C7E8.toInt())
+                }
+            }
+            val d2 = View(this@DesktopPetService).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(5.5f), dp(5.5f)).apply { topMargin = dp(2.5f) }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(0xFFFFFFFF.toInt())
+                    setStroke(dp(1f), 0xFFA8C7E8.toInt())
+                }
+            }
+            addView(d1)
+            addView(d2)
         }
         val rootL = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -478,6 +545,8 @@ class DesktopPetService : Service() {
         }
         bubbleText = tv
         bubbleTail = tail
+        bubbleEars = ears
+        bubbleDots = dots
         bubbleRoot = rootL
         setBubbleFlipped(false)
         val blp = WindowManager.LayoutParams(
@@ -499,6 +568,8 @@ class DesktopPetService : Service() {
             bubbleRoot = null
             bubbleText = null
             bubbleTail = null
+            bubbleEars = null
+            bubbleDots = null
             bubbleLp = null
         }
     }
@@ -522,7 +593,7 @@ class DesktopPetService : Service() {
         // 气泡被屏幕边挤偏时，尾巴横移补偿，尖端仍对准仓鼠
         val tailShift = (petCenterX - (targetX + bw / 2)).toFloat()
             .coerceIn(-(bw / 2 - dp(22f)).toFloat().coerceAtLeast(0f), (bw / 2 - dp(22f)).toFloat().coerceAtLeast(0f))
-        bubbleTail?.translationX = tailShift
+        currentTailView()?.translationX = tailShift
         if (blp.x != targetX || blp.y != targetY) {
             blp.x = targetX
             blp.y = targetY
@@ -700,10 +771,26 @@ class DesktopPetService : Service() {
         val rootL = bubbleRoot ?: return
         val bt = bubbleText ?: return
         val blp = bubbleLp ?: return
+        // 款式轮换：云朵团 / 胖团子随机一款（她点选 A+C 两款都要）
+        bubbleStyleCloud = Random.nextBoolean()
+        layoutBubble()
         // 先按整句量好尺寸、把窗口宽高写死，再开始逐字打字：
         // 1.175 的气泡窗用 WRAP_CONTENT 随逐字文本量宽，真机上塌成一条空壳、字被挤没（她截图实证）
+        // 宽度收到 172dp 让字断成两三行、气泡成团不拉长条（她明令不要长条条）
         bt.text = text
-        val wSpec = View.MeasureSpec.makeMeasureSpec(dp(244f), View.MeasureSpec.AT_MOST)
+        bt.measure(
+            View.MeasureSpec.makeMeasureSpec(dp(172f), View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+        )
+        // 熊耳朵宽度跟着气泡身走
+        bubbleEars?.let { ears ->
+            val lp2 = ears.layoutParams as LinearLayout.LayoutParams
+            if (lp2.width != bt.measuredWidth) {
+                lp2.width = bt.measuredWidth
+                ears.layoutParams = lp2
+            }
+        }
+        val wSpec = View.MeasureSpec.makeMeasureSpec(dp(190f), View.MeasureSpec.AT_MOST)
         val hSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         rootL.measure(wSpec, hSpec)
         bubbleW = rootL.measuredWidth
@@ -1351,5 +1438,81 @@ class DesktopPetService : Service() {
                 updateBubblePosition()
             }
         }
+    }
+}
+
+/** 云朵团气泡身：上下缘带一排小圆波浪的云朵；蓝边靠先画一层边色云、再上移盖白色云露出。 */
+private class CloudDrawable(
+    fillColor: Int,
+    edgeColor: Int,
+    private val density: Float,
+) : Drawable() {
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = fillColor
+        style = Paint.Style.FILL
+    }
+    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = edgeColor
+        style = Paint.Style.FILL
+    }
+
+    override fun draw(canvas: Canvas) {
+        val b = bounds
+        drawCloud(canvas, b, edgePaint, 1.6f * density)
+        drawCloud(canvas, b, fillPaint, 0f)
+    }
+
+    private fun drawCloud(canvas: Canvas, b: Rect, p: Paint, dy: Float) {
+        val r = 8.5f * density
+        val left = b.left + r * 0.35f
+        val right = b.right - r * 0.35f
+        val top = b.top + r
+        val bottom = b.bottom - r
+        if (right <= left || bottom <= top) return
+        val body = RectF(left, top + dy, right, bottom + dy)
+        canvas.drawRoundRect(body, r * 1.3f, r * 1.3f, p)
+        val spacing = r * 1.72f
+        var x = left + r * 0.95f
+        while (x < right - r * 0.4f) {
+            canvas.drawCircle(x, top + dy, r, p)
+            canvas.drawCircle(x, bottom + dy, r * 0.85f, p)
+            x += spacing
+        }
+        canvas.drawCircle(right - r * 0.55f, top + dy, r, p)
+        canvas.drawCircle(right - r * 0.55f, bottom + dy, r * 0.85f, p)
+    }
+
+    override fun setAlpha(alpha: Int) {}
+    override fun setColorFilter(cf: ColorFilter?) {}
+    @Deprecated("Drawable opacity")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/** 胖团子款的熊耳朵：一左一右两只圆耳朵（外棕内粉），圆心压在控件底边附近，与气泡身重叠着长。 */
+private class BearEarsView(
+    context: Context,
+    private val earR: Int,
+    private val inset: Int,
+    private val density: Float,
+) : View(context) {
+    private val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFC9955C.toInt()
+        style = Paint.Style.FILL
+    }
+    private val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFF8B7B2.toInt()
+        style = Paint.Style.FILL
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val cy = height - 3f * density
+        val lx = (inset + earR).toFloat()
+        val rx = (width - inset - earR).toFloat()
+        if (rx <= lx) return
+        canvas.drawCircle(lx, cy, earR.toFloat(), outerPaint)
+        canvas.drawCircle(rx, cy, earR.toFloat(), outerPaint)
+        canvas.drawCircle(lx, cy, earR * 0.55f, innerPaint)
+        canvas.drawCircle(rx, cy, earR * 0.55f, innerPaint)
     }
 }
