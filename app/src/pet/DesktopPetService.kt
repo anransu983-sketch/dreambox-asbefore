@@ -63,6 +63,7 @@ class DesktopPetService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.suanran.dreambox.pet.STOP"
+        const val ACTION_VIDEO_STATE = "com.suanran.dreambox.pet.VIDEO_STATE"
         private const val CHANNEL_ID = "desktop_pet"
         private const val NOTIF_ID = 4201
         private const val TICK_MS = 90L
@@ -162,6 +163,33 @@ class DesktopPetService : Service() {
         }
     }
 
+    // 看视频自动藏身：琳播放器进播放页时发信号（playing=true，停留期间每 30s 心跳），退出时发 playing=false
+    @Volatile
+    private var videoHidden = false
+    private var lastVideoSignalAt = 0L
+    private val videoReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != ACTION_VIDEO_STATE) return
+            if (intent.getBooleanExtra("playing", false)) {
+                lastVideoSignalAt = SystemClock.uptimeMillis()
+                setVideoHidden(true)
+            } else {
+                setVideoHidden(false)
+            }
+        }
+    }
+
+    private fun setVideoHidden(hidden: Boolean) {
+        if (videoHidden == hidden) return
+        videoHidden = hidden
+        if (hidden) {
+            bubbleRoot?.visibility = View.GONE
+            root?.visibility = View.GONE
+        } else {
+            root?.visibility = View.VISIBLE
+        }
+    }
+
     // 摇一摇：加速度突变 → 晕乎乎
     private var sensorManager: SensorManager? = null
     private var lastAccelMag = 9.8f
@@ -237,6 +265,14 @@ class DesktopPetService : Service() {
             )
         } catch (_: Exception) {
         }
+        // 看琳 Emby 时自动藏身：琳是另一个 App 须导出接收；信号最坏只让仓鼠藏一会儿，另有失联自恢复兜底
+        try {
+            androidx.core.content.ContextCompat.registerReceiver(
+                this, videoReceiver, IntentFilter(ACTION_VIDEO_STATE),
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+            )
+        } catch (_: Exception) {
+        }
         // 开场按时段打个招呼
         handler.postDelayed({ say(PetTalk.timePool()) }, 1400)
     }
@@ -270,6 +306,10 @@ class DesktopPetService : Service() {
         sensorManager?.unregisterListener(shakeListener)
         try {
             unregisterReceiver(lifeReceiver)
+        } catch (_: Exception) {
+        }
+        try {
+            unregisterReceiver(videoReceiver)
         } catch (_: Exception) {
         }
         super.onDestroy()
@@ -765,6 +805,7 @@ class DesktopPetService : Service() {
     }
 
     private fun showBubble(text: String) {
+        if (videoHidden) return // 藏身看视频时不冒泡
         bubbleFull = text
         bubbleStart = SystemClock.uptimeMillis()
         bubbleUntil = bubbleStart + 900 + text.length * 75L + 1700
@@ -968,6 +1009,10 @@ class DesktopPetService : Service() {
             // 熄屏时不跑状态机、不刷窗口（此前 90ms 整夜空转耗电）；低频探活，亮屏自动恢复
             val screenOn = powerManager?.isInteractive ?: true
             if (screenOn) {
+                // 藏身信号失联兜底：琳进程被杀等情况没发退出信号时，2 分钟后自己回来
+                if (videoHidden && SystemClock.uptimeMillis() - lastVideoSignalAt > 120_000) {
+                    setVideoHidden(false)
+                }
                 step()
                 handler.postDelayed(this, TICK_MS)
             } else {
