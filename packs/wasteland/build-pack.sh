@@ -17,6 +17,10 @@ trap 'rm -rf "$STAGE"' EXIT
 cp "$PACK_DIR/web/index.html" "$STAGE/index.html"
 cp "$PACK_DIR/native-bridge.js" "$STAGE/native-bridge.js"
 cp "$PACK_DIR/pack.json" "$STAGE/pack.json"
+if [ -d "$PACK_DIR/web/art" ]; then
+  mkdir -p "$STAGE/art"
+  cp "$PACK_DIR/web/art/"*.jpg "$STAGE/art/"
+fi
 rm -f "$OUT_ZIP"
 (cd "$STAGE" && zip -q -r "$OUT_ZIP" .)
 ls -lh "$OUT_ZIP"
