@@ -135,15 +135,6 @@ class PackStore(context: Context) {
                 entryClass = "com.suanran.pack.nodeforge.NodeForgePackEntry",
             ),
             PackDef(
-                id = "rebirth",
-                name = "轮回",
-                summary = "高武门派与轮回已合为一体：一个包走完修仙一生与百世轮回。山门大世界照旧（选道、境界、俸禄、成就、集市、万界、NPC），山门里多了一间轮回殿——转世结算、自由配点、遗产回响、天道注视与伐天、百世长卷都在里面；每世按配点加权随机落界与修炼体系（12 界 7 体系），修全七体系走满百世可融万法归一。原高武门派包的进度（弟子、设施、NPC 记录）同源存储，自动延续。",
-                version = "20",
-                sizeText = "约 2.6 MB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/rebirth-pack-v20.zip",
-                entryClass = "com.suanran.pack.rebirth.RebirthPackEntry",
-            ),
-            PackDef(
                 id = "iptest",
                 name = "IP 测试",
                 summary = "IP 查询与纯净度检测：13 个常用检测站经当前代理出口一键打开",
@@ -178,15 +169,6 @@ class PackStore(context: Context) {
                 sizeText = "约 1.3 MB",
                 downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v18.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
-            ),
-            PackDef(
-                id = "wasteland",
-                name = "废土家园",
-                summary = "废土生存单机小游戏：经营营地（卧室/作坊/仓库），在工作台与加工台、药盒制作装备，带狼宠物奥力给外出探索六个地点打怪攒材料；生存三维（生命/饱食/精力）与昼夜天气全在本地存档，分解多余小刀回材料；v3：全套场景换写实厚涂画（营地内外景/探索废墟街/战斗与宠物立绘），新增外观升级——席梦思（睡觉回血 +50%）与五星酒店套房（睡满＋精力回满）",
-                version = "3",
-                sizeText = "约 1.5 MB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/wasteland-pack-v3.zip",
-                entryClass = "",
             ),
         )
     }
