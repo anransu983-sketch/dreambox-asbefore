@@ -1,0 +1,32 @@
+name: Build Wasteland pack
+
+# 废土家园插件：纯网页包（无 dex），仓库里已带打好的 zip，本工作流只负责发布。
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-pack:
+    name: Publish wasteland pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout DreamBox
+        uses: actions/checkout@v4
+
+      - name: Upload pack artifact
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: wasteland-pack
+          path: packs/wasteland/wasteland-pack-v*.zip
+
+      - name: Publish pack to packs release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view packs >/dev/null 2>&1 || \
+            gh release create packs --title "插件" --notes "梦盒插件下载（App 内插件页使用）"
+          gh release upload packs packs/wasteland/wasteland-pack-v*.zip --clobber

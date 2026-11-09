@@ -179,6 +179,15 @@ class PackStore(context: Context) {
                 downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/sshtty-pack-v18.zip",
                 entryClass = "com.suanran.pack.sshtty.SshTermPackEntry",
             ),
+            PackDef(
+                id = "wasteland",
+                name = "废土家园",
+                summary = "废土生存单机小游戏：经营营地（卧室/作坊/仓库），在工作台与加工台、药盒制作装备，带狼宠物奥力给外出探索六个地点打怪攒材料；生存三维（生命/饱食/精力）与昼夜天气全在本地存档，分解多余小刀回材料",
+                version = "1",
+                sizeText = "约 20 KB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/wasteland-pack-v1.zip",
+                entryClass = "",
+            ),
         )
     }
 }

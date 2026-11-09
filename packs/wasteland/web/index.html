@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>废土家园</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#17150f;--panel:#23201a;--panel2:#2d2921;--wood:#6b4a2f;--line:#454031;--txt:#ddd6c4;--dim:#9a927c;--red:#c8543f;--amber:#d9a441;--green:#7fa653;--blue:#5b84a8;--stripe:repeating-linear-gradient(45deg,#c9a227 0 14px,#1c1a14 14px 28px)}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;padding-bottom:16px}
+.hazard{height:8px;background:var(--stripe);opacity:.85}
+header{padding:10px 12px 6px}
+h1{font-size:19px;letter-spacing:2px;color:#e8dfc8}
+.sub{color:var(--dim);font-size:12px;margin-top:2px}
+.stats{padding:4px 12px}
+.srow{display:flex;align-items:center;gap:8px;margin:5px 0}
+.srow .lb{width:34px;color:var(--dim);font-size:12px}
+.bar{flex:1;height:12px;background:#0f0e0a;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;transition:width .3s}
+.hp i{background:linear-gradient(90deg,#8e3527,var(--red))}
+.food i{background:linear-gradient(90deg,#a8742c,var(--amber))}
+.eng i{background:linear-gradient(90deg,#3d5f7d,var(--blue))}
+.srow .vl{width:86px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.env{display:flex;gap:6px;flex-wrap:wrap;padding:6px 12px}
+.env span{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--dim)}
+.env b{color:var(--txt);font-weight:600}
+.gold{color:var(--amber)!important}
+nav{display:flex;gap:6px;padding:8px 12px;position:sticky;top:0;background:var(--bg);z-index:5}
+nav button{flex:1;padding:9px 0;background:var(--panel);color:var(--dim);border:1px solid var(--line);border-radius:8px;font-size:14px}
+nav button.on{background:var(--wood);color:#fff;border-color:#8a623e}
+.view{display:none;padding:0 12px}
+.view.on{display:block}
+.rooms{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.room{background:linear-gradient(180deg,#2e2a20,#211e17);border:1px solid var(--line);border-radius:10px;padding:14px 10px;min-height:86px;position:relative;overflow:hidden}
+.room:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--stripe);opacity:.5}
+.room .ic{font-size:26px}
+.room .nm{font-size:16px;margin-top:4px}
+.room .ds{color:var(--dim);font-size:12px;margin-top:2px;line-height:1.5}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
+.panel h3{font-size:15px;margin-bottom:8px;color:#e8dfc8}
+.panel p{color:var(--dim);font-size:13px;line-height:1.6}
+.btn{display:inline-block;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:13px;margin:4px 4px 0 0}
+.btn:active{background:var(--wood)}
+.btn.main{background:var(--wood);border-color:#8a623e;color:#fff}
+.btn.danger{border-color:#7c3a2d;color:#e08a76}
+.btn:disabled{opacity:.4}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.cell{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 4px;text-align:center;position:relative;min-height:74px}
+.cell .ic{font-size:23px}
+.cell .nm{font-size:12px;margin-top:3px}
+.cell .ct{position:absolute;right:5px;bottom:4px;font-size:12px;color:var(--amber);font-weight:700}
+.cell .use{margin-top:5px;font-size:11px;padding:3px 8px}
+.rec{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-top:7px}
+.rec .rn{font-size:14px}
+.rec .rm{color:var(--dim);font-size:12px;margin-top:2px}
+.rec .rm .lack{color:#e08a76}
+.loc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px;margin-top:8px}
+.loc .ln{font-size:15px}
+.loc .ld{color:var(--dim);font-size:12px;line-height:1.6;margin-top:3px}
+#log{background:#100f0b;border:1px solid var(--line);border-radius:10px;margin:12px;padding:10px 12px;height:168px;overflow-y:auto;font-size:12.5px;line-height:1.75;color:#bdb49e}
+#log .sys{color:var(--amber)}
+#log .bad{color:#e08a76}
+#log .good{color:#a5c97e}
+.foot{display:flex;gap:8px;padding:0 12px}
+.foot button{flex:1;padding:9px;background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:8px;font-size:13px}
+#fight{display:none;background:#2a1f1a;border:1px solid #7c3a2d;border-radius:10px;padding:12px;margin:10px 12px 0}
+#fight h3{color:#e08a76}
+.wolfbar{height:10px;background:#0f0e0a;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+.wolfbar i{display:block;height:100%;background:var(--green)}
+.kv{display:flex;justify-content:space-between;padding:3px 0;color:var(--dim);font-size:13px}
+.kv b{color:var(--txt)}
+</style>
+</head>
+<body>
+<div class="hazard"></div>
+<header>
+  <h1>废 土 家 园</h1>
+  <div class="sub"><span id="pname">泡芙对a</span> · 医生 · 独自在废土上重建营地</div>
+</header>
+<div class="stats">
+  <div class="srow"><span class="lb">生命</span><div class="bar hp"><i id="bHp"></i></div><span class="vl" id="vHp"></span></div>
+  <div class="srow"><span class="lb">饱食</span><div class="bar food"><i id="bFood"></i></div><span class="vl" id="vFood"></span></div>
+  <div class="srow"><span class="lb">精力</span><div class="bar eng"><i id="bEng"></i></div><span class="vl" id="vEng"></span></div>
+</div>
+<div class="env">
+  <span>第 <b id="vDay">1</b> 天</span><span>天气 <b id="vWx">晴</b></span><span>时段 <b id="vTime">上午</b></span>
+  <span>温度 <b id="vTemp">20℃</b></span><span>辐射 <b>0</b></span><span>金币 <b class="gold" id="vGold">0</b></span>
+  <span>攻 <b id="vAtk">87</b> / 防 <b>4</b></span>
+</div>
+<nav>
+  <button id="nCamp" class="on" onclick="go('camp')">营地</button>
+  <button id="nBag" onclick="go('bag')">背包</button>
+  <button id="nExplore" onclick="go('explore')">探索</button>
+  <button id="nPet" onclick="go('pet')">宠物</button>
+</nav>
+
+<div class="view on" id="view-camp">
+  <div class="rooms" id="rooms"></div>
+  <div class="panel" id="roomPanel"><h3>营地</h3><p>点任意房间进去办事：睡觉、制作、种地、练功，物资都存在仓库格里（背包即仓库）。</p></div>
+</div>
+
+<div class="view" id="view-bag">
+  <button class="btn main" onclick="splitKnives()">分解多余小刀（只留 1 把）</button>
+  <div class="grid" id="bagGrid" style="margin-top:10px"></div>
+  <p style="color:var(--dim);font-size:12px;margin-top:8px;line-height:1.6">食物与药品格里有「使用」按钮；材料在作坊里消耗。变异血液先留着，v2 有用。</p>
+</div>
+
+<div class="view" id="view-explore">
+  <p style="color:var(--dim);font-size:12.5px;line-height:1.6">带上铁砂弹和小刀再出门。奥力给食槽 ≥50 才会跟你参战，&lt;50 只能在家等投喂。</p>
+  <div id="locList"></div>
+</div>
+
+<div id="fight"></div>
+
+<div class="view" id="view-pet">
+  <div class="panel">
+    <h3>🐺 奥力给 · 狼 · Lv.30</h3>
+    <div class="kv"><span>生命</span><b>228 / 228</b></div>
+    <div class="kv"><span>攻击 / 防御</span><b>41 / 14</b></div>
+    <div class="kv"><span>成长</span><b>A</b></div>
+    <div class="kv"><span>技能</span><b>利齿Ⅱ · 撕裂 · 献祭</b></div>
+    <div style="margin:10px 0 4px;color:var(--dim);font-size:13px">食槽 <b id="vTrough" style="color:var(--txt)">45</b> / 100 <span id="troughState"></span></div>
+    <div class="wolfbar"><i id="bTrough"></i></div>
+    <div style="margin-top:10px">
+      <button class="btn" onclick="feed('meat',25)">投喂生肉（+25）</button>
+      <button class="btn" onclick="feed('can',30)">投喂罐头（+30）</button>
+      <button class="btn" onclick="feed('blackfruit',5)">投喂黑果（+5）</button>
+    </div>
+    <p style="margin-top:8px">出战一次消耗食槽 5。食槽不足 50 时探索遇敌它不会参战。</p>
+  </div>
+</div>
+
+<div id="log"></div>
+<div class="foot">
+  <button onclick="saveGame(true)">保存存档</button>
+  <button onclick="resetGame()">重开存档</button>
+</div>
+<div class="hazard" style="margin-top:12px"></div>
+
+<script src="native-bridge.js"></script>
+<script>
+"use strict";
+/* ============ 废土家园 v1（原创单机） ============ */
+var TIMES=["凌晨","上午","下午","傍晚","晚上","深夜"];
+var ITEMS={
+ knife:{n:"小刀",ic:"🗡️",t:"wpn"},
+ rifle:{n:"土制步枪",ic:"🔫",t:"wpn"},
+ drink:{n:"饮料",ic:"🥤",t:"food",food:10,eng:5},
+ blackfruit:{n:"黑果",ic:"🫐",t:"food",food:6},
+ meat:{n:"生肉",ic:"🥩",t:"food",food:12},
+ can:{n:"罐头",ic:"🥫",t:"food",food:35},
+ wood:{n:"木头",ic:"🪵",t:"mat"},
+ stone:{n:"石头",ic:"🪨",t:"mat"},
+ cloth:{n:"碎布",ic:"🧣",t:"mat"},
+ branch:{n:"树枝",ic:"🌿",t:"mat"},
+ bottle:{n:"塑料瓶",ic:"🍶",t:"mat"},
+ leather:{n:"皮革",ic:"🟫",t:"mat"},
+ herb:{n:"草药叶",ic:"🍃",t:"mat"},
+ blood:{n:"变异血液",ic:"🧪",t:"mat"},
+ metal:{n:"金属碎片",ic:"🔩",t:"mat"},
+ gravel:{n:"石料",ic:"🧱",t:"mat"},
+ rope:{n:"绳子",ic:"🪢",t:"mat"},
+ bait:{n:"诱饵",ic:"🪱",t:"mat"},
+ ironshot:{n:"铁砂弹",ic:"💠",t:"mat"},
+ stick:{n:"木棍",ic:"🏏",t:"wpn"},
+ spear:{n:"木制长矛",ic:"🔱",t:"wpn"},
+ plank:{n:"木板",ic:"🪟",t:"mat"},
+ shield:{n:"木盾",ic:"🛡️",t:"wpn"},
+ mask:{n:"蒙面头巾",ic:"🥷",t:"wpn"},
+ bandage:{n:"绷带",ic:"🩹",t:"med",hp:80},
+ salve:{n:"简易药膏",ic:"🧴",t:"med",hp:150}
+};
+var RECIPES=[
+ {id:"stick",st:"工作台 Lv.6",out:1,cost:{wood:2}},
+ {id:"spear",st:"工作台 Lv.6",out:1,cost:{wood:3,branch:2}},
+ {id:"knife",st:"工作台 Lv.6",out:1,cost:{metal:2,wood:1}},
+ {id:"plank",st:"工作台 Lv.6",out:1,cost:{wood:3}},
+ {id:"shield",st:"工作台 Lv.6",out:1,cost:{plank:2,cloth:1}},
+ {id:"mask",st:"工作台 Lv.6",out:1,cost:{cloth:3}},
+ {id:"ironshot",st:"加工台 Lv.4",out:8,cost:{metal:1,stone:1}},
+ {id:"rope",st:"加工台 Lv.4",out:1,cost:{branch:2,cloth:1}},
+ {id:"bait",st:"加工台 Lv.4",out:1,cost:{blackfruit:3}},
+ {id:"gravel",st:"加工台 Lv.4",out:1,cost:{stone:2}},
+ {id:"bandage",st:"药盒 Lv.3",out:1,cost:{cloth:2}},
+ {id:"salve",st:"药盒 Lv.3",out:1,cost:{herb:2,cloth:1}}
+];
+var LOCS=[
+ {n:"避难营地",d:"自家营地周边，安全，捡些日常物资。",cost:10,er:0.1,drops:[["wood",2,5],["cloth",1,3],["blackfruit",2,4]],gold:[0,2]},
+ {n:"山下树林",d:"树枝、草药和野果多，偶有变异犬出没。",cost:20,er:0.3,drops:[["branch",3,6],["herb",1,3],["blackfruit",3,6],["meat",1,2]],gold:[1,4]},
+ {n:"废弃民居",d:"翻找旧屋，饮料罐头和碎布常有，丧尸也不少。",cost:30,er:0.45,drops:[["drink",1,3],["cloth",2,4],["can",0,1],["metal",1,3]],gold:[3,8]},
+ {n:"服务区",d:"高速服务区，金属碎片与塑料瓶多，路途远。",cost:40,er:0.5,drops:[["metal",2,5],["bottle",2,5],["drink",1,2],["ironshot",2,5]],gold:[5,10]},
+ {n:"8号公路",d:"废弃车辆排成长龙，汽修零件散一地，危险也大。",cost:50,er:0.6,drops:[["metal",3,6],["leather",1,3],["stone",2,4]],gold:[8,15]},
+ {n:"郊外小镇居民楼",d:"整栋楼翻个底朝天，收获最丰厚，敌人也最凶。",cost:60,er:0.7,drops:[["can",1,2],["cloth",3,5],["metal",2,4],["blood",0,1],["meat",1,3]],gold:[10,20]}
+];
+var ENEMIES=[{n:"游荡丧尸",hp:90,atk:14},{n:"变异犬",hp:70,atk:18},{n:"腐化感染者",hp:120,atk:16},{n:"裂口兽",hp:150,atk:20}];
+function defState(){return{day:1,ti:1,wx:"晴",temp:20,hp:833,food:80,eng:360,gold:1,str:41,tis:25,train:0,
+ inv:{knife:10,rifle:1,drink:8,wood:24,stone:60,cloth:20,branch:25,bottle:12,leather:9,blackfruit:173,herb:11,blood:2,metal:5,ironshot:20,meat:3},
+ trough:45,garden:null,logs:[]};}
+var S=defState();
+try{var raw=localStorage.getItem("wasteland-v1");if(raw){var p=JSON.parse(raw);if(p&&p.inv)S=p;}}catch(e){}
+var fight=null;
+function $(id){return document.getElementById(id)}
+function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function cnt(id){return S.inv[id]||0}
+function add(id,n){S.inv[id]=Math.max(0,cnt(id)+n);if(S.inv[id]===0)delete S.inv[id];}
+function log(msg,cls){S.logs.push({m:msg,c:cls||""});if(S.logs.length>60)S.logs.shift();
+ var el=$("log");el.innerHTML=S.logs.map(function(l){return '<div class="'+l.c+'">'+l.m+"</div>"}).join("");el.scrollTop=el.scrollHeight;}
+function saveGame(tip){try{localStorage.setItem("wasteland-v1",JSON.stringify(S));if(tip)log("存档已保存。","sys");}catch(e){}}
+function resetGame(){if(!confirm("重开存档？当前进度会清空。"))return;localStorage.removeItem("wasteland-v1");S=defState();fight=null;
+ log("—— 新的存档 ——","sys");log("欢迎来到废土家园，泡芙对a。营地还在，先吃点东西再出门。","sys");render();}
+function advance(steps){for(var i=0;i<steps;i++){S.ti++;if(S.ti>=6){S.ti=0;S.day++;S.wx=pick(["晴","晴","多云","雨","多云"]);
+   S.temp=S.wx==="雨"?rnd(14,19):rnd(18,27);log("—— 第 "+S.day+" 天，天气："+S.wx+" ——","sys");}
+  S.food=Math.max(0,S.food-4);
+  if(S.food<=0){S.hp=Math.max(1,S.hp-15);log("你饿得发慌，生命 -15。赶紧吃东西！","bad");}}
+ if(S.garden&&S.garden.left>0){S.garden.left-=steps;if(S.garden.left<=0){S.garden.left=0;log("花园里的"+ITEMS[S.garden.crop].n+"成熟了，去露天花园收获。","sys");}}}
+function render(){
+ $("bHp").style.width=(S.hp/833*100)+"%";$("vHp").textContent=S.hp+" / 833";
+ $("bFood").style.width=(S.food/156*100)+"%";$("vFood").textContent=S.food+" / 156";
+ $("bEng").style.width=(S.eng/360*100)+"%";$("vEng").textContent=S.eng+" / 360";
+ $("vDay").textContent=S.day;$("vWx").textContent=S.wx;$("vTime").textContent=TIMES[S.ti];
+ $("vTemp").textContent=S.temp+"℃";$("vGold").textContent=S.gold;
+ $("vAtk").textContent=87+Math.floor((S.str-41)/2);
+ $("vTrough").textContent=S.trough;$("bTrough").style.width=S.trough+"%";
+ $("troughState").textContent=S.trough>=50?"（可出战）":"（不足 50，不能出战）";
+ renderBag();renderLocs();renderFight();saveGame(false);}
+function go(v){["camp","bag","explore","pet"].forEach(function(k){$("view-"+k).classList.toggle("on",k===v);
+ $("n"+k.charAt(0).toUpperCase()+k.slice(1)).classList.toggle("on",k===v);});}
+/* ---------- 营地 ---------- */
+var ROOMS=[
+ {id:"garden",ic:"🌱",nm:"露天花园",ds:"种黑果和草药，过几个时段来收。"},
+ {id:"bed",ic:"🛏️",nm:"卧室",ds:"床 Lv.9，睡一觉回血回精力。"},
+ {id:"gym",ic:"🏋️",nm:"健身房",ds:"练力量与体质，攻击跟着涨。"},
+ {id:"work",ic:"🔨",nm:"作坊",ds:"工作台 Lv.6 · 加工台 Lv.4 · 药盒 Lv.3。"},
+ {id:"store",ic:"📦",nm:"仓库",ds:"全部物资清单（即背包）。"}];
+$("rooms").innerHTML=ROOMS.map(function(r){return '<div class="room" onclick="openRoom(\''+r.id+'\')"><div class="ic">'+r.ic+'</div><div class="nm">'+r.nm+'</div><div class="ds">'+r.ds+"</div></div>"}).join("");
+function openRoom(id){var P=$("roomPanel");
+ if(id==="bed"){P.innerHTML="<h3>卧室 · 床 Lv.9</h3><p>做工还不错的床。睡一觉：生命 +300、精力回满，时间推进 2 个时段，饱食 -8。</p><button class='btn main' onclick='sleep()'>睡一觉</button>";}
+ else if(id==="gym"){P.innerHTML="<h3>健身房</h3><p>当前 力量 "+S.str+" · 体质 "+S.tis+"。训练一次耗精力 30，每练 3 次随机一项 +1，攻击随力量成长。</p><button class='btn main' onclick='train()'>训练（-30 精力）</button>";}
+ else if(id==="work"){P.innerHTML="<h3>作坊</h3><p>三台设备都在这。点配方即制作，材料不够的会标红。</p>"+RECIPES.map(recipeHtml).join("");}
+ else if(id==="garden"){var g=S.garden;
+   P.innerHTML="<h3>露天花园</h3>"+(g?("<p>地里种着 <b>"+ITEMS[g.crop].n+"</b>，还剩 "+g.left+" 个时段成熟。</p>"):"<p>空地一块。种黑果（2 个时段收 6 个）或草药（3 个时段收 4 片草药叶）。</p><button class='btn main' onclick=\"plant('blackfruit')\">种黑果</button><button class='btn' onclick=\"plant('herb')\">种草药</button>")+(g&&g.left<=0?"<button class='btn main' onclick='harvest()'>收获</button>":"");}
+ else if(id==="store"){P.innerHTML="<h3>仓库</h3><p>"+Object.keys(S.inv).map(function(k){return ITEMS[k].n+" ×"+S.inv[k]}).join(" · ")+"</p><button class='btn' onclick=\"go('bag')\">去背包使用物品</button>";}
+ render();}
+function recipeHtml(r){var lack=Object.keys(r.cost).some(function(k){return cnt(k)<r.cost[k]});
+ var cost=Object.keys(r.cost).map(function(k){var ok=cnt(k)>=r.cost[k];return '<span class="'+(ok?"":"lack")+'">'+ITEMS[k].n+" "+cnt(k)+"/"+r.cost[k]+"</span>"}).join(" · ");
+ return '<div class="rec"><div><div class="rn">'+ITEMS[r.id].ic+" "+ITEMS[r.id].n+(r.out>1?" ×"+r.out:"")+'</div><div class="rm">'+r.st+" ｜ "+cost+'</div></div><button class="btn" '+(lack?"disabled":"")+' onclick="craft(\''+r.id+'\')">制作</button></div>';}
+function craft(id){var r=null;RECIPES.forEach(function(x){if(x.id===id)r=x});if(!r)return;
+ for(var k in r.cost){if(cnt(k)<r.cost[k]){log("材料不够，做不了"+ITEMS[id].n+"。","bad");return;}}
+ for(var k2 in r.cost)add(k2,-r.cost[k2]);add(id,r.out);
+ log("做好了："+ITEMS[id].n+(r.out>1?" ×"+r.out:"")+"。","good");openRoom("work");}
+function sleep(){S.hp=Math.min(833,S.hp+300);S.eng=360;S.food=Math.max(0,S.food-8);advance(2);
+ log("你在床上睡了一觉，生命 +300、精力回满。","good");openRoom("bed");}
+function train(){if(S.eng<30){log("精力不够，先休息或吃点东西。","bad");return;}
+ S.eng-=30;S.train++;advance(1);
+ if(S.train%3===0){if(Math.random()<0.5){S.str++;log("训练见效：力量 +1（"+S.str+"）。","good");}else{S.tis++;log("训练见效：体质 +1（"+S.tis+"）。","good");}}
+ else log("你练得满头大汗（再练 "+(3-S.train%3)+" 次有成长）。");openRoom("gym");}
+function plant(crop){if(S.garden){log("地里已经种了东西。","bad");return;}
+ advance(1);S.garden={crop:crop,left:crop==="blackfruit"?2:3};log("种下了"+ITEMS[crop].n+"，过几个时段来收。","good");openRoom("garden");}
+function harvest(){if(!S.garden||S.garden.left>0)return;var c=S.garden.crop;var n=c==="blackfruit"?6:4;
+ add(c,n);S.garden=null;log("收获 "+ITEMS[c].n+" ×"+n+"。","good");openRoom("garden");}
+/* ---------- 背包 ---------- */
+function renderBag(){var g=$("bagGrid");var keys=Object.keys(S.inv);
+ g.innerHTML=keys.map(function(k){var it=ITEMS[k];var btn=(it.t==="food"||it.t==="med")?'<br><button class="btn use" onclick="useItem(\''+k+'\')">使用</button>':"";
+  return '<div class="cell"><div class="ic">'+it.ic+'</div><div class="nm">'+it.n+"</div>"+btn+'<span class="ct">'+S.inv[k]+"</span></div>"}).join("")||"<p style='color:var(--dim)'>背包空了。</p>";}
+function useItem(k){var it=ITEMS[k];if(cnt(k)<=0)return;add(k,-1);
+ if(it.food){S.food=Math.min(156,S.food+it.food);if(it.eng)S.eng=Math.min(360,S.eng+it.eng);log("吃了"+it.n+"，饱食 +"+it.food+"。","good");}
+ if(it.hp){S.hp=Math.min(833,S.hp+it.hp);log("用了"+it.n+"，生命 +"+it.hp+"。","good");}
+ render();}
+function splitKnives(){var n=cnt("knife");if(n<=1){log("小刀只有 "+n+" 把，没得多余的。","bad");return;}
+ add("knife",-(n-1));add("metal",(n-1)*2);var g2=rnd(1,3);S.gold+=g2;
+ log("分解了 "+(n-1)+" 把多余小刀 → 金属碎片 ×"+((n-1)*2)+"，还顺手卖了点零碎，金币 +"+g2+"。","good");render();}
+/* ---------- 探索与战斗 ---------- */
+function renderLocs(){$("locList").innerHTML=LOCS.map(function(L,i){
+ return '<div class="loc"><div class="ln">'+L.n+'</div><div class="ld">'+L.d+'<br>精力消耗 '+L.cost+" ｜ 遇敌率 "+Math.round(L.er*100)+'%</div><button class="btn main" onclick="explore('+i+')">前往探索</button></div>'}).join("");}
+function explore(i){if(fight){log("先打完眼前这一场。","bad");return;}var L=LOCS[i];
+ if(S.eng<L.cost){log("精力不够去"+L.n+"，先回营地休息。","bad");return;}
+ S.eng-=L.cost;advance(1);
+ var got=[];L.drops.forEach(function(d){var n=rnd(d[1],d[2]);if(n>0){add(d[0],n);got.push(ITEMS[d[0]].n+"×"+n)}});
+ var g=rnd(L.gold[0],L.gold[1]);S.gold+=g;if(g>0)got.push("金币×"+g);
+ log("探索 "+L.n+"：带回 "+(got.join("、")||"空气")+"。");
+ if(Math.random()<L.er){var E=pick(ENEMIES);fight={n:E.n,hp:E.hp,max:E.hp,atk:E.atk,loc:L.n};
+  log("⚠ 在"+L.n+"撞上了 "+E.n+"！","bad");
+  if(S.trough<50)log("奥力给食槽只有 "+S.trough+"，不足 50，它留在营地没跟来——这一场只能靠你自己。","bad");
+  else log("奥力给跟在你身边，龇牙低吼。","sys");}
+ render();}
+function renderFight(){var F=$("fight");if(!fight){F.style.display="none";F.innerHTML="";return;}
+ F.style.display="block";
+ F.innerHTML="<h3>⚔ 战斗："+fight.n+"（"+fight.loc+"）</h3><p style='color:var(--dim);margin:6px 0;line-height:1.6'>敌人生命 "+fight.hp+" / "+fight.max+" ｜ 它的攻击 "+fight.atk+"<br>你：生命 "+S.hp+" ｜ 铁砂弹 "+cnt("ironshot")+" ｜ 小刀 "+cnt("knife")+" 把"+(S.trough>=50?" ｜ 奥力给参战中":"")+"</p>"
+ +'<button class="btn main" onclick="hit(\'gun\')">步枪射击（耗铁砂弹）</button>'
+ +'<button class="btn" onclick="hit(\'knife\')">小刀近战</button>'
+ +'<button class="btn danger" onclick="flee()">逃跑</button>';}
+function hit(kind){if(!fight)return;var dmg;
+ if(kind==="gun"){if(cnt("ironshot")<=0){log("铁砂弹打光了！改用小刀。","bad");return;}add("ironshot",-1);dmg=rnd(55,85);}
+ else{if(cnt("knife")<=0&&cnt("spear")<=0){log("手里没近战武器，只能用拳头（伤害很低）。","bad");dmg=rnd(5,10);}else dmg=rnd(30,50)+(cnt("spear")>0?8:0);}
+ fight.hp-=dmg;log("你打出 "+dmg+" 点伤害。","good");
+ if(S.trough>=50&&fight.hp>0){var wd=rnd(15,28);fight.hp-=wd;log("奥力给扑上去撕咬，造成 "+wd+" 点伤害。","good");}
+ if(fight.hp<=0){var g=rnd(3,10);S.gold+=g;if(S.trough>=50)S.trough=Math.max(0,S.trough-5);
+  if(Math.random()<0.5){add("meat",1);log("打赢了！金币 +"+g+"，还割下一块生肉。","good");}else log("打赢了！金币 +"+g+"。","good");
+  fight=null;render();return;}
+ var ed=Math.max(1,fight.atk-4+rnd(-3,3));S.hp-=ed;log(fight.n+" 反击，你受到 "+ed+" 点伤害。","bad");
+ if(S.hp<=0){S.hp=100;fight=null;log("你被打倒了……醒来时已经拖回营地，生命只剩 100。先吃药睡觉。","bad");}
+ render();}
+function flee(){if(!fight)return;var ed=Math.max(1,fight.atk-4);S.hp=Math.max(1,S.hp-ed);
+ log("你转身逃回营地，路上挨了一下，生命 -"+ed+"。","bad");fight=null;render();}
+function feed(item,up){if(cnt(item)<=0){log("没有"+ITEMS[item].n+"可投喂。","bad");return;}
+ if(S.trough>=100){log("食槽已经满了，奥力给吃不下了。","bad");return;}
+ add(item,-1);S.trough=Math.min(100,S.trough+up);
+ log("投喂奥力给一块"+ITEMS[item].n+"，食槽 +"+up+" → "+S.trough+(S.trough>=50?"，够出战了！":"（还差 "+(50-S.trough)+" 到出战线）"),"good");render();}
+/* ---------- 启动 ---------- */
+if(S.logs.length===0){log("欢迎来到重建…不，欢迎来到废土家园，泡芙对a。","sys");log("你的营地有床 Lv.9、工作台 Lv.6、加工台 Lv.4、药盒 Lv.3。饱食只有 80/156，先去背包吃点黑果或饮料垫垫。","sys");log("提醒：背包里躺着 10 把小刀，去背包点「分解多余小刀」能换金属碎片。","sys");}
+else{$("log").innerHTML=S.logs.map(function(l){return '<div class="'+l.c+'">'+l.m+"</div>"}).join("");}
+render();
+</script>
+</body>
+</html>
