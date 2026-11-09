@@ -182,10 +182,10 @@ class PackStore(context: Context) {
             PackDef(
                 id = "wasteland",
                 name = "废土家园",
-                summary = "废土生存单机小游戏：经营营地（卧室/作坊/仓库），在工作台与加工台、药盒制作装备，带狼宠物奥力给外出探索六个地点打怪攒材料；生存三维（生命/饱食/精力）与昼夜天气全在本地存档，分解多余小刀回材料",
-                version = "2",
-                sizeText = "约 30 KB",
-                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/wasteland-pack-v2.zip",
+                summary = "废土生存单机小游戏：经营营地（卧室/作坊/仓库），在工作台与加工台、药盒制作装备，带狼宠物奥力给外出探索六个地点打怪攒材料；生存三维（生命/饱食/精力）与昼夜天气全在本地存档，分解多余小刀回材料；v3：全套场景换写实厚涂画（营地内外景/探索废墟街/战斗与宠物立绘），新增外观升级——席梦思（睡觉回血 +50%）与五星酒店套房（睡满＋精力回满）",
+                version = "3",
+                sizeText = "约 1.5 MB",
+                downloadUrl = "https://github.com/anransu983-sketch/dreambox-asbefore/releases/download/packs/wasteland-pack-v3.zip",
                 entryClass = "",
             ),
         )
