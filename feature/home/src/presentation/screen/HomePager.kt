@@ -166,6 +166,7 @@ fun HomePager(mainInnerPadding: PaddingValues, onOpenDashboard: (() -> Unit)? = 
         onHomeClick = onHomeClick,
         onOpenPacks = { openSecondary(Route.FeaturePacks) },
         onOpenTraffic = { openSecondary(Route.TrafficStatistics) },
+        onOpenDashboard = onOpenDashboard,
     )
 }
 
@@ -183,6 +184,7 @@ private fun HomeSkyScene(
     onHomeClick: () -> Unit,
     onOpenPacks: () -> Unit,
     onOpenTraffic: () -> Unit,
+    onOpenDashboard: (() -> Unit)? = null,
 ) {
     val name by homeViewModel.selectedServerName.collectAsStateWithLifecycle()
     val ping by homeViewModel.selectedServerPing.collectAsStateWithLifecycle()
@@ -212,12 +214,13 @@ private fun HomeSkyScene(
     fun speed(b: Long): String? =
         if (!isRunning || b <= 0) null else formatBytesForDisplay(b).let { (v, u) -> "$v $u/s" }
 
-    // 浮石入口：画里原有的两块发光浮石，左石=插件、右石=流量统计
+    // 浮石入口：画里三块发光浮石，左石=插件、右石=流量统计、中下石=面板（核心面板，1.183 加回：天空之城改版后首页丢了面板入口，onOpenDashboard 接进来却没地方点）
     val packSpots =
         remember {
             listOf(
                 SkyPackSpot("packs", "插件", Offset(0.220f, 0.545f)),
                 SkyPackSpot("traffic", "流量统计", Offset(0.789f, 0.539f)),
+                SkyPackSpot("panel", "面板", Offset(0.505f, 0.615f)),
             )
         }
 
@@ -252,6 +255,12 @@ private fun HomeSkyScene(
         art = remember { skyNightArt("file:///android_asset/sky_island_night.webp") },
         onHomeClick = onHomeClick,
         packSpots = packSpots,
-        onOpenPack = { id -> if (id == "traffic") onOpenTraffic() else onOpenPacks() },
+        onOpenPack = { id ->
+            when (id) {
+                "traffic" -> onOpenTraffic()
+                "panel" -> onOpenDashboard?.invoke()
+                else -> onOpenPacks()
+            }
+        },
     )
 }

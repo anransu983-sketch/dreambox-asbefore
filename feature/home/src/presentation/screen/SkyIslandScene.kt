@@ -582,7 +582,7 @@ fun SkyIslandScene(
             }
         }
 
-        // 浮石入口：两块发光浮石（飞行石），不画新东西，只在原有光晕上叠光；左石=插件、右石=流量统计，两块都是正式焦点、各带自己的题字
+        // 浮石入口：三块发光浮石（飞行石），不画新东西，只在原有光晕上叠光；左石=插件、右石=流量统计、中下石=面板，三块都是正式焦点、各带自己的题字
         packSpots.forEachIndexed { index, spot ->
             key(spot.id) {
                 val src = remember { MutableInteractionSource() }
