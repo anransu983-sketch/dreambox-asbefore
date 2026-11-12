@@ -110,13 +110,14 @@ WantedBy=multi-user.target
 UNITEOF
 }
 
-nfsub_render_full() { # $1=template $2=uuid $3=pub $4=sid
+nfsub_render_full() { # $1=template $2=uuid $3=pub $4=sid $5=tuic_uuid $6=tuic_pass $7=tuic_port
     python3 - "$1" "$NFSUB_YAML" "$PUBLIC_HOST" "$NODE_PORT" "$2" "$3" "$4" \
         "$SNI" "$NODE_NAME" "$SUB_ID" "$PROTOCOLS" "$HY2_PASS" "$HY2_PORT" \
-        "$SS_KEY" "$SS_PORT" <<'PYEOF'
+        "$SS_KEY" "$SS_PORT" "$5" "$6" "$7" <<'PYEOF'
 import json, sys
 (tpl_path, out_path, host, node_port, uuid, pub, sid, sni,
- name, sub_id, protos, hy2_pass, hy2_port, ss_key, ss_port) = sys.argv[1:16]
+ name, sub_id, protos, hy2_pass, hy2_port, ss_key, ss_port,
+ tuic_uuid, tuic_pass, tuic_port) = sys.argv[1:19]
 with open(tpl_path) as f:
     yaml = f.read()
 disp = name if name else sub_id
@@ -136,6 +137,10 @@ if "ss" in plist:
     extras.append((disp + " SS",
                    "- name: %s SS\n  type: ss\n  server: %s\n  port: %s\n  cipher: 2022-blake3-aes-256-gcm\n  password: %s\n  udp: true"
                    % (disp, host, ss_port, json.dumps(ss_key))))
+if "tuic" in plist:
+    extras.append((disp + " TUIC",
+                   "- name: %s TUIC\n  type: tuic\n  server: %s\n  port: %s\n  uuid: %s\n  password: %s\n  sni: %s\n  alpn: [h3]\n  congestion-controller: bbr\n  udp-relay-mode: native\n  skip-cert-verify: true\n  udp: true"
+                   % (disp, host, tuic_port, tuic_uuid, json.dumps(tuic_pass), sni)))
 if extras:
     block = "\n".join(lines for _, lines in extras)
     yaml = yaml.replace("\nproxy-groups:", "\n" + block + "\nproxy-groups:", 1)
@@ -204,7 +209,7 @@ nfsub_setup() {
     fi
     if [ "$mode" = "full" ]; then
         [ -f "$2" ] || { log "订阅模板缺失，跳过订阅服务（本地导入仍可用）"; return 0; }
-        nfsub_render_full "$2" "$3" "$4" "$5" || return 0
+        nfsub_render_full "$2" "$3" "$4" "$5" "$6" "$7" "$8" || return 0
     else
         nfsub_render_hy2only || return 0
     fi

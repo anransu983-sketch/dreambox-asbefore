@@ -102,8 +102,9 @@
     <label style="margin:0"><input type="checkbox" id="protoReality" checked disabled style="width:auto"> VLESS Reality（主）</label>
     <label style="margin:0"><input type="checkbox" id="protoHy2" checked style="width:auto"> Hysteria2</label>
     <label style="margin:0"><input type="checkbox" id="protoSs" checked style="width:auto"> SS 2022</label>
+    <label style="margin:0"><input type="checkbox" id="protoTuic" checked style="width:auto"> TUIC（UDP/QUIC）</label>
   </div>
-  <div class="warn" id="protoWarn">端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。</div>
+  <div class="warn" id="protoWarn">端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），TUIC 用 +2（UDP，QUIC，移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。</div>
   <button class="main" id="deployBtn">一键部署</button>
   <div class="warn" id="subPortWarn" style="margin-top:10px">云厂商控制台的安全组记得放行节点端口与订阅端口（2096），机内防火墙脚本会自动处理。</div>
 </div>
@@ -118,6 +119,7 @@
   <div>
     <button class="mini" id="copyVless">复制 vless 链接</button>
     <button class="mini hidden" id="copySs">复制 SS 链接</button>
+    <button class="mini hidden" id="copyTuic">复制 TUIC 链接</button>
     <button class="mini hidden" id="copyHy2">复制 Hy2 链接</button>
     <button class="mini" id="copySub">复制订阅链接</button>
     <button class="mini" id="importSub">📥 导入到梦盒</button>
@@ -232,7 +234,7 @@
       adminPass: $('adminPass').value,
       quotaGb: $('quotaGb').value.trim(),
       expireDate: $('expireDate').value,
-      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoSs').checked ? ',ss' : ''),
+      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoTuic').checked ? ',tuic' : '') + ($('protoSs').checked ? ',ss' : ''),
       engine: engine
     };
   }
@@ -241,6 +243,7 @@
     if (!f) return;
     var protos = (f.protocols || 'reality').split(',');
     $('protoHy2').checked = protos.indexOf('hy2') >= 0;
+    $('protoTuic').checked = protos.indexOf('tuic') >= 0;
     $('protoSs').checked = protos.indexOf('ss') >= 0;
     $('host').value = f.host || '';
     $('sshPort').value = f.sshPort || 22;
@@ -287,7 +290,7 @@
       ? '带网页面板和订阅链接；面板只绑本机回环、公网打不开，管理走 SSH 隧道。两个引擎的表单分开保存，各记各的。'
       : '没有面板：sing-box 一个进程跑全部协议，配置和链接直接打印在部署终端里，并附随机令牌订阅（错路径 404）供梦盒远程导入；这个模式没有流量/到期统计。两个引擎的表单分开保存，各记各的。';
     $('protoWarn').textContent = e === 'sui'
-      ? '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。'
+      ? '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP，独立服务、移动线友好），TUIC 用 +2（UDP，QUIC，移动线友好），SS 用 +3（TCP/UDP，进 s-ui 订阅）；安全组记得连同放行。'
       : '端口占用：Reality 用节点端口（TCP），Hy2 用 +1（UDP），SS 用 +3（TCP/UDP），都由 sing-box 托管；安全组记得连同放行。';
   }
   $('engSui').addEventListener('click', function () { setEngine('sui'); });
@@ -396,6 +399,21 @@
 
   function yamlQ(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
 
+  function parseTuicLink(link) {
+    try {
+      var u = new URL(link);
+      return {
+        uuid: decodeURIComponent(u.username || ''),
+        password: decodeURIComponent(u.password || ''),
+        port: parseInt(u.port, 10) || 0,
+        sni: u.searchParams.get('sni') || '',
+        cc: u.searchParams.get('congestion_control') || 'bbr',
+        urm: u.searchParams.get('udp_relay_mode') || 'native',
+        insecure: u.searchParams.get('insecure') === '1' || u.searchParams.get('allow_insecure') === '1'
+      };
+    } catch (e) { return null; }
+  }
+
   // 结果里带了 Hy2/SS 链接时，现算出对应的 mihomo 节点条目，
   // 让模板 YAML 一次带齐全部已选协议（不止 Reality 主节点）。
   function extraProxies(r) {
@@ -424,6 +442,24 @@
           '  port: ' + s.port + '\n' +
           '  cipher: ' + s.cipher + '\n' +
           '  password: ' + yamlQ(s.password) + '\n' +
+          '  udp: true' });
+      }
+    }
+    if (r.tuicLink) {
+      var t = parseTuicLink(r.tuicLink);
+      if (t && t.port) {
+        list.push({ name: nodeName + ' TUIC', lines:
+          '- name: ' + nodeName + ' TUIC\n' +
+          '  type: tuic\n' +
+          '  server: ' + lastOpts.host + '\n' +
+          '  port: ' + t.port + '\n' +
+          '  uuid: ' + t.uuid + '\n' +
+          '  password: ' + yamlQ(t.password) + '\n' +
+          (t.sni ? '  sni: ' + t.sni + '\n' : '') +
+          '  alpn: [h3]\n' +
+          '  congestion-controller: ' + (t.cc || 'bbr') + '\n' +
+          '  udp-relay-mode: ' + (t.urm || 'native') + '\n' +
+          '  skip-cert-verify: ' + (t.insecure ? 'true' : 'false') + '\n' +
           '  udp: true' });
       }
     }
@@ -492,6 +528,7 @@
         '<b>vless 链接</b><br>' + vless.split(lastOpts.host).join(mh0) +
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh0) : '') +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh0) : '') +
+        (r.tuicLink ? '<br><b>TUIC 链接</b><br>' + r.tuicLink.split(lastOpts.host).join(mh0) : '') +
         sshRow(r) +
         '<br><span class="warn">完整配置已在上方部署终端里打印；下面这份 YAML 也可直接导入梦盒当配置用。</span>';
       ['copyTunnel'].forEach(function (id) { $(id).classList.add('hidden'); });
@@ -506,12 +543,13 @@
             alert('打开导入失败：' + (e && e.message ? e.message : e));
           });
         };
-        $('yamlWarn').textContent = '点「导入到梦盒」走远程订阅导入（以后节点有变动，在梦盒里点更新即可）；下面这份 YAML 是同内容的本地备份，Reality、Hy2、SS 勾了哪个都在里面。页面上的地址已打码，按钮复制的仍是原文。';
+        $('yamlWarn').textContent = '点「导入到梦盒」走远程订阅导入（以后节点有变动，在梦盒里点更新即可）；下面这份 YAML 是同内容的本地备份，Reality、Hy2、TUIC、SS 勾了哪个都在里面。页面上的地址已打码，按钮复制的仍是原文。';
       } else {
         $('copySub').classList.add('hidden');
-        $('yamlWarn').textContent = '订阅服务这次没起来，已退回本地导入：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，Reality、Hy2、SS 勾了哪个都在里面。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
+        $('yamlWarn').textContent = '订阅服务这次没起来，已退回本地导入：点「导入到梦盒」，下面这份 YAML 会作为本地配置直接加进梦盒，Reality、Hy2、TUIC、SS 勾了哪个都在里面。链接和 YAML 也可复制备份。页面上的地址已打码，按钮复制的仍是原文。';
       }
       if (r.ssLink) { $('copySs').classList.remove('hidden'); $('copySs').onclick = function () { copyText(r.ssLink, this); }; }
+      if (r.tuicLink) { $('copyTuic').classList.remove('hidden'); $('copyTuic').onclick = function () { copyText(r.tuicLink, this); }; }
       if (r.hy2Link) { $('copyHy2').classList.remove('hidden'); $('copyHy2').onclick = function () { copyText(r.hy2Link, this); }; }
       $('copyVless').onclick = function () { copyText(vless, this); };
       fetch('template.yaml').then(function (res) { return res.text(); }).then(function (tpl) {
@@ -575,6 +613,8 @@
       var pl = document.createElement('span');
       pl.innerHTML = '<b>协议</b>：' + r.protocols +
         (r.ssLink ? '<br><b>SS 链接</b><br>' + r.ssLink.split(lastOpts.host).join(mh) : '') +
+        (r.tuicLink ? '<br><b>TUIC 链接</b><br>' + r.tuicLink.split(lastOpts.host).join(mh) +
+          '<br><span class="warn">TUIC 已合并进上方订阅（与 VLESS、SS 同一份）：点「导入到梦盒」或更新已有订阅，节点一起进来。</span>' : '') +
         (r.hy2Link ? '<br><b>Hy2 链接</b><br>' + r.hy2Link.split(lastOpts.host).join(mh) +
           '<br><span class="warn">Hy2 已合并进上方订阅（与 VLESS、SS 同一份）：点「导入到梦盒」或更新已有订阅，三个节点一起进来；下方按钮是备用（单独导入 Hy2），一般不用点。</span>' : '');
       $('resultKv').appendChild(document.createElement('br'));
@@ -588,6 +628,10 @@
     if (r.ssLink) {
       $('copySs').classList.remove('hidden');
       $('copySs').onclick = function () { copyText(r.ssLink, this); };
+    }
+    if (r.tuicLink) {
+      $('copyTuic').classList.remove('hidden');
+      $('copyTuic').onclick = function () { copyText(r.tuicLink, this); };
     }
     if (r.hy2Link) {
       $('copyHy2').classList.remove('hidden');
@@ -669,7 +713,7 @@
       adminPass: $('adminPass').value,
       quotaGb: $('quotaGb').value.trim(),
       expireDate: $('expireDate').value,
-      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoSs').checked ? ',ss' : ''),
+      protocols: 'reality' + ($('protoHy2').checked ? ',hy2' : '') + ($('protoTuic').checked ? ',tuic' : '') + ($('protoSs').checked ? ',ss' : ''),
       engine: engine
     };
     if ($('protoSs').checked && opts.nodePort + 3 > 65535) { alert('节点端口太大：SS 要用节点端口+3，不能超过 65535'); return; }

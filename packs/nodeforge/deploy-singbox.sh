@@ -25,6 +25,7 @@ NODE_NAME="${NF_NODE_NAME:-}"
 PROTOCOLS="${NF_PROTOCOLS:-reality}"
 has_proto() { case ",$PROTOCOLS," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
 HY2_PORT=$((NODE_PORT + 1))
+TUIC_PORT=$((NODE_PORT + 2))
 SS_PORT=$((NODE_PORT + 3))
 if [ "$NODE_PORT" -lt 1 ] || [ $((NODE_PORT + 3)) -gt 65535 ]; then
     echo "NF_ERROR: 节点端口不合法（多协议顺延需要主端口+3 不超过 65535）" >&2
@@ -93,7 +94,7 @@ else
 fi
 
 # ── 2. 密钥（落盘复用） ────────────────────────────────────
-UUID=""; REALITY_PRIV=""; REALITY_PUB=""; SHORT_ID=""; HY2_PASS=""; SS_KEY=""
+UUID=""; REALITY_PRIV=""; REALITY_PUB=""; SHORT_ID=""; HY2_PASS=""; SS_KEY=""; TUIC_UUID=""; TUIC_PASS=""
 if [ -f "$SECRETS_FILE" ]; then . "$SECRETS_FILE" || true; fi
 GEN_NEW=""
 if [ -z "$UUID" ]; then UUID="$(cat /proc/sys/kernel/random/uuid)"; GEN_NEW=1; fi
@@ -107,33 +108,38 @@ fi
 if [ -z "$SHORT_ID" ]; then SHORT_ID="$(openssl rand -hex 8)"; GEN_NEW=1; fi
 if has_proto hy2 && [ -z "$HY2_PASS" ]; then HY2_PASS="$(openssl rand -hex 12)"; GEN_NEW=1; fi
 if has_proto ss && [ -z "$SS_KEY" ]; then SS_KEY="$(openssl rand -base64 32 | tr -d '\n')"; GEN_NEW=1; fi
+if has_proto tuic && [ -z "$TUIC_UUID" ]; then TUIC_UUID="$(cat /proc/sys/kernel/random/uuid)"; GEN_NEW=1; fi
+if has_proto tuic && [ -z "$TUIC_PASS" ]; then TUIC_PASS="$(openssl rand -hex 12)"; GEN_NEW=1; fi
 if [ -n "$GEN_NEW" ]; then
     umask 077
     { echo "UUID=$UUID"; echo "REALITY_PRIV=$REALITY_PRIV"; echo "REALITY_PUB=$REALITY_PUB"
       echo "SHORT_ID=$SHORT_ID"; echo "HY2_PASS=$HY2_PASS"; echo "SS_KEY=$SS_KEY"
+      echo "TUIC_UUID=$TUIC_UUID"; echo "TUIC_PASS=$TUIC_PASS"
     } > "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE" 2>/dev/null || true
     log "密钥已就绪（重跑复用同一套）"
 fi
 
-# ── 3. Hy2 自签证书 ────────────────────────────────────────
+# ── 3. Hy2/TUIC 自签证书（同一把，CN=$SNI，两协议共用） ──
 HY2_CERT="$CFG_DIR/hy2-cert.pem"
 HY2_KEY="$CFG_DIR/hy2-key.pem"
-if has_proto hy2 && [ ! -f "$HY2_CERT" ]; then
+if { has_proto hy2 || has_proto tuic; } && [ ! -f "$HY2_CERT" ]; then
     openssl req -x509 -newkey rsa:2048 -keyout "$HY2_KEY" -out "$HY2_CERT" \
         -days 3650 -nodes -subj "/CN=$SNI" >/dev/null 2>&1 || fail "Hy2 证书生成失败"
     chmod 600 "$HY2_KEY" 2>/dev/null || true
-    log "Hy2 自签证书已生成"
+    log "Hy2/TUIC 自签证书已生成"
 fi
 
 # ── 4. 写配置并校验 ────────────────────────────────────────
 if [ -n "$NODE_NAME" ]; then VLESS_TAG="$NODE_NAME"; else VLESS_TAG="nf-vless"; fi
 python3 - "$CFG_FILE" "$VLESS_TAG" "$SUB_ID" "$UUID" "$NODE_PORT" "$SNI" \
     "$REALITY_PRIV" "$SHORT_ID" "$PROTOCOLS" "$HY2_PORT" "$HY2_PASS" \
-    "$HY2_CERT" "$HY2_KEY" "$SS_PORT" "$SS_KEY" <<'PYEOF'
+    "$HY2_CERT" "$HY2_KEY" "$SS_PORT" "$SS_KEY" \
+    "$TUIC_PORT" "$TUIC_UUID" "$TUIC_PASS" <<'PYEOF'
 import json, sys
 (cfg, tag, user, uuid, port, sni, priv, sid, protos,
- hy2_port, hy2_pass, cert, key, ss_port, ss_key) = sys.argv[1:16]
+ hy2_port, hy2_pass, cert, key, ss_port, ss_key,
+ tuic_port, tuic_uuid, tuic_pass) = sys.argv[1:19]
 plist = [p for p in protos.split(",") if p]
 inbounds = [{
     "type": "vless", "tag": tag, "listen": "::", "listen_port": int(port),
@@ -155,6 +161,16 @@ if "ss" in plist:
         "type": "shadowsocks", "tag": "nf-ss", "listen": "::",
         "listen_port": int(ss_port),
         "method": "2022-blake3-aes-256-gcm", "password": ss_key,
+    })
+if "tuic" in plist:
+    tuic_tag = tag + " TUIC" if tag != "nf-vless" else "nf-tuic"
+    inbounds.append({
+        "type": "tuic", "tag": tuic_tag, "listen": "::",
+        "listen_port": int(tuic_port),
+        "users": [{"uuid": tuic_uuid, "password": tuic_pass}],
+        "congestion_control": "bbr",
+        "tls": {"enabled": True, "server_name": sni, "alpn": ["h3"],
+                "certificate_path": cert, "key_path": key},
     })
 conf = {"log": {"level": "warn"},
         "inbounds": inbounds,
@@ -218,22 +234,26 @@ port_listening() { # $1=port $2=tcp|udp
 }
 VERIFY="fail"
 if port_listening "$NODE_PORT" tcp; then VERIFY="ok"; log "VLESS Reality 已监听 $NODE_PORT/tcp"; else log "警告：$NODE_PORT/tcp 未见监听"; fi
-HY2_OK="fail"; SS_VERIFY="fail"
+HY2_OK="fail"; SS_VERIFY="fail"; TUIC_OK="fail"
 if has_proto hy2; then
     if port_listening "$HY2_PORT" udp; then HY2_OK="ok"; log "Hysteria2 已监听 $HY2_PORT/udp"; else log "警告：$HY2_PORT/udp 未见监听"; fi
 fi
 if has_proto ss; then
     if port_listening "$SS_PORT" tcp; then SS_VERIFY="ok"; log "SS 2022 已监听 $SS_PORT"; else log "警告：$SS_PORT 未见监听"; fi
 fi
+if has_proto tuic; then
+    if port_listening "$TUIC_PORT" udp; then TUIC_OK="ok"; log "TUIC 已监听 $TUIC_PORT/udp"; else log "警告：$TUIC_PORT/udp 未见监听"; fi
+fi
 
 # ── 8. 客户端链接：直接打印在终端里（无网址） ──────────────
 LINKS="$(python3 - "$PUBLIC_HOST" "$NODE_NAME" "$SUB_ID" "$UUID" "$NODE_PORT" \
     "$REALITY_PUB" "$SHORT_ID" "$SNI" "$PROTOCOLS" "$HY2_PASS" "$HY2_PORT" \
-    "$SS_KEY" "$SS_PORT" <<'PYEOF'
+    "$SS_KEY" "$SS_PORT" "$TUIC_UUID" "$TUIC_PASS" "$TUIC_PORT" <<'PYEOF'
 import sys, base64
 from urllib.parse import quote
 (host, name, sub_id, uuid, port, pub, sid, sni, protos,
- hy2_pass, hy2_port, ss_key, ss_port) = sys.argv[1:14]
+ hy2_pass, hy2_port, ss_key, ss_port,
+ tuic_uuid, tuic_pass, tuic_port) = sys.argv[1:17]
 disp = name if name else sub_id
 enc = quote(disp, safe="")
 plist = [p for p in protos.split(",") if p]
@@ -246,6 +266,9 @@ if "hy2" in plist:
 if "ss" in plist:
     b64 = base64.urlsafe_b64encode(("2022-blake3-aes-256-gcm:" + ss_key).encode()).decode()
     out.append("ss://%s@%s:%s#%s" % (b64, host, ss_port, enc))
+if "tuic" in plist:
+    out.append("tuic://%s:%s@%s:%s?congestion_control=bbr&alpn=h3&sni=%s&udp_relay_mode=native&allow_insecure=1#%s%%20TUIC"
+               % (tuic_uuid, tuic_pass, host, tuic_port, sni, enc))
 print("\n".join(out))
 PYEOF
 )"
@@ -253,6 +276,8 @@ VLESS_LINK="$(printf '%s' "$LINKS" | grep '^vless://' || true)"
 HY2_LINK=""; SS_LINK=""
 if has_proto hy2; then HY2_LINK="$(printf '%s' "$LINKS" | grep '^hysteria2://' || true)"; fi
 if has_proto ss; then SS_LINK="$(printf '%s' "$LINKS" | grep '^ss://' || true)"; fi
+TUIC_LINK=""
+if has_proto tuic; then TUIC_LINK="$(printf '%s' "$LINKS" | grep '^tuic://' || true)"; fi
 log "客户端配置（sing-box 无面板无订阅，下面就是全部配置，复制保存）"
 printf '%s\n' "$LINKS"
 
@@ -261,7 +286,7 @@ NF_SUB_URL=""; NF_SUB_PORT=0; NF_SUB_OK="fail"
 RUN_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$RUN_DIR/sub-service.sh" ]; then
     . "$RUN_DIR/sub-service.sh"
-    nfsub_setup full "$RUN_DIR/template.yaml" "$UUID" "$REALITY_PUB" "$SHORT_ID" || true
+    nfsub_setup full "$RUN_DIR/template.yaml" "$UUID" "$REALITY_PUB" "$SHORT_ID" "$TUIC_UUID" "$TUIC_PASS" "$TUIC_PORT" || true
 fi
 
 # ── 10. SSH 公钥 / 关密码登录（可选，表单填了公钥才执行；可多行，一行一把全装） ──
@@ -314,11 +339,13 @@ fi
 python3 - "$UUID" "$REALITY_PUB" "$SHORT_ID" "$NODE_PORT" "$SNI" "$VLESS_LINK" \
     "$VERIFY" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" \
     "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$SB_VER" \
-    "$NF_SUB_URL" "$NF_SUB_PORT" "$NF_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" "$SSH_KEY_CNT" <<'PYEOF'
+    "$NF_SUB_URL" "$NF_SUB_PORT" "$NF_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" "$SSH_KEY_CNT" \
+    "$TUIC_LINK" "$TUIC_PORT" "$TUIC_OK" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, node_port, sni, vless, verify, protocols,
  ss_link, ss_port, ss_verify, hy2_link, hy2_port, hy2_ok, sb_ver,
- sub_url, sub_port, sub_ok, ssh_key_ok, ssh_pw_closed, ssh_key_cnt) = sys.argv[1:22]
+ sub_url, sub_port, sub_ok, ssh_key_ok, ssh_pw_closed, ssh_key_cnt,
+ tuic_link, tuic_port, tuic_ok) = sys.argv[1:25]
 print("NF_RESULT " + json.dumps({
     "engine": "singbox", "sbVersion": sb_ver,
     "uuid": uuid, "publicKey": pub, "shortId": sid,
@@ -326,6 +353,8 @@ print("NF_RESULT " + json.dumps({
     "verified": verify == "ok",
     "protocols": protocols, "ssLink": ss_link, "ssPort": int(ss_port),
     "ssVerified": ss_verify == "ok", "hy2Link": hy2_link,
+    "tuicLink": tuic_link, "tuicPort": int(tuic_port),
+    "tuicVerified": tuic_ok == "ok",
     "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
     "subUrl": sub_url, "subPort": int(sub_port), "subOk": sub_ok == "ok",
     "sshKeyOk": ssh_key_ok == "ok", "sshPwClosed": ssh_pw_closed == "ok",

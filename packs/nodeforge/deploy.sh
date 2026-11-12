@@ -2,6 +2,7 @@
 # ============================================================
 # NodeForge 一键部署（梦盒「一键节点」功能包通过 SSH 喂入执行）
 # 目标：全新机器 → s-ui v1.6.7 + VLESS+Reality 入站 + 客户端，
+#       可选加 TUIC（QUIC/UDP，+2 端口）/ Hysteria2（+1）/ SS 2022（+3）。
 #       面板只绑 127.0.0.1（公网打不开，管理走 SSH 隧道），
 #       防火墙放行 节点端口/订阅端口/SSH，面板端口不放行。
 # 输入（环境变量，密码不进 argv、不落盘）：
@@ -44,10 +45,13 @@ if [ -n "$NODE_NAME" ]; then INBOUND_TAG="$NODE_NAME"; else INBOUND_TAG="nf-vles
 PROTOCOLS="${NF_PROTOCOLS:-reality}"
 has_proto() { case ",$PROTOCOLS," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
 HY2_PORT=$((NODE_PORT + 1))
+TUIC_PORT=$((NODE_PORT + 2))
 SS_PORT=$((NODE_PORT + 3))
 HY2_OK="fail"
 HY2_LINK=""
 SS_VERIFY="fail"
+TUIC_VERIFY="fail"
+TUIC_LINK=""
 if [ "$NODE_PORT" -lt 1 ] || [ $((NODE_PORT + 3)) -gt 65535 ]; then
     echo "NF_ERROR: 节点端口不合法（多协议顺延需要主端口+3 不超过 65535）" >&2
     exit 1
@@ -190,14 +194,16 @@ UUID="$(gen_uuid)"
 log "UUID 与 Short ID 已就绪"
 # ── 3.5 多协议密钥（SS/Hy2）：一次生成、落盘复用，重跑不换 ──
 SECRETS_FILE="/usr/local/s-ui/nf-secrets.env"
-SS_PSK=""; SS_USER_PSK=""; HY2_PASS=""
+SS_PSK=""; SS_USER_PSK=""; HY2_PASS=""; TUIC_UUID=""; TUIC_PASS=""
 if [ -f "$SECRETS_FILE" ]; then . "$SECRETS_FILE" || true; fi
 if has_proto ss && [ -z "$SS_PSK" ]; then SS_PSK="$(openssl rand -base64 16 | tr -d '\n')"; fi
 if has_proto ss && [ -z "$SS_USER_PSK" ]; then SS_USER_PSK="$(openssl rand -base64 16 | tr -d '\n')"; fi
 if has_proto hy2 && [ -z "$HY2_PASS" ]; then HY2_PASS="$(openssl rand -hex 12)"; fi
-if has_proto ss || has_proto hy2; then
+if has_proto tuic && [ -z "$TUIC_UUID" ]; then TUIC_UUID="$(gen_uuid)"; fi
+if has_proto tuic && [ -z "$TUIC_PASS" ]; then TUIC_PASS="$(openssl rand -hex 12)"; fi
+if has_proto ss || has_proto hy2 || has_proto tuic; then
     umask 077
-    { echo "SS_PSK=$SS_PSK"; echo "SS_USER_PSK=$SS_USER_PSK"; echo "HY2_PASS=$HY2_PASS"; } > "$SECRETS_FILE"
+    { echo "SS_PSK=$SS_PSK"; echo "SS_USER_PSK=$SS_USER_PSK"; echo "HY2_PASS=$HY2_PASS"; echo "TUIC_UUID=$TUIC_UUID"; echo "TUIC_PASS=$TUIC_PASS"; } > "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE" 2>/dev/null || true
     log "多协议密钥已就绪（重跑复用同一套）"
 fi
@@ -463,9 +469,14 @@ if isinstance(o, dict):
     cand = [x for x in o.values() if isinstance(x, list)]
     o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
 items = [x for x in (o or []) if isinstance(x, dict)]
-hits = [t for t in items if t.get("tag") == sys.argv[1] and t.get("type") == "shadowsocks"]
-print(hits[-1].get("id") if hits else "")
-' "$SS_TAG")"
+sitems = [t for t in items if t.get("type") == "shadowsocks"]
+hits = [t for t in sitems if t.get("tag") == sys.argv[1]]
+if not hits:
+    hits = [t for t in sitems if t.get("tag") == "nf-ss"]
+if not hits:
+    hits = [t for t in sitems if str(t.get("listen_port", "")) == sys.argv[2]]
+print(hits[0].get("id") if hits else "")
+' "$SS_TAG" "$SS_PORT")"
     if [ -n "$SS_ID_FOUND" ]; then
         SS_INBOUND_ID="$SS_ID_FOUND"
         SS_EDIT="$(printf '%s' "$SS_LIST" | python3 -c '
@@ -486,7 +497,7 @@ hits = [t for t in items if str(t.get("id")) == sys.argv[1]]
 port, psk, host = int(sys.argv[2]), sys.argv[3], sys.argv[4]
 if hits:
     t = hits[-1]
-    d = {"id": int(t["id"]), "type": "shadowsocks", "tag": t.get("tag") or sys.argv[5],
+    d = {"id": int(t["id"]), "type": "shadowsocks", "tag": sys.argv[5],
          "listen": "::", "listen_port": port,
          "method": "2022-blake3-aes-128-gcm", "password": psk}
     if host:
@@ -536,6 +547,196 @@ print(hits[-1].get("id") if hits else "")
 ' "$SS_TAG")"
         [ -n "$SS_INBOUND_ID" ] || fail "SS 入站创建后未找到"
         log "SS 入站已创建（端口 $SS_PORT）"
+    fi
+fi
+
+# ── 5.6 TUIC v5 入站（可选，多协议；UDP/QUIC，TCP 被整墙时仍可用） ──
+# s-ui v1.6.7 源码核实：TUIC 入站走 sing-box TUICInboundOptions，
+# TLS 必须启用（无 TLS 直接拒绝）；订阅链接由 s-ui 按客户端 config
+# 的 "tuic" 键（uuid/password）+ 入站 congestion_control /
+# out_json 的 udp_relay_mode 生成；Clash 订阅转成 skip-cert-verify。
+TUIC_INBOUND_ID=""
+TUIC_TAG="nf-tuic"
+TUIC_TLS_NAME="nf-tuic"
+if [ -n "$NODE_NAME" ]; then TUIC_TAG="$NODE_NAME TUIC"; fi
+if has_proto tuic; then
+    log "处理 TUIC 入站（端口 $TUIC_PORT/udp）"
+    # 自签证书（与 Hy2 同款：CN=www.microsoft.com，重跑复用）
+    mkdir -p /etc/tuic
+    if [ ! -f /etc/tuic/cert.pem ]; then
+        openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -days 3650 -nodes \
+            -keyout /etc/tuic/key.pem -out /etc/tuic/cert.pem \
+            -subj "/CN=www.microsoft.com" -addext "subjectAltName=DNS:www.microsoft.com" \
+            >/dev/null 2>&1 \
+        || openssl req -x509 -newkey rsa:2048 -days 3650 -nodes \
+            -keyout /etc/tuic/key.pem -out /etc/tuic/cert.pem \
+            -subj "/CN=www.microsoft.com" >/dev/null 2>&1 || true
+        chmod 600 /etc/tuic/key.pem 2>/dev/null || true
+    fi
+    # TLS 记录：已有同名则复用 id，否则新建（server 供入站 TLS，
+    # client 的 insecure:true 让订阅链接带 insecure=1 → Clash 转 skip-cert-verify）
+    TUIC_TLS_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/tls")"
+    TUIC_TLS_ID="$(printf '%s' "$TUIC_TLS_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("name") == sys.argv[1]]
+print(hits[-1].get("id") if hits else "")
+' "$TUIC_TLS_NAME")"
+    if [ -z "$TUIC_TLS_ID" ]; then
+        tuic_tls_data="$(python3 - <<'PYEOF2'
+import json
+data = {
+    "name": "nf-tuic",
+    "server": {
+        "enabled": True,
+        "server_name": "www.microsoft.com",
+        "alpn": ["h3"],
+        "certificate_path": "/etc/tuic/cert.pem",
+        "key_path": "/etc/tuic/key.pem",
+    },
+    "client": {
+        "enabled": True,
+        "server_name": "www.microsoft.com",
+        "alpn": ["h3"],
+        "insecure": True,
+    },
+}
+print(json.dumps(data, separators=(",", ":")))
+PYEOF2
+)" || fail "TUIC TLS 数据组装失败"
+        api_post_ok save --data-urlencode object=tls --data-urlencode action=new \
+            --data-urlencode "data=$tuic_tls_data" >/dev/null
+        TUIC_TLS_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/tls")"
+        TUIC_TLS_ID="$(printf '%s' "$TUIC_TLS_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("name") == sys.argv[1]]
+print(hits[-1].get("id") if hits else "")
+' "$TUIC_TLS_NAME")"
+        [ -n "$TUIC_TLS_ID" ] || fail "TUIC TLS 记录创建后未找到"
+        log "TUIC TLS 记录已创建"
+    else
+        log "复用已有 TUIC TLS 记录"
+    fi
+    # 入站：认领优先级与 SS 一致（本次 tag → 旧默认 tag → 表单端口），取首个
+    TUIC_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+    TUIC_ID_FOUND="$(printf '%s' "$TUIC_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+titems = [t for t in items if t.get("type") == "tuic"]
+hits = [t for t in titems if t.get("tag") == sys.argv[1]]
+if not hits:
+    hits = [t for t in titems if t.get("tag") == "nf-tuic"]
+if not hits:
+    hits = [t for t in titems if str(t.get("listen_port", "")) == sys.argv[2]]
+print(hits[0].get("id") if hits else "")
+' "$TUIC_TAG" "$TUIC_PORT")"
+    if [ -n "$TUIC_ID_FOUND" ]; then
+        TUIC_INBOUND_ID="$TUIC_ID_FOUND"
+        TUIC_EDIT="$(printf '%s' "$TUIC_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if str(t.get("id")) == sys.argv[1]]
+port, host = int(sys.argv[2]), sys.argv[4]
+if hits:
+    t = hits[-1]
+    tls_id = t.get("tls_id") or sys.argv[3]
+    d = {"id": int(t["id"]), "type": "tuic", "tag": sys.argv[5], "listen": "::",
+         "listen_port": port, "tls_id": int(tls_id),
+         "congestion_control": "bbr",
+         "out_json": {"udp_relay_mode": "native"}}
+    if host:
+        d["addrs"] = [{"server": host, "server_port": port}]
+    print(json.dumps(d, separators=(",", ":")))
+' "$TUIC_INBOUND_ID" "$TUIC_PORT" "$TUIC_TLS_ID" "$PUBLIC_HOST" "$TUIC_TAG")"
+        if [ -n "$TUIC_EDIT" ]; then
+            if api_post_ok save --data-urlencode object=inbounds --data-urlencode action=edit \
+                --data-urlencode "data=$TUIC_EDIT" >/dev/null; then
+                log "已校正 TUIC 入站（端口 $TUIC_PORT）"
+            else
+                log "TUIC 入站校正失败（继续，文末校验会确认）"
+            fi
+        else
+            log "复用已有 TUIC 入站（端口 $TUIC_PORT）"
+        fi
+    else
+        tuic_data="$(python3 -c '
+import json, sys
+d = {"type": "tuic", "tag": sys.argv[1], "listen": "::",
+     "listen_port": int(sys.argv[2]), "tls_id": int(sys.argv[3]),
+     "congestion_control": "bbr",
+     "out_json": {"udp_relay_mode": "native"}}
+host = sys.argv[4].strip()
+if host:
+    d["addrs"] = [{"server": host, "server_port": int(sys.argv[2])}]
+print(json.dumps(d, separators=(",", ":")))
+' "$TUIC_TAG" "$TUIC_PORT" "$TUIC_TLS_ID" "$PUBLIC_HOST")"
+        api_post_ok save --data-urlencode object=inbounds --data-urlencode action=new \
+            --data-urlencode "data=$tuic_data" >/dev/null
+        TUIC_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/inbounds")"
+        TUIC_INBOUND_ID="$(printf '%s' "$TUIC_LIST" | python3 -c '
+import json, sys
+def norm(x):
+    while isinstance(x, str):
+        try: x = json.loads(x)
+        except Exception: return None
+    return x
+try: d = json.load(sys.stdin)
+except Exception: d = {}
+o = norm(d.get("obj"))
+if isinstance(o, dict):
+    cand = [x for x in o.values() if isinstance(x, list)]
+    o = cand[0] if cand else [x for x in o.values() if isinstance(x, dict)]
+items = [x for x in (o or []) if isinstance(x, dict)]
+hits = [t for t in items if t.get("tag") == sys.argv[1] and t.get("type") == "tuic"]
+print(hits[-1].get("id") if hits else "")
+' "$TUIC_TAG")"
+        [ -n "$TUIC_INBOUND_ID" ] || fail "TUIC 入站创建后未找到"
+        log "TUIC 入站已创建（端口 $TUIC_PORT）"
     fi
 fi
 
@@ -605,6 +806,11 @@ if ss_id.isdigit() and ss_psk:
     cfg["shadowsocks16"] = {"password": ss_psk}
     if int(ss_id) not in inbs:
         inbs.append(int(ss_id))
+tuic_id, tuic_uuid, tuic_pass = sys.argv[11], sys.argv[12], sys.argv[13]
+if tuic_id.isdigit() and tuic_uuid and tuic_pass:
+    cfg["tuic"] = {"uuid": tuic_uuid, "password": tuic_pass}
+    if int(tuic_id) not in inbs:
+        inbs.append(int(tuic_id))
 links = []
 if sys.argv[10]:
     disp = sys.argv[9] if sys.argv[9] else sys.argv[1]
@@ -615,7 +821,7 @@ print(json.dumps({"enable": True, "name": sys.argv[1],
                   "volume": vol, "expiry": exp, "remark": "",
                   "autoReset": vol > 0, "resetDays": 30 if vol > 0 else 0,
                   "nextReset": nxt if vol > 0 else 0}, separators=(",", ":")))
-' "$SUB_ID" "$UUID" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$HY2_LINK")"
+' "$SUB_ID" "$UUID" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$HY2_LINK" "$TUIC_INBOUND_ID" "$TUIC_UUID" "$TUIC_PASS")"
     api_post_ok save --data-urlencode object=clients --data-urlencode action=new \
         --data-urlencode "data=$client_data" >/dev/null
     CLI_LIST="$(curl -s --max-time 25 -b "$CJ" "$API/clients")"
@@ -679,12 +885,15 @@ fi
 # 不能拿来回写），只改 volume/expiry/autoReset/resetDays/nextReset 五项，
 # 其余字段（config/计数/时间戳）逐字保留，经 API edit 落盘。
 if [ -n "$INBOUND_ID" ]; then
-    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$HY2_LINK" <<'PYEOF2'
+    CLI_EDIT="$(python3 - "$SUB_ID" "$VOL_BYTES" "$EXP_EPOCH" "$NEXT_RESET" "$NODE_NAME" "$INBOUND_ID" "$SS_INBOUND_ID" "$SS_USER_PSK" "$HY2_LINK" "$TUIC_INBOUND_ID" "$TUIC_UUID" "$TUIC_PASS" <<'PYEOF2'
 import sqlite3, glob, json, sys
 name, vol, exp, nxt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 nm = sys.argv[5] if len(sys.argv) > 5 else ''
 want_ids = []
-for a in sys.argv[6:8]:
+tuic_id = sys.argv[10] if len(sys.argv) > 10 else ''
+tuic_uuid = sys.argv[11] if len(sys.argv) > 11 else ''
+tuic_pass = sys.argv[12] if len(sys.argv) > 12 else ''
+for a in sys.argv[6:8] + [tuic_id]:
     if a and a.isdigit() and int(a) not in want_ids:
         want_ids.append(int(a))
 ss_psk = sys.argv[8] if len(sys.argv) > 8 else ''
@@ -727,6 +936,11 @@ else:
         ss_cfg = dict(new_cfg.get('shadowsocks16') or {})
         ss_cfg['password'] = ss_psk
         new_cfg['shadowsocks16'] = ss_cfg
+    if tuic_uuid and tuic_pass:
+        tuic_cfg = dict(new_cfg.get('tuic') or {})
+        tuic_cfg['uuid'] = tuic_uuid
+        tuic_cfg['password'] = tuic_pass
+        new_cfg['tuic'] = tuic_cfg
     # Hy2 合并进同一份订阅：以 external 链接形式挂在客户端上（s-ui 订阅
     # 生成会把它转成节点；重跑时先摘旧的再挂新的，取消勾选则摘除）。
     cur_links = jload(r.get('links'), [])
@@ -786,12 +1000,14 @@ if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi 'status: 
     ufw allow "$SUB_PORT"/tcp >/dev/null 2>&1 || true
     if has_proto ss; then ufw allow "$SS_PORT"/tcp >/dev/null 2>&1 || true; ufw allow "$SS_PORT"/udp >/dev/null 2>&1 || true; fi
     if has_proto hy2; then ufw allow "$HY2_PORT"/udp >/dev/null 2>&1 || true; fi
+    if has_proto tuic; then ufw allow "$TUIC_PORT"/udp >/dev/null 2>&1 || true; fi
     log "ufw 已放行 $SSH_PORT/$NODE_PORT/$SUB_PORT，面板 $PANEL_PORT 未放行"
 elif command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
     firewall-cmd --permanent --add-port="$NODE_PORT"/tcp >/dev/null 2>&1 || true
     firewall-cmd --permanent --add-port="$SUB_PORT"/tcp >/dev/null 2>&1 || true
     if has_proto ss; then firewall-cmd --permanent --add-port="$SS_PORT"/tcp >/dev/null 2>&1 || true; firewall-cmd --permanent --add-port="$SS_PORT"/udp >/dev/null 2>&1 || true; fi
     if has_proto hy2; then firewall-cmd --permanent --add-port="$HY2_PORT"/udp >/dev/null 2>&1 || true; fi
+    if has_proto tuic; then firewall-cmd --permanent --add-port="$TUIC_PORT"/udp >/dev/null 2>&1 || true; fi
     firewall-cmd --reload >/dev/null 2>&1 || true
     log "firewalld 已放行 $NODE_PORT/$SUB_PORT"
 else
@@ -809,6 +1025,10 @@ else
     if has_proto hy2; then
         iptables -C INPUT -p udp --dport "$HY2_PORT" -j ACCEPT 2>/dev/null || \
             iptables -I INPUT -p udp --dport "$HY2_PORT" -j ACCEPT 2>/dev/null || true
+    fi
+    if has_proto tuic; then
+        iptables -C INPUT -p udp --dport "$TUIC_PORT" -j ACCEPT 2>/dev/null || \
+            iptables -I INPUT -p udp --dport "$TUIC_PORT" -j ACCEPT 2>/dev/null || true
     fi
     iptables -C INPUT -p tcp --dport "$PANEL_PORT" ! -i lo -j DROP 2>/dev/null || \
         iptables -I INPUT -p tcp --dport "$PANEL_PORT" ! -i lo -j DROP 2>/dev/null || true
@@ -1031,6 +1251,36 @@ PYEOF4
         fi
     fi
 fi
+# TUIC 实测（按服务端密钥组装客户端，与订阅链接同构）
+TUIC_VERIFY="fail"
+if has_proto tuic && [ -x "$SB_BIN" ]; then
+    TPORT_V="$(pick_free_port)"
+    if python3 - "$TUIC_PORT" "$TUIC_UUID" "$TUIC_PASS" "$SB_DIR/verify-tuic.json" "$TPORT_V" <<'PYEOF6'
+import json, sys
+cfg = {"log": {"level": "error"},
+  "inbounds": [{"type": "mixed", "tag": "tin", "listen": "127.0.0.1", "listen_port": int(sys.argv[5])}],
+  "outbounds": [{"type": "tuic", "tag": "tout", "server": "127.0.0.1",
+                 "server_port": int(sys.argv[1]), "uuid": sys.argv[2], "password": sys.argv[3],
+                 "congestion_control": "bbr", "udp_relay_mode": "native",
+                 "tls": {"enabled": True, "server_name": "www.microsoft.com",
+                         "alpn": ["h3"], "insecure": True}}]}
+open(sys.argv[4], "w").write(json.dumps(cfg))
+PYEOF6
+    then
+        "$SB_BIN" run -c "$SB_DIR/verify-tuic.json" > "$SB_DIR/verify-tuic.log" 2>&1 &
+        TPID=$!
+        sleep 2
+        TCODE="$(curl -s --max-time 12 -x socks5h://127.0.0.1:$TPORT_V -o /dev/null -w '%{http_code}' https://www.gstatic.com/generate_204 2>/dev/null || echo 000)"
+        kill "$TPID" 2>/dev/null || true
+        if [ "$TCODE" = "204" ]; then
+            TUIC_VERIFY="ok"
+            log "TUIC 实测验证通过（回环真连出网 204）"
+        else
+            log "TUIC 实测验证未通过（回环返回 $TCODE）"
+        fi
+    fi
+fi
+
 
 # ── 9.5 订阅地址校验：订阅里节点的 host 必须是公网地址 ────
 SUB_HOST_OK="fail"
@@ -1151,13 +1401,18 @@ SS_LINK=""
 if has_proto ss; then
     SS_LINK="$(printf '%s' "$SUB_NOW_TXT" | grep -o 'ss://[^[:space:]]*' | head -1 || true)"
 fi
-python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$HY2_SUB_URL" "$HY2_SUB_PORT" "$HY2_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" "$SSH_KEY_CNT" <<'PYEOF'
+TUIC_LINK=""
+if has_proto tuic; then
+    TUIC_LINK="$(printf '%s' "$SUB_NOW_TXT" | grep -o 'tuic://[^[:space:]]*' | head -1 || true)"
+fi
+python3 - "$UUID" "$PUB" "$SID" "$SUB_ID" "$NODE_PORT" "$PANEL_PORT" "$PANEL_PATH" "$SUB_PORT" "$SUB_PATH" "$SNI" "$VLESS_LINK" "$SUI_VER" "$VERIFY" "$SUB_HOST_OK" "$SUB_INFO" "$SUB_TPL_OK" "$NAME_OK" "$PROTOCOLS" "$SS_LINK" "$SS_PORT" "$SS_VERIFY" "$HY2_LINK" "$HY2_PORT" "$HY2_OK" "$HY2_SUB_URL" "$HY2_SUB_PORT" "$HY2_SUB_OK" "$SSH_KEY_OK" "$SSH_PW_CLOSED" "$SSH_KEY_CNT" "$TUIC_LINK" "$TUIC_PORT" "$TUIC_VERIFY" <<'PYEOF'
 import json, sys
 (uuid, pub, sid, sub_id, node_port, panel_port, panel_path,
  sub_port, sub_path, sni, vless, ver, verify, sub_host_ok, sub_info,
  sub_tpl_ok, name_ok, protocols, ss_link, ss_port, ss_verify,
  hy2_link, hy2_port, hy2_ok, hy2_sub_url, hy2_sub_port, hy2_sub_ok,
- ssh_key_ok, ssh_pw_closed, ssh_key_cnt) = sys.argv[1:31]
+ ssh_key_ok, ssh_pw_closed, ssh_key_cnt,
+ tuic_link, tuic_port, tuic_verify) = sys.argv[1:34]
 print("NF_RESULT " + json.dumps({
     "uuid": uuid, "publicKey": pub, "shortId": sid, "subId": sub_id,
     "nodePort": int(node_port), "panelPort": int(panel_port),
@@ -1168,6 +1423,8 @@ print("NF_RESULT " + json.dumps({
     "nameOk": name_ok == "ok",
     "protocols": protocols, "ssLink": ss_link, "ssPort": int(ss_port),
     "ssVerified": ss_verify == "ok", "hy2Link": hy2_link,
+    "tuicLink": tuic_link, "tuicPort": int(tuic_port),
+    "tuicVerified": tuic_verify == "ok",
     "hy2Port": int(hy2_port), "hy2Ok": hy2_ok == "ok",
     "hy2SubUrl": hy2_sub_url, "hy2SubPort": int(hy2_sub_port),
     "hy2SubOk": hy2_sub_ok == "ok",
