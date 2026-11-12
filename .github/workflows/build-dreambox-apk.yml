@@ -193,10 +193,10 @@ jobs:
         run: |
           set -eu
           ver=$(grep -E '^project\.version\.name=' gradle.properties | cut -d= -f2)
-          ts=$(TZ=Asia/Shanghai date +%Y%m%d%H%M)
-          sha=$(git rev-parse --short=6 HEAD)
           src=$(ls app/build/outputs/apk/release/*.apk | head -1)
-          asset="DreamBox-builtin-arm64-v8a-release-${ts}-${sha}.apk"
+          # 发版不再改名：直接用 CI 原名挂资产。改名会把资产时间戳改成发布时间，
+          # 比包内 UI_BUILD_ID 晚，更新器 Smart 通道按构建号比较会把同版误判为新版。
+          asset=$(basename "$src")
           cp "$src" "$asset"
           if gh release view "v${ver}" >/dev/null 2>&1; then
             gh release upload "v${ver}" "$asset" --clobber
