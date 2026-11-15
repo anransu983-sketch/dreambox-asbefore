@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
@@ -39,8 +40,19 @@ class ModuleStore(context: Context) {
 
     private fun enabledIds(state: JSONObject): MutableSet<String> {
         val set = mutableSetOf<String>()
-        val arr = state.optJSONArray("enabled") ?: return set
-        for (i in 0 until arr.length()) set += arr.optString(i)
+        val arr = state.optJSONArray("enabled")
+        if (arr != null) {
+            for (i in 0 until arr.length()) set += arr.optString(i)
+            return set
+        }
+        // 兼容旧版写坏的格式：{"enabled":"[tracking]"}（字符串，不是数组）。
+        // Android 的 JSONObject.put 不会把 List 包成 JSONArray，toString 时直接
+        // 按 value.toString() 加引号写成字符串，optJSONArray 读回永远是 null。
+        val raw = state.optString("enabled").trim()
+        if (raw.startsWith("[") && raw.endsWith("]")) {
+            raw.removePrefix("[").removeSuffix("]").split(",")
+                .map { it.trim() }.filter { it.isNotEmpty() }.forEach { set += it }
+        }
         return set
     }
 
@@ -115,7 +127,7 @@ class ModuleStore(context: Context) {
         val state = loadState()
         val enabled = enabledIds(state)
         if (enabled.remove(id)) {
-            state.put("enabled", enabled.toList())
+            state.put("enabled", JSONArray(enabled.toList()))
             saveState(state)
         }
     }
@@ -124,7 +136,8 @@ class ModuleStore(context: Context) {
         val state = loadState()
         val set = enabledIds(state)
         if (enabled) set += id else set -= id
-        state.put("enabled", set.toList())
+        // 必须显式包 JSONArray：put 不会包装 List，toString 会把它写成 "[tracking]" 字符串。
+        state.put("enabled", JSONArray(set.toList()))
         saveState(state)
         Log.d("ModuleToggle", "setEnabled persisted id=$id enabled=$enabled state=${stateFile.readText()}")
     }
