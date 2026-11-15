@@ -62,9 +62,26 @@ cf_dns_upsert() {
   fi
 }
 
+# CF DNS AAAA 记录 upsert：$1=子域名全名，橙云指向本机 IPv6（已存在就更新）
+cf_dns_upsert_aaaa() {
+  local name="$1" rec_json rec_id rec_body resp
+  rec_json=$(cf_get "/zones/$ZONE_ID/dns_records?type=AAAA&name=$name&per_page=1")
+  rec_id=$(echo "$rec_json" | python3 -c 'import sys,json; r=json.load(sys.stdin).get("result") or []; print(r[0]["id"] if r else "")' 2>/dev/null)
+  rec_body=$(python3 -c 'import json,sys; print(json.dumps({"type":"AAAA","name":sys.argv[1],"content":sys.argv[2],"proxied":True,"ttl":1}))' "$name" "$VPS_IPv6")
+  if [ -n "$rec_id" ]; then
+    resp=$(cf_put "/zones/$ZONE_ID/dns_records/$rec_id" "$rec_body")
+    cf_ok "$resp" && echo "DNS 记录 $name 已更新为橙云指向本机 IPv6。" || { echo "DNS 更新失败（$name）：$resp"; exit 1; }
+  else
+    resp=$(cf_post "/zones/$ZONE_ID/dns_records" "$rec_body")
+    cf_ok "$resp" && echo "DNS 记录 $name 已新建（橙云，IPv6）。" || { echo "DNS 新建失败（$name）：$resp"; exit 1; }
+  fi
+}
+
 echo ">>> [1/6] 本机 IP 与 token 校验"
 VPS_IP=$(curl -sS -m 10 https://api.ipify.org || curl -sS -m 10 https://ifconfig.me)
 echo "本机公网 IP: $VPS_IP"
+VPS_IPv6=$(curl -sS -m 10 https://api64.ipify.org || echo "")
+if [ -n "$VPS_IPv6" ]; then echo "本机公网 IPv6: $VPS_IPv6"; else echo "没取到本机 IPv6，这次只配 IPv4。"; fi
 if ! cf_ok "$(cf_get /user/tokens/verify)"; then
   echo "token 校验失败（/user/tokens/verify 没通过），请检查 /root/.cf.ini 里的 token 是否有效。"
   exit 1
@@ -78,6 +95,10 @@ echo "Zone ID: $ZONE_ID"
 
 echo ">>> [3/6] CF DNS：$NODE_DOMAIN 的 A 记录 -> $VPS_IP，橙云（proxied=true）"
 cf_dns_upsert "$NODE_DOMAIN"
+if [ -n "$VPS_IPv6" ]; then
+  echo ">>> [3/6] CF DNS：$NODE_DOMAIN 的 AAAA 记录 -> $VPS_IPv6，橙云（让 CF 回源走 IPv6，Zouter 香港 v4 烂、v6 好）"
+  cf_dns_upsert_aaaa "$NODE_DOMAIN"
+fi
 
 echo ">>> [4/6] CF 设置：SSL 严格 + 强制 HTTPS"
 if cf_ok "$(cf_patch "/zones/$ZONE_ID/settings/ssl" '{"value":"strict"}')"; then echo "SSL 已设为 完全（严格）。"; else echo "SSL 设置失败（多半是 token 缺 Zone Settings 权限）。"; MANUAL="$MANUAL
@@ -319,11 +340,13 @@ chmod 644 "/var/www/node-sub/${SUB_TOKEN}.yaml"
 cat > "/etc/nginx/sites-available/${NODE_DOMAIN}" <<NGINXEOF
 server {
     listen 80;
+    listen [::]:80;
     server_name ${NODE_DOMAIN};
     return 301 https://\$host\$request_uri;
 }
 server {
     listen 443 ssl;
+    listen [::]:443 ssl;
     server_name ${NODE_DOMAIN};
 
     ssl_certificate /etc/letsencrypt/live/${NODE_DOMAIN}/fullchain.pem;
