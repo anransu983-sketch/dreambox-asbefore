@@ -134,13 +134,16 @@ fun BocchiCard(
     }
 }
 
-/** 波奇酱粉色小开关（纯 Compose 实现，不依赖主题色）。 */
+/** 波奇酱粉色小开关（纯 Compose 实现，不依赖主题色）。
+ * clickable=false 时只画样子、不自己接点按，交给外层 Row 的 clickable
+ * 统一处理——父子双 clickable 嵌套时真机上点按会丢（模块市场开关三次失灵的根因）。 */
 @Composable
 fun BocchiSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    clickable: Boolean = true,
 ) {
     val trackColor = if (checked) BocchiStar else Color(0xFFE0D5D8)
     val interaction = remember { MutableInteractionSource() }
@@ -150,12 +153,18 @@ fun BocchiSwitch(
                 .size(width = 44.dp, height = 26.dp)
                 .clip(CircleShape)
                 .background(trackColor.copy(alpha = if (enabled) 1f else 0.5f))
-                .clickable(
-                    interactionSource = interaction,
-                    indication = null,
-                    enabled = enabled,
-                    role = Role.Switch,
-                    onClick = { onCheckedChange(!checked) },
+                .then(
+                    if (clickable) {
+                        Modifier.clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            enabled = enabled,
+                            role = Role.Switch,
+                            onClick = { onCheckedChange(!checked) },
+                        )
+                    } else {
+                        Modifier
+                    },
                 )
                 .padding(3.dp),
         contentAlignment = Alignment.CenterStart,

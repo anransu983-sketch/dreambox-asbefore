@@ -605,10 +605,12 @@ private fun ModuleCard(
                         color = BocchiTextDark,
                     )
                     // 不用 Miuix Switch：它在真机上点按无反应（外层 toggleable + 拇指 draggable 接不到点按）。
-                    // 改用 App 自带的 BocchiSwitch（纯 clickable，和能正常用的安装/删除按钮同一机制）。
+                    // 也不让开关自己接点按：Row 已有 clickable，父子双 clickable 嵌套会丢点按。
+                    // 开关只画样子，整行点按都走 Row 的 onToggle。
                     BocchiSwitch(
                         checked = enabled,
                         onCheckedChange = onToggle,
+                        clickable = false,
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
