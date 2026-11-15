@@ -155,6 +155,13 @@ proxies:
     path: ${WS_PATH}
     headers:
       Host: ${NODE_DOMAIN}
+proxy-groups:
+- name: HK-CF
+  type: select
+  proxies:
+  - HK-CF-VLESS
+rules:
+- MATCH,HK-CF
 YAMLEOF
 chmod 644 "/var/www/node-sub/${SUB_TOKEN}.yaml"
 
