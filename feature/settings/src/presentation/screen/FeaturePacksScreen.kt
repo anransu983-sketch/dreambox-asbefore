@@ -601,11 +601,7 @@ private fun ModuleCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable {
-                            Log.d("ModuleToggle", "row tapped id=${def.id} enabled=$enabled")
-                            onToggle(!enabled)
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = "启用",
@@ -613,13 +609,11 @@ private fun ModuleCard(
                         fontWeight = FontWeight.Medium,
                         color = BocchiTextDark,
                     )
-                    // 不用 Miuix Switch：它在真机上点按无反应（外层 toggleable + 拇指 draggable 接不到点按）。
-                    // 也不让开关自己接点按：Row 已有 clickable，父子双 clickable 嵌套会丢点按。
-                    // 开关只画样子，整行点按都走 Row 的 onToggle。
+                    // Row 不接点按：开关自己接（设置页 BocchiSwitchItem 就是这么做的，真机能点）。
+                    // Row clickable + 开关不接点按的组合在真机上点按丢了（1.190/1.191 实测：row tapped 一次没出）。
                     BocchiSwitch(
                         checked = enabled,
                         onCheckedChange = onToggle,
-                        clickable = false,
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
