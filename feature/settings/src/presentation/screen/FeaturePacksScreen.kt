@@ -598,24 +598,14 @@ private fun ModuleCard(
             }
             if (installed) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                // 开关已连坏六版（Miuix Switch / Row clickable / 开关自己接点按全失灵），
+                // 同卡片里唯一能点的是 PackActionButton（Box + clickable），改用它当开关。
+                PackActionButton(
+                    text = if (enabled) "已启用，点击关闭" else "启用",
+                    filled = !enabled,
+                    enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "启用",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = BocchiTextDark,
-                    )
-                    // Row 不接点按：开关自己接（设置页 BocchiSwitchItem 就是这么做的，真机能点）。
-                    // Row clickable + 开关不接点按的组合在真机上点按丢了（1.190/1.191 实测：row tapped 一次没出）。
-                    BocchiSwitch(
-                        checked = enabled,
-                        onCheckedChange = onToggle,
-                    )
-                }
+                ) { onToggle(!enabled) }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (hasUpdate) {
