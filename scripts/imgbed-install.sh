@@ -163,21 +163,40 @@ document.getElementById('up').onclick = async function(){
 HTMLEOF
 
 # ---------- 5. DNS 检查（解析必须已指到本机，否则先去 CF 后台加记录再重跑） ----------
+# 两种都算过：解析到本机 IP（仅 DNS），或解析到 Cloudflare 边缘 IP（橙云代理）。
 say "查 DNS（$DOMAIN 应该指到本机）……"
 PUBIP=$(curl -s --max-time 10 https://api.ipify.org || hostname -I | awk '{print $1}')
+dns_ok() {
+  [ "$1" = "$PUBIP" ] && return 0
+  python3 - "$1" <<'PYEOF' 2>/dev/null
+import sys, ipaddress, urllib.request
+ip_str = sys.argv[1]
+if not ip_str:
+    sys.exit(1)
+try:
+    ranges = urllib.request.urlopen('https://www.cloudflare.com/ips-v4', timeout=10).read().decode().split()
+    ip = ipaddress.ip_address(ip_str)
+    sys.exit(0 if any(ip in ipaddress.ip_network(r) for r in ranges) else 1)
+except Exception:
+    sys.exit(1)
+PYEOF
+}
 RESOLVED=""
 for i in $(seq 1 12); do
   RESOLVED=$(getent hosts "$DOMAIN" | awk '{print $1}' | head -1)
   [ -z "$RESOLVED" ] && RESOLVED=$(curl -s --max-time 10 "https://dns.google/resolve?name=$DOMAIN&type=A" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['Answer'][0]['data'] if d.get('Answer') else '')" 2>/dev/null)
-  [ "$RESOLVED" = "$PUBIP" ] && break
+  if dns_ok "$RESOLVED"; then
+    say "DNS 已指到本机（$DOMAIN → $RESOLVED）。"
+    break
+  fi
+  RESOLVED=""
   sleep 10
 done
-if [ "$RESOLVED" != "$PUBIP" ]; then
-  echo "DNS 还没指过来：$DOMAIN 现在解析到 ${RESOLVED:-（查不到）}，本机是 $PUBIP。"
+if [ -z "$RESOLVED" ]; then
+  echo "DNS 还没指过来：$DOMAIN 解析不到本机 $PUBIP，也不在 Cloudflare 代理段里。"
   echo "去 Cloudflare 后台 suanran9527.com → DNS 加一条 A 记录：名称 img，内容 $PUBIP，Proxied，保存后重跑这个脚本。"
   exit 1
 fi
-say "DNS 已指到本机（$RESOLVED）。"
 
 # ---------- 6. 证书（HTTP-01，已有就跳过） ----------
 # 先立一个纯 HTTP 站，让 certbot 能放验证文件；签完再换成完整配置。
