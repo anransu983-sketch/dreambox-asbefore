@@ -51,6 +51,7 @@ import com.suanran.dreambox.presentation.component.layout.ScreenLazyColumn
 import com.suanran.dreambox.presentation.component.layout.combinePaddingValues
 import com.suanran.dreambox.presentation.component.layout.rememberStandalonePageMainPadding
 import com.suanran.dreambox.presentation.component.misc.BocchiCard
+import com.suanran.dreambox.presentation.component.misc.BocchiSwitch
 import com.suanran.dreambox.presentation.component.misc.BocchiTextDark
 import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
@@ -62,7 +63,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -595,7 +595,8 @@ private fun ModuleCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable { onToggle(!enabled) },
                 ) {
                     Text(
                         text = "启用",
@@ -603,7 +604,9 @@ private fun ModuleCard(
                         fontWeight = FontWeight.Medium,
                         color = BocchiTextDark,
                     )
-                    Switch(
+                    // 不用 Miuix Switch：它在真机上点按无反应（外层 toggleable + 拇指 draggable 接不到点按）。
+                    // 改用 App 自带的 BocchiSwitch（纯 clickable，和能正常用的安装/删除按钮同一机制）。
+                    BocchiSwitch(
                         checked = enabled,
                         onCheckedChange = onToggle,
                     )

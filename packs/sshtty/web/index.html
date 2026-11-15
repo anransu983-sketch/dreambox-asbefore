@@ -469,7 +469,7 @@
           run: function () { openTest('ipq', s, true); }, view: function () { openTest('ipq', s, false); } },
         { img: 'ico-nq.png', w: 80, cls: 'b4', ic: '#fde68a', lab: '一键 NQ', sub: '硬件质量', nq: true,
           run: function () { openTest('nq', s, true); }, view: function () { openTest('nq', s, false); } },
-        { img: 'ico-cf.png', w: 58, cls: 'b5', ic: '#93c5fd', lab: '一键 CF', sub: 'Emby 反代',
+        { img: 'ico-cf.png', w: 58, cls: 'b5', ic: '#93c5fd', lab: '一键 CF', sub: '自动出节点',
           run: function () { openTest('cf', s, true); }, view: function () { openTest('cf', s, false); } }
       ];
       defs.forEach(function (d) {
@@ -825,10 +825,10 @@
       doneUrl: '✅ NodeQuality 已跑完，报告链接：',
       idle: '还没有跑过 NodeQuality，或上次的日志已被清理。回列表点「一键NQ」开始。' },
     cf: { start: 'cfStart', state: 'cfState', title: '☁️ 一键 CF', startLabel: '开始跑一键 CF',
-      sub: '一键给这台机套 Cloudflare 做 Emby 反代＋出节点：CF 橙云 DNS + SSL 严格 + 关 Rocket Loader + 缓存绕过 + nginx 反代墨云阁1服 + 证书，再装 Xray 出 VLESS+WS 节点（走 CF、与 Emby 共用 443），全自动约 2–3 分钟。跑完反代地址是 https://emby-hk.suanran9527.com（播放器里 HTTPS 开、端口 443、路径留空），节点订阅会自动打开导入梦盒。机上要先有 /root/.cf.ini（Cloudflare API token），没有会直接停手提示。',
+      sub: '一键给这台机套 Cloudflare 自动出节点，不做反代：CF 橙云 DNS（只 node-hk）+ SSL 严格 + 证书，再装 Xray 出 VLESS+WS 节点（走 CF、443），全自动约 2–3 分钟。跑完节点订阅会自动打开导入梦盒。机上要先有 /root/.cf.ini（Cloudflare API token），没有会直接停手提示。',
       running: '⏳ 一键 CF 运行中…（CF 配置 + nginx + 证书 + Xray 节点，约 2–3 分钟）',
       done: '✅ 一键 CF 已跑完，节点订阅见下面。',
-      doneUrl: '✅ 一键 CF 已跑完，Emby 反代地址：',
+      doneUrl: '✅ 一键 CF 已跑完，节点订阅见下面。',
       idle: '还没有跑过一键 CF，或上次的日志已被清理。回列表点「一键CF」开始。' }
   };
   var testKind = null, testSrv = null, testTimer = null, cfAutoImported = false, cfSubUrl = '';

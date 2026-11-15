@@ -1310,21 +1310,22 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
         }
     }
 
-    // ── 一键 CF（Emby 反代套 Cloudflare 橙云 + VLESS+WS 节点共用 443）──
-    // 点一下跑 emby-hk-cf-oneclick.sh：CF 橙云 DNS + SSL 严格 + 关 Rocket Loader
-    // + 缓存绕过 + nginx 反代墨云阁1服 p3mc4 + Let's Encrypt 证书，
-    // 再装 Xray：VLESS+WS 监听本机 127.0.0.1:10086、路径 /vless，nginx 按域名
-    // 分流（emby-hk 去墨云阁，node-hk.suanran9527.com 的 /vless 去 Xray、
-    // /sub/ 出 Clash 订阅 YAML），全自动。UUID 与订阅令牌首次生成后落盘，
-    // 重跑不换。跑完日志里打印「节点订阅」与「节点链接」。
+    // ── 一键 CF（纯节点版，不做反代）──
+    // 点一下跑 cf-node-oneclick.sh：CF 橙云 DNS（只 node-hk）+ SSL 严格
+    // + Let's Encrypt 证书（只 node-hk），再装 Xray：VLESS+WS 监听本机
+    // 127.0.0.1:10086、路径 /vless，nginx 上 node-hk.suanran9527.com 的
+    // /vless 去 Xray、/sub/ 出 Clash 订阅 YAML，全自动。UUID 与订阅令牌
+    // 首次生成后落盘，重跑不换。跑完日志里打印「节点订阅」与「节点链接」。
+    // 不做 emby-hk 反代、不碰墨云阁源站、不设缓存规则，token 只要
+    // Zone:DNS Edit + Zone:Zone Settings Edit。
     // 前提是机上已有 /root/.cf.ini（Cloudflare API token，600 权限）；
     // 没有就直接报 NEEDTOKEN，不瞎跑。旧的只有 DNS 权限的 token 也能跑
-    // DNS/证书，SSL/缓存那几步会 403 跳过、脚本最后列手动项。脚本从仓库
+    // DNS/证书，SSL 那步会 403 跳过、脚本最后列手动项。脚本从仓库
     // raw 拉取，与 pack 同批推送才生效。脱离会话跑（nohup 写日志）、
     // pidfile 判存活，与 TQ/NQ 同款。
 
     private static final String CF_SCRIPT_URL =
-            "https://raw.githubusercontent.com/anransu983-sketch/dreambox-asbefore/main/packs/sshtty/scripts/emby-hk-cf-oneclick.sh";
+            "https://raw.githubusercontent.com/anransu983-sketch/dreambox-asbefore/main/packs/sshtty/scripts/cf-node-oneclick.sh";
 
     private void doCfStart(JSONObject opts, PackCallback callback) {
         try {
@@ -1332,9 +1333,9 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             String cmd = "mkdir -p /tmp/sshtty-cf && cd /tmp/sshtty-cf && "
                     + "if [ -f cf.pid ] && kill -0 $(cat cf.pid) 2>/dev/null; then echo ALREADY; "
                     + "elif [ ! -f /root/.cf.ini ]; then echo NEEDTOKEN; "
-                    + "elif curl -fsSL -o emby-hk-cf-oneclick.sh " + CF_SCRIPT_URL + "; then "
+                    + "elif curl -fsSL -o cf-node-oneclick.sh " + CF_SCRIPT_URL + "; then "
                     + "mv -f cf.log cf-prev.log 2>/dev/null; "
-                    + "nohup env TERM=xterm-256color bash emby-hk-cf-oneclick.sh "
+                    + "nohup env TERM=xterm-256color bash cf-node-oneclick.sh "
                     + "> cf.log 2>&1 < /dev/null & echo $! > cf.pid; echo STARTED; "
                     + "else echo DOWNLOADFAIL; fi";
             String r = runExec(srv, cmd, 90).trim();
@@ -1354,8 +1355,6 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             JSONObject srv = credsFor(opts);
             String cmd = "if [ -f /tmp/sshtty-cf/cf.pid ] && kill -0 $(cat /tmp/sshtty-cf/cf.pid) 2>/dev/null; "
                     + "then echo RUNNING; else echo IDLE; fi; "
-                    + "grep -aoE 'https://emby-hk[.]suanran9527[.]com' "
-                    + "/tmp/sshtty-cf/cf.log 2>/dev/null | tail -1; "
                     + "grep -aoE 'https://node-hk[.]suanran9527[.]com/sub/[A-Za-z0-9._-]+' "
                     + "/tmp/sshtty-cf/cf.log 2>/dev/null | tail -1; "
                     + "grep -aoE 'vless://[^ ]+' "
@@ -1366,10 +1365,6 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
             boolean running = r.startsWith("RUNNING");
             boolean needsToken = r.contains("NEEDTOKEN");
             String url = "";
-            java.util.regex.Matcher m = java.util.regex.Pattern
-                    .compile("https://emby-hk\\.suanran9527\\.com")
-                    .matcher(r);
-            if (m.find()) url = m.group();
             String subUrl = "";
             java.util.regex.Matcher m2 = java.util.regex.Pattern
                     .compile("https://node-hk\\.suanran9527\\.com/sub/[A-Za-z0-9._-]+")
