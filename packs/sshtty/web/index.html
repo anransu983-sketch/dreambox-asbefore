@@ -86,6 +86,7 @@
   .b2 { border-radius: 54% 46% 44% 56% / 46% 56% 44% 54%; }
   .b3 { border-radius: 50% 50% 56% 44% / 52% 44% 56% 48%; }
   .b4 { border-radius: 44% 56% 48% 52% / 56% 48% 52% 44%; }
+  .b5 { border-radius: 52% 48% 55% 45% / 48% 55% 45% 52%; }
   .hamico { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); z-index: 2; pointer-events: none; filter: drop-shadow(0 3px 8px rgba(0,0,0,.45)); }
   .bud { position: absolute; right: -10px; bottom: -8px; width: 29px; height: 29px; padding: 0; cursor: pointer; overflow: hidden; z-index: 3;
     background: radial-gradient(circle at 35% 28%, rgba(38,110,180,.75), rgba(10,26,50,.95) 80%);
@@ -281,6 +282,15 @@
       <button class="mini primary" id="btn-test-copy">复制链接</button>
       <button class="mini" id="btn-test-open">打开报告</button>
     </div>
+    <div id="cf-sub-link" class="linkbox hidden">
+      <div class="url" id="cf-sub-url"></div>
+      <button class="mini primary" id="btn-cf-import">📥 导入到梦盒</button>
+      <button class="mini" id="btn-cf-copy-sub">复制订阅</button>
+    </div>
+    <div id="cf-vless-link" class="linkbox hidden">
+      <div class="url" id="cf-vless-url"></div>
+      <button class="mini" id="btn-cf-copy-vless">复制节点链接</button>
+    </div>
     <pre class="log hidden" id="test-tail"></pre>
     <button class="mini primary" id="btn-test-start">开始跑</button>
     <button class="mini" id="btn-test-back">返回列表</button>
@@ -458,7 +468,9 @@
         { img: 'ico-ip.png', w: 55, cls: 'b3', ic: '#7dd3fc', lab: 'IP 体检', sub: '质量评分',
           run: function () { openTest('ipq', s, true); }, view: function () { openTest('ipq', s, false); } },
         { img: 'ico-nq.png', w: 80, cls: 'b4', ic: '#fde68a', lab: '一键 NQ', sub: '硬件质量', nq: true,
-          run: function () { openTest('nq', s, true); }, view: function () { openTest('nq', s, false); } }
+          run: function () { openTest('nq', s, true); }, view: function () { openTest('nq', s, false); } },
+        { img: 'ico-cf.png', w: 58, cls: 'b5', ic: '#93c5fd', lab: '一键 CF', sub: 'Emby 反代',
+          run: function () { openTest('cf', s, true); }, view: function () { openTest('cf', s, false); } }
       ];
       defs.forEach(function (d) {
         var u = document.createElement('div');
@@ -811,9 +823,15 @@
       running: '⏳ NodeQuality 运行中…（四合一全套，约 5–15 分钟）',
       done: '✅ NodeQuality 已跑完，结果在下面日志尾部。',
       doneUrl: '✅ NodeQuality 已跑完，报告链接：',
-      idle: '还没有跑过 NodeQuality，或上次的日志已被清理。回列表点「一键NQ」开始。' }
+      idle: '还没有跑过 NodeQuality，或上次的日志已被清理。回列表点「一键NQ」开始。' },
+    cf: { start: 'cfStart', state: 'cfState', title: '☁️ 一键 CF', startLabel: '开始跑一键 CF',
+      sub: '一键给这台机套 Cloudflare 做 Emby 反代＋出节点：CF 橙云 DNS + SSL 严格 + 关 Rocket Loader + 缓存绕过 + nginx 反代墨云阁1服 + 证书，再装 Xray 出 VLESS+WS 节点（走 CF、与 Emby 共用 443），全自动约 2–3 分钟。跑完反代地址是 https://emby-hk.suanran9527.com（播放器里 HTTPS 开、端口 443、路径留空），节点订阅会自动打开导入梦盒。机上要先有 /root/.cf.ini（Cloudflare API token），没有会直接停手提示。',
+      running: '⏳ 一键 CF 运行中…（CF 配置 + nginx + 证书 + Xray 节点，约 2–3 分钟）',
+      done: '✅ 一键 CF 已跑完，节点订阅见下面。',
+      doneUrl: '✅ 一键 CF 已跑完，Emby 反代地址：',
+      idle: '还没有跑过一键 CF，或上次的日志已被清理。回列表点「一键CF」开始。' }
   };
-  var testKind = null, testSrv = null, testTimer = null;
+  var testKind = null, testSrv = null, testTimer = null, cfAutoImported = false, cfSubUrl = '';
   function openTest(kind, s, start) {
     testKind = kind; testSrv = s;
     var cfg = TESTS[kind];
@@ -822,6 +840,9 @@
     $('btn-test-start').textContent = cfg.startLabel;
     $('test-status').textContent = start ? '正在启动…' : '正在读取状态…';
     $('test-link').classList.add('hidden');
+    $('cf-sub-link').classList.add('hidden');
+    $('cf-vless-link').classList.add('hidden');
+    cfAutoImported = false; cfSubUrl = '';
     $('test-tail').textContent = '';
     $('test-tail').classList.add('hidden');
     show('view-test');
@@ -836,7 +857,9 @@
     if (!testSrv || !testKind) return Promise.resolve();
     var cfg = TESTS[testKind];
     return callNative(cfg.start, { id: testSrv.id }).then(function (r) {
-      if (r && r.started) {
+      if (r && r.needsToken) {
+        $('test-status').textContent = '这台机上还没有 /root/.cf.ini（Cloudflare API token）。先在终端里把 token 写进 /root/.cf.ini（600 权限），再点开始。token 不要发到聊天里。';
+      } else if (r && r.started) {
         $('test-status').textContent = '已启动，' + cfg.running;
       } else if (r && r.alreadyRunning) {
         $('test-status').textContent = '⏳ 已经在跑了，看下面进度';
@@ -874,6 +897,26 @@
       } else {
         $('test-tail').classList.add('hidden');
       }
+      // ── 一键 CF 专属：节点订阅与自动导入 ──────────────
+      if (testKind === 'cf' && r.subUrl) {
+        cfSubUrl = r.subUrl;
+        $('cf-sub-url').textContent = r.subUrl;
+        $('cf-sub-link').classList.remove('hidden');
+        $('btn-cf-import').textContent = '📥 导入到梦盒';
+        if (r.vless) {
+          $('cf-vless-url').textContent = r.vless;
+          $('cf-vless-link').classList.remove('hidden');
+        }
+        if (!r.running && !cfAutoImported) {
+          cfAutoImported = true;
+          callNative('importSubscription', { url: r.subUrl }).then(function () {
+            $('btn-cf-import').textContent = '已自动打开导入 ✓';
+            $('test-status').textContent = '✅ 一键 CF 已跑完，节点订阅已自动打开导入梦盒。';
+          }).catch(function () {
+            $('test-status').textContent = '✅ 一键 CF 已跑完，自动导入没打开，点下面「导入到梦盒」手动导入。';
+          });
+        }
+      }
     }).catch(function (e) {
       $('test-status').textContent = '读取失败：' + e.message;
     });
@@ -886,6 +929,17 @@
   $('btn-test-refresh').onclick = pollTest;
   $('btn-test-copy').onclick = function () { copyText($('test-url').textContent, this); };
   $('btn-test-open').onclick = function () { window.open($('test-url').textContent, '_blank'); };
+  $('btn-cf-import').onclick = function () {
+    if (!cfSubUrl) { alert('还没有拿到节点订阅链接'); return; }
+    var btn = this;
+    callNative('importSubscription', { url: cfSubUrl }).then(function () {
+      btn.textContent = '已打开导入 ✓';
+    }).catch(function (e) {
+      alert('打开导入失败：' + (e && e.message ? e.message : e));
+    });
+  };
+  $('btn-cf-copy-sub').onclick = function () { copyText($('cf-sub-url').textContent, this); };
+  $('btn-cf-copy-vless').onclick = function () { copyText($('cf-vless-url').textContent, this); };
 
   // ── 调优 ─────────────────────────────────────
   var tuneSrv = null, tuneTimer = null;

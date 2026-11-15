@@ -1,6 +1,8 @@
 package com.suanran.pack.sshtty;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
@@ -25,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.SecureRandom;
@@ -221,6 +224,15 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                 return true;
             case "nqState":
                 io.execute(() -> doNqState(opts, callback));
+                return true;
+            case "cfStart":
+                io.execute(() -> doCfStart(opts, callback));
+                return true;
+            case "cfState":
+                io.execute(() -> doCfState(opts, callback));
+                return true;
+            case "importSubscription":
+                io.execute(() -> importSubscription(opts, callback));
                 return true;
             case "tuneStart":
                 io.execute(() -> doTuneStart(opts, callback));
@@ -1295,6 +1307,119 @@ public class SshTermPackEntry implements PackBridgeDispatcher {
                     .toString(), null);
         } catch (Exception e) {
             callback.onResult(false, null, "读取 NodeQuality 状态失败：" + msg(e));
+        }
+    }
+
+    // ── 一键 CF（Emby 反代套 Cloudflare 橙云 + VLESS+WS 节点共用 443）──
+    // 点一下跑 emby-hk-cf-oneclick.sh：CF 橙云 DNS + SSL 严格 + 关 Rocket Loader
+    // + 缓存绕过 + nginx 反代墨云阁1服 p3mc4 + Let's Encrypt 证书，
+    // 再装 Xray：VLESS+WS 监听本机 127.0.0.1:10086、路径 /vless，nginx 按域名
+    // 分流（emby-hk 去墨云阁，node-hk.suanran9527.com 的 /vless 去 Xray、
+    // /sub/ 出 Clash 订阅 YAML），全自动。UUID 与订阅令牌首次生成后落盘，
+    // 重跑不换。跑完日志里打印「节点订阅」与「节点链接」。
+    // 前提是机上已有 /root/.cf.ini（Cloudflare API token，600 权限）；
+    // 没有就直接报 NEEDTOKEN，不瞎跑。旧的只有 DNS 权限的 token 也能跑
+    // DNS/证书，SSL/缓存那几步会 403 跳过、脚本最后列手动项。脚本从仓库
+    // raw 拉取，与 pack 同批推送才生效。脱离会话跑（nohup 写日志）、
+    // pidfile 判存活，与 TQ/NQ 同款。
+
+    private static final String CF_SCRIPT_URL =
+            "https://raw.githubusercontent.com/anransu983-sketch/dreambox-asbefore/main/packs/sshtty/scripts/emby-hk-cf-oneclick.sh";
+
+    private void doCfStart(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "mkdir -p /tmp/sshtty-cf && cd /tmp/sshtty-cf && "
+                    + "if [ -f cf.pid ] && kill -0 $(cat cf.pid) 2>/dev/null; then echo ALREADY; "
+                    + "elif [ ! -f /root/.cf.ini ]; then echo NEEDTOKEN; "
+                    + "elif curl -fsSL -o emby-hk-cf-oneclick.sh " + CF_SCRIPT_URL + "; then "
+                    + "mv -f cf.log cf-prev.log 2>/dev/null; "
+                    + "nohup env TERM=xterm-256color bash emby-hk-cf-oneclick.sh "
+                    + "> cf.log 2>&1 < /dev/null & echo $! > cf.pid; echo STARTED; "
+                    + "else echo DOWNLOADFAIL; fi";
+            String r = runExec(srv, cmd, 90).trim();
+            callback.onResult(true, new JSONObject()
+                    .put("started", r.contains("STARTED"))
+                    .put("alreadyRunning", r.contains("ALREADY"))
+                    .put("needsToken", r.contains("NEEDTOKEN"))
+                    .put("echo", r)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "启动一键 CF 失败：" + msg(e));
+        }
+    }
+
+    private void doCfState(JSONObject opts, PackCallback callback) {
+        try {
+            JSONObject srv = credsFor(opts);
+            String cmd = "if [ -f /tmp/sshtty-cf/cf.pid ] && kill -0 $(cat /tmp/sshtty-cf/cf.pid) 2>/dev/null; "
+                    + "then echo RUNNING; else echo IDLE; fi; "
+                    + "grep -aoE 'https://emby-hk[.]suanran9527[.]com' "
+                    + "/tmp/sshtty-cf/cf.log 2>/dev/null | tail -1; "
+                    + "grep -aoE 'https://node-hk[.]suanran9527[.]com/sub/[A-Za-z0-9._-]+' "
+                    + "/tmp/sshtty-cf/cf.log 2>/dev/null | tail -1; "
+                    + "grep -aoE 'vless://[^ ]+' "
+                    + "/tmp/sshtty-cf/cf.log 2>/dev/null | tail -1; "
+                    + "grep -q '找不到 /root/.cf.ini' /tmp/sshtty-cf/cf.log 2>/dev/null && echo NEEDTOKEN; "
+                    + "echo __TAIL__; tail -c 1500 /tmp/sshtty-cf/cf.log 2>/dev/null";
+            String r = runExec(srv, cmd, 30);
+            boolean running = r.startsWith("RUNNING");
+            boolean needsToken = r.contains("NEEDTOKEN");
+            String url = "";
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("https://emby-hk\\.suanran9527\\.com")
+                    .matcher(r);
+            if (m.find()) url = m.group();
+            String subUrl = "";
+            java.util.regex.Matcher m2 = java.util.regex.Pattern
+                    .compile("https://node-hk\\.suanran9527\\.com/sub/[A-Za-z0-9._-]+")
+                    .matcher(r);
+            if (m2.find()) subUrl = m2.group();
+            String vless = "";
+            java.util.regex.Matcher m3 = java.util.regex.Pattern
+                    .compile("vless://[^ \\n]+")
+                    .matcher(r);
+            if (m3.find()) vless = m3.group();
+            String tail = "";
+            int idx = r.indexOf("__TAIL__");
+            if (idx >= 0) tail = stripAnsi(r.substring(idx + "__TAIL__".length()).trim());
+            callback.onResult(true, new JSONObject()
+                    .put("running", running)
+                    .put("needsToken", needsToken)
+                    .put("url", url)
+                    .put("subUrl", subUrl)
+                    .put("vless", vless)
+                    .put("tail", tail)
+                    .toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "读取 CF 状态失败：" + msg(e));
+        }
+    }
+
+    // ── importSubscription：经 clash:// 深链把订阅导入梦盒 ──────
+    // 与 nodeforge 同款：订阅链接加 ?format=clash，深链由宿主 MainActivity
+    // 的 install-config 处理接住。不用 location.href 跳（WebView 未处理
+    // shouldOverrideUrlLoading 会报未知协议），包内直接发 Intent 并
+    // setPackage 锁定本应用。
+
+    private void importSubscription(JSONObject opts, PackCallback callback) {
+        try {
+            String url = opts.getString("url").trim();
+            if (url.isEmpty()) {
+                throw new IllegalArgumentException("订阅链接为空");
+            }
+            String clashUrl = url + (url.contains("?") ? "&" : "?") + "format=clash";
+            String deep = "clash://install-config?url="
+                    + URLEncoder.encode(clashUrl, "UTF-8");
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(deep));
+            intent.setPackage(appContext.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(intent);
+            JSONObject r = new JSONObject();
+            r.put("ok", true);
+            callback.onResult(true, r.toString(), null);
+        } catch (Exception e) {
+            callback.onResult(false, null, "打开导入失败：" + e.getMessage());
         }
     }
 
