@@ -160,6 +160,30 @@ sleep 2
 systemctl is-active --quiet xray || { echo "Xray 没起来，退出。"; systemctl status xray --no-pager | head -20; exit 1; }
 echo "Xray 已启动（VLESS+WS，127.0.0.1:${XRAY_PORT}${WS_PATH}）。"
 
+# 直连 v6 节点：取到本机 IPv6 才加进订阅（与 CF 节点同机同 UUID，只换连接目标为服务器 IPv6 直连 443，不经过 CF）
+if [ -n "$VPS_IPv6" ]; then
+  DIRECT_NODE=$(cat <<DNEOF
+- name: 🇭🇰 香港直连v6
+  type: vless
+  server: ${VPS_IPv6}
+  port: 443
+  uuid: ${NODE_UUID}
+  udp: true
+  tls: true
+  servername: ${NODE_DOMAIN}
+  client-fingerprint: chrome
+  network: ws
+  ws-opts:
+    path: ${WS_PATH}
+    headers:
+      Host: ${NODE_DOMAIN}
+DNEOF
+)
+  DIRECT_GROUP="  - 🇭🇰 香港直连v6"
+else
+  DIRECT_NODE=""
+  DIRECT_GROUP=""
+fi
 # 订阅 YAML：4837 v2 模板完整配置（6 组＋sniffer＋防 DNS 泄露＋STUN 拦截），节点参数由脚本变量填，梦盒 importSubscription 用 clash:// 深链导入
 cat > "/var/www/node-sub/${SUB_TOKEN}.yaml" <<YAMLEOF
 allow-lan: false
@@ -232,12 +256,14 @@ proxies:
     path: ${WS_PATH}
     headers:
       Host: ${NODE_DOMAIN}
+${DIRECT_NODE}
 proxy-groups:
 - name: Proxy
   type: select
   proxies:
   - Auto
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
 - name: Auto
   type: url-test
   url: http://www.gstatic.com/generate_204
@@ -245,11 +271,13 @@ proxy-groups:
   tolerance: 50
   proxies:
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
 - name: 🎮 Steam
   type: select
   proxies:
   - Proxy
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
   - DIRECT
   - Auto
 - name: 🎬 Emby
@@ -257,24 +285,28 @@ proxy-groups:
   proxies:
   - Proxy
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
   - DIRECT
 - name: 📺 YouTube
   type: select
   proxies:
   - Proxy
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
   - Auto
 - name: ✈️ Telegram
   type: select
   proxies:
   - Proxy
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
   - Auto
 - name: 🤖 AI 增强
   type: select
   proxies:
   - Proxy
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
   - Auto
   - DIRECT
 - name: 🐟 漏网之鱼
@@ -282,6 +314,7 @@ proxy-groups:
   proxies:
   - Proxy
   - 🇭🇰 香港CF
+${DIRECT_GROUP}
   - DIRECT
 rules:
 - GEOIP,Private,DIRECT
