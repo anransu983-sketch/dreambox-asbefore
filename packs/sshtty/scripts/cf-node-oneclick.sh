@@ -4,8 +4,9 @@
 #               + nginx + Let's Encrypt 证书
 #               + 节点：Xray VLESS+WS 走 CF、443（子域名 node-hk），
 #                 跑完打印节点订阅（Clash YAML，供梦盒一键导入）和 vless 链接
-#               + 朋友节点：单独 UUID，只走 CF（不含直连 v6，不暴露源站 IP），
-#                 每月 20GB 限额，1 号清零，超了自动停用，你的节点不受影响
+#               + 朋友节点：单独 UUID，CF 节点＋直连 v6 节点（直连会把源站 IPv6
+#                 告诉朋友，只给信得过的朋友），每月 20GB 限额，1 号清零，
+#                 超了自动停用，你的节点不受影响
 # 用法：bash cf-node-oneclick.sh
 # 节点说明：CF 只代理 80/443，直连回国又烂，所以节点只能走 VLESS+WS 经 CF；
 #   电话 -> CF 边缘 -> 香港机 nginx 443（node-hk 的 /vless 去本机 Xray）。
@@ -142,6 +143,9 @@ fi
 [ -z "$NODE_UUID" ] && NODE_UUID=$(cat /proc/sys/kernel/random/uuid)
 echo "$NODE_UUID" > /var/www/node-sub/.owner-uuid
 chmod 600 /var/www/node-sub/.owner-uuid
+# 本机 IPv6 落盘，供看守脚本 1 号恢复朋友节点时渲染直连节点用
+printf '%s' "$VPS_IPv6" > /var/www/node-sub/.vps-ipv6
+chmod 600 /var/www/node-sub/.vps-ipv6
 if [ -f /var/www/node-sub/.token ]; then
   SUB_TOKEN=$(cat /var/www/node-sub/.token)
 else
@@ -363,7 +367,8 @@ APPLY = "/usr/local/bin/xray-apply-clients.py"
 STATE = "/var/lib/xray-friend-quota/state.json"
 FRIEND_UUID_FILE = "/var/www/node-sub/.friend-uuid"
 FRIEND_TOKEN_FILE = "/var/www/node-sub/.friend-token"
-TEMPLATE = "/usr/local/etc/xray/friend-sub-template.yaml"
+VPS_IPV6_FILE = "/var/www/node-sub/.vps-ipv6"
+RENDER = "/usr/local/bin/render-friend-sub.py"
 FRIEND_SUB_DIR = "/var/www/node-sub-friend"
 SNIPPET = "/etc/nginx/snippets/friend-userinfo.conf"
 
@@ -445,16 +450,16 @@ def render_friend_sub():
     if not uuid or not token:
         log("cannot render friend sub: missing uuid/token file")
         return False
-    try:
-        with open(TEMPLATE) as f:
-            tpl = f.read()
-    except OSError as e:
-        log("cannot read friend template: %s" % e)
+    ipv6 = read_file(VPS_IPV6_FILE) or ""
+    p = subprocess.run(["python3", RENDER, uuid, ipv6],
+                       capture_output=True, text=True, timeout=15)
+    if p.returncode != 0:
+        log("render-friend-sub failed: %s" % p.stderr.strip()[:200])
         return False
     os.makedirs(FRIEND_SUB_DIR, exist_ok=True)
     path = os.path.join(FRIEND_SUB_DIR, token + ".yaml")
     with open(path, "w") as f:
-        f.write(tpl.replace("__FRIEND_UUID__", uuid))
+        f.write(p.stdout)
     os.chmod(path, 0o644)
     return True
 
@@ -538,7 +543,60 @@ if __name__ == "__main__":
 PYQUOTAEOF
 chmod 755 /usr/local/bin/xray-friend-quota.py
 
-# 朋友订阅模板（只含 CF 节点，不含直连 v6；__FRIEND_UUID__ 由脚本/看守渲染时替换）
+# 朋友订阅渲染器：模板里的直连 v6 节点（DIRECT-V6-BEGIN/END 之间＋组里的同名行）
+# 只在给了本机 IPv6 时保留，否则整段去掉，朋友订阅退回纯 CF 节点
+cat > /usr/local/bin/render-friend-sub.py <<'PYRENDEREOF'
+#!/usr/bin/env python3
+"""Render the friend subscription from the template.
+
+Usage: render-friend-sub.py <friend-uuid> [server-ipv6]
+- __FRIEND_UUID__ is always replaced.
+- The direct-v6 node (between DIRECT-V6-BEGIN/END markers, plus its
+  group entries) is kept only when a server IPv6 is given; otherwise
+  it is dropped so the friend sub stays CF-only.
+Prints the rendered YAML to stdout.
+"""
+import sys
+
+TEMPLATE = "/usr/local/etc/xray/friend-sub-template.yaml"
+
+
+def main():
+    uuid = sys.argv[1]
+    ipv6 = sys.argv[2] if len(sys.argv) > 2 else ""
+    with open(TEMPLATE) as f:
+        lines = f.read().splitlines(keepends=True)
+    out = []
+    skip = False
+    for line in lines:
+        if "# DIRECT-V6-BEGIN" in line:
+            if ipv6:
+                continue
+            skip = True
+            continue
+        if "# DIRECT-V6-END" in line:
+            if ipv6:
+                continue
+            skip = False
+            continue
+        if skip:
+            continue
+        if not ipv6 and line.strip() == "- 🇭🇰 香港直连v6":
+            continue
+        out.append(line)
+    text = "".join(out).replace("__FRIEND_UUID__", uuid)
+    if ipv6:
+        text = text.replace("__VPS_IPV6__", ipv6)
+    sys.stdout.write(text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+PYRENDEREOF
+chmod 755 /usr/local/bin/render-friend-sub.py
+
+# 朋友订阅模板（CF 节点＋直连 v6 节点；__FRIEND_UUID__/__VPS_IPV6__ 由渲染器替换，无 IPv6 时直连节点自动去掉）
 cat > /usr/local/etc/xray/friend-sub-template.yaml <<'FRIENDTMPL'
 mixed-port: 7890
 mode: rule
@@ -565,12 +623,29 @@ proxies:
     path: /vless
     headers:
       Host: node-hk.suanran9527.com
+# DIRECT-V6-BEGIN
+- name: 🇭🇰 香港直连v6
+  type: vless
+  server: __VPS_IPV6__
+  port: 443
+  uuid: __FRIEND_UUID__
+  udp: true
+  tls: true
+  servername: node-hk.suanran9527.com
+  client-fingerprint: chrome
+  network: ws
+  ws-opts:
+    path: /vless
+    headers:
+      Host: node-hk.suanran9527.com
+# DIRECT-V6-END
 proxy-groups:
 - name: Proxy
   type: select
   proxies:
   - Auto
   - 🇭🇰 香港CF
+  - 🇭🇰 香港直连v6
 - name: Auto
   type: url-test
   url: http://www.gstatic.com/generate_204
@@ -578,6 +653,7 @@ proxy-groups:
   tolerance: 50
   proxies:
   - 🇭🇰 香港CF
+  - 🇭🇰 香港直连v6
 rules:
 - GEOIP,Private,DIRECT
 - GEOIP,CN,DIRECT
@@ -596,7 +672,7 @@ echo "Xray 已启动（VLESS+WS，127.0.0.1:${XRAY_PORT}${WS_PATH}，朋友用�
 
 # 朋友订阅文件（启用时生成，停用时删掉，订阅地址 404）
 if [ "$FRIEND_ENABLED" = "1" ]; then
-  sed "s/__FRIEND_UUID__/$FRIEND_UUID/" /usr/local/etc/xray/friend-sub-template.yaml > "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
+  python3 /usr/local/bin/render-friend-sub.py "$FRIEND_UUID" "$VPS_IPv6" > "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
   chmod 644 "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
 else
   rm -f "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
@@ -906,7 +982,7 @@ echo "节点链接：$NODE_VLESS"
 echo "梦盒里点「导入到梦盒」走订阅导入（以后节点有变，更新订阅即可）；单条链接也可复制手动导入。"
 echo "朋友订阅：$FRIEND_SUB_URL"
 echo "朋友链接：$FRIEND_VLESS"
-echo "朋友节点只走 CF（不含直连 v6，不暴露源站 IP），每月 20GB，1 号清零，超了自动停用；你的节点不受影响。"
+echo "朋友节点：CF 节点＋直连 v6 节点（直连会暴露源站 IPv6，只给信得过的朋友），每月 20GB，1 号清零，超了自动停用；你的节点不受影响。"
 echo "查朋友已用：cat $QUOTA_STATE；看守日志：tail /var/log/xray-friend-quota.log"
 if [ -n "$MANUAL" ]; then
   echo ""
