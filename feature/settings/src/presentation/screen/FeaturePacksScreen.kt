@@ -56,7 +56,10 @@ import com.suanran.dreambox.presentation.component.misc.BocchiTextGray
 import com.suanran.dreambox.presentation.component.navigation.NavigationBackIcon
 import com.suanran.dreambox.presentation.component.navigation.TopBar
 import com.suanran.dreambox.presentation.navigation.Navigator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
@@ -168,6 +171,9 @@ fun FeaturePacksScreen(navigator: Navigator) {
     var marketFromRemote by remember { mutableStateOf(false) }
     var moduleUrlText by remember { mutableStateOf("") }
     var busyModuleId by remember { mutableStateOf<String?>(null) }
+    // 开关乐观状态：点下立刻翻开关，后台再写盘+重算规则；写完用磁盘真实值对账。
+    // 之前开关完全等后台协程跑完才翻，桥里任何一步卡住都会让开关看起来“点不动”。
+    var moduleEnabledOverride by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     // 每次刷新都重拉一次远程索引（拉不到就回内置种子，不报错）。
     LaunchedEffect(refreshTick) {
         val (list, fromRemote) = moduleStore.fetchMarket()
@@ -181,10 +187,17 @@ fun FeaturePacksScreen(navigator: Navigator) {
         marketModules + installedModules.filter { it.def.id !in marketIds }.map { it.def }
     }
 
-    /** 按已装模块的开关状态重算聚合覆写并重应用。 */
+    /** 按已装模块的开关状态重算聚合覆写并重应用。带 15 秒上限：桥里任何一步卡住都不能把开关钉死在“处理中”。 */
     suspend fun syncModules() {
-        val enabled = moduleStore.listInstalled().filter { it.enabled }.map { it.def }
-        moduleBridge.syncEnabled(enabled)
+        val ok = withTimeoutOrNull(15_000) {
+            val enabled = withContext(Dispatchers.IO) { moduleStore.listInstalled() }
+                .filter { it.enabled }.map { it.def }
+            moduleBridge.syncEnabled(enabled)
+            true
+        }
+        if (ok != true) {
+            Toast.makeText(context, "规则应用超时，开关已保存，拨动一次会重新应用", Toast.LENGTH_LONG).show()
+        }
     }
     // 模块页关掉显示开关的包不在这里出现（去模块页或已隐藏的模块页恢复）。
     val packHidden = remember(refreshTick) { loadHiddenSections(mmkv, PACKS_VISIBILITY_SCOPE) }
@@ -285,7 +298,8 @@ fun FeaturePacksScreen(navigator: Navigator) {
                 @Suppress("UNUSED_EXPRESSION") refreshTick
                 val installed = installedModules.find { it.def.id == def.id }
                 val hasUpdate = installed != null && installed.def.version != def.version
-                val enabled = installed?.enabled == true
+                // 乐观值优先：用户刚拨过的开关不等后台，直接按拨动后的值画。
+                val enabled = moduleEnabledOverride[def.id] ?: (installed?.enabled == true)
                 val busy = busyModuleId == def.id
                 ModuleCard(
                     def = def,
@@ -324,15 +338,18 @@ fun FeaturePacksScreen(navigator: Navigator) {
                         }
                     },
                     onToggle = { on ->
+                        // 先翻开关再干活：写盘在 IO 线程，规则重算有 15 秒上限，超时也不钉死界面。
+                        moduleEnabledOverride = moduleEnabledOverride + (def.id to on)
                         busyModuleId = def.id
                         scope.launch {
                             try {
-                                moduleStore.setEnabled(def.id, on)
+                                withContext(Dispatchers.IO) { moduleStore.setEnabled(def.id, on) }
                                 syncModules()
                             } catch (t: Throwable) {
                                 Toast.makeText(context, "切换失败：${t.message}", Toast.LENGTH_LONG).show()
                             } finally {
                                 busyModuleId = null
+                                moduleEnabledOverride = moduleEnabledOverride - def.id
                                 refreshTick++
                             }
                         }
