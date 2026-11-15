@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,9 +32,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.suanran.dreambox.core.contract.OverrideApplier
+import com.suanran.dreambox.core.contract.OverrideConfigRepository
+import com.suanran.dreambox.core.contract.ProfileBindingReader
+import com.suanran.dreambox.feature.settings.presentation.module.ModuleDef
+import com.suanran.dreambox.feature.settings.presentation.module.ModuleOverrideBridge
+import com.suanran.dreambox.feature.settings.presentation.module.ModuleStore
+import com.suanran.dreambox.feature.settings.presentation.module.SeedModules
 import com.suanran.dreambox.feature.settings.presentation.pack.PACKS_VISIBILITY_SCOPE
 import com.suanran.dreambox.feature.settings.presentation.pack.PackDef
 import com.suanran.dreambox.feature.settings.presentation.pack.PackStore
+import com.suanran.dreambox.runtime.api.contract.ProfileRepositoryContract
 import com.suanran.dreambox.presentation.component.sortable.loadHiddenSections
 import com.tencent.mmkv.MMKV
 import org.koin.compose.koinInject
@@ -50,7 +59,9 @@ import com.suanran.dreambox.presentation.navigation.Navigator
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private fun formatSize(bytes: Long): String = when {
@@ -138,6 +149,43 @@ fun FeaturePacksScreen(navigator: Navigator) {
     var refreshTick by remember { mutableStateOf(0) }
     var busyId by remember { mutableStateOf<String?>(null) }
     var progressText by remember { mutableStateOf("") }
+    // ── 轻模块（Loon 式模块市场，v1）──
+    // 聚合覆写桥：已启用模块的规则聚成一份覆写，照 QuickRules 的路子绑定 + 重应用。
+    val moduleStore = remember { ModuleStore(context) }
+    val moduleConfigRepo: OverrideConfigRepository = koinInject()
+    val moduleApplier: OverrideApplier = koinInject()
+    val moduleBindingReader: ProfileBindingReader = koinInject()
+    val moduleProfilesRepo: ProfileRepositoryContract = koinInject()
+    val moduleBridge = remember {
+        ModuleOverrideBridge(
+            configRepo = moduleConfigRepo,
+            bindingReader = moduleBindingReader,
+            applier = moduleApplier,
+            queryActiveProfile = { moduleProfilesRepo.queryActiveProfile() },
+        )
+    }
+    var marketModules by remember { mutableStateOf(SeedModules.ALL) }
+    var marketFromRemote by remember { mutableStateOf(false) }
+    var moduleUrlText by remember { mutableStateOf("") }
+    var busyModuleId by remember { mutableStateOf<String?>(null) }
+    // 每次刷新都重拉一次远程索引（拉不到就回内置种子，不报错）。
+    LaunchedEffect(refreshTick) {
+        val (list, fromRemote) = moduleStore.fetchMarket()
+        marketModules = list
+        marketFromRemote = fromRemote
+    }
+    val installedModules = remember(refreshTick) { moduleStore.listInstalled() }
+    // 市场里没有、但已从 URL 装上的模块也要显示出来。
+    val displayModuleDefs = remember(marketModules, installedModules) {
+        val marketIds = marketModules.map { it.id }.toSet()
+        marketModules + installedModules.filter { it.def.id !in marketIds }.map { it.def }
+    }
+
+    /** 按已装模块的开关状态重算聚合覆写并重应用。 */
+    suspend fun syncModules() {
+        val enabled = moduleStore.listInstalled().filter { it.enabled }.map { it.def }
+        moduleBridge.syncEnabled(enabled)
+    }
     // 模块页关掉显示开关的包不在这里出现（去模块页或已隐藏的模块页恢复）。
     val packHidden = remember(refreshTick) { loadHiddenSections(mmkv, PACKS_VISIBILITY_SCOPE) }
     val visiblePacks = PackStore.REGISTRY.filter { it.id !in packHidden }.distinctBy { it.id }
@@ -175,6 +223,144 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
+            }
+            // ── 模块市场（Loon 式轻模块）：纯规则包，开关即生效 ──
+            item {
+                Text(
+                    text = "模块市场",
+                    style = MiuixTheme.textStyles.title4,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            item {
+                Text(
+                    text = if (marketFromRemote) "轻模块是纯规则包：一键安装，开关当场生效，删掉就干净移除。"
+                    else "轻模块是纯规则包：一键安装，开关当场生效，删掉就干净移除。（远程索引暂不可达，当前显示内置种子）",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
+            }
+            item {
+                BocchiCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+                        TextField(
+                            value = moduleUrlText,
+                            onValueChange = { moduleUrlText = it },
+                            label = "粘贴 module.json 链接安装…",
+                            useLabelAsPlaceholder = true,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        PackActionButton(
+                            text = if (busyModuleId == "__url__") "安装中…" else "从链接安装",
+                            filled = true,
+                            enabled = busyModuleId == null && moduleUrlText.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            val url = moduleUrlText.trim()
+                            busyModuleId = "__url__"
+                            scope.launch {
+                                try {
+                                    val def = moduleStore.installFromUrl(url)
+                                    syncModules()
+                                    moduleUrlText = ""
+                                    Toast.makeText(context, "${def.name} 已安装并启用", Toast.LENGTH_SHORT).show()
+                                } catch (t: Throwable) {
+                                    Toast.makeText(context, "安装失败：${t.message}", Toast.LENGTH_LONG).show()
+                                } finally {
+                                    busyModuleId = null
+                                    refreshTick++
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            items(displayModuleDefs.size, key = { displayModuleDefs[it].id }) { index ->
+                val def = displayModuleDefs[index]
+                @Suppress("UNUSED_EXPRESSION") refreshTick
+                val installed = installedModules.find { it.def.id == def.id }
+                val hasUpdate = installed != null && installed.def.version != def.version
+                val enabled = installed?.enabled == true
+                val busy = busyModuleId == def.id
+                ModuleCard(
+                    def = def,
+                    installed = installed != null,
+                    enabled = enabled,
+                    hasUpdate = hasUpdate,
+                    busy = busy,
+                    onInstall = {
+                        busyModuleId = def.id
+                        scope.launch {
+                            try {
+                                moduleStore.install(def)
+                                syncModules()
+                                Toast.makeText(context, "${def.name} 已安装并启用", Toast.LENGTH_SHORT).show()
+                            } catch (t: Throwable) {
+                                Toast.makeText(context, "安装失败：${t.message}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                busyModuleId = null
+                                refreshTick++
+                            }
+                        }
+                    },
+                    onUpdate = {
+                        busyModuleId = def.id
+                        scope.launch {
+                            try {
+                                moduleStore.update(def)
+                                syncModules()
+                                Toast.makeText(context, "${def.name} 已更新到 v${def.version}", Toast.LENGTH_SHORT).show()
+                            } catch (t: Throwable) {
+                                Toast.makeText(context, "更新失败：${t.message}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                busyModuleId = null
+                                refreshTick++
+                            }
+                        }
+                    },
+                    onToggle = { on ->
+                        busyModuleId = def.id
+                        scope.launch {
+                            try {
+                                moduleStore.setEnabled(def.id, on)
+                                syncModules()
+                            } catch (t: Throwable) {
+                                Toast.makeText(context, "切换失败：${t.message}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                busyModuleId = null
+                                refreshTick++
+                            }
+                        }
+                    },
+                    onDelete = {
+                        busyModuleId = def.id
+                        scope.launch {
+                            try {
+                                moduleStore.uninstall(def.id)
+                                syncModules()
+                                Toast.makeText(context, "已删除 ${def.name}", Toast.LENGTH_SHORT).show()
+                            } catch (t: Throwable) {
+                                Toast.makeText(context, "删除失败：${t.message}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                busyModuleId = null
+                                refreshTick++
+                            }
+                        }
+                    },
+                )
+            }
+            // ── 功能包（原有重型功能包，原样保留）──
+            item {
+                Text(
+                    text = "功能包",
+                    style = MiuixTheme.textStyles.title4,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
             if (PackStore.REGISTRY.isEmpty()) {
@@ -312,6 +498,125 @@ fun FeaturePacksScreen(navigator: Navigator) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** 轻模块卡片：和功能包卡片同语言，开关在卡片里直接拨，拨完立刻重算规则。 */
+@Composable
+private fun ModuleCard(
+    def: ModuleDef,
+    installed: Boolean,
+    enabled: Boolean,
+    hasUpdate: Boolean,
+    busy: Boolean,
+    onInstall: () -> Unit,
+    onUpdate: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+) {
+    BocchiCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.13f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "🧩", fontSize = 23.sp)
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = def.name,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = BocchiTextDark,
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    when {
+                        busy -> PackStatusLine("处理中…", ok = false)
+                        installed && enabled -> PackStatusLine("已安装 · 已启用", ok = true)
+                        installed -> PackStatusLine("已安装 · 未启用", ok = false)
+                        else -> PackStatusLine("未安装", ok = false)
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(BocchiTextGray.copy(alpha = 0.12f))
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = "v${def.version}",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = BocchiTextGray,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = def.desc,
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                color = BocchiTextGray,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${def.category} · 规则 ${def.rules.size} 条 · ${def.author}",
+                    fontSize = 12.5.sp,
+                    color = BocchiTextGray,
+                )
+            }
+            if (installed) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "启用",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = BocchiTextDark,
+                    )
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = onToggle,
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (hasUpdate) {
+                        PackActionButton(
+                            text = "更新到 v${def.version}",
+                            filled = true,
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        ) { onUpdate() }
+                    }
+                    PackActionButton(
+                        text = "删除",
+                        filled = false,
+                        danger = true,
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f),
+                    ) { onDelete() }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(12.dp))
+                PackActionButton(
+                    text = if (busy) "安装中…" else "安装",
+                    filled = true,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { onInstall() }
             }
         }
     }
