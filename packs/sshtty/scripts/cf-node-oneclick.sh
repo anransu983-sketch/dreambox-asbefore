@@ -4,9 +4,8 @@
 #               + nginx + Let's Encrypt 证书
 #               + 节点：Xray VLESS+WS 走 CF、443（子域名 node-hk），
 #                 跑完打印节点订阅（Clash YAML，供梦盒一键导入）和 vless 链接
-#               + 朋友节点：单独 UUID，CF 节点＋直连 v6 节点（直连会把源站 IPv6
-#                 告诉朋友，只给信得过的朋友），每月 20GB 限额，1 号清零，
-#                 超了自动停用，你的节点不受影响
+#               + 朋友用户已删：2026-11-16 用户决定不分享，脚本不再建朋友用户，
+#                 重跑即从 Xray 配置摘除朋友 UUID、删朋友订阅、停限额看守
 # 用法：bash cf-node-oneclick.sh
 # 节点说明：CF 只代理 80/443，直连回国又烂，所以节点只能走 VLESS+WS 经 CF；
 #   电话 -> CF 边缘 -> 香港机 nginx 443（node-hk 的 /vless 去本机 Xray）。
@@ -155,31 +154,12 @@ else
 fi
 NODE_SUB_URL="https://${NODE_DOMAIN}/sub/${SUB_TOKEN}.yaml"
 NODE_VLESS="vless://${NODE_UUID}@${NODE_DOMAIN}:443?encryption=none&security=tls&sni=${NODE_DOMAIN}&type=ws&path=%2Fvless#HK-CF-VLESS"
-# 朋友 UUID 与订阅令牌：同样落盘复用（只第一次生成）
-FRIEND_UUID=""
-if [ -f /var/www/node-sub/.friend-uuid ]; then
-  FRIEND_UUID=$(cat /var/www/node-sub/.friend-uuid)
-fi
-if [ -z "$FRIEND_UUID" ] && [ -f /usr/local/etc/xray/config.json ]; then
-  FRIEND_UUID=$(python3 -c 'import json; cs=json.load(open("/usr/local/etc/xray/config.json"))["inbounds"][0]["settings"]["clients"]; print([c["id"] for c in cs if c.get("email")=="friend"][0])' 2>/dev/null || echo "")
-fi
-[ -z "$FRIEND_UUID" ] && FRIEND_UUID=$(cat /proc/sys/kernel/random/uuid)
-echo "$FRIEND_UUID" > /var/www/node-sub/.friend-uuid
-chmod 600 /var/www/node-sub/.friend-uuid
-if [ -f /var/www/node-sub/.friend-token ]; then
-  FRIEND_TOKEN=$(cat /var/www/node-sub/.friend-token)
-else
-  FRIEND_TOKEN=$(head -c16 /dev/urandom | od -An -tx1 | tr -d ' \n')
-  echo "$FRIEND_TOKEN" > /var/www/node-sub/.friend-token
-  chmod 600 /var/www/node-sub/.friend-token
-fi
-FRIEND_SUB_URL="https://${NODE_DOMAIN}/friend-sub/${FRIEND_TOKEN}.yaml"
-FRIEND_VLESS="vless://${FRIEND_UUID}@${NODE_DOMAIN}:443?encryption=none&security=tls&sni=${NODE_DOMAIN}&type=ws&path=%2Fvless#HK-CF-Friend"
-# 本月朋友是否处于停用（上月超 20GB）：停用期内重跑脚本也不恢复，等看守脚本 1 号自动恢复
-FRIEND_ENABLED=1
-if [ -f "$QUOTA_STATE" ]; then
-  FRIEND_ENABLED=$(python3 -c 'import json,sys,time; s=json.load(open(sys.argv[1])); print(0 if (s.get("disabled") and s.get("month")==time.strftime("%Y-%m")) else 1)' "$QUOTA_STATE" 2>/dev/null || echo 1)
-fi
+# 朋友用户已删（2026-11-16 用户决定不分享）：不再生成朋友 UUID/令牌，
+# 删掉落盘的朋友 UUID/令牌与限额状态，下面的 apply --no-friend 会把已有的
+# 朋友用户从 Xray 配置摘除，朋友订阅随之失效
+FRIEND_ENABLED=0
+rm -f /var/www/node-sub/.friend-uuid /var/www/node-sub/.friend-token
+rm -rf "$QUOTA_DIR"
 
 # 装 Xray（官方安装脚本，systemd 服务 xray）
 if ! command -v /usr/local/bin/xray >/dev/null 2>&1; then
@@ -664,25 +644,19 @@ FRIENDTMPL
 if [ "$FRIEND_ENABLED" = "1" ]; then
   python3 /usr/local/bin/xray-apply-clients.py --port "$XRAY_PORT" --ws-path "$WS_PATH" --owner-uuid "$NODE_UUID" --friend-uuid "$FRIEND_UUID"
 else
-  echo "朋友节点本月已超 20GB，处于停用中，本次不恢复（1 号自动恢复）。"
+  echo "朋友用户已删：本次把朋友 UUID 从 Xray 配置摘除。"
   python3 /usr/local/bin/xray-apply-clients.py --port "$XRAY_PORT" --ws-path "$WS_PATH" --owner-uuid "$NODE_UUID" --no-friend
 fi
 systemctl is-active --quiet xray || { echo "Xray 没起来，退出。"; systemctl status xray --no-pager | head -20; exit 1; }
 echo "Xray 已启动（VLESS+WS，127.0.0.1:${XRAY_PORT}${WS_PATH}，朋友用户：$([ "$FRIEND_ENABLED" = "1" ] && echo 已启用 || echo 已停用)）。"
 
-# 朋友订阅文件（启用时生成，停用时删掉，订阅地址 404）
-if [ "$FRIEND_ENABLED" = "1" ]; then
-  python3 /usr/local/bin/render-friend-sub.py "$FRIEND_UUID" "$VPS_IPv6" > "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
-  chmod 644 "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
-else
-  rm -f "/var/www/node-sub-friend/${FRIEND_TOKEN}.yaml"
-fi
+# 朋友订阅文件全部删掉（订阅地址 404，朋友的配置即刻失效）
+rm -f /var/www/node-sub-friend/*.yaml
 
-# 限额看守 cron（每 5 分钟；Xray 统计重启清零，累计数存在本机状态文件里）
-systemctl enable --now cron >/dev/null 2>&1 || true
-if ! crontab -l 2>/dev/null | grep -q "xray-friend-quota.py"; then
-  (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/bin/python3 /usr/local/bin/xray-friend-quota.py >>/var/log/xray-friend-quota.log 2>&1") | crontab -
-  echo "限额看守 cron 已装（每 5 分钟）。"
+# 限额看守已停：朋友用户删除后不再累计，删掉 cron（否则 1 号会把朋友加回来）
+if crontab -l 2>/dev/null | grep -q "xray-friend-quota.py"; then
+  crontab -l 2>/dev/null | grep -v "xray-friend-quota.py" | crontab -
+  echo "限额看守 cron 已删。"
 fi
 
 # 直连 v6 节点：取到本机 IPv6 才加进订阅（与 CF 节点同机同 UUID，只换连接目标为服务器 IPv6 直连 443，不经过 CF）
@@ -904,15 +878,9 @@ fi
 SUB_USED=$((SUB_RX + SUB_TX))
 if [ "$SUB_USED" -lt "$SUB_USED_SNAPSHOT" ]; then SUB_USED=$SUB_USED_SNAPSHOT; fi
 SUB_DOWNLOAD=$SUB_USED
-# 朋友订阅流量头：本月已用取看守状态文件（当月），过期日为下月 1 号
-mkdir -p /etc/nginx/snippets
-FRIEND_USED=0
-if [ -f "$QUOTA_STATE" ]; then
-  FRIEND_USED=$(python3 -c 'import json,sys,time; s=json.load(open(sys.argv[1])); print(s.get("used",0) if s.get("month")==time.strftime("%Y-%m") else 0)' "$QUOTA_STATE" 2>/dev/null || echo 0)
-fi
-FRIEND_EXPIRE=$(date -d "$(date +%Y-%m-01) +1 month" +%s)
-printf 'add_header subscription-userinfo "upload=0; download=%s; total=%s; expire=%s";\n' "$FRIEND_USED" "$FRIEND_LIMIT_BYTES" "$FRIEND_EXPIRE" > /etc/nginx/snippets/friend-userinfo.conf
-# nginx：node-hk 域名——/vless 转 Xray，/sub/ 出主人订阅文件（带流量头），/friend-sub/ 出朋友订阅文件（带朋友流量头），其余 404
+# 朋友订阅流量头已删（朋友用户已删，/friend-sub/ 位置也一并去掉）
+rm -f /etc/nginx/snippets/friend-userinfo.conf
+# nginx：node-hk 域名——/vless 转 Xray，/sub/ 出主人订阅文件（带流量头），其余 404
 cat > "/etc/nginx/sites-available/${NODE_DOMAIN}" <<NGINXEOF
 server {
     listen 80;
@@ -946,12 +914,6 @@ server {
         add_header subscription-userinfo "upload=0; download=${SUB_DOWNLOAD}; total=${SUB_TOTAL_BYTES}; expire=${SUB_EXPIRE}";
     }
 
-    location /friend-sub/ {
-        alias /var/www/node-sub-friend/;
-        default_type text/plain;
-        include /etc/nginx/snippets/friend-userinfo.conf;
-    }
-
     location / {
         return 404;
     }
@@ -980,10 +942,7 @@ echo "完成！只出了节点，没有做反代。"
 echo "节点订阅：$NODE_SUB_URL"
 echo "节点链接：$NODE_VLESS"
 echo "梦盒里点「导入到梦盒」走订阅导入（以后节点有变，更新订阅即可）；单条链接也可复制手动导入。"
-echo "朋友订阅：$FRIEND_SUB_URL"
-echo "朋友链接：$FRIEND_VLESS"
-echo "朋友节点：CF 节点＋直连 v6 节点（直连会暴露源站 IPv6，只给信得过的朋友），每月 20GB，1 号清零，超了自动停用；你的节点不受影响。"
-echo "查朋友已用：cat $QUOTA_STATE；看守日志：tail /var/log/xray-friend-quota.log"
+echo "朋友用户已删除：朋友 UUID 已从 Xray 配置摘除，朋友订阅已失效，限额看守已停；你的节点不受影响。"
 if [ -n "$MANUAL" ]; then
   echo ""
   echo "以下几项因 token 权限不足没自动改上，请去 CF 面板手动点一下：$MANUAL"
