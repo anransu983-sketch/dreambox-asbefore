@@ -340,13 +340,15 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     },
                     onToggle = { on ->
                         Log.d("ModuleToggle", "onToggle called id=${def.id} on=$on enabledBefore=$enabled")
-                        // 先翻开关再干活：写盘在 IO 线程，规则重算有 15 秒上限，超时也不钉死界面。
+                        // 点到立刻弹 Toast（不依赖日志，点没点到一眼就看出来）。
+                        Toast.makeText(context, "已点：${def.name} -> ${if (on) "启用" else "关闭"}", Toast.LENGTH_SHORT).show()
+                        // 先翻开关再干活：写盘改同步做（小文件不卡），不等协程，状态立刻落盘。
+                        runCatching { moduleStore.setEnabled(def.id, on) }
+                            .onFailure { Toast.makeText(context, "写盘失败：${it.message}", Toast.LENGTH_LONG).show() }
                         moduleEnabledOverride = moduleEnabledOverride + (def.id to on)
                         busyModuleId = def.id
                         scope.launch {
                             try {
-                                withContext(Dispatchers.IO) { moduleStore.setEnabled(def.id, on) }
-                                Log.d("ModuleToggle", "setEnabled done id=${def.id} on=$on")
                                 syncModules()
                                 Log.d("ModuleToggle", "syncModules done id=${def.id} on=$on")
                             } catch (t: Throwable) {
