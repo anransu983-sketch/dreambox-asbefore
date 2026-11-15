@@ -139,10 +139,65 @@ sleep 2
 systemctl is-active --quiet xray || { echo "Xray 没起来，退出。"; systemctl status xray --no-pager | head -20; exit 1; }
 echo "Xray 已启动（VLESS+WS，127.0.0.1:${XRAY_PORT}${WS_PATH}）。"
 
-# 订阅 YAML（Clash 格式，梦盒 importSubscription 用 clash:// 深链导入）
+# 订阅 YAML：4837 v2 模板完整配置（6 组＋sniffer＋防 DNS 泄露＋STUN 拦截），节点参数由脚本变量填，梦盒 importSubscription 用 clash:// 深链导入
 cat > "/var/www/node-sub/${SUB_TOKEN}.yaml" <<YAMLEOF
+allow-lan: false
+global-client-fingerprint: chrome
+keep-alive-interval: 30
+profile:
+  store-selected: true
+  store-fake-ip: true
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true
+  sniff:
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080]
+      override-destination: true
+dns:
+  default-nameserver:
+  - 8.8.8.8
+  - 1.1.1.1
+  enable: true
+  enhanced-mode: fake-ip
+  fake-ip-filter:
+  - '*.lan'
+  - localhost
+  - '*.local'
+  fake-ip-range: 198.18.0.1/16
+  fallback:
+  - https://9.9.9.9/dns-query
+  - https://149.112.112.112/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+    - 240.0.0.0/4
+  ipv6: false
+  respect-rules: true
+  proxy-server-nameserver:
+  - https://doh.pub/dns-query
+  direct-nameserver:
+  - https://doh.pub/dns-query
+  nameserver:
+  - https://1.1.1.1/dns-query
+  - https://8.8.8.8/dns-query
+  nameserver-policy:
+    '+.cn':
+    - https://doh.pub/dns-query
+external-controller: 127.0.0.1:9090
+secret: '123456'
+log-level: info
+mixed-port: 7890
+mode: rule
+unified-delay: true
+tcp-concurrent: true
 proxies:
-- name: HK-CF-VLESS
+- name: 🇭🇰 香港CF
   type: vless
   server: ${NODE_DOMAIN}
   port: 443
@@ -150,18 +205,113 @@ proxies:
   udp: true
   tls: true
   servername: ${NODE_DOMAIN}
+  client-fingerprint: chrome
   network: ws
   ws-opts:
     path: ${WS_PATH}
     headers:
       Host: ${NODE_DOMAIN}
 proxy-groups:
-- name: HK-CF
+- name: Proxy
   type: select
   proxies:
-  - HK-CF-VLESS
+  - Auto
+  - 🇭🇰 香港CF
+- name: Auto
+  type: url-test
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 50
+  proxies:
+  - 🇭🇰 香港CF
+- name: 🎮 Steam
+  type: select
+  proxies:
+  - Proxy
+  - 🇭🇰 香港CF
+  - DIRECT
+  - Auto
+- name: 🎬 Emby
+  type: select
+  proxies:
+  - Proxy
+  - 🇭🇰 香港CF
+  - DIRECT
+- name: 📺 YouTube
+  type: select
+  proxies:
+  - Proxy
+  - 🇭🇰 香港CF
+  - Auto
+- name: ✈️ Telegram
+  type: select
+  proxies:
+  - Proxy
+  - 🇭🇰 香港CF
+  - Auto
+- name: 🤖 AI 增强
+  type: select
+  proxies:
+  - Proxy
+  - 🇭🇰 香港CF
+  - Auto
+  - DIRECT
+- name: 🐟 漏网之鱼
+  type: select
+  proxies:
+  - Proxy
+  - 🇭🇰 香港CF
+  - DIRECT
 rules:
-- MATCH,HK-CF
+- GEOIP,Private,DIRECT
+- DOMAIN-SUFFIX,local,DIRECT
+- IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+- IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+- DOMAIN-KEYWORD,stun,REJECT
+- DST-PORT,3478,REJECT
+- DST-PORT,3479,REJECT
+- DST-PORT,5349,REJECT
+- DST-PORT,19302,REJECT
+- DST-PORT,19305,REJECT
+- DOMAIN-SUFFIX,openai.com,🤖 AI 增强
+- DOMAIN-SUFFIX,chatgpt.com,🤖 AI 增强
+- DOMAIN-SUFFIX,anthropic.com,🤖 AI 增强
+- DOMAIN-SUFFIX,claude.ai,🤖 AI 增强
+- DOMAIN-SUFFIX,gemini.google.com,🤖 AI 增强
+- DOMAIN-SUFFIX,t.me,✈️ Telegram
+- DOMAIN-SUFFIX,tdesktop.com,✈️ Telegram
+- DOMAIN-SUFFIX,telegra.ph,✈️ Telegram
+- DOMAIN-SUFFIX,telegram.me,✈️ Telegram
+- DOMAIN-SUFFIX,telegram.org,✈️ Telegram
+- IP-CIDR,91.108.4.0/22,✈️ Telegram,no-resolve
+- IP-CIDR,91.108.8.0/22,✈️ Telegram,no-resolve
+- IP-CIDR,91.108.12.0/22,✈️ Telegram,no-resolve
+- IP-CIDR,91.108.16.0/22,✈️ Telegram,no-resolve
+- IP-CIDR,91.108.20.0/22,✈️ Telegram,no-resolve
+- IP-CIDR,91.108.56.0/22,✈️ Telegram,no-resolve
+- IP-CIDR,149.154.160.0/20,✈️ Telegram,no-resolve
+- DOMAIN-SUFFIX,youtube.com,📺 YouTube
+- DOMAIN-SUFFIX,youtu.be,📺 YouTube
+- DOMAIN-SUFFIX,googlevideo.com,📺 YouTube
+- DOMAIN-SUFFIX,ytimg.com,📺 YouTube
+- DOMAIN-SUFFIX,steampowered.com,🎮 Steam
+- DOMAIN-SUFFIX,steamcommunity.com,🎮 Steam
+- DOMAIN-SUFFIX,steamgames.com,🎮 Steam
+- DOMAIN-SUFFIX,steamusercontent.com,🎮 Steam
+- DOMAIN-SUFFIX,steamcontent.com,🎮 Steam
+- DOMAIN-SUFFIX,steamstatic.com,🎮 Steam
+- DOMAIN-SUFFIX,steamcdn-a.akamaihd.net,🎮 Steam
+- DOMAIN-KEYWORD,emby,🎬 Emby
+- GEOIP,CN,DIRECT
+- MATCH,🐟 漏网之鱼
+tun:
+  auto-detect-interface: true
+  auto-route: true
+  dns-hijack:
+  - any:53
+  enable: true
+  stack: system
 YAMLEOF
 chmod 644 "/var/www/node-sub/${SUB_TOKEN}.yaml"
 
