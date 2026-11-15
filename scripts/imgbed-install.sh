@@ -265,6 +265,7 @@ say "nginx 已配好。"
 
 # ---------- 8. 自测：真传一张 1x1 图再删掉 ----------
 say "自测上传……"
+sleep 2  # 等 nginx reload 彻底生效，免得撞上旧 worker（曾因此误报 404）
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > /tmp/imgbed-test.png
 RESP=$(curl -s -F "file=@/tmp/imgbed-test.png" -F "token=$TOKEN" "https://$DOMAIN/upload")
 echo "$RESP" | grep -q '"url"' || { echo "自测失败，上传接口返回：$RESP"; exit 1; }
