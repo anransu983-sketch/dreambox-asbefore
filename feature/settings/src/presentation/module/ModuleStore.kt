@@ -1,6 +1,7 @@
 package com.suanran.dreambox.feature.settings.presentation.module
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -125,6 +126,7 @@ class ModuleStore(context: Context) {
         if (enabled) set += id else set -= id
         state.put("enabled", set.toList())
         saveState(state)
+        Log.d("ModuleToggle", "setEnabled persisted id=$id enabled=$enabled state=${stateFile.readText()}")
     }
 
     companion object {

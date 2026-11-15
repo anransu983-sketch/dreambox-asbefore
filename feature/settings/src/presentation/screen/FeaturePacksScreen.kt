@@ -1,6 +1,7 @@
 package com.suanran.dreambox.feature.settings.presentation.screen
 
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -338,19 +339,24 @@ fun FeaturePacksScreen(navigator: Navigator) {
                         }
                     },
                     onToggle = { on ->
+                        Log.d("ModuleToggle", "onToggle called id=${def.id} on=$on enabledBefore=$enabled")
                         // 先翻开关再干活：写盘在 IO 线程，规则重算有 15 秒上限，超时也不钉死界面。
                         moduleEnabledOverride = moduleEnabledOverride + (def.id to on)
                         busyModuleId = def.id
                         scope.launch {
                             try {
                                 withContext(Dispatchers.IO) { moduleStore.setEnabled(def.id, on) }
+                                Log.d("ModuleToggle", "setEnabled done id=${def.id} on=$on")
                                 syncModules()
+                                Log.d("ModuleToggle", "syncModules done id=${def.id} on=$on")
                             } catch (t: Throwable) {
+                                Log.d("ModuleToggle", "toggle failed id=${def.id}: ${t.message}")
                                 Toast.makeText(context, "切换失败：${t.message}", Toast.LENGTH_LONG).show()
                             } finally {
                                 busyModuleId = null
                                 moduleEnabledOverride = moduleEnabledOverride - def.id
                                 refreshTick++
+                                Log.d("ModuleToggle", "toggle finally id=${def.id} refreshTick=$refreshTick")
                             }
                         }
                     },
@@ -596,7 +602,10 @@ private fun ModuleCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
-                        .clickable { onToggle(!enabled) },
+                        .clickable {
+                            Log.d("ModuleToggle", "row tapped id=${def.id} enabled=$enabled")
+                            onToggle(!enabled)
+                        },
                 ) {
                     Text(
                         text = "启用",
