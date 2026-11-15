@@ -2,33 +2,27 @@
 # 自建图床一键安装（英国 9929 VPS，Debian 12，root 下跑）
 # 用途：给 NodeSeek 测评帖传图，替代 nodeimage（它现在要 NodeSeek 授权＋云端过不了 CF 验证）
 # 成品：https://img.suanran9527.com/ —— 手机浏览器打开就能传图，传完直接给 Markdown 链接
-# 依赖：本机 /root/.cf.ini 已放好 Cloudflare API token（600 权限），格式一行：
-#   dns_cloudflare_api_token = <token>
-#   （只要 DNS 编辑权就够：改 img 子域解析＋DNS-01 签证书）
+# 前置（先做，1 分钟）：Cloudflare 后台 suanran9527.com → DNS → Add record：
+#   类型 A，名称 img，IPv4 地址 212.135.122.19，Proxy status 选 Proxied（橙云），Save。
+#   不用 token、不写 /root/.cf.ini；证书走 HTTP-01，脚本自己签。
 # 用法（梦盒终端里，在英国 9929 那台机上）：
 #   curl -sSL https://raw.githubusercontent.com/anransu983-sketch/dreambox-asbefore/main/scripts/imgbed-install.sh | sudo bash
 # 重跑安全：token、证书、DNS 都只建一次，已有的不重建。
 set -e
 DOMAIN="img.suanran9527.com"
-ZONE="suanran9527.com"
 APP_DIR="/opt/imgbed"
 STORE="/var/www/img"
 PORT="17235"
-CF_INI="/root/.cf.ini"
-CF_API="https://api.cloudflare.com/client/v4"
 
 say() { echo "[图床] $*"; }
 
 [ "$(id -u)" = "0" ] || { echo "请用 root 跑（sudo bash）"; exit 1; }
-[ -f "$CF_INI" ] || { echo "$CF_INI 不存在：先把 CF token 写进去再跑（格式 dns_cloudflare_api_token = ...，权限 600）。"; exit 1; }
-CF_TOKEN=$(grep -E '^dns_cloudflare_api_token' "$CF_INI" | cut -d= -f2 | tr -d ' "')
-[ -n "$CF_TOKEN" ] || { echo "$CF_INI 里没有 dns_cloudflare_api_token，请先补上再跑。"; exit 1; }
 
 # ---------- 1. 依赖 ----------
 say "装依赖（nginx / python3-flask / certbot）……"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq nginx python3 python3-flask certbot python3-certbot-dns-cloudflare curl openssl > /dev/null
+apt-get install -y -qq nginx python3 python3-flask certbot curl openssl > /dev/null
 python3 -c "import flask" || { echo "flask 没装上"; exit 1; }
 
 # ---------- 2. 上传 token（只生成一次，重跑不变） ----------
@@ -168,31 +162,44 @@ document.getElementById('up').onclick = async function(){
 </html>
 HTMLEOF
 
-# ---------- 5. Cloudflare DNS（img 子域 → 本机，橙云） ----------
-say "配 DNS（$DOMAIN → 本机，橙云）……"
+# ---------- 5. DNS 检查（解析必须已指到本机，否则先去 CF 后台加记录再重跑） ----------
+say "查 DNS（$DOMAIN 应该指到本机）……"
 PUBIP=$(curl -s --max-time 10 https://api.ipify.org || hostname -I | awk '{print $1}')
-cf_get()  { curl -s -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" "$CF_API$1"; }
-cf_post() { curl -s -X POST -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" -d "$2" "$CF_API$1"; }
-cf_put()  { curl -s -X PUT -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" -d "$2" "$CF_API$1"; }
-ZONE_ID=$(cf_get "/zones?name=$ZONE" | python3 -c "import json,sys; print(json.load(sys.stdin)['result'][0]['id'])")
-REC=$(cf_get "/zones/$ZONE_ID/dns_records?name=$DOMAIN&type=A")
-REC_ID=$(echo "$REC" | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r[0]['id'] if r else '')")
-BODY=$(python3 -c "import json; print(json.dumps({'type':'A','name':'$DOMAIN','content':'$PUBIP','ttl':1,'proxied':True}))")
-if [ -n "$REC_ID" ]; then
-  cf_put "/zones/$ZONE_ID/dns_records/$REC_ID" "$BODY" > /dev/null
-  say "DNS 记录已更新（$DOMAIN → $PUBIP，橙云）。"
-else
-  cf_post "/zones/$ZONE_ID/dns_records" "$BODY" > /dev/null
-  say "DNS 记录已建（$DOMAIN → $PUBIP，橙云）。"
+RESOLVED=""
+for i in $(seq 1 12); do
+  RESOLVED=$(getent hosts "$DOMAIN" | awk '{print $1}' | head -1)
+  [ -z "$RESOLVED" ] && RESOLVED=$(curl -s --max-time 10 "https://dns.google/resolve?name=$DOMAIN&type=A" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['Answer'][0]['data'] if d.get('Answer') else '')" 2>/dev/null)
+  [ "$RESOLVED" = "$PUBIP" ] && break
+  sleep 10
+done
+if [ "$RESOLVED" != "$PUBIP" ]; then
+  echo "DNS 还没指过来：$DOMAIN 现在解析到 ${RESOLVED:-（查不到）}，本机是 $PUBIP。"
+  echo "去 Cloudflare 后台 suanran9527.com → DNS 加一条 A 记录：名称 img，内容 $PUBIP，Proxied，保存后重跑这个脚本。"
+  exit 1
 fi
+say "DNS 已指到本机（$RESOLVED）。"
 
-# ---------- 6. 证书（DNS-01，已有就跳过） ----------
+# ---------- 6. 证书（HTTP-01，已有就跳过） ----------
+# 先立一个纯 HTTP 站，让 certbot 能放验证文件；签完再换成完整配置。
+cat > /etc/nginx/sites-available/imgbed <<'NXEOF'
+server {
+    listen 80;
+    server_name img.suanran9527.com;
+    root /var/www/img;
+    index index.html;
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+NXEOF
+ln -sf /etc/nginx/sites-available/imgbed /etc/nginx/sites-enabled/imgbed
+nginx -t && systemctl reload nginx
 if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
   say "证书已存在，跳过签发。"
 else
-  say "签证书（DNS-01）……"
-  certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" \
-    -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email
+  say "签证书（HTTP-01）……"
+  certbot certonly --webroot -w /var/www/img -d "$DOMAIN" \
+    --non-interactive --agree-tos --register-unsafely-without-email
 fi
 
 # ---------- 7. nginx ----------
