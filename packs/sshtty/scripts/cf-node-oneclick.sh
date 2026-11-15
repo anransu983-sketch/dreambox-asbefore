@@ -25,6 +25,11 @@ ACME_EMAIL="iloveyou@suanran9527.com"
 CF_INI="/root/.cf.ini"
 CF_API="https://api.cloudflare.com/client/v4"
 MANUAL=""
+# 订阅流量头（让梦盒配置卡显示流量/日期，双向流量：上下行合计）
+# 总流量 2048GB（Zouter 后台 2026-11-16 04:42：已用 19.91GB，剩余 2028GB，重置 2026-12-15 21:49:26）
+SUB_TOTAL_BYTES=2199023255552
+SUB_EXPIRE=1797342566
+SUB_USED_SNAPSHOT=21378199715
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "缺少命令 $1，请先安装。"; exit 1; }; }
 need curl; need python3
@@ -369,7 +374,17 @@ tun:
 YAMLEOF
 chmod 644 "/var/www/node-sub/${SUB_TOKEN}.yaml"
 
-# nginx：node-hk 域名——/vless 转 Xray，/sub/ 出订阅文件，其余 404
+# 订阅流量头：已用量取本机网卡累计收发（双向合计），低于后台快照时用快照兜底（防重启后计数清零显少）
+SUB_IF=$(ip route show default 2>/dev/null | awk '{print $5}' | head -1)
+SUB_RX=0; SUB_TX=0
+if [ -n "$SUB_IF" ] && [ -r "/sys/class/net/$SUB_IF/statistics/rx_bytes" ]; then
+  SUB_RX=$(cat "/sys/class/net/$SUB_IF/statistics/rx_bytes" 2>/dev/null || echo 0)
+  SUB_TX=$(cat "/sys/class/net/$SUB_IF/statistics/tx_bytes" 2>/dev/null || echo 0)
+fi
+SUB_USED=$((SUB_RX + SUB_TX))
+if [ "$SUB_USED" -lt "$SUB_USED_SNAPSHOT" ]; then SUB_USED=$SUB_USED_SNAPSHOT; fi
+SUB_DOWNLOAD=$SUB_USED
+# nginx：node-hk 域名——/vless 转 Xray，/sub/ 出订阅文件（带流量头），其余 404
 cat > "/etc/nginx/sites-available/${NODE_DOMAIN}" <<NGINXEOF
 server {
     listen 80;
@@ -400,6 +415,7 @@ server {
     location /sub/ {
         alias /var/www/node-sub/;
         default_type text/plain;
+        add_header subscription-userinfo "upload=0; download=${SUB_DOWNLOAD}; total=${SUB_TOTAL_BYTES}; expire=${SUB_EXPIRE}";
     }
 
     location / {
