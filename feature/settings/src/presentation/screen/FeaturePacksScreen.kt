@@ -206,6 +206,8 @@ fun FeaturePacksScreen(navigator: Navigator) {
     var selectedModuleId by remember { mutableStateOf<String?>(null) }
     // 仪表盘顶部的圆形分类（全部 / 去广告 / 隐私 / 安全），点一个只看那类灯。
     var selectedCategory by remember { mutableStateOf("全部") }
+    // 1.200 分页签：0=模块市场，1=功能包。两区不再叠在一页里滑到底，默认停模块市场。
+    var selectedTab by remember { mutableStateOf(0) }
     // 每次刷新都重拉一次远程索引（拉不到就回内置种子，不报错）。
     LaunchedEffect(refreshTick) {
         val (list, fromRemote) = moduleStore.fetchMarket()
@@ -339,7 +341,26 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
             }
+            // 1.200 分页签：点一下直达，不用滑过另一区。复用 PackActionButton 当页签，选中实心、未选描边。
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                ) {
+                    PackActionButton(
+                        text = "模块市场 ${displayModuleDefs.size}",
+                        filled = selectedTab == 0,
+                        modifier = Modifier.weight(1f),
+                    ) { selectedTab = 0 }
+                    PackActionButton(
+                        text = "功能包 ${visiblePacks.size}",
+                        filled = selectedTab == 1,
+                        modifier = Modifier.weight(1f),
+                    ) { selectedTab = 1 }
+                }
+            }
             // ── 模块市场（Loon 式轻模块）：纯规则包，开关即生效 ──
+            if (selectedTab == 0) {
             item {
                 Text(
                     text = "模块市场",
@@ -444,7 +465,9 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     )
                 }
             }
+            } // selectedTab == 0：模块市场
             // ── 功能包（原有重型功能包，原样保留）──
+            if (selectedTab == 1) {
             item {
                 Text(
                     text = "功能包",
@@ -589,6 +612,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     }
                 }
             }
+            } // selectedTab == 1：功能包
         }
     }
 }
