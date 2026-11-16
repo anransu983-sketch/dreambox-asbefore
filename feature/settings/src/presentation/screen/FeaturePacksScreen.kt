@@ -194,6 +194,8 @@ fun FeaturePacksScreen(navigator: Navigator) {
     var moduleEnabledOverride by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     // 灯笼夜空里最后点到的那盏灯，下面磨砂详情卡就讲它。
     var selectedModuleId by remember { mutableStateOf<String?>(null) }
+    // 仪表盘顶部的圆形分类（全部 / 去广告 / 隐私 / 安全），点一个只看那类灯。
+    var selectedCategory by remember { mutableStateOf("全部") }
     // 每次刷新都重拉一次远程索引（拉不到就回内置种子，不报错）。
     LaunchedEffect(refreshTick) {
         val (list, fromRemote) = moduleStore.fetchMarket()
@@ -382,13 +384,13 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     }
                 }
             }
-            // ── 灯笼夜空：模块不是列表里的一行，是一盏盏浮在夜空里的灯。点灯 = 启用/关闭。──
+            // ── 灯笼仪表盘：顶部圆形分类 + 磨砂 hero 卡 + 双列网格灯卡（参考琳记录页的布局）。──
             item {
                 val enabledCount = displayModuleDefs.count { def ->
                     moduleEnabledOverride[def.id]
                         ?: (installedModules.find { it.def.id == def.id }?.enabled == true)
                 }
-                ModuleLanternScene(
+                ModuleDashboard(
                     defs = displayModuleDefs,
                     installedIds = installedModules.map { it.def.id }.toSet(),
                     isEnabled = { def ->
@@ -397,7 +399,9 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     },
                     isBusy = { def -> busyModuleId == def.id },
                     enabledCount = enabledCount,
-                    onLanternTap = { def, enabled ->
+                    selectedCategory = selectedCategory,
+                    onCategorySelect = { selectedCategory = it },
+                    onModuleTap = { def, enabled ->
                         selectedModuleId = def.id
                         if (installedModules.any { it.def.id == def.id }) {
                             toggleModule(def, !enabled, enabled)
@@ -592,31 +596,21 @@ private val LanternOk = Color(0xFFA6EBCB)
 private val LanternOff = Color(0xFFB9C3D9)
 private val LanternCyan = Color(0xFF7FE3FF)
 
-/** 每盏灯在夜空里的位置（宽/高分数），按模块顺序取，超了就轮着用。 */
-private val LanternSpots = listOf(
-    0.14f to 0.10f,
-    0.64f to 0.06f,
-    0.40f to 0.30f,
-    0.10f to 0.52f,
-    0.70f to 0.48f,
-    0.30f to 0.70f,
-    0.64f to 0.72f,
-)
-
 @Composable
-private fun ModuleLanternScene(
+private fun ModuleDashboard(
     defs: List<ModuleDef>,
     installedIds: Set<String>,
     isEnabled: (ModuleDef) -> Boolean,
     isBusy: (ModuleDef) -> Boolean,
     enabledCount: Int,
-    onLanternTap: (ModuleDef, Boolean) -> Unit,
+    selectedCategory: String,
+    onCategorySelect: (String) -> Unit,
+    onModuleTap: (ModuleDef, Boolean) -> Unit,
 ) {
-    // 夜空是现画的：渐变 + 星星 + 月晕 + 淡云，不借首页那张画。
+    val categories = listOf("全部", "去广告", "隐私", "安全")
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(560.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.verticalGradient(
@@ -626,10 +620,10 @@ private fun ModuleLanternScene(
                 )
             ),
     ) {
+        // 星星 + 月晕 + 淡云（现画夜空）。
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val w = maxWidth
             val h = maxHeight
-            // 星星。
             LanternStars.forEach { star ->
                 val (fx, fy, size, alpha) = star
                 Box(
@@ -644,7 +638,6 @@ private fun ModuleLanternScene(
                         .background(Color.White.copy(alpha = alpha), CircleShape),
                 )
             }
-            // 月晕。
             Box(
                 modifier = Modifier
                     .offset {
@@ -662,7 +655,6 @@ private fun ModuleLanternScene(
                         CircleShape,
                     ),
             )
-            // 淡云。
             LanternClouds.forEach { (fx, fy, cw, ch, alpha) ->
                 Box(
                     modifier = Modifier
@@ -683,49 +675,82 @@ private fun ModuleLanternScene(
                 )
             }
         }
-        Text(
-            text = "已点亮 $enabledCount / ${defs.size} 盏灯",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            fontFamily = FontFamily.Serif,
-            color = LanternLabelCore,
-            style = androidx.compose.ui.text.TextStyle(
-                shadow = Shadow(color = LanternLabelGlow, blurRadius = 18f),
-            ),
+        Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 18.dp),
-        )
-        Text(
-            text = "点一盏灯，亮起一个模块",
-            fontSize = 12.5.sp,
-            color = LanternOff,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 52.dp),
-        )
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val w = maxWidth
-            val h = maxHeight
-            defs.forEachIndexed { index, def ->
-                val spot = LanternSpots[index % LanternSpots.size]
-                val enabled = isEnabled(def)
-                val busy = isBusy(def)
-                val installed = def.id in installedIds
-                ModuleLantern(
-                    def = def,
-                    enabled = enabled && installed,
-                    installed = installed,
-                    busy = busy,
-                    phase = index * 0.9f,
-                    modifier = Modifier.offset {
-                        IntOffset(
-                            (spot.first * w.toPx()).roundToInt(),
-                            (spot.second * h.toPx()).roundToInt(),
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            // 圆形分类。
+            Row(
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                categories.forEach { cat ->
+                    val selected = cat == selectedCategory
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) LanternGold.copy(alpha = 0.25f)
+                                    else LanternCard.copy(alpha = 0.7f)
+                                )
+                                .border(
+                                    width = if (selected) 2.dp else 1.dp,
+                                    color = if (selected) LanternGold
+                                    else LanternOff.copy(alpha = 0.4f),
+                                    shape = CircleShape,
+                                )
+                                .clickable { onCategorySelect(cat) },
+                        ) {
+                            Text(
+                                text = cat.first().toString(),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                fontFamily = FontFamily.Serif,
+                                color = if (selected) LanternGold else LanternLabelCore,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = cat,
+                            fontSize = 12.sp,
+                            color = if (selected) LanternGold else LanternOff,
                         )
-                    },
-                    onTap = { onLanternTap(def, enabled && installed) },
-                )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            // Hero 卡：已点亮几盏。
+            ModuleHeroCard(enabledCount = enabledCount, total = defs.size)
+            Spacer(modifier = Modifier.height(12.dp))
+            // 双列网格灯卡。
+            val filtered = if (selectedCategory == "全部") defs
+            else defs.filter { it.category == selectedCategory }
+            filtered.chunked(2).forEach { row ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                ) {
+                    row.forEach { def ->
+                        val enabled = isEnabled(def) && (def.id in installedIds)
+                        val busy = isBusy(def)
+                        ModuleGridCard(
+                            def = def,
+                            enabled = enabled,
+                            installed = def.id in installedIds,
+                            busy = busy,
+                            phase = defs.indexOf(def) * 0.9f,
+                            modifier = Modifier.weight(1f),
+                            onTap = { onModuleTap(def, enabled) },
+                        )
+                    }
+                    if (row.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
@@ -767,8 +792,75 @@ private val LanternClouds = listOf(
 
 private data class LanternCloud(val x: Float, val y: Float, val w: Float, val h: Float, val alpha: Float)
 
+/** Hero 卡：已点亮几盏 + 进度条。 */
 @Composable
-private fun ModuleLantern(
+private fun ModuleHeroCard(enabledCount: Int, total: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(LanternCard.copy(alpha = 0.75f))
+            .border(1.dp, LanternCyan.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .padding(20.dp),
+    ) {
+        Column {
+            Text(
+                text = "已点亮",
+                fontSize = 13.sp,
+                color = LanternLabelGlow,
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "$enabledCount",
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    color = LanternGold,
+                    style = androidx.compose.ui.text.TextStyle(
+                        shadow = Shadow(color = LanternGold, blurRadius = 16f),
+                    ),
+                )
+                Text(
+                    text = " / $total 盏灯",
+                    fontSize = 18.sp,
+                    fontFamily = FontFamily.Serif,
+                    color = LanternLabelCore,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(LanternOff.copy(alpha = 0.2f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(if (total > 0) enabledCount.toFloat() / total else 0f)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(LanternGoldDeep, LanternGold)
+                            )
+                        ),
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "点一盏灯，亮起一个模块",
+                fontSize = 12.5.sp,
+                color = LanternOff,
+            )
+        }
+    }
+}
+
+/** 网格灯卡：磨砂卡 + 灯芯（浮动 + 金光呼吸）+ 名字 + 状态 + 规则数，点卡即开关。 */
+@Composable
+private fun ModuleGridCard(
     def: ModuleDef,
     enabled: Boolean,
     installed: Boolean,
@@ -777,17 +869,17 @@ private fun ModuleLantern(
     modifier: Modifier = Modifier,
     onTap: () -> Unit,
 ) {
-    // 上下浮动：每盏灯相位错开，像真的浮在夜空里。
-    val bob = rememberInfiniteTransition(label = "lantern-bob-${def.id}")
+    // 灯芯上下浮动：每张卡相位错开。
+    val bob = rememberInfiniteTransition(label = "orb-bob-${def.id}")
     val bobT by bob.animateFloat(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
         animationSpec = infiniteRepeatable(animation = tween(3600, easing = LinearEasing)),
         label = "bob",
     )
-    val bobY = (sin(bobT + phase) * 6).dp
+    val bobY = (sin(bobT + phase) * 4).dp
     // 点亮时金光呼吸。
-    val glow = rememberInfiniteTransition(label = "lantern-glow-${def.id}")
+    val glow = rememberInfiniteTransition(label = "orb-glow-${def.id}")
     val glowT by glow.animateFloat(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
@@ -798,101 +890,107 @@ private fun ModuleLantern(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.90f else 1f,
+        targetValue = if (pressed) 0.94f else 1f,
         animationSpec = tween(120),
         label = "press",
     )
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
         modifier = modifier
-            .offset(y = bobY)
             .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(20.dp))
+            .background(LanternCard.copy(alpha = 0.75f))
+            .border(
+                width = 1.dp,
+                color = if (enabled) LanternGold.copy(alpha = 0.5f)
+                else LanternCyan.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(20.dp),
+            )
             .clickable(
                 interactionSource = interaction,
                 indication = null,
                 enabled = !busy,
                 onClick = onTap,
-            ),
+            )
+            .padding(16.dp),
     ) {
-        // 灯绳。
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(10.dp)
-                .background(LanternOff.copy(alpha = 0.5f)),
-        )
-        // 灯体：亮是暖金光晕 + 金芯，灭是暗灰石。
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(64.dp)
-                .background(
-                    brush = if (enabled) {
-                        Brush.radialGradient(
-                            0f to LanternGold,
-                            0.55f to LanternGoldDeep.copy(alpha = 0.85f),
-                            1f to LanternGoldDeep.copy(alpha = 0.35f),
-                        )
-                    } else {
-                        Brush.radialGradient(
-                            0f to Color(0xFF3A4568),
-                            1f to Color(0xFF232B47),
-                        )
-                    },
-                    shape = CircleShape,
-                )
-                .border(
-                    width = 1.5.dp,
-                    color = if (enabled) LanternGold.copy(alpha = 0.9f) else LanternOff.copy(alpha = 0.35f),
-                    shape = CircleShape,
-                ),
-        ) {
-            // 光晕（呼吸），比灯体大一圈，浮在灯外。
-            if (enabled) {
-                Box(
-                    modifier = Modifier
-                        .size(92.dp)
-                        .graphicsLayer { alpha = glowAlpha }
-                        .background(
-                            brush = Brush.radialGradient(
-                                0f to LanternGold.copy(alpha = 0.55f),
-                                1f to Color.Transparent,
+        Column {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(48.dp)
+                    .offset(y = bobY)
+                    .background(
+                        brush = if (enabled) {
+                            Brush.radialGradient(
+                                0f to LanternGold,
+                                0.55f to LanternGoldDeep.copy(alpha = 0.85f),
+                                1f to LanternGoldDeep.copy(alpha = 0.35f),
+                            )
+                        } else {
+                            Brush.radialGradient(
+                                0f to Color(0xFF3A4568),
+                                1f to Color(0xFF232B47),
+                            )
+                        },
+                        shape = CircleShape,
+                    )
+                    .border(
+                        width = 1.5.dp,
+                        color = if (enabled) LanternGold.copy(alpha = 0.9f)
+                        else LanternOff.copy(alpha = 0.35f),
+                        shape = CircleShape,
+                    ),
+            ) {
+                // 光晕（呼吸），比灯芯大一圈。
+                if (enabled) {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .graphicsLayer { alpha = glowAlpha }
+                            .background(
+                                brush = Brush.radialGradient(
+                                    0f to LanternGold.copy(alpha = 0.55f),
+                                    1f to Color.Transparent,
+                                ),
+                                shape = CircleShape,
                             ),
-                            shape = CircleShape,
-                        ),
+                    )
+                }
+                Text(
+                    text = "🧩",
+                    fontSize = 20.sp,
+                    modifier = Modifier.graphicsLayer { alpha = if (enabled) 1f else 0.55f },
                 )
             }
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "🧩",
-                fontSize = 26.sp,
-                modifier = Modifier.graphicsLayer { alpha = if (enabled) 1f else 0.55f },
+                text = def.name,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.Serif,
+                color = LanternLabelCore,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = when {
+                    busy -> "处理中…"
+                    enabled -> "已点亮"
+                    installed -> "未点亮"
+                    else -> "未安装"
+                },
+                fontSize = 12.sp,
+                color = if (enabled) LanternOk else LanternOff,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "规则 ${def.rules.size} 条",
+                fontSize = 11.5.sp,
+                color = LanternOff,
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = def.name,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            fontFamily = FontFamily.Serif,
-            color = LanternLabelCore,
-            style = androidx.compose.ui.text.TextStyle(
-                shadow = Shadow(color = LanternLabelGlow, blurRadius = 12f),
-            ),
-        )
-        Text(
-            text = when {
-                busy -> "处理中…"
-                enabled -> "已点亮"
-                installed -> "未点亮"
-                else -> "未安装"
-            },
-            fontSize = 11.sp,
-            color = if (enabled) LanternOk else LanternOff,
-        )
     }
 }
 
-/** 选中那盏灯的磨砂详情卡：说明、规则数、开关、删除都在这。 */
 @Composable
 private fun ModuleDetailCard(
     def: ModuleDef,
