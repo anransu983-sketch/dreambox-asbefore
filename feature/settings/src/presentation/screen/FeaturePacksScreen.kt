@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -55,8 +56,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.DampingRatioMediumBouncy
-import androidx.compose.animation.core.StiffnessMedium
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Image
 import androidx.compose.ui.composed
 import androidx.compose.ui.res.painterResource
@@ -648,7 +648,7 @@ private fun HamsterIcon(
     )
     val pressScale by animateFloatAsState(
         targetValue = if (pressed) 0.86f else 1f,
-        animationSpec = spring(DampingRatioMediumBouncy, StiffnessMedium),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "press",
     )
     val bobDp = sin(phase + index * 1.37f).toFloat() * 2f
@@ -694,8 +694,8 @@ private fun ModuleSwitchVisual(on: Boolean) {
             .size(40.dp, 24.dp)
             .clip(RoundedCornerShape(999.dp))
             .background(
-                if (on) Brush.horizontalGradient(listOf(LanternGold, ModulePink))
-                else Color(0xFF82808C).copy(alpha = 0.45f)
+                brush = if (on) Brush.horizontalGradient(listOf(LanternGold, ModulePink))
+                else SolidColor(Color(0xFF82808C).copy(alpha = 0.45f))
             ),
     ) {
         Box(
