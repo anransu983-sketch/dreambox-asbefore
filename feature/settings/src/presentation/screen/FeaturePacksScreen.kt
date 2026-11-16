@@ -9,7 +9,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,15 +43,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.github.panpf.sketch.rememberAsyncImagePainter
-import com.github.panpf.sketch.request.ImageRequest
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import com.suanran.dreambox.core.contract.OverrideApplier
@@ -616,35 +612,77 @@ private fun ModuleLanternScene(
     enabledCount: Int,
     onLanternTap: (ModuleDef, Boolean) -> Unit,
 ) {
-    val context = LocalContext.current
-    val skyPainter = rememberAsyncImagePainter(
-        request = ImageRequest(context, "file:///android_asset/sky_island_night.webp")
-    )
+    // 夜空是现画的：渐变 + 星星 + 月晕 + 淡云，不借首页那张画。
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(560.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(LanternNight),
+            .background(
+                Brush.verticalGradient(
+                    0f to Color(0xFF0D1B40),
+                    0.55f to Color(0xFF0B1636),
+                    1f to Color(0xFF050B1F),
+                )
+            ),
     ) {
-        Image(
-            painter = skyPainter,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        // 压一层暗色，保证上面的光字读得清。
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to LanternNight.copy(alpha = 0.45f),
-                        0.5f to Color.Transparent,
-                        1f to LanternNight.copy(alpha = 0.55f),
-                    )
-                ),
-        )
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val w = maxWidth
+            val h = maxHeight
+            // 星星。
+            LanternStars.forEach { star ->
+                val (fx, fy, size, alpha) = star
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (fx * w.toPx()).roundToInt(),
+                                (fy * h.toPx()).roundToInt(),
+                            )
+                        }
+                        .size(size.dp)
+                        .background(Color.White.copy(alpha = alpha), CircleShape),
+                )
+            }
+            // 月晕。
+            Box(
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            (0.70f * w.toPx()).roundToInt(),
+                            (0.02f * h.toPx()).roundToInt(),
+                        )
+                    }
+                    .size(120.dp)
+                    .background(
+                        Brush.radialGradient(
+                            0f to Color(0xFFBFE6FF).copy(alpha = 0.30f),
+                            1f to Color.Transparent,
+                        ),
+                        CircleShape,
+                    ),
+            )
+            // 淡云。
+            LanternClouds.forEach { (fx, fy, cw, ch, alpha) ->
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (fx * w.toPx()).roundToInt(),
+                                (fy * h.toPx()).roundToInt(),
+                            )
+                        }
+                        .size(cw.dp, ch.dp)
+                        .background(
+                            Brush.radialGradient(
+                                0f to Color(0xFF8FC8FF).copy(alpha = alpha),
+                                1f to Color.Transparent,
+                            ),
+                            CircleShape,
+                        ),
+                )
+            }
+        }
         Text(
             text = "已点亮 $enabledCount / ${defs.size} 盏灯",
             fontSize = 20.sp,
@@ -692,6 +730,42 @@ private fun ModuleLanternScene(
         }
     }
 }
+
+/** 夜空里的星星（宽/高分数、直径 dp、透明度），位置固定，画出来就长这样。 */
+private val LanternStars = listOf(
+    LanternStar(0.06f, 0.05f, 2.5f, 0.9f),
+    LanternStar(0.18f, 0.12f, 2f, 0.6f),
+    LanternStar(0.30f, 0.04f, 3f, 0.9f),
+    LanternStar(0.44f, 0.10f, 2f, 0.5f),
+    LanternStar(0.55f, 0.05f, 2.5f, 0.8f),
+    LanternStar(0.82f, 0.10f, 2f, 0.6f),
+    LanternStar(0.92f, 0.18f, 3f, 0.9f),
+    LanternStar(0.10f, 0.28f, 2f, 0.5f),
+    LanternStar(0.24f, 0.34f, 2.5f, 0.7f),
+    LanternStar(0.58f, 0.26f, 2f, 0.5f),
+    LanternStar(0.88f, 0.32f, 2.5f, 0.7f),
+    LanternStar(0.05f, 0.48f, 2f, 0.6f),
+    LanternStar(0.36f, 0.44f, 2f, 0.5f),
+    LanternStar(0.50f, 0.56f, 2.5f, 0.7f),
+    LanternStar(0.90f, 0.55f, 2f, 0.5f),
+    LanternStar(0.14f, 0.66f, 2.5f, 0.7f),
+    LanternStar(0.48f, 0.78f, 2f, 0.5f),
+    LanternStar(0.76f, 0.82f, 2f, 0.6f),
+    LanternStar(0.22f, 0.88f, 2f, 0.5f),
+    LanternStar(0.60f, 0.92f, 2.5f, 0.7f),
+)
+
+private data class LanternStar(val x: Float, val y: Float, val size: Float, val alpha: Float)
+
+/** 夜空里的淡云（宽/高分数、宽 dp、高 dp、透明度）。 */
+private val LanternClouds = listOf(
+    LanternCloud(0.02f, 0.20f, 150f, 60f, 0.10f),
+    LanternCloud(0.55f, 0.38f, 170f, 70f, 0.08f),
+    LanternCloud(0.10f, 0.60f, 160f, 64f, 0.09f),
+    LanternCloud(0.48f, 0.80f, 180f, 70f, 0.08f),
+)
+
+private data class LanternCloud(val x: Float, val y: Float, val w: Float, val h: Float, val alpha: Float)
 
 @Composable
 private fun ModuleLantern(
