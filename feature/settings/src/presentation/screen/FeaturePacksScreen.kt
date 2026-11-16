@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,10 +48,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.DampingRatioMediumBouncy
+import androidx.compose.animation.core.StiffnessMedium
+import androidx.compose.foundation.Image
+import androidx.compose.ui.composed
+import androidx.compose.ui.res.painterResource
+import com.suanran.dreambox.feature.settings.R
 import com.suanran.dreambox.core.contract.OverrideApplier
 import com.suanran.dreambox.core.contract.OverrideConfigRepository
 import com.suanran.dreambox.core.contract.ProfileBindingReader
@@ -192,7 +202,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
     // 开关乐观状态：点下立刻翻开关，后台再写盘+重算规则；写完用磁盘真实值对账。
     // 之前开关完全等后台协程跑完才翻，桥里任何一步卡住都会让开关看起来“点不动”。
     var moduleEnabledOverride by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    // 灯笼夜空里最后点到的那盏灯，下面磨砂详情卡就讲它。
+    // 最后点到的那个模块，下面磨砂详情卡就讲它。
     var selectedModuleId by remember { mutableStateOf<String?>(null) }
     // 仪表盘顶部的圆形分类（全部 / 去广告 / 隐私 / 安全），点一个只看那类灯。
     var selectedCategory by remember { mutableStateOf("全部") }
@@ -222,7 +232,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
         }
     }
 
-    /** 灯笼/详情卡共用的三个动作：装、拨、删。拨灯的逻辑与 1.195 完全一致（同步写盘 + 乐观翻转）。 */
+    /** 模块行/详情卡共用的三个动作：装、拨、删。拨动的逻辑与 1.195 完全一致（同步写盘 + 乐观翻转）。 */
     fun installModule(def: ModuleDef) {
         busyModuleId = def.id
         scope.launch {
@@ -384,7 +394,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
                     }
                 }
             }
-            // ── 灯笼仪表盘：顶部圆形分类 + 磨砂 hero 卡 + 双列网格灯卡（参考琳记录页的布局）。──
+            // ── 仓鼠仪表盘：顶部圆形分类签 + 磨砂 hero 卡 + 便当格 + 模块大卡行（参考琳记录页的布局）。──
             item {
                 val enabledCount = displayModuleDefs.count { def ->
                     moduleEnabledOverride[def.id]
@@ -583,9 +593,7 @@ fun FeaturePacksScreen(navigator: Navigator) {
     }
 }
 
-/** 轻模块卡片：和功能包卡片同语言，开关在卡片里直接拨，拨完立刻重算规则。 */
-@Composable
-/** 灯笼夜空：模块是一盏盏浮在夜空里的灯，不是列表。点灯 = 启用/关闭。 */
+/** 仓鼠版模块市场：骨架照琳记录页（圆形分类签 + Hero + 便当格），行语言照白月光 medalRow，玻璃照琳 StatsGlassCard。 */
 private val LanternGold = Color(0xFFF2C46B)
 private val LanternGoldDeep = Color(0xFFE8A33D)
 private val LanternNight = Color(0xFF0B1636)
@@ -595,6 +603,296 @@ private val LanternLabelGlow = Color(0xFF8FC8FF)
 private val LanternOk = Color(0xFFA6EBCB)
 private val LanternOff = Color(0xFFB9C3D9)
 private val LanternCyan = Color(0xFF7FE3FF)
+private val ModuleGlass = Color(0xFF141B3D)
+private val ModulePink = Color(0xFFF48FB1)
+
+/** 模块配哪只仓鼠（按 id 固定，换 id 也不串）。URL 装的陌生模块默认 ham_12。 */
+private fun moduleHamster(def: ModuleDef): Int = when (def.id) {
+    "adblock" -> R.drawable.ham_01
+    "tracking" -> R.drawable.ham_03
+    "splash" -> R.drawable.ham_04
+    "videoads" -> R.drawable.ham_06
+    "antimalware" -> R.drawable.ham_07
+    "privacyplus" -> R.drawable.ham_08
+    "shopping" -> R.drawable.ham_10
+    else -> R.drawable.ham_12
+}
+
+/** 分类签配哪只仓鼠。 */
+private fun categoryHamster(cat: String): Int = when (cat) {
+    "全部" -> R.drawable.ham_01
+    "去广告" -> R.drawable.ham_03
+    "隐私" -> R.drawable.ham_05
+    "安全" -> R.drawable.ham_09
+    else -> R.drawable.ham_12
+}
+
+/** 仓鼠图标（照琳 HamsterIcon 原样抄）：待机呼吸浮动，周期 1700 + (index % 4) * 200 ms，相位按序号错开，上下 ±2dp；点按压到 0.86 再弹簧回弹。 */
+@Composable
+private fun HamsterIcon(
+    resId: Int,
+    index: Int,
+    pressed: Boolean = false,
+    iconSize: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "hamsterBreath")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1700 + (index % 4) * 200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "phase",
+    )
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.86f else 1f,
+        animationSpec = spring(DampingRatioMediumBouncy, StiffnessMedium),
+        label = "press",
+    )
+    val bobDp = sin(phase + index * 1.37f).toFloat() * 2f
+    Image(
+        painter = painterResource(resId),
+        contentDescription = null,
+        modifier = modifier
+            .size(iconSize)
+            .graphicsLayer {
+                translationY = bobDp * density
+                scaleX = pressScale
+                scaleY = pressScale
+            },
+    )
+}
+
+/** 依次入场（照琳 Modifier.entrance）：按序号 delay index * 45ms，上限 12 项，alpha 0→1、translationY 22→0，380ms。 */
+private fun Modifier.moduleEntrance(index: Int): Modifier = composed {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+    val delay = index.coerceAtMost(11) * 45
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(380, delayMillis = delay),
+        label = "entranceAlpha",
+    )
+    val offsetY by animateFloatAsState(
+        targetValue = if (visible) 0f else 22f,
+        animationSpec = tween(380, delayMillis = delay),
+        label = "entranceY",
+    )
+    this.graphicsLayer {
+        this.alpha = alpha
+        translationY = offsetY
+    }
+}
+
+/** 开关只画样子，不接点按（1.190 教训：父子双 clickable 嵌套会丢点按；整行点按只走 Row 的 onToggle）。 */
+@Composable
+private fun ModuleSwitchVisual(on: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(40.dp, 24.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(
+                if (on) Brush.horizontalGradient(listOf(LanternGold, ModulePink))
+                else Color(0xFF82808C).copy(alpha = 0.45f)
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .offset(x = if (on) 19.dp else 3.dp, y = 3.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+        )
+    }
+}
+
+/** 模块行（照白月光 medalRow）：48dp 仓鼠 + 标题 16sp + 副标题 13sp + 右边开关。关掉整行（仓鼠 + 文字）变淡 0.55，开关本身不动。 */
+@Composable
+private fun ModuleMedalRow(
+    def: ModuleDef,
+    index: Int,
+    enabled: Boolean,
+    installed: Boolean,
+    busy: Boolean,
+    onTap: () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    // 已装但未启用才变淡；未安装的保持全亮（等用户来装）。
+    val dim = installed && !enabled
+    val dimAlpha = if (dim) 0.55f else 1f
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .moduleEntrance(index)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                enabled = !busy,
+                onClick = onTap,
+            )
+            .padding(horizontal = 18.dp, vertical = 11.dp),
+    ) {
+        HamsterIcon(
+            resId = moduleHamster(def),
+            index = index,
+            pressed = pressed,
+            iconSize = 48.dp,
+            modifier = Modifier.graphicsLayer { alpha = dimAlpha },
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .graphicsLayer { alpha = dimAlpha },
+        ) {
+            Text(
+                text = def.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.Serif,
+                color = LanternLabelCore,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = when {
+                    busy -> "处理中…"
+                    enabled -> "已点亮 · 规则 ${def.rules.size} 条"
+                    installed -> "未点亮 · 规则 ${def.rules.size} 条"
+                    else -> "未安装 · 规则 ${def.rules.size} 条"
+                },
+                fontSize = 13.sp,
+                color = if (enabled) LanternOk else LanternOff,
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        ModuleSwitchVisual(on = enabled)
+    }
+}
+
+/** 便当格（照琳记录页双列便当格）：左竖版卡放规则总数，右两小卡放已启用与已安装。数字全是真实计数，不编。 */
+@Composable
+private fun ModuleBentoRow(
+    totalRules: Int,
+    enabledCount: Int,
+    total: Int,
+    installedCount: Int,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(18.dp))
+                .background(ModuleGlass.copy(alpha = 0.44f))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
+                .padding(14.dp),
+        ) {
+            HamsterIcon(
+                resId = R.drawable.ham_12,
+                index = 0,
+                iconSize = 40.dp,
+                modifier = Modifier.align(Alignment.TopEnd),
+            )
+            Column(modifier = Modifier.align(Alignment.BottomStart)) {
+                Text(
+                    text = "规则总数",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ModulePink,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "$totalRules 条",
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = LanternLabelCore,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "$total 个模块 · $enabledCount 个已启用",
+                    fontSize = 11.sp,
+                    color = LanternLabelCore.copy(alpha = 0.75f),
+                )
+            }
+        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(ModuleGlass.copy(alpha = 0.44f))
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Column {
+                    Text(
+                        text = "已启用",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ModulePink,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "$enabledCount / $total",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LanternLabelCore,
+                    )
+                    Text(
+                        text = "个模块已点亮",
+                        fontSize = 11.sp,
+                        color = LanternLabelCore.copy(alpha = 0.55f),
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(ModuleGlass.copy(alpha = 0.44f))
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Column {
+                    Text(
+                        text = "已安装",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ModulePink,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "$installedCount 个",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LanternLabelCore,
+                    )
+                    Text(
+                        text = "个模块已装上",
+                        fontSize = 11.sp,
+                        color = LanternLabelCore.copy(alpha = 0.55f),
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun ModuleDashboard(
@@ -680,75 +978,110 @@ private fun ModuleDashboard(
                 .fillMaxWidth()
                 .padding(16.dp),
         ) {
-            // 圆形分类。
+            // 圆形分类签（照琳 RecordsTabBar：52dp 圆，圆里是仓鼠图，选中放大 1.07 + 金边，label 在圆下）。
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                categories.forEach { cat ->
+                categories.forEachIndexed { catIndex, cat ->
                     val selected = cat == selectedCategory
+                    val tabScale by animateFloatAsState(
+                        targetValue = if (selected) 1.07f else 1f,
+                        animationSpec = tween(200),
+                        label = "tabScale",
+                    )
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(52.dp)
+                                .graphicsLayer {
+                                    scaleX = tabScale
+                                    scaleY = tabScale
+                                }
                                 .clip(CircleShape)
                                 .background(
-                                    if (selected) LanternGold.copy(alpha = 0.25f)
+                                    if (selected) LanternGold.copy(alpha = 0.20f)
                                     else LanternCard.copy(alpha = 0.7f)
                                 )
                                 .border(
-                                    width = if (selected) 2.dp else 1.dp,
-                                    color = if (selected) LanternGold
+                                    width = 1.dp,
+                                    color = if (selected) Color(0xBFFFC79A)
                                     else LanternOff.copy(alpha = 0.4f),
                                     shape = CircleShape,
                                 )
                                 .clickable { onCategorySelect(cat) },
                         ) {
-                            Text(
-                                text = cat.first().toString(),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                fontFamily = FontFamily.Serif,
-                                color = if (selected) LanternGold else LanternLabelCore,
+                            HamsterIcon(
+                                resId = categoryHamster(cat),
+                                index = catIndex,
+                                iconSize = 40.dp,
                             )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = cat,
                             fontSize = 12.sp,
-                            color = if (selected) LanternGold else LanternOff,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selected) Color(0xFFFFC79A) else LanternOff,
                         )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // Hero 卡：已点亮几盏。
+            // Hero 卡：已点亮几盏（照琳 StatsGlassCard 的玻璃配方）。
             ModuleHeroCard(enabledCount = enabledCount, total = defs.size)
             Spacer(modifier = Modifier.height(12.dp))
-            // 双列网格灯卡。
+            // 便当格：规则总数 + 已启用 + 已安装。
+            val totalRules = defs.sumOf { it.rules.size }
+            val installedCount = defs.count { it.id in installedIds }
+            ModuleBentoRow(
+                totalRules = totalRules,
+                enabledCount = enabledCount,
+                total = defs.size,
+                installedCount = installedCount,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            // 模块列表大卡（照白月光：一张 28dp 大卡包住全部行）。
             val filtered = if (selectedCategory == "全部") defs
             else defs.filter { it.category == selectedCategory }
-            filtered.chunked(2).forEach { row ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                ) {
-                    row.forEach { def ->
+            val filteredEnabledCount = filtered.count { isEnabled(it) && it.id in installedIds }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(ModuleGlass.copy(alpha = 0.44f))
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
+                    .padding(vertical = 6.dp),
+            ) {
+                Column {
+                    Text(
+                        text = "共 ${filtered.size} 个模块 · 已启用 $filteredEnabledCount 个",
+                        fontSize = 12.sp,
+                        color = LanternOff,
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                    )
+                    filtered.forEachIndexed { rowIndex, def ->
                         val enabled = isEnabled(def) && (def.id in installedIds)
                         val busy = isBusy(def)
-                        ModuleGridCard(
+                        ModuleMedalRow(
                             def = def,
+                            index = rowIndex,
                             enabled = enabled,
                             installed = def.id in installedIds,
                             busy = busy,
-                            phase = defs.indexOf(def) * 0.9f,
-                            modifier = Modifier.weight(1f),
                             onTap = { onModuleTap(def, enabled) },
                         )
-                    }
-                    if (row.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
+                        if (rowIndex < filtered.lastIndex) {
+                            // 行间发丝线（照白月光：左缩进，不顶满宽）。
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 80.dp, end = 18.dp)
+                                    .height(1.dp)
+                                    .background(Color.White.copy(alpha = 0.08f)),
+                            )
+                        }
                     }
                 }
             }
@@ -792,22 +1125,23 @@ private val LanternClouds = listOf(
 
 private data class LanternCloud(val x: Float, val y: Float, val w: Float, val h: Float, val alpha: Float)
 
-/** Hero 卡：已点亮几盏 + 进度条。 */
+/** Hero 卡：已点亮几盏 + 进度条（照琳 StatsGlassCard 的玻璃配方：18dp 圆角 + 深色 0.44 + 1dp 白 0.15 边）。 */
 @Composable
 private fun ModuleHeroCard(enabledCount: Int, total: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(LanternCard.copy(alpha = 0.75f))
-            .border(1.dp, LanternCyan.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(ModuleGlass.copy(alpha = 0.44f))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
             .padding(20.dp),
     ) {
         Column {
             Text(
                 text = "已点亮",
                 fontSize = 13.sp,
-                color = LanternLabelGlow,
+                fontWeight = FontWeight.Bold,
+                color = ModulePink,
             )
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
@@ -858,139 +1192,6 @@ private fun ModuleHeroCard(enabledCount: Int, total: Int) {
     }
 }
 
-/** 网格灯卡：磨砂卡 + 灯芯（浮动 + 金光呼吸）+ 名字 + 状态 + 规则数，点卡即开关。 */
-@Composable
-private fun ModuleGridCard(
-    def: ModuleDef,
-    enabled: Boolean,
-    installed: Boolean,
-    busy: Boolean,
-    phase: Float,
-    modifier: Modifier = Modifier,
-    onTap: () -> Unit,
-) {
-    // 灯芯上下浮动：每张卡相位错开。
-    val bob = rememberInfiniteTransition(label = "orb-bob-${def.id}")
-    val bobT by bob.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(animation = tween(3600, easing = LinearEasing)),
-        label = "bob",
-    )
-    val bobY = (sin(bobT + phase) * 4).dp
-    // 点亮时金光呼吸。
-    val glow = rememberInfiniteTransition(label = "orb-glow-${def.id}")
-    val glowT by glow.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(animation = tween(2600, easing = LinearEasing)),
-        label = "glow",
-    )
-    val glowAlpha = if (enabled) 0.55f + 0.35f * sin(glowT + phase) else 0f
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = tween(120),
-        label = "press",
-    )
-    Box(
-        modifier = modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(20.dp))
-            .background(LanternCard.copy(alpha = 0.75f))
-            .border(
-                width = 1.dp,
-                color = if (enabled) LanternGold.copy(alpha = 0.5f)
-                else LanternCyan.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(20.dp),
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                enabled = !busy,
-                onClick = onTap,
-            )
-            .padding(16.dp),
-    ) {
-        Column {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(48.dp)
-                    .offset(y = bobY)
-                    .background(
-                        brush = if (enabled) {
-                            Brush.radialGradient(
-                                0f to LanternGold,
-                                0.55f to LanternGoldDeep.copy(alpha = 0.85f),
-                                1f to LanternGoldDeep.copy(alpha = 0.35f),
-                            )
-                        } else {
-                            Brush.radialGradient(
-                                0f to Color(0xFF3A4568),
-                                1f to Color(0xFF232B47),
-                            )
-                        },
-                        shape = CircleShape,
-                    )
-                    .border(
-                        width = 1.5.dp,
-                        color = if (enabled) LanternGold.copy(alpha = 0.9f)
-                        else LanternOff.copy(alpha = 0.35f),
-                        shape = CircleShape,
-                    ),
-            ) {
-                // 光晕（呼吸），比灯芯大一圈。
-                if (enabled) {
-                    Box(
-                        modifier = Modifier
-                            .size(68.dp)
-                            .graphicsLayer { alpha = glowAlpha }
-                            .background(
-                                brush = Brush.radialGradient(
-                                    0f to LanternGold.copy(alpha = 0.55f),
-                                    1f to Color.Transparent,
-                                ),
-                                shape = CircleShape,
-                            ),
-                    )
-                }
-                Text(
-                    text = "🧩",
-                    fontSize = 20.sp,
-                    modifier = Modifier.graphicsLayer { alpha = if (enabled) 1f else 0.55f },
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = def.name,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = FontFamily.Serif,
-                color = LanternLabelCore,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = when {
-                    busy -> "处理中…"
-                    enabled -> "已点亮"
-                    installed -> "未点亮"
-                    else -> "未安装"
-                },
-                fontSize = 12.sp,
-                color = if (enabled) LanternOk else LanternOff,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "规则 ${def.rules.size} 条",
-                fontSize = 11.5.sp,
-                color = LanternOff,
-            )
-        }
-    }
-}
-
 @Composable
 private fun ModuleDetailCard(
     def: ModuleDef,
@@ -1006,25 +1207,18 @@ private fun ModuleDetailCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(LanternCard.copy(alpha = 0.82f))
-            .border(1.dp, LanternCyan.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(ModuleGlass.copy(alpha = 0.44f))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
             .padding(20.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (enabled) LanternGold.copy(alpha = 0.22f)
-                            else LanternCyan.copy(alpha = 0.13f)
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = "🧩", fontSize = 23.sp)
-                }
+                HamsterIcon(
+                    resId = moduleHamster(def),
+                    index = 0,
+                    iconSize = 48.dp,
+                )
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
