@@ -87,7 +87,89 @@ object SeedModules {
         ),
     )
 
-    val ALL: List<ModuleDef> = listOf(AD_BLOCK, TRACKING, SPLASH)
+    val VIDEO_ADS = ModuleDef(
+        id = "videoads",
+        name = "视频去广告",
+        desc = "拦截视频广告 SDK 与片前贴片域名，视频片头广告直接不加载",
+        author = "梦盒内置",
+        homepage = "",
+        version = "1",
+        category = "去广告",
+        sourceUrl = "",
+        rules = listOf(
+            "DOMAIN-SUFFIX,imasdk.googleapis.com,REJECT",
+            "DOMAIN-SUFFIX,pubads.g.doubleclick.net,REJECT",
+            "DOMAIN-SUFFIX,s0.2mdn.net,REJECT",
+            "DOMAIN-SUFFIX,2mdn.net,REJECT",
+            "DOMAIN-SUFFIX,ad.doubleclick.net,REJECT",
+            "DOMAIN-SUFFIX,g.doubleclick.net,REJECT",
+        ),
+    )
+
+    val ANTI_MALWARE = ModuleDef(
+        id = "antimalware",
+        name = "反恶意域名",
+        desc = "拦截挖矿脚本与恶意域名，防后台偷跑算力与恶意跳转",
+        author = "梦盒内置",
+        homepage = "",
+        version = "1",
+        category = "安全",
+        sourceUrl = "",
+        rules = listOf(
+            "DOMAIN-SUFFIX,coinhive.com,REJECT",
+            "DOMAIN-SUFFIX,coin-hive.com,REJECT",
+            "DOMAIN-SUFFIX,cryptoloot.pro,REJECT",
+            "DOMAIN-SUFFIX,minero.cc,REJECT",
+            "DOMAIN-SUFFIX,coinimp.com,REJECT",
+            "DOMAIN-SUFFIX,jsecoin.com,REJECT",
+            "DOMAIN-SUFFIX,webminepool.com,REJECT",
+        ),
+    )
+
+    val PRIVACY_PLUS = ModuleDef(
+        id = "privacyplus",
+        name = "隐私增强",
+        desc = "拦截会话录制与指纹追踪，不让网站回放你的操作与设备指纹",
+        author = "梦盒内置",
+        homepage = "",
+        version = "1",
+        category = "隐私",
+        sourceUrl = "",
+        rules = listOf(
+            "DOMAIN-SUFFIX,mouseflow.com,REJECT",
+            "DOMAIN-SUFFIX,luckyorange.com,REJECT",
+            "DOMAIN-SUFFIX,inspectlet.com,REJECT",
+            "DOMAIN-SUFFIX,smartlook.com,REJECT",
+            "DOMAIN-SUFFIX,logrocket.com,REJECT",
+            "DOMAIN-SUFFIX,heap.io,REJECT",
+            "DOMAIN-SUFFIX,pendo.io,REJECT",
+            "DOMAIN-SUFFIX,api.fingerprint.com,REJECT",
+            "DOMAIN-SUFFIX,fingerprint.com,REJECT",
+        ),
+    )
+
+    val SHOPPING = ModuleDef(
+        id = "shopping",
+        name = "购物净化",
+        desc = "拦截电商联盟与返利追踪，购物链接不再被挂返利与追踪参数",
+        author = "梦盒内置",
+        homepage = "",
+        version = "1",
+        category = "去广告",
+        sourceUrl = "",
+        rules = listOf(
+            "DOMAIN-SUFFIX,awin.com,REJECT",
+            "DOMAIN-SUFFIX,linksynergy.com,REJECT",
+            "DOMAIN-SUFFIX,shareasale.com,REJECT",
+            "DOMAIN-SUFFIX,cj.com,REJECT",
+            "DOMAIN-SUFFIX,impact.com,REJECT",
+            "DOMAIN-SUFFIX,skimlinks.com,REJECT",
+            "DOMAIN-SUFFIX,viglink.com,REJECT",
+            "DOMAIN-SUFFIX,partnerize.com,REJECT",
+        ),
+    )
+
+    val ALL: List<ModuleDef> = listOf(AD_BLOCK, TRACKING, SPLASH, VIDEO_ADS, ANTI_MALWARE, PRIVACY_PLUS, SHOPPING)
 
     /** 生成远程索引 modules.json 的内容（和本文件三条一致）。 */
     fun toIndexJson(): String {
