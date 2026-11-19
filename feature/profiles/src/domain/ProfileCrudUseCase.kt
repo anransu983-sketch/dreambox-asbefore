@@ -54,20 +54,28 @@ class ProfileCrudUseCase(
         onBeforeUpdate: (suspend (UUID) -> Unit)? = null,
     ): UUID? {
         var createdUuid: UUID? = null
+        var updateStarted = false
         return try {
             val uuid = profilesRepository.createProfile(type, name, source, ageSecretKey, interval)
             createdUuid = uuid
             onBeforeUpdate?.invoke(uuid)
             val observer = IFetchObserver { status -> onProgress?.invoke(status) }
+            updateStarted = true
             profilesRepository.updateProfile(uuid, observer)
             uuid
         } catch (error: Exception) {
             if (error is kotlinx.coroutines.CancellationException) throw error
             Timber.e(error, "Failed to create profile")
-            createdUuid?.let { uuid ->
-                safeRunSilent("ProfileCrud", "Rollback profile creation: $uuid") {
-                    profilesRepository.deleteProfile(uuid)
+            // 审计 1.201：只在建记录/写文件阶段失败时回滚删除；拉取订阅失败时保留记录
+            // （含用户填的 URL 与备注），否则一次网络抖动就把刚填的东西全丢了，列表里可再点更新重试。
+            if (!updateStarted) {
+                createdUuid?.let { uuid ->
+                    safeRunSilent("ProfileCrud", "Rollback profile creation: $uuid") {
+                        profilesRepository.deleteProfile(uuid)
+                    }
                 }
+            } else {
+                Timber.w("Keeping profile after fetch failure: $createdUuid")
             }
             throw error
         }
@@ -119,15 +127,19 @@ class ProfileCrudUseCase(
         false
     }
 
+    /** 全部更新的结果：成功数与失败的订阅 UUID。审计 1.201：此前只回成功数，调用方会把部分失败也报成全部成功。 */
+    data class UpdateAllResult(val updated: Int, val failed: List<UUID>)
+
     /**
      * Update all URL-type profiles with progress reporting.
-     * Returns the number of profiles updated.
+     * Returns how many updated and which failed, so the caller can report honestly.
      */
     suspend fun updateAllUrlProfiles(
         profiles: List<Profile>,
         onProgress: ((FetchStatus) -> Unit)? = null,
-    ): Int {
+    ): UpdateAllResult {
         var count = 0
+        val failed = mutableListOf<UUID>()
         for (profile in profiles.filter { it.type == Profile.Type.Url }) {
             val observer = IFetchObserver { status -> onProgress?.invoke(status) }
             try {
@@ -136,9 +148,10 @@ class ProfileCrudUseCase(
             } catch (error: Exception) {
                 if (error is kotlinx.coroutines.CancellationException) throw error
                 Timber.e(error, "Failed to update profile ${profile.uuid}")
+                failed += profile.uuid
             }
         }
-        return count
+        return UpdateAllResult(updated = count, failed = failed)
     }
 
     /** Patch profile properties. Returns true on success. */

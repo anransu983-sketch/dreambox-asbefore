@@ -27,6 +27,11 @@ data class Profile(
     val updatedAt: Long,
     val ageSecretKey: String = ""
 ) : Parcelable {
+    // 审计 1.201：data class 默认 toString 会把订阅 URL 与 age 密钥打进日志/崩溃报告，改写为脱敏版。
+    override fun toString(): String =
+        "Profile(uuid=$uuid, name=$name, type=$type, active=$active, interval=$interval, " +
+            "upload=$upload, download=$download, total=$total, expire=$expire, updatedAt=$updatedAt, " +
+            "source=<redacted>, ageSecretKey=<redacted>)"
     enum class Type { File, Url, External }
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         Parcelizer.encodeToParcel(serializer(), parcel, this)

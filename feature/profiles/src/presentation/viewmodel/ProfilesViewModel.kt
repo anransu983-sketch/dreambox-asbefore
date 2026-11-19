@@ -153,6 +153,12 @@ class ProfilesViewModel(
                     // 订阅返回的不是 Clash 配置而是节点链接时，转为节点导入（兜底）
                     val msg = e.message.orEmpty()
                     if (type == Profile.Type.Url && ("proxies" in msg || "proxy-providers" in msg)) {
+                        // 审计 1.201：首导失败不再删记录，节点链接兜底时先清掉这条残留的 URL 记录，避免留一条永远失败的订阅。
+                        runCatching {
+                            profileCrud.queryAllProfiles()
+                                .filter { it.type == Profile.Type.Url && it.source == decodedSource }
+                                .forEach { profileCrud.deleteProfile(it.uuid) }
+                        }
                         importNodeSubscriptionInternal(name, decodedSource, msg)
                         return@launch
                     }
@@ -254,14 +260,19 @@ class ProfilesViewModel(
             try {
                 setLoading(true)
                 _downloadProgress.value = DownloadProgress(0, FlyTxt.ProfilesVM.Progress.Preparing)
-                val count = profileCrud.updateAllUrlProfiles(
+                val result = profileCrud.updateAllUrlProfiles(
                     profiles = _profiles.value,
                     onProgress = { status -> _downloadProgress.value = status.toDownloadProgress() },
                 )
-                if (count > 0) {
+                if (result.updated > 0 || result.failed.isNotEmpty()) {
                     _downloadProgress.value =
                         DownloadProgress(percent = 100, message = FlyTxt.ProfilesVM.Progress.ImportComplete, isCompleted = true)
-                    showMessage(FlyTxt.ProfilesPage.Action.UpdateAll)
+                    // 审计 1.201：有失败时不许只报成功，如实报成功/失败数。
+                    if (result.failed.isEmpty()) {
+                        showMessage(FlyTxt.ProfilesPage.Action.UpdateAll)
+                    } else {
+                        showMessage("${FlyTxt.ProfilesPage.Action.UpdateAll}：成功 ${result.updated} 个，失败 ${result.failed.size} 个")
+                    }
                 }
                 refreshProfiles()
             } catch (error: Exception) {

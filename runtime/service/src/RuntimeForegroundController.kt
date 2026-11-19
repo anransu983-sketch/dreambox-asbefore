@@ -89,13 +89,25 @@ internal class RuntimeForegroundController(
                     stopForegroundService()
                     scope.launch(Dispatchers.IO) {
                         if (isRuntimeInitialized) {
-                            val stopResult = runCatching { runtime.stop(reason) }.getOrNull()
-                            if (stopResult?.success == false) {
-                                val error = stopResult.error ?: "$logTag runtime stop failed"
+                            // 审计 1.201：此前 runCatching{}.getOrNull() 会把 stop 抛异常的路径静默丢掉，
+                            // 只有 Result 失败才处理；现在异常与 Result 失败都记失败并上报。
+                            val stopResult = runCatching { runtime.stop(reason) }
+                            val thrown = stopResult.exceptionOrNull()
+                            if (thrown != null) {
+                                val error = thrown.message ?: "$logTag runtime stop failed"
                                 this@RuntimeForegroundController.reason = error
                                 StatusProvider.markRuntimeFailed(mode)
                                 service.sendClashStopped(error)
                                 Log.e("$logTag runtime stop failed: $error")
+                            } else {
+                                val result = stopResult.getOrNull()
+                                if (result?.success == false) {
+                                    val error = result.error ?: "$logTag runtime stop failed"
+                                    this@RuntimeForegroundController.reason = error
+                                    StatusProvider.markRuntimeFailed(mode)
+                                    service.sendClashStopped(error)
+                                    Log.e("$logTag runtime stop failed: $error")
+                                }
                             }
                         }
                         service.stopSelf()
@@ -258,7 +270,10 @@ internal class RuntimeForegroundController(
         notificationJob = null
         scope.launch(Dispatchers.IO) {
             if (isRuntimeInitialized) {
-                runCatching { runtime.stop(reason) }
+                // 审计 1.201：VPN 被系统回收时的 stop 失败此前全静默，现记日志。
+                runCatching { runtime.stop(reason) }.onFailure {
+                    Log.e("$logTag runtime stop failed on revoke: ${it.message}")
+                }
             }
             stopForegroundService()
             service.stopSelf()

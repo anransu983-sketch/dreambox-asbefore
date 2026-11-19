@@ -26,6 +26,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.Executors
 
 /**
@@ -199,6 +200,19 @@ class PackHostActivity : Activity() {
         if (entryClass.isBlank()) return null
         val dex = File(packDir, "plugins.dex")
         if (!dex.isFile) return null
+        // 审计 1.201：pack.json 声明 dexSha256 时先验 dex 哈希，不符拒绝加载。
+        // 未声明时保持原行为（现有 5 个包暂无该字段，不因此断供）。
+        val expectedDexSha = runCatching {
+            JSONObject(File(packDir, "pack.json").readText()).optString("dexSha256")
+        }.getOrDefault("")
+        if (expectedDexSha.isNotBlank()) {
+            val actualDexSha = runCatching { sha256Hex(dex) }.getOrNull()
+            if (actualDexSha == null || !actualDexSha.equals(expectedDexSha.trim(), ignoreCase = true)) {
+                AppLogBuffer.forceAdd(Log.ERROR, "Pack", "原生代码 SHA-256 不符，拒绝加载 dir=${packDir.name}")
+                Toast.makeText(this, "插件原生代码校验失败，已拒绝加载", Toast.LENGTH_LONG).show()
+                return null
+            }
+        }
         return runCatching {
             // Android 14+：动态加载的 dex 必须只读。
             dex.setReadOnly()
@@ -221,6 +235,18 @@ class PackHostActivity : Activity() {
     }
 
     // ── Capacitor 桥 ─────────────────────────────────────────
+
+    private fun sha256Hex(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            var read: Int
+            while (input.read(buffer).also { read = it } != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+    }
 
     inner class AndroidBridge {
         @JavascriptInterface

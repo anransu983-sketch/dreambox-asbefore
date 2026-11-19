@@ -293,7 +293,8 @@ fun MainScreen(
                             }
                         },
                     state = mainPagerState.pagerState,
-                    beyondViewportPageCount = 2,
+                    // 审计 1.201：2 会让首页天空场景在切到代理/配置页时仍常驻组合、无限动画空转；1 仍保留相邻页滑动顺滑。
+                    beyondViewportPageCount = 1,
                     flingBehavior = pagerFlingBehavior,
                     userScrollEnabled = true,
                     overscrollEffect = null,

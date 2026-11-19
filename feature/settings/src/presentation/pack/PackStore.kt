@@ -8,6 +8,7 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
 /** 功能包显示开关的作用域：模块页开关与已隐藏页恢复共用 section_hidden_packs 存储。 */
@@ -23,6 +24,8 @@ data class PackDef(
     val downloadUrl: String,
     /** 包内桥入口类名（实现 core 的 PackBridgeDispatcher），由宿主用 DexClassLoader 加载。 */
     val entryClass: String,
+    /** 审计 1.201：zip 的 SHA-256（有值时安装前校验）。现有 5 个注册包暂未发哈希，先留空=不校验，后续发包时补。 */
+    val sha256: String = "",
 )
 
 /**
@@ -75,6 +78,14 @@ class PackStore(context: Context) {
                 }
             }
         }
+        // 审计 1.201：包体积上限 20MB（现有最大 1.3MB），防镜像/劫持送超大文件撑满磁盘。
+        if (zipFile.length() > MAX_PACK_BYTES) throw IllegalStateException("插件包超过上限（20MB）")
+        if (def.sha256.isNotBlank()) {
+            val actual = sha256Hex(zipFile)
+            if (!actual.equals(def.sha256.trim(), ignoreCase = true)) {
+                throw IllegalStateException("插件包 SHA-256 不符")
+            }
+        }
         val target = dirOf(def.id)
         val staging = File(packsRoot, "${def.id}.staging")
         staging.deleteRecursively()
@@ -83,6 +94,11 @@ class PackStore(context: Context) {
             unzipSafely(zipFile, staging)
             val marker = File(staging, "pack.json")
             if (!marker.isFile) throw IllegalStateException("插件缺少 pack.json")
+            // 审计 1.201：解压后核对包内 id/version 与注册表一致，错包不许装入（此前只在 isInstalled 里查）。
+            val markerJson = JSONObject(marker.readText())
+            if (markerJson.optString("id") != def.id || markerJson.optString("version") != def.version) {
+                throw IllegalStateException("插件包与注册表不符：${markerJson.optString("id")} v${markerJson.optString("version")}")
+            }
             target.deleteRecursively()
             if (!staging.renameTo(target)) throw IllegalStateException("插件装入失败")
         } catch (t: Throwable) {
@@ -95,6 +111,18 @@ class PackStore(context: Context) {
 
     fun uninstall(id: String) {
         dirOf(id).deleteRecursively()
+    }
+
+    private fun sha256Hex(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            var read: Int
+            while (input.read(buffer).also { read = it } != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
     }
 
     private fun unzipSafely(zipFile: File, destDir: File) {
@@ -119,6 +147,7 @@ class PackStore(context: Context) {
     }
 
     companion object {
+        const val MAX_PACK_BYTES = 20L * 1024L * 1024L
         /**
          * 注册表：新增功能包只加一条定义，本体代码不用改。
          * 芷湘包已于 2026-11-02 按用户决定下架（包内网易云播不了，用户拍板删）；

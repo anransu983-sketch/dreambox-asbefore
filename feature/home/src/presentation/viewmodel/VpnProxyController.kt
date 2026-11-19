@@ -78,8 +78,9 @@ class VpnProxyController(private val scope: CoroutineScope, private val proxyFac
      * @param onSuccess Optional callback invoked after successful start
      */
     fun startProxy(mode: RunMode, onPreStart: (suspend () -> Unit)? = null, onSuccess: (() -> Unit)? = null) {
-        if (_pendingTransition.value == PendingTransition.AwaitingPermission) return
-        _pendingTransition.value = PendingTransition.Starting
+        // 审计 1.201：此前先读值后赋值是非原子的，两次连点会同时放行，后一次启动会停掉刚起来的前一次。
+        // compareAndSet 原子占位：只有空闲态能进 Starting，正在启动/停止/等授权时直接返回。
+        if (!_pendingTransition.compareAndSet(PendingTransition.None, PendingTransition.Starting)) return
         scope.launch {
             try {
                 onPreStart?.invoke()
@@ -120,8 +121,10 @@ class VpnProxyController(private val scope: CoroutineScope, private val proxyFac
      * @param onPreStop Optional callback invoked before stopping
      */
     fun stopProxy(mode: RunMode? = null, onPreStop: (suspend () -> Unit)? = null) {
-        if (_pendingTransition.value == PendingTransition.Stopping) return
-        _pendingTransition.value = PendingTransition.Stopping
+        // 审计 1.201：同上原子占位；正在启动时也允许停（抢占 Starting），等授权/已在停止时返回。
+        val stopped = _pendingTransition.compareAndSet(PendingTransition.None, PendingTransition.Stopping) ||
+            _pendingTransition.compareAndSet(PendingTransition.Starting, PendingTransition.Stopping)
+        if (!stopped) return
         scope.launch {
             try {
                 onPreStop?.invoke()

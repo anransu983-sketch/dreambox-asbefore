@@ -19,6 +19,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import java.io.File
 import java.io.IOException
+import java.security.MessageDigest
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -259,6 +260,8 @@ class GitHubUpdateManager(
                 coroutineContext.ensureActive()
                 val downloaded = runCatching {
                     downloadToFile(target.url, outputFile, target.expectedSize)
+                    // 审计 1.201：落盘后终验大小 + SHA-256（有值时），不符就删包换下一个源，不再直接调安装器。
+                    verifyDownloadedFile(outputFile, target)
                     if (downloadCancelRequested) throw UpdateDownloadCancelledException()
                     true
                 }.onFailure { throwable ->
@@ -342,12 +345,12 @@ class GitHubUpdateManager(
         val releases: List<GitHubRelease> = json.decodeFromString(response.bodyAsText())
         val usable = releases.filter { !it.draft && it.tagName.isNotBlank() }
         val picked = when (source) {
-            // Stable 通道：最新的正式版；没有正式版时退到最新的预发布
-            UpdateSource.Latest -> usable.firstOrNull { !it.prerelease } ?: usable.firstOrNull()
+            // 审计 1.201：Stable 通道只取正式版，没有正式版时不退到预发布（此前会把预发布当正式版推给用户）。
+            UpdateSource.Latest -> usable.firstOrNull { !it.prerelease }
             // 预发布 / Smart 通道：最新的版本（含预发布）
             else -> usable.firstOrNull()
         }
-        return picked ?: error("HTTP 404")
+        return picked ?: error(if (source == UpdateSource.Latest) "暂无正式版" else "HTTP 404")
     }
     private fun GitHubRelease.toUpdateCandidate(source: UpdateSource): UpdateCandidate {
         val allowedPrefixes = releasePrefixesFor(source)
@@ -419,6 +422,8 @@ class GitHubUpdateManager(
         return raw.trim().removePrefix("v").removePrefix("V")
     }
     private fun compareSemanticVersion(a: String, b: String): Int {
+        // 审计 1.201：旧实现把 "-beta" 等非数字后缀直接丢掉，1.200-beta 会和 1.200 比成相等。
+        // 新规则：数字段先比；数字相等时预发布版 < 正式版；同为预发布再按字符串比。
         val left = a.split('.', '-', '_').mapNotNull { it.toIntOrNull() }
         val right = b.split('.', '-', '_').mapNotNull { it.toIntOrNull() }
         val size = maxOf(left.size, right.size)
@@ -427,7 +432,21 @@ class GitHubUpdateManager(
             val rv = right.getOrElse(index) { 0 }
             if (lv != rv) return lv.compareTo(rv)
         }
-        return 0
+        val aPre = isPrereleaseVersion(a)
+        val bPre = isPrereleaseVersion(b)
+        return when {
+            aPre && !bPre -> -1
+            !aPre && bPre -> 1
+            aPre && bPre -> a.compareTo(b)
+            else -> 0
+        }
+    }
+
+    private fun isPrereleaseVersion(raw: String): Boolean {
+        val core = raw.trim().removePrefix("v").removePrefix("V")
+        val rest = core.replace(Regex("""^[0-9]+(\.[0-9]+)*"""), "")
+        if (rest.isBlank()) return false
+        return rest.any { it.isLetter() }
     }
     private fun isNonLatestNewer(candidate: UpdateCandidate): Boolean {
         // 先看版本号：tag 是语义版本且明确高于本地版本时直接算新版，不走时间戳比较。
@@ -460,14 +479,19 @@ class GitHubUpdateManager(
     }
     private fun mirrorUrlsFor(sourceUrl: String, templates: String): List<String> {
         if (sourceUrl.isBlank() || templates.isBlank()) return emptyList()
+        // 审计 1.201：镜像只接受 https，http 镜像直接丢弃（此前无协议白名单，中间人可替换 APK）。
         return templates.split('\n', ',', ';')
             .map(String::trim)
             .filter(String::isNotBlank)
-            .map { template ->
-                when {
+            .mapNotNull { template ->
+                val built = when {
                     "{url}" in template -> template.replace("{url}", sourceUrl)
                     "{encodedUrl}" in template -> template.replace("{encodedUrl}", Uri.encode(sourceUrl))
                     else -> template.trimEnd('/') + "/" + sourceUrl
+                }
+                if (built.startsWith("https://")) built else {
+                    Timber.w("Update mirror dropped non-https template: %s", template)
+                    null
                 }
             }
     }
@@ -475,27 +499,37 @@ class GitHubUpdateManager(
         val url: String,
         val fileName: String,
         val expectedSize: Long = 0L,
+        val sha256: String = "",
     )
     private fun UpdateCandidate.resolveDownloadTargets(selectedPackage: UpdateManifestPackage? = null): List<DownloadTarget> {
+        // 审计 1.201：包列表非空但无匹配 ABI 时直接返回空（走 NoCompatibleAsset），不许再 fallback 到 legacy 通用地址装错 ABI 的包。
+        if (selectedPackage == null && manifest.packages.isNotEmpty() && manifest.resolveBestPackageTarget() == null) {
+            return emptyList()
+        }
         val urls = resolveDownloadUrls(selectedPackage)
         val fileName = resolveDownloadFileName(selectedPackage)
+        val best = manifest.resolveBestPackageTarget()
         val expectedSize = selectedPackage?.size?.takeIf { it > 0 }
-            ?: manifest.resolveBestPackageTarget()?.size?.takeIf { it > 0 }
+            ?: best?.size?.takeIf { it > 0 }
             ?: 0L
-        return urls.filter(String::isNotBlank).map { DownloadTarget(url = it, fileName = fileName, expectedSize = expectedSize) }
+        val expectedSha256 = selectedPackage?.sha256?.takeIf { it.isNotBlank() }
+            ?: best?.sha256?.takeIf { it.isNotBlank() }
+            ?: ""
+        return urls.filter(String::isNotBlank).map { DownloadTarget(url = it, fileName = fileName, expectedSize = expectedSize, sha256 = expectedSha256) }
     }
     private fun UpdateCandidate.resolveDownloadUrls(selectedPackage: UpdateManifestPackage? = null): List<String> {
         val directUrl = selectedPackage?.downloadUrl?.takeIf { it.isNotBlank() } ?: manifest.resolveBestPackageUrl()
         if (directUrl.isNotBlank()) {
+            // 审计 1.201：直连优先、镜像兜底（此前镜像先试，坏镜像会先吃掉一次下载机会还可能先送错包）。
             val urls = linkedSetOf<String>()
-            urls += mirrorUrlsFor(directUrl, buildConfig.updateMirrorTemplates)
             urls += directUrl
+            urls += mirrorUrlsFor(directUrl, buildConfig.updateMirrorTemplates)
             return urls.filter(String::isNotBlank)
         }
         val downloadUrl = manifest.toLegacyApkDownloadUrl()
         val urls = linkedSetOf<String>()
-        urls += mirrorUrlsFor(downloadUrl, buildConfig.updateMirrorTemplates)
         urls += downloadUrl
+        urls += mirrorUrlsFor(downloadUrl, buildConfig.updateMirrorTemplates)
         return urls.filter(String::isNotBlank)
     }
     private fun UpdateCandidate.resolveDownloadFileName(selectedPackage: UpdateManifestPackage? = null): String {
@@ -534,7 +568,8 @@ class GitHubUpdateManager(
             .sortedWith(byNewest)
             .firstOrNull()
         if (universal != null) return universal
-        return available.sortedWith(byNewest).firstOrNull()
+        // 审计 1.201：无精确 ABI 且无 universal 时返回 null，不再任意挑一个 ABI 的包装上（此前会装错 ABI）。
+        return null
     }
 
     /** 从文件名提取构建时间戳（形如 …-202610071820-8cca33.apk 取 202610071820），取不到返回空。 */
@@ -629,6 +664,9 @@ class GitHubUpdateManager(
                             coroutineContext.ensureActive()
                             output.write(buffer, 0, read)
                             total += read
+                            if (total > MAX_DOWNLOAD_BYTES) {
+                                throw IOException("下载文件超过上限（200MB），已中止")
+                            }
                             stallWindowBytes += read
                             val nowMs = System.currentTimeMillis()
                             if (nowMs - stallWindowStart >= 20_000) {
@@ -672,6 +710,30 @@ class GitHubUpdateManager(
             }
         }
     }
+    private fun verifyDownloadedFile(file: File, target: DownloadTarget) {
+        if (target.expectedSize > 0 && file.length() != target.expectedSize) {
+            error("下载文件大小不符：期望 ${target.expectedSize}，实际 ${file.length()}")
+        }
+        if (target.sha256.isNotBlank()) {
+            val actual = sha256Hex(file)
+            if (!actual.equals(target.sha256.trim(), ignoreCase = true)) {
+                error("下载文件 SHA-256 不符")
+            }
+        }
+    }
+
+    private fun sha256Hex(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var read: Int
+            while (input.read(buffer).also { read = it } != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+    }
+
     private fun openInstaller(file: File) {
         val uri = FileProvider.getUriForFile(
             appContext,
@@ -690,6 +752,7 @@ class GitHubUpdateManager(
     }
     private companion object {
         private const val TAG = "GitHubUpdateManager"
+        const val MAX_DOWNLOAD_BYTES = 200L * 1024L * 1024L
         const val FALLBACK_APK_FILE_NAME = "FlyCat-release.apk"
         const val AUTO_CHECK_INTERVAL_MS = 1 * 60 * 60 * 1000L
         const val PREFERENCE_FILE = "update_preferences"
