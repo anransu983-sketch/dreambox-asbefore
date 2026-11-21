@@ -244,9 +244,12 @@ internal object SelectionRestoreExecutor {
         // 订阅模板常把 Auto（url-test 组）放 Proxy 组首位；mihomo 在没有手动记忆时
         // 默认选中首位，于是流量走 Auto、每 300 秒主动探测全部节点，弱协议节点
         // 会在探测中暴露（yuphy 2026-11-20）。启动/重载恢复选择后，对没有手动
-        // 记忆、当前又停在 url-test/fallback 组上的选择器组，改选组内第一个直连
-        // 节点并记下来；已手动选过的组一律不动（包括用户自己点过 Auto 的组）。
+        // 记忆、当前又停在 url-test/fallback 组上的选择器组，改选直连节点并记下来；
+        // 已手动选过的组一律不动（包括用户自己点过 Auto 的组）。
         // 其他组（如 Steam/Emby）首位是 Proxy 选择器组，不受影响。
+        // 1.205：兜底不再只取列表第一个——老订阅的 Proxy 顺序常把 CF 放直连前面，
+        // 取第一个会落到 CF 上（2026-11-21 香港配置实测）。改取已测速里延迟最低的
+        // 直连节点；都没测速时才按列表顺序取第一个。
         val storedGroups = survivingGroups
         selectorGroups.values.forEach { group ->
             if (group.type != Proxy.Type.Selector) return@forEach
@@ -257,19 +260,29 @@ internal object SelectionRestoreExecutor {
                 (currentGroup != null &&
                     (currentGroup.type == Proxy.Type.URLTest || currentGroup.type == Proxy.Type.Fallback))
             if (!sitsOnAutoProbe) return@forEach
-            val firstDirect = firstDirectNode(group)
-            if (firstDirect.isEmpty()) return@forEach
-            if (patchSelectorWithRetry(group.name, firstDirect)) {
-                SelectionDao.upsertManualSelection(profileUuid, group.name, firstDirect)
+            val defaultDirect = defaultDirectNode(group)
+            if (defaultDirect.isEmpty()) return@forEach
+            if (patchSelectorWithRetry(group.name, defaultDirect)) {
+                SelectionDao.upsertManualSelection(profileUuid, group.name, defaultDirect)
                 Log.w(
                     "$tag default direct node: profile=$profileUuid group=${group.name} " +
-                        "node=$firstDirect (was ${current.ifEmpty { "<empty>" }})"
+                        "node=$defaultDirect (was ${current.ifEmpty { "<empty>" }})"
                 )
             } else {
                 Log.w(
-                    "$tag default direct node patch failed: profile=$profileUuid group=${group.name} node=$firstDirect"
+                    "$tag default direct node patch failed: profile=$profileUuid group=${group.name} node=$defaultDirect"
                 )
             }
+        }
+    }
+
+    /** 组内直连节点（排除组引用与 DIRECT/REJECT 类伪节点），保持订阅里的列表顺序。 */
+    private fun directNodes(group: ProxyGroup): List<Proxy> {
+        return group.proxies.filter { proxy ->
+            !proxy.isGroup &&
+                proxy.type != Proxy.Type.Direct &&
+                proxy.type != Proxy.Type.Reject &&
+                proxy.type != Proxy.Type.RejectDrop
         }
     }
 
@@ -278,25 +291,18 @@ internal object SelectionRestoreExecutor {
      * 组里一个直连节点都没有时，说明 provider 还没拉完，不能据此认定记忆里的节点已失效。
      */
     private fun hasDirectNode(group: ProxyGroup): Boolean {
-        return group.proxies.any { proxy ->
-            !proxy.isGroup &&
-                proxy.type != Proxy.Type.Direct &&
-                proxy.type != Proxy.Type.Reject &&
-                proxy.type != Proxy.Type.RejectDrop
-        }
+        return directNodes(group).isNotEmpty()
     }
 
-    private fun firstDirectNode(group: ProxyGroup): String {
-        return group.proxies
-            .firstOrNull { proxy ->
-                !proxy.isGroup &&
-                    proxy.type != Proxy.Type.Direct &&
-                    proxy.type != Proxy.Type.Reject &&
-                    proxy.type != Proxy.Type.RejectDrop
-            }
-            ?.name
-            ?.trim()
-            .orEmpty()
+    /**
+     * 1.205 默认直连节点：优先取已测速（delay > 0）里延迟最低的直连节点；
+     * 都没测速时才按列表顺序取第一个。只取列表第一个会在老订阅上落到 CF
+     *（香港配置 Proxy 顺序是 [Auto、香港CF、直连v6]，CF 在直连前面）。
+     */
+    private fun defaultDirectNode(group: ProxyGroup): String {
+        val direct = directNodes(group)
+        val fastest = direct.filter { it.delay > 0 }.minByOrNull { it.delay }
+        return (fastest ?: direct.firstOrNull())?.name?.trim().orEmpty()
     }
 
     private suspend fun patchSelectorWithRetry(group: String, node: String): Boolean {
