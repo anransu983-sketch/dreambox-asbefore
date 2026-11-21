@@ -19,8 +19,8 @@ object SelectionDao {
         supportsPinnedSelection: Boolean,
     ) {
         val uuid = profileUUID ?: return
+        // 1.206：强制选择没点上也不删 pin——失败不等于用户改主意了。
         if (!patched) {
-            removePinned(uuid, proxyGroup)
             return
         }
         if (!supportsPinnedSelection) {
@@ -160,18 +160,32 @@ internal object SelectionRestoreExecutor {
         tag: String,
     ) {
         val selectorGroups = runtimeGroups.associateBy { it.name }
-        // 1.204：只有校验通过（或因快照未加载而保留）的记忆才算“有手动记忆”。
-        // 绝不能拿删除前的旧列表当依据，否则刚被删掉记忆的组会被默认直连兜底漏掉。
+        // 1.206（用户原话：选哪个节点、切回来还要是那个节点，哪怕它炸了）：
+        // 手动记忆是用户的选择，程序永远不删、不改、不覆盖。只有用户自己点选别的节点
+        // 才会更新记忆。组暂时不在列表、节点暂时不在列表（改名、订阅更新、provider
+        // 未拉完、节点下线），一律只保留记忆跳过本轮，绝不按“已失效”删除。
+        // 唯一还删的情况：记录本身就是空的（无意义的脏数据）。
+        // 节点不在当前列表、但组里已有直连节点时，本轮临时顶一个延迟最低的直连节点
+        // 上去（不记下来），节点回来后下次恢复还会选回它；组里一个直连节点都没有时
+        // （provider 未拉完）则什么都不做。
         val survivingGroups = mutableSetOf<String>()
         selections.forEach { selection ->
-            val group =
-                selectorGroups[selection.proxy]
-                    ?: run {
-                        removeSelection(profileUuid, selection, tag, "group missing")
-                        return@forEach
-                    }
+            val groupName = selection.proxy.trim()
+            val group = selectorGroups[selection.proxy]
+            if (group == null) {
+                Log.w(
+                    "$tag keep selector memory: profile=$profileUuid group=${selection.proxy} " +
+                        "node=${selection.selected} (group missing)"
+                )
+                survivingGroups.add(groupName)
+                return@forEach
+            }
             if (group.type != Proxy.Type.Selector) {
-                removeSelection(profileUuid, selection, tag, "group not selector")
+                Log.w(
+                    "$tag keep selector memory: profile=$profileUuid group=${selection.proxy} " +
+                        "node=${selection.selected} (group not selector)"
+                )
+                survivingGroups.add(groupName)
                 return@forEach
             }
 
@@ -179,27 +193,31 @@ internal object SelectionRestoreExecutor {
                 group.proxies.mapNotNull { proxy -> proxy.name.trim().takeIf { it.isNotEmpty() } }
             val targetNode = selection.selected.trim()
             if (targetNode.isEmpty()) {
-                removeSelection(profileUuid, selection, tag, "node missing")
+                removeSelection(profileUuid, selection, tag, "empty selection")
                 return@forEach
             }
             if (targetNode !in currentNodes) {
-                // 1.204：订阅节点是远程拉取的，切配置后组名先出来、节点后到。
-                // 组里一个直连节点都没有时，说明 provider 还没拉完，不能认定记忆里的
-                // 节点已改名/删除——否则每次切配置都会把手动记忆删掉、回落到 Auto。
-                // 只有组里已经有直连节点、目标仍不在其中时，才按节点已失效处理。
                 if (!hasDirectNode(group)) {
                     Log.w(
                         "$tag keep selector memory: profile=$profileUuid group=${selection.proxy} " +
                             "node=$targetNode (provider not loaded yet)"
                     )
-                    survivingGroups.add(selection.proxy.trim())
+                    survivingGroups.add(groupName)
                     return@forEach
                 }
-                removeSelection(profileUuid, selection, tag, "node missing")
+                Log.w(
+                    "$tag keep selector memory: profile=$profileUuid group=${selection.proxy} " +
+                        "node=$targetNode (node missing, fallback without recording)"
+                )
+                survivingGroups.add(groupName)
+                val fallback = defaultDirectNode(group)
+                if (fallback.isNotEmpty() && fallback != targetNode) {
+                    patchSelectorWithRetry(selection.proxy, fallback)
+                }
                 return@forEach
             }
 
-            survivingGroups.add(selection.proxy.trim())
+            survivingGroups.add(groupName)
             if (!patchSelectorWithRetry(selection.proxy, targetNode)) {
                 Log.w(
                     "$tag restore selector patch failed: profile=$profileUuid group=${selection.proxy} node=$targetNode"
@@ -208,31 +226,33 @@ internal object SelectionRestoreExecutor {
         }
 
         pins.forEach { (groupName, pinnedNode) ->
-            val group = selectorGroups[groupName] ?: run {
-                removePinned(profileUuid, groupName, pinnedNode, tag, "group missing")
+            val group = selectorGroups[groupName]
+            if (group == null) {
+                Log.w(
+                    "$tag keep pin: profile=$profileUuid group=$groupName " +
+                        "node=$pinnedNode (group missing)"
+                )
                 return@forEach
             }
             if (!group.type.supportsPinnedSelection()) {
-                removePinned(profileUuid, groupName, pinnedNode, tag, "group does not support pin")
+                Log.w(
+                    "$tag keep pin: profile=$profileUuid group=$groupName " +
+                        "node=$pinnedNode (group does not support pin)"
+                )
                 return@forEach
             }
             val currentNodes = group.proxies
                 .mapNotNull { proxy -> proxy.name.trim().takeIf { it.isNotEmpty() } }
             val targetNode = pinnedNode.trim()
             if (targetNode.isEmpty()) {
-                removePinned(profileUuid, groupName, pinnedNode, tag, "node missing")
+                removePinned(profileUuid, groupName, pinnedNode, tag, "empty pin")
                 return@forEach
             }
             if (targetNode !in currentNodes) {
-                // 1.204：同上，provider 未拉完时不删 pin，只跳过本轮。
-                if (!hasDirectNode(group)) {
-                    Log.w(
-                        "$tag keep pin: profile=$profileUuid group=$groupName " +
-                            "node=$targetNode (provider not loaded yet)"
-                    )
-                    return@forEach
-                }
-                removePinned(profileUuid, groupName, pinnedNode, tag, "node missing")
+                Log.w(
+                    "$tag keep pin: profile=$profileUuid group=$groupName " +
+                        "node=$targetNode (node missing)"
+                )
                 return@forEach
             }
             if (!patchForceSelectorWithRetry(groupName, targetNode)) {

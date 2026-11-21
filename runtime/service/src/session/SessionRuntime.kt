@@ -288,8 +288,9 @@ class SessionRuntime(
     fun patchSelector(group: String, name: String): Boolean {
         val profileUuid = currentSnapshot.profileUuid?.let(UUID::fromString)
         return Clash.patchSelector(group, name).also { patched ->
+            // 1.206：点选成功就是用户的选择，直接记下来；点选没点上也不删记忆——
+            // 失败不等于用户改主意了。刷新查不到组同样不删。记忆只由用户下一次点选覆盖。
             if (!patched) {
-                profileUuid?.let { SelectionDao.remove(it, group) }
                 return@also
             }
 
@@ -297,13 +298,7 @@ class SessionRuntime(
                 currentSnapshot.phase == RuntimePhase.Running ||
                     currentSnapshot.phase == RuntimePhase.Starting
             ) {
-                val refreshedGroup = refreshRuntimeProxyGroup(group)
-                if (refreshedGroup?.type == Proxy.Type.Selector) {
-                    profileUuid?.let { SelectionDao.upsertManualSelection(it, group, name) }
-                } else if (refreshedGroup != null) {
-                    // 1.204：查回来的组明确不是 Selector 才删记忆；查不到（null）是未知状态，不删。
-                    profileUuid?.let { SelectionDao.remove(it, group) }
-                }
+                profileUuid?.let { SelectionDao.upsertManualSelection(it, group, name) }
             }
         }
     }
