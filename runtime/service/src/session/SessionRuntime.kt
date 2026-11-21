@@ -300,7 +300,8 @@ class SessionRuntime(
                 val refreshedGroup = refreshRuntimeProxyGroup(group)
                 if (refreshedGroup?.type == Proxy.Type.Selector) {
                     profileUuid?.let { SelectionDao.upsertManualSelection(it, group, name) }
-                } else {
+                } else if (refreshedGroup != null) {
+                    // 1.204：查回来的组明确不是 Selector 才删记忆；查不到（null）是未知状态，不删。
                     profileUuid?.let { SelectionDao.remove(it, group) }
                 }
             }
@@ -606,9 +607,10 @@ class SessionRuntime(
         val profileUuid = UUID.fromString(spec.profileUuid)
         val restoreSelections = SelectionDao.queryRestorableSelections(profileUuid)
         val restorePins = SelectionDao.getAllPins(profileUuid)
-        if (restoreSelections.isEmpty() && restorePins.isEmpty()) {
-            return
-        }
+        // 1.204：没有存量记忆也不能直接返回——默认直连兜底也要跑，否则新配置永远停在 Auto。
+        // 恢复之前先等订阅节点拉完：切配置后 provider 是异步拉取的，组名先出来、节点后到；
+        // 不等就恢复，会把手动记忆误判成“节点已删”直接删掉。
+        awaitProxyNodesReady(spec)
         val runtimeGroups =
             runCatching { resolveRuntimeProxyGroups(excludeNotSelectable = false) }
                 .getOrDefault(emptyList())
@@ -619,6 +621,39 @@ class SessionRuntime(
             runtimeGroups = runtimeGroups,
             tag = spec.owner.name,
         )
+    }
+
+    /**
+     * 等各选择器组的直连节点数稳定（两次连续采样不变）或超时。订阅拉取失败时节点数
+     * 一直是 0 也会稳定，不会无限等；即使超时也不丢数据，restore() 里有
+     * “快照未加载不删记忆”的保护。
+     */
+    private suspend fun awaitProxyNodesReady(spec: RuntimeSpec) {
+        var lastCount = -1
+        var stableRounds = 0
+        repeat(PROXY_NODES_READY_MAX_POLLS) { attempt ->
+            ensureNotInterrupted(spec)
+            val count = runCatching { resolveRuntimeProxyGroups(excludeNotSelectable = false) }
+                .getOrDefault(emptyList())
+                .sumOf { group ->
+                    group.proxies.count { proxy ->
+                        !proxy.isGroup &&
+                            proxy.type != Proxy.Type.Direct &&
+                            proxy.type != Proxy.Type.Reject &&
+                            proxy.type != Proxy.Type.RejectDrop
+                    }
+                }
+            if (attempt > 0 && count == lastCount) {
+                stableRounds++
+                if (stableRounds >= 2) return
+            } else {
+                stableRounds = 0
+            }
+            lastCount = count
+            if (attempt < PROXY_NODES_READY_MAX_POLLS - 1) {
+                delay(PROXY_NODES_READY_DELAY_MS)
+            }
+        }
     }
 
     private fun startObservers() {
@@ -805,6 +840,8 @@ class SessionRuntime(
     private companion object {
         private const val PROXY_GROUP_READY_RETRY_COUNT = 10
         private const val PROXY_GROUP_READY_RETRY_DELAY_MS = 200L
+        private const val PROXY_NODES_READY_MAX_POLLS = 17
+        private const val PROXY_NODES_READY_DELAY_MS = 300L
 
         /** The session instance currently owning the process-wide Go core. */
         @Volatile private var coreOwner: SessionRuntime? = null

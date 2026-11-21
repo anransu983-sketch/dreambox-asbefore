@@ -160,6 +160,9 @@ internal object SelectionRestoreExecutor {
         tag: String,
     ) {
         val selectorGroups = runtimeGroups.associateBy { it.name }
+        // 1.204：只有校验通过（或因快照未加载而保留）的记忆才算“有手动记忆”。
+        // 绝不能拿删除前的旧列表当依据，否则刚被删掉记忆的组会被默认直连兜底漏掉。
+        val survivingGroups = mutableSetOf<String>()
         selections.forEach { selection ->
             val group =
                 selectorGroups[selection.proxy]
@@ -175,11 +178,28 @@ internal object SelectionRestoreExecutor {
             val currentNodes =
                 group.proxies.mapNotNull { proxy -> proxy.name.trim().takeIf { it.isNotEmpty() } }
             val targetNode = selection.selected.trim()
-            if (targetNode.isEmpty() || targetNode !in currentNodes) {
+            if (targetNode.isEmpty()) {
+                removeSelection(profileUuid, selection, tag, "node missing")
+                return@forEach
+            }
+            if (targetNode !in currentNodes) {
+                // 1.204：订阅节点是远程拉取的，切配置后组名先出来、节点后到。
+                // 组里一个直连节点都没有时，说明 provider 还没拉完，不能认定记忆里的
+                // 节点已改名/删除——否则每次切配置都会把手动记忆删掉、回落到 Auto。
+                // 只有组里已经有直连节点、目标仍不在其中时，才按节点已失效处理。
+                if (!hasDirectNode(group)) {
+                    Log.w(
+                        "$tag keep selector memory: profile=$profileUuid group=${selection.proxy} " +
+                            "node=$targetNode (provider not loaded yet)"
+                    )
+                    survivingGroups.add(selection.proxy.trim())
+                    return@forEach
+                }
                 removeSelection(profileUuid, selection, tag, "node missing")
                 return@forEach
             }
 
+            survivingGroups.add(selection.proxy.trim())
             if (!patchSelectorWithRetry(selection.proxy, targetNode)) {
                 Log.w(
                     "$tag restore selector patch failed: profile=$profileUuid group=${selection.proxy} node=$targetNode"
@@ -199,7 +219,19 @@ internal object SelectionRestoreExecutor {
             val currentNodes = group.proxies
                 .mapNotNull { proxy -> proxy.name.trim().takeIf { it.isNotEmpty() } }
             val targetNode = pinnedNode.trim()
-            if (targetNode.isEmpty() || targetNode !in currentNodes) {
+            if (targetNode.isEmpty()) {
+                removePinned(profileUuid, groupName, pinnedNode, tag, "node missing")
+                return@forEach
+            }
+            if (targetNode !in currentNodes) {
+                // 1.204：同上，provider 未拉完时不删 pin，只跳过本轮。
+                if (!hasDirectNode(group)) {
+                    Log.w(
+                        "$tag keep pin: profile=$profileUuid group=$groupName " +
+                            "node=$targetNode (provider not loaded yet)"
+                    )
+                    return@forEach
+                }
                 removePinned(profileUuid, groupName, pinnedNode, tag, "node missing")
                 return@forEach
             }
@@ -215,7 +247,7 @@ internal object SelectionRestoreExecutor {
         // 记忆、当前又停在 url-test/fallback 组上的选择器组，改选组内第一个直连
         // 节点并记下来；已手动选过的组一律不动（包括用户自己点过 Auto 的组）。
         // 其他组（如 Steam/Emby）首位是 Proxy 选择器组，不受影响。
-        val storedGroups = selections.map { it.proxy.trim() }.toSet()
+        val storedGroups = survivingGroups
         selectorGroups.values.forEach { group ->
             if (group.type != Proxy.Type.Selector) return@forEach
             if (group.name.trim() in storedGroups) return@forEach
@@ -225,16 +257,7 @@ internal object SelectionRestoreExecutor {
                 (currentGroup != null &&
                     (currentGroup.type == Proxy.Type.URLTest || currentGroup.type == Proxy.Type.Fallback))
             if (!sitsOnAutoProbe) return@forEach
-            val firstDirect = group.proxies
-                .firstOrNull { proxy ->
-                    !proxy.isGroup &&
-                        proxy.type != Proxy.Type.Direct &&
-                        proxy.type != Proxy.Type.Reject &&
-                        proxy.type != Proxy.Type.RejectDrop
-                }
-                ?.name
-                ?.trim()
-                .orEmpty()
+            val firstDirect = firstDirectNode(group)
             if (firstDirect.isEmpty()) return@forEach
             if (patchSelectorWithRetry(group.name, firstDirect)) {
                 SelectionDao.upsertManualSelection(profileUuid, group.name, firstDirect)
@@ -248,6 +271,32 @@ internal object SelectionRestoreExecutor {
                 )
             }
         }
+    }
+
+    /**
+     * 组里是否已有直连节点。订阅节点是远程拉取的，切配置后组名先出来、节点后到；
+     * 组里一个直连节点都没有时，说明 provider 还没拉完，不能据此认定记忆里的节点已失效。
+     */
+    private fun hasDirectNode(group: ProxyGroup): Boolean {
+        return group.proxies.any { proxy ->
+            !proxy.isGroup &&
+                proxy.type != Proxy.Type.Direct &&
+                proxy.type != Proxy.Type.Reject &&
+                proxy.type != Proxy.Type.RejectDrop
+        }
+    }
+
+    private fun firstDirectNode(group: ProxyGroup): String {
+        return group.proxies
+            .firstOrNull { proxy ->
+                !proxy.isGroup &&
+                    proxy.type != Proxy.Type.Direct &&
+                    proxy.type != Proxy.Type.Reject &&
+                    proxy.type != Proxy.Type.RejectDrop
+            }
+            ?.name
+            ?.trim()
+            .orEmpty()
     }
 
     private suspend fun patchSelectorWithRetry(group: String, node: String): Boolean {
