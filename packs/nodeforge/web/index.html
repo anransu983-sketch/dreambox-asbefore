@@ -487,7 +487,7 @@
           yaml = yaml.slice(0, idx + anchor.length) + ins + yaml.slice(idx + anchor.length);
         }
       };
-      addTo('- Auto\n  - ' + nodeName);
+      addTo('- ' + nodeName + '\n  - Auto');
       addTo('  tolerance: 50\n  proxies:\n  - ' + nodeName);
     }
     return yaml;

@@ -207,6 +207,47 @@ internal object SelectionRestoreExecutor {
                 Log.w("$tag restore pin patch failed: profile=$profileUuid group=$groupName node=$targetNode")
             }
         }
+
+        // DreamBox 1.203：切换节点不要默认 Auto。
+        // 订阅模板常把 Auto（url-test 组）放 Proxy 组首位；mihomo 在没有手动记忆时
+        // 默认选中首位，于是流量走 Auto、每 300 秒主动探测全部节点，弱协议节点
+        // 会在探测中暴露（yuphy 2026-11-20）。启动/重载恢复选择后，对没有手动
+        // 记忆、当前又停在 url-test/fallback 组上的选择器组，改选组内第一个直连
+        // 节点并记下来；已手动选过的组一律不动（包括用户自己点过 Auto 的组）。
+        // 其他组（如 Steam/Emby）首位是 Proxy 选择器组，不受影响。
+        val storedGroups = selections.map { it.proxy.trim() }.toSet()
+        selectorGroups.values.forEach { group ->
+            if (group.type != Proxy.Type.Selector) return@forEach
+            if (group.name.trim() in storedGroups) return@forEach
+            val current = group.now.trim()
+            val currentGroup = current.takeIf { it.isNotEmpty() }?.let { selectorGroups[it] }
+            val sitsOnAutoProbe = current.isEmpty() ||
+                (currentGroup != null &&
+                    (currentGroup.type == Proxy.Type.URLTest || currentGroup.type == Proxy.Type.Fallback))
+            if (!sitsOnAutoProbe) return@forEach
+            val firstDirect = group.proxies
+                .firstOrNull { proxy ->
+                    !proxy.isGroup &&
+                        proxy.type != Proxy.Type.Direct &&
+                        proxy.type != Proxy.Type.Reject &&
+                        proxy.type != Proxy.Type.RejectDrop
+                }
+                ?.name
+                ?.trim()
+                .orEmpty()
+            if (firstDirect.isEmpty()) return@forEach
+            if (patchSelectorWithRetry(group.name, firstDirect)) {
+                SelectionDao.upsertManualSelection(profileUuid, group.name, firstDirect)
+                Log.w(
+                    "$tag default direct node: profile=$profileUuid group=${group.name} " +
+                        "node=$firstDirect (was ${current.ifEmpty { "<empty>" }})"
+                )
+            } else {
+                Log.w(
+                    "$tag default direct node patch failed: profile=$profileUuid group=${group.name} node=$firstDirect"
+                )
+            }
+        }
     }
 
     private suspend fun patchSelectorWithRetry(group: String, node: String): Boolean {

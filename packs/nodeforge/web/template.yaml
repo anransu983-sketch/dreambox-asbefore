@@ -74,8 +74,8 @@ proxy-groups:
 - name: Proxy
   type: select
   proxies:
-  - Auto
   - {{NODE_NAME}}
+  - Auto
 - name: Auto
   type: url-test
   url: http://www.gstatic.com/generate_204

@@ -62,8 +62,8 @@ proxy-groups:
 - name: Proxy
   type: select
   proxies:
-  - Auto
   - all
+  - Auto
 - name: Auto
   type: url-test
   url: http://www.gstatic.com/generate_204
