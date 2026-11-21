@@ -98,6 +98,8 @@ internal fun LazyListScope.nodeGroupItems(
     onGroupIconReset: ((ProxyGroupInfo) -> Unit)? = null,
     itemVerticalPadding: Dp = UiDp.dp6,
     revealCount: State<Int> = RowRevealAll,
+    /** 面板模式：竖排全宽行 + 右侧当前节点延迟 pill，其余交互与普通卡片一致。 */
+    panelStyle: Boolean = false,
 ) {
     // 策略组统一纵向列表样式，不再分单/双栏。
     itemsIndexed(
@@ -113,6 +115,7 @@ internal fun LazyListScope.nodeGroupItems(
             onIconPick = onGroupIconPick?.let { cb -> { cb(group) } },
             onIconReset = onGroupIconReset?.let { cb -> { cb(group) } },
             modifier = Modifier.rowReveal(rememberRowShown(index, revealCount)).fillMaxWidth().padding(vertical = itemVerticalPadding),
+            panelStyle = panelStyle,
         )
     }
 }
@@ -127,6 +130,7 @@ internal fun NodeGroupCard(
     onIconPick: (() -> Unit)? = null,
     onIconReset: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    panelStyle: Boolean = false,
 ) {
     val groupIconKey = remember(group.name) { CustomIcons.keyFor("group", group.name) }
     val customGroupIcon = rememberCustomIconBitmap(groupIconKey)
@@ -231,8 +235,10 @@ internal fun NodeGroupCard(
                 // 组内最快：已测速节点里最小的有效延迟，一眼看出这个组还有没有救。
                 // 65535 是内核测速失败的哨兵值（uint16 最大），>5000 一律不算有效延迟，
                 // 否则节点明明能用却显示「最快 65535ms」。口径与 nodeLatencyLabel 一致。
-                val fastestDelay = remember(group.proxies) {
-                    group.proxies.mapNotNull { it.delay }.filter { it in 1..5000 }.minOrNull()
+                // 面板模式不显示这一项，右侧延迟 pill 已是当前节点的延迟。
+                val fastestDelay = remember(group.proxies, panelStyle) {
+                    if (panelStyle) null
+                    else group.proxies.mapNotNull { it.delay }.filter { it in 1..5000 }.minOrNull()
                 }
                 if (fastestDelay != null && group.proxies.size > 1) {
                     Text(
@@ -243,6 +249,26 @@ internal fun NodeGroupCard(
                     )
                 }
             }
+        }
+        // 面板模式：右侧显示当前节点的延迟 pill（无有效延迟时显示「未测速」）。
+        // nodeLatencyLabel 是 @Composable，不能放进 remember 的计算块里，直接调。
+        if (panelStyle) {
+            val currentDelayLabel = nodeLatencyLabel(currentProxy?.delay, withUnit = true)
+            val pillBg = currentDelayLabel?.second?.copy(alpha = 0.18f)
+                ?: MiuixTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+            val pillFg = currentDelayLabel?.second
+                ?: MiuixTheme.colorScheme.onSurfaceVariantSummary
+            Text(
+                text = currentDelayLabel?.first ?: "未测速",
+                style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                color = pillFg,
+                maxLines = 1,
+                modifier = Modifier
+                    .padding(start = UiDp.dp8)
+                    .clip(RoundedCornerShape(50))
+                    .background(pillBg)
+                    .padding(horizontal = UiDp.dp10, vertical = UiDp.dp4),
+            )
         }
         if (onTestClick != null) {
             Box(

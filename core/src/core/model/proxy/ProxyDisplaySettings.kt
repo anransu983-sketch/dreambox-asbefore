@@ -32,10 +32,12 @@ enum class ProxyDisplayMode {
     SINGLE_DETAILED,
     SINGLE_SIMPLE,
     DOUBLE_DETAILED,
-    DOUBLE_SIMPLE;
+    DOUBLE_SIMPLE,
+    /** 仪表盘面板：顶部实时流量头卡 + 组竖排全宽行（只改展示，功能与其它模式一致）。 */
+    PANEL;
 
     val isSingleColumn: Boolean
-        get() = this == SINGLE_DETAILED || this == SINGLE_SIMPLE
+        get() = this == SINGLE_DETAILED || this == SINGLE_SIMPLE || this == PANEL
 
     /**
      * 旧版「简洁」模式折叠到对应「详细」。

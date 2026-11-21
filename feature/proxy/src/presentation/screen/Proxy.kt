@@ -69,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -94,6 +95,7 @@ import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
 import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
 import com.suanran.dreambox.core.model.proxy.ProxySortMode
+import com.suanran.dreambox.core.model.traffic.TrafficData
 import com.suanran.dreambox.feature.proxy.presentation.screen.node.NodeSearchToolbar
 import com.suanran.dreambox.feature.proxy.presentation.screen.node.NodeSortPopup
 import com.suanran.dreambox.feature.proxy.presentation.screen.node.NodeTestPullToRefresh
@@ -115,6 +117,7 @@ import com.suanran.dreambox.presentation.icon.flycat.ListChevronsUpDown
 import com.suanran.dreambox.presentation.icon.flycat.Search
 import com.suanran.dreambox.presentation.icon.flycat.Folders
 import com.suanran.dreambox.presentation.icon.flycat.Speed
+import com.suanran.dreambox.presentation.icon.flycat.Zashboard
 import com.suanran.dreambox.presentation.theme.AnimationSpecs
 import com.suanran.dreambox.presentation.theme.AppTheme
 import com.suanran.dreambox.presentation.theme.LocalSpacing
@@ -122,6 +125,7 @@ import com.suanran.dreambox.presentation.theme.UiDp
 import com.suanran.dreambox.presentation.theme.rememberRowReveal
 import dev.chrisbanes.haze.hazeSource
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -203,6 +207,38 @@ fun ProxyPager(
     val sortMode by proxyViewModel.sortMode.collectAsStateWithLifecycle()
     val delayTestMode by proxyViewModel.delayTestMode.collectAsStateWithLifecycle()
     val displayMode by proxyViewModel.displayMode.collectAsStateWithLifecycle()
+    // 面板模式：ProxyDisplayMode.PANEL，纯展示切换；切回时恢复切入面板前的经典模式。
+    val panelMode = displayMode == ProxyDisplayMode.PANEL
+    var lastClassicModeName by rememberSaveable { mutableStateOf(ProxyDisplayMode.DOUBLE_DETAILED.name) }
+    val onTogglePanelMode: () -> Unit = {
+        if (panelMode) {
+            val restored = runCatching { ProxyDisplayMode.valueOf(lastClassicModeName) }
+                .getOrDefault(ProxyDisplayMode.DOUBLE_DETAILED)
+            proxyViewModel.setDisplayMode(restored.normalized())
+        } else {
+            lastClassicModeName = displayMode.name
+            proxyViewModel.setDisplayMode(ProxyDisplayMode.PANEL)
+        }
+    }
+    // 面板头卡的实时流量：与首页同一数据源（ProxyControlContract.trafficNow），
+    // 未连接时按首页口径显示为 0；速率历史每秒采一次真实值，最多 24 个点。
+    val trafficNowRaw by proxyControl.trafficNow.collectAsStateWithLifecycle()
+    val trafficNow = remember(trafficNowRaw, isProxyRunning) {
+        if (isProxyRunning) TrafficData.from(trafficNowRaw) else TrafficData.zero
+    }
+    val speedHistory = remember { mutableStateListOf<TrafficData>() }
+    LaunchedEffect(panelMode, isActive, isProxyRunning) {
+        if (!panelMode || !isActive || !isProxyRunning) {
+            speedHistory.clear()
+            return@LaunchedEffect
+        }
+        while (true) {
+            val sample = TrafficData.from(proxyControl.trafficNow.value)
+            speedHistory.add(sample)
+            if (speedHistory.size > 24) speedHistory.removeAt(0)
+            delay(1000L)
+        }
+    }
     val groupScrollBehavior = MiuixScrollBehavior(snapAnimationSpec = null)
     val pagerState = LocalPagerState.current
     val topBarHazeState = LocalTopBarHazeState.current
@@ -360,6 +396,8 @@ fun ProxyPager(
                 showSortPopup = showSortPopup,
                 onShowSortPopupChange = { showSortPopup = it },
                 displayMode = displayMode,
+                panelMode = panelMode,
+                onTogglePanelMode = onTogglePanelMode,
                 sortMode = sortMode,
                 onDisplayModeSelected = proxyViewModel::setDisplayMode,
                 onSortSelected = proxyViewModel::setSortMode,
@@ -445,6 +483,11 @@ fun ProxyPager(
                         onGroupIconPick = onGroupIconPick,
                         onGroupIconReset = onGroupIconReset,
                         statusBar = statusBarContent,
+                        panelMode = panelMode,
+                        isRunning = isProxyRunning,
+                        trafficNow = trafficNow,
+                        speedHistory = speedHistory,
+                        onTogglePanelMode = onTogglePanelMode,
                     )
                 }
             } else {
@@ -495,6 +538,11 @@ fun ProxyPager(
                                 onGroupIconPick = onGroupIconPick,
                                 onGroupIconReset = onGroupIconReset,
                                 statusBar = statusBarContent,
+                                panelMode = panelMode,
+                                isRunning = isProxyRunning,
+                                trafficNow = trafficNow,
+                                speedHistory = speedHistory,
+                                onTogglePanelMode = onTogglePanelMode,
                             )
                         }
                     } else {
@@ -627,6 +675,8 @@ private fun PagerTopBar(
     showSortPopup: Boolean,
     onShowSortPopupChange: (Boolean) -> Unit,
     displayMode: ProxyDisplayMode,
+    panelMode: Boolean = false,
+    onTogglePanelMode: (() -> Unit)? = null,
     sortMode: ProxySortMode,
     onDisplayModeSelected: (ProxyDisplayMode) -> Unit,
     onSortSelected: (ProxySortMode) -> Unit,
@@ -659,6 +709,8 @@ private fun PagerTopBar(
         showSortPopup = showSortPopup,
         onShowSortPopupChange = onShowSortPopupChange,
         displayMode = displayMode,
+        panelMode = panelMode,
+        onTogglePanelMode = onTogglePanelMode,
         sortMode = sortMode,
         onDisplayModeSelected = onDisplayModeSelected,
         onSortSelected = onSortSelected,
@@ -686,6 +738,8 @@ internal fun ProxyTopBar(
     showSortPopup: Boolean,
     onShowSortPopupChange: (Boolean) -> Unit,
     displayMode: ProxyDisplayMode,
+    panelMode: Boolean = false,
+    onTogglePanelMode: (() -> Unit)? = null,
     sortMode: ProxySortMode,
     onDisplayModeSelected: (ProxyDisplayMode) -> Unit,
     onSortSelected: (ProxySortMode) -> Unit,
@@ -730,6 +784,16 @@ internal fun ProxyTopBar(
         },
         actions = {
             Row(horizontalArrangement = Arrangement.spacedBy(UiDp.dp4)) {
+                // 面板/列表切换：只在代理页顶栏出现（双栏右栏的 ProxyTopBar 不传此回调）。
+                if (onTogglePanelMode != null) {
+                    IconButton(onClick = onTogglePanelMode) {
+                        Icon(
+                            FlyCat.Zashboard,
+                            contentDescription = if (panelMode) "切回列表" else "面板",
+                            tint = if (panelMode) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
                 if (onSearchToggle != null) {
                     IconButton(onClick = onSearchToggle) {
                         Icon(
@@ -1013,6 +1077,11 @@ private fun ProxyContent(
     onGroupIconPick: ((ProxyGroupInfo) -> Unit)? = null,
     onGroupIconReset: ((ProxyGroupInfo) -> Unit)? = null,
     statusBar: (@Composable () -> Unit)? = null,
+    panelMode: Boolean = false,
+    isRunning: Boolean = false,
+    trafficNow: TrafficData = TrafficData.zero,
+    speedHistory: List<TrafficData> = emptyList(),
+    onTogglePanelMode: (() -> Unit)? = null,
 ) {
     val spacing = LocalSpacing.current
     val revealCount = rememberRowReveal(itemCount = proxyGroups.size, listState = listState)
@@ -1036,6 +1105,19 @@ private fun ProxyContent(
                 }
             }
         }
+        if (panelMode) {
+            item(key = "proxy_panel_header", contentType = "ProxyPanelHeader") {
+                Box(modifier = Modifier.fillMaxWidth().padding(bottom = UiDp.dp8)) {
+                    PanelDashboardHeader(
+                        trafficNow = trafficNow,
+                        isRunning = isRunning,
+                        groupCount = proxyGroups.size,
+                        speedHistory = speedHistory,
+                        onTogglePanelMode = onTogglePanelMode,
+                    )
+                }
+            }
+        }
         nodeGroupItems(
             groups = proxyGroups,
             displayMode = displayMode,
@@ -1047,6 +1129,7 @@ private fun ProxyContent(
             onGroupIconReset = onGroupIconReset,
             itemVerticalPadding = UiDp.dp6,
             revealCount = revealCount,
+            panelStyle = panelMode,
         )
     }
 }
