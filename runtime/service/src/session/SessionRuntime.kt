@@ -619,9 +619,14 @@ class SessionRuntime(
     }
 
     /**
-     * 等各选择器组的直连节点数稳定（两次连续采样不变）或超时。订阅拉取失败时节点数
-     * 一直是 0 也会稳定，不会无限等；即使超时也不丢数据，restore() 里有
-     * “快照未加载不删记忆”的保护。
+     * 等各选择器组的直连节点数稳定（两次连续采样不变）或超时。
+     * 1.207：节点数一直是 0 不能算“稳定”——订阅是远程拉取的，手机流量下
+     * 600ms 内拉不回任何节点是常事；旧逻辑会在 0 节点上判定稳定、restore
+     * 在空快照上跑完跳过，之后 provider 拉完、mihomo 按自己的 store-selected
+     * 缓存（香港那条就是 CF）恢复，DAO 里的手动记忆再也不会被应用——
+     * 点多少次直连 v6、切回来都还是 CF。0 必须视为未就绪，一直等到有节点
+     * 且稳定，或超时（订阅拉失败时节点数一直是 0，等满即走，restore 里有
+     * “快照未加载不删记忆”的保护，不丢数据）。
      */
     private suspend fun awaitProxyNodesReady(spec: RuntimeSpec) {
         var lastCount = -1
@@ -638,7 +643,7 @@ class SessionRuntime(
                             proxy.type != Proxy.Type.RejectDrop
                     }
                 }
-            if (attempt > 0 && count == lastCount) {
+            if (attempt > 0 && count > 0 && count == lastCount) {
                 stableRounds++
                 if (stableRounds >= 2) return
             } else {
@@ -835,7 +840,8 @@ class SessionRuntime(
     private companion object {
         private const val PROXY_GROUP_READY_RETRY_COUNT = 10
         private const val PROXY_GROUP_READY_RETRY_DELAY_MS = 200L
-        private const val PROXY_NODES_READY_MAX_POLLS = 17
+        // 1.207：0 节点不算就绪后，慢订阅要等更久——30 轮 × 300ms ≈ 9 秒上限。
+        private const val PROXY_NODES_READY_MAX_POLLS = 30
         private const val PROXY_NODES_READY_DELAY_MS = 300L
 
         /** The session instance currently owning the process-wide Go core. */
