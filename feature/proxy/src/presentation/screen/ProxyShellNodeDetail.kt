@@ -55,6 +55,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun ProxyShellNodeDetail(mainInnerPadding: PaddingValues, onNavigateToProviders: (() -> Unit)? = null, onOpenPanel: (() -> Unit)? = null) {
     val proxyViewModel = koinViewModel<ProxyViewModel>()
     val proxyGroups by proxyViewModel.sortedProxyGroups.collectAsStateWithLifecycle()
+    val nodeVisibility by proxyViewModel.nodeVisibility.collectAsStateWithLifecycle()
     val testingGroupNames by proxyViewModel.testingGroupNames.collectAsStateWithLifecycle()
     val testingProxyNames by proxyViewModel.testingProxyNames.collectAsStateWithLifecycle()
     val delayTestProgress by proxyViewModel.delayTestProgress.collectAsStateWithLifecycle()
@@ -168,6 +169,10 @@ fun ProxyShellNodeDetail(mainInnerPadding: PaddingValues, onNavigateToProviders:
                 searchVisible = nodeSearchVisible,
                 onSearchVisibleChange = { nodeSearchVisible = it },
                 testProgress = delayTestProgress,
+                hiddenNodes = nodeVisibility.hidden.sorted(),
+                onHideNode = proxyViewModel::hideNode,
+                onDeleteNode = proxyViewModel::deleteNode,
+                onRestoreNode = proxyViewModel::restoreNode,
             )
         }
     }

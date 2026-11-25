@@ -25,6 +25,7 @@ import com.suanran.dreambox.feature.proxy.presentation.screen.node.nodeLatencyLa
 import com.suanran.dreambox.feature.proxy.presentation.screen.node.displayName
 import com.suanran.dreambox.presentation.component.misc.rememberDelayHistory
 import com.suanran.dreambox.presentation.component.dialog.AppActionBottomSheet
+import com.suanran.dreambox.presentation.component.dialog.AppConfirmDialog
 import androidx.compose.foundation.layout.height
 import com.suanran.dreambox.presentation.component.misc.DelayHistory
 import androidx.compose.runtime.mutableStateMapOf
@@ -201,6 +202,7 @@ fun ProxyPager(
     val isProxyRunning by proxyControl.isRunning.collectAsStateWithLifecycle()
     val primaryNode by proxyControl.resolvedPrimaryNode.collectAsStateWithLifecycle()
     val proxyGroups by proxyViewModel.sortedProxyGroups.collectAsStateWithLifecycle()
+    val nodeVisibility by proxyViewModel.nodeVisibility.collectAsStateWithLifecycle()
     val testingGroupNames by proxyViewModel.testingGroupNames.collectAsStateWithLifecycle()
     val testingProxyNames by proxyViewModel.testingProxyNames.collectAsStateWithLifecycle()
     val delayTestProgress by proxyViewModel.delayTestProgress.collectAsStateWithLifecycle()
@@ -568,6 +570,10 @@ fun ProxyPager(
                             searchVisible = nodeSearchVisible,
                             onSearchVisibleChange = { nodeSearchVisible = it },
                             testProgress = delayTestProgress,
+                            hiddenNodes = nodeVisibility.hidden.sorted(),
+                            onHideNode = proxyViewModel::hideNode,
+                            onDeleteNode = proxyViewModel::deleteNode,
+                            onRestoreNode = proxyViewModel::restoreNode,
                         )
                     }
                 }
@@ -859,6 +865,10 @@ internal fun NodeListPage(
     searchVisible: Boolean = false,
     onSearchVisibleChange: (Boolean) -> Unit = {},
     testProgress: ProxyViewModel.DelayTestProgress? = null,
+    hiddenNodes: List<String> = emptyList(),
+    onHideNode: (String) -> Unit = {},
+    onDeleteNode: (String) -> Unit = {},
+    onRestoreNode: (String) -> Unit = {},
 ) {
     if (group == null) {
         CenteredText(
@@ -884,6 +894,8 @@ internal fun NodeListPage(
         }
     }
     var detailProxy by remember { mutableStateOf<Proxy?>(null) }
+    var pendingDeleteProxy by remember { mutableStateOf<Proxy?>(null) }
+    var hiddenSheetVisible by remember { mutableStateOf(false) }
     // 节点自定义图标（与策略组同一套 CustomIcons 机制，key=node_<md5>）。
     val nodeIconContext = LocalContext.current
     var pendingNodeIconKey by remember { mutableStateOf<String?>(null) }
@@ -959,6 +971,27 @@ internal fun NodeListPage(
                 ),
             )
         }
+        if (hiddenNodes.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = UiDp.dp12, vertical = UiDp.dp6)
+                    .clickable { hiddenSheetVisible = true },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "已隐藏节点（${hiddenNodes.size}）",
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "恢复",
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.primary,
+                )
+            }
+        }
         NodeTestPullToRefresh(
             isRefreshing = isTesting,
             onRefresh = onTestDelay,
@@ -1011,6 +1044,34 @@ internal fun NodeListPage(
         onIconReset = { p ->
             CustomIcons.clear(nodeIconContext, CustomIcons.keyFor("node", p.name))
             nodeIconContext.toast("已恢复默认图标")
+        },
+        onHide = { p ->
+            detailProxy = null
+            onHideNode(p.name)
+        },
+        onDelete = { p ->
+            detailProxy = null
+            pendingDeleteProxy = p
+        },
+    )
+    HiddenNodesSheet(
+        show = hiddenSheetVisible,
+        hiddenNodes = hiddenNodes,
+        onDismiss = { hiddenSheetVisible = false },
+        onRestore = { name ->
+            onRestoreNode(name)
+            if (hiddenNodes.size <= 1) hiddenSheetVisible = false
+        },
+    )
+    AppConfirmDialog(
+        show = pendingDeleteProxy != null,
+        title = "删除节点",
+        message = "删除「${pendingDeleteProxy?.name.orEmpty()}」后不能在应用里恢复，想恢复只能重新配置（重新导入该配置）。确定删除？",
+        confirmText = "删除",
+        onDismissRequest = { pendingDeleteProxy = null },
+        onConfirm = {
+            pendingDeleteProxy?.let { onDeleteNode(it.name) }
+            pendingDeleteProxy = null
         },
     )
 }
@@ -1148,6 +1209,8 @@ private fun NodeDetailSheet(
     onTestSingle: (String) -> Unit,
     onIconPick: (Proxy) -> Unit,
     onIconReset: (Proxy) -> Unit,
+    onHide: (Proxy) -> Unit = {},
+    onDelete: (Proxy) -> Unit = {},
 ) {
     val spacing = LocalSpacing.current
     AppActionBottomSheet(
@@ -1265,6 +1328,92 @@ private fun NodeDetailSheet(
                     onClick = { onIconReset(proxy) },
                     modifier = Modifier.weight(1f),
                 )
+            }
+            // 隐藏/删除只对真实出站节点开放；策略组条目与 DIRECT/REJECT 等内置节点不给这两个动作。
+            if (isRemovableNodeType(proxy)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = spacing.space8),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.space10),
+                ) {
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = "隐藏节点",
+                        onClick = { onHide(proxy) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = "删除节点",
+                        onClick = { onDelete(proxy) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    text = "隐藏后可在已隐藏节点里恢复；删除后想恢复只能重新配置。",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(bottom = spacing.space8),
+                )
+            }
+        }
+    }
+}
+
+private fun isRemovableNodeType(proxy: Proxy): Boolean {
+    if (proxy.isGroup) return false
+    return proxy.type !in setOf(
+        Proxy.Type.Direct,
+        Proxy.Type.Reject,
+        Proxy.Type.RejectDrop,
+        Proxy.Type.Compatible,
+        Proxy.Type.Pass,
+        Proxy.Type.Dns,
+        Proxy.Type.PassRule,
+        Proxy.Type.Unknown,
+    )
+}
+
+/** 已隐藏节点抽屉：列出当前配置隐藏的节点，可逐个恢复。已删除节点不在这里出现。 */
+@Composable
+private fun HiddenNodesSheet(
+    show: Boolean,
+    hiddenNodes: List<String>,
+    onDismiss: () -> Unit,
+    onRestore: (String) -> Unit,
+) {
+    val spacing = LocalSpacing.current
+    AppActionBottomSheet(
+        show = show,
+        title = "已隐藏节点",
+        onDismissRequest = onDismiss,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.space16, vertical = spacing.space8),
+        ) {
+            if (hiddenNodes.isEmpty()) {
+                Text(
+                    text = "没有已隐藏的节点。",
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(bottom = spacing.space8),
+                )
+            }
+            hiddenNodes.forEach { name ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = spacing.space6),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = name,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = "恢复",
+                        onClick = { onRestore(name) },
+                    )
+                }
             }
         }
     }

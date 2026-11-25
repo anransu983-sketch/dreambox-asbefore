@@ -38,6 +38,7 @@ import com.suanran.dreambox.runtime.service.root.EbpfOverride
 import com.suanran.dreambox.runtime.service.root.RootTunConfigFactory
 import com.suanran.dreambox.runtime.service.session.DelayTuningOverride
 import com.suanran.dreambox.runtime.service.session.GlobalUaOverride
+import com.suanran.dreambox.runtime.service.session.NodeFilterOverride
 import com.suanran.dreambox.runtime.service.session.transport.TunOverride
 import com.suanran.dreambox.runtime.service.util.directoryLastModified
 import java.io.File
@@ -64,7 +65,8 @@ class SessionRuntimeSpecFactory(
                 compiledConfigPipeline.resolveOverrideSpecs(profile.uuid.toString())
             }
         val overrideSpecs =
-            listOf(delayTuningOverrideSpec(profileDir)) + userOverrides + GlobalUaOverride.materialize(profileDir)
+            listOf(delayTuningOverrideSpec(profileDir)) + userOverrides + GlobalUaOverride.materialize(profileDir) +
+                listOfNotNull(NodeFilterOverride.materialize(profileDir))
         val ageSecretKey = normalizeAgeSecretKey(profile.ageSecretKey)
         return RuntimeSpec(
             owner = RuntimeOwner.LocalTun,
@@ -103,7 +105,8 @@ class SessionRuntimeSpecFactory(
                 userOverrides
             }
         val overrideSpecs =
-            listOf(delayTuningOverrideSpec(profileDir)) + modeOverrides + GlobalUaOverride.materialize(profileDir)
+            listOf(delayTuningOverrideSpec(profileDir)) + modeOverrides + GlobalUaOverride.materialize(profileDir) +
+                listOfNotNull(NodeFilterOverride.materialize(profileDir))
         val ageSecretKey = normalizeAgeSecretKey(profile.ageSecretKey)
         return RuntimeSpec(
             owner = RuntimeOwner.RootTun,
@@ -157,7 +160,9 @@ class SessionRuntimeSpecFactory(
             )
         val modeOverrides = userOverrides + ebpfOverride
         // eBPF keeps the profile authoritative — skip GlobalUaOverride.
-        val overrideSpecs = listOf(delayTuningOverrideSpec(profileDir)) + modeOverrides
+        val overrideSpecs =
+            listOf(delayTuningOverrideSpec(profileDir)) + modeOverrides +
+                listOfNotNull(NodeFilterOverride.materialize(profileDir))
         val ageSecretKey = normalizeAgeSecretKey(profile.ageSecretKey)
         return RuntimeSpec(
             owner = RuntimeOwner.RootTun,

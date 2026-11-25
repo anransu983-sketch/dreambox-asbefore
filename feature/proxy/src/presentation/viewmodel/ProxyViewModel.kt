@@ -21,21 +21,30 @@
 
 package com.suanran.dreambox.feature.proxy.presentation.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.suanran.dreambox.core.contract.AppSettingsReader
 import com.suanran.dreambox.core.contract.ConnectionRepository
+import com.suanran.dreambox.core.contract.NetworkSettingsControllerContract
 import com.suanran.dreambox.core.contract.NetworkSettingsReader
 import com.suanran.dreambox.core.contract.ProxyDisplaySettingsReader
 import com.suanran.dreambox.core.contract.ProxyGroupRepository
 import com.suanran.dreambox.core.contract.ProxySelectTimeoutException
+import com.suanran.dreambox.core.importedDir
 import com.suanran.dreambox.core.model.proxy.DelayTestMode
+import com.suanran.dreambox.core.model.proxy.Proxy
 import com.suanran.dreambox.core.model.proxy.ProxyDisplayMode
 import com.suanran.dreambox.core.model.proxy.ProxyGroupInfo
 import com.suanran.dreambox.core.model.proxy.ProxySortMode
+import com.suanran.dreambox.core.util.NodeVisibility
+import com.suanran.dreambox.core.util.NodeVisibilityStore
 import com.suanran.dreambox.feature.proxy.domain.ProxyHealthCheckUseCase
 import com.suanran.dreambox.presentation.viewmodel.ContractStateViewModel
 import com.suanran.dreambox.presentation.viewmodel.LoadableState
+import com.suanran.dreambox.runtime.api.contract.ProfileRepositoryContract
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -57,6 +66,9 @@ class ProxyViewModel(
     appSettings: AppSettingsReader,
     private val healthCheck: ProxyHealthCheckUseCase,
     private val networkSettings: NetworkSettingsReader,
+    private val profileRepository: ProfileRepositoryContract,
+    private val networkSettingsController: NetworkSettingsControllerContract,
+    private val appContext: Context,
 ) :
     ContractStateViewModel<ProxyViewModel.ProxyUiState, ProxyViewModel.ProxyUiEffect>(
         ProxyUiState()
@@ -83,6 +95,18 @@ class ProxyViewModel(
 
     private companion object {
         const val FORCE_REFRESH_COOLDOWN_MS = 30_000L
+
+        val BUILTIN_PROXY_TYPES =
+            setOf(
+                Proxy.Type.Direct,
+                Proxy.Type.Reject,
+                Proxy.Type.RejectDrop,
+                Proxy.Type.Compatible,
+                Proxy.Type.Pass,
+                Proxy.Type.Dns,
+                Proxy.Type.PassRule,
+                Proxy.Type.Unknown,
+            )
     }
 
     /** Shared selected group name for tablet dual-pane (left=groups, right=nodes). */
@@ -121,13 +145,26 @@ class ProxyViewModel(
         networkSettings.delayTestMode.set(mode)
     }
 
+    /** 当前配置的节点隐藏/删除状态；隐藏可恢复，删除只能重新配置恢复（见 NodeVisibilityStore）。 */
+    private val _nodeVisibility = MutableStateFlow(NodeVisibility())
+    val nodeVisibility: StateFlow<NodeVisibility> = _nodeVisibility.asStateFlow()
+
     val proxyGroups: StateFlow<List<ProxyGroupInfo>> =
         combine(
             proxyGroupRepository.proxyGroups,
             proxyGroupRepository.tcpDelays,
             delayTestMode,
-        ) { groups, tcpOverlay, mode ->
-            val visible = groups.filterNot(ProxyGroupInfo::hidden)
+            _nodeVisibility,
+        ) { groups, tcpOverlay, mode, visibility ->
+            val excluded = visibility.excluded
+            val visible =
+                groups.filterNot(ProxyGroupInfo::hidden).map { group ->
+                    if (excluded.isEmpty()) {
+                        group
+                    } else {
+                        group.copy(proxies = group.proxies.filterNot { it.name in excluded })
+                    }
+                }
             if (mode == DelayTestMode.TCP && tcpOverlay.isNotEmpty()) {
                 // TCP 模式：用直连握手测速结果覆盖展示。
                 visible.map { group ->
@@ -152,6 +189,15 @@ class ProxyViewModel(
             proxyGroups
                 .distinctUntilChangedBy { groups -> groups.map(ProxyGroupInfo::name) }
                 .collect { groups -> groupSorter.track(groups) }
+        }
+        viewModelScope.launch {
+            // 隐藏/删除状态按配置存：原始组/成员集合变化（切配置、订阅更新）时跟着重读，
+            // 不能只看组名——两个配置的组名可能完全一样。
+            proxyGroupRepository.proxyGroups
+                .distinctUntilChangedBy { groups ->
+                    groups.map { group -> group.name to group.proxies.map { it.name } }
+                }
+                .collect { reloadNodeVisibility() }
         }
     }
 
@@ -343,6 +389,104 @@ class ProxyViewModel(
                 pendingProxyDelayTests.remove(proxyName)
             }
         }
+    }
+
+    /** 隐藏节点：从列表与编译配置里滤掉，但保留在「已隐藏节点」里可恢复。 */
+    fun hideNode(proxyName: String) {
+        updateNodeVisibility(proxyName, hide = true)
+    }
+
+    /** 删除节点：滤掉且不提供恢复入口，想恢复只能重新配置（重新导入该配置）。 */
+    fun deleteNode(proxyName: String) {
+        updateNodeVisibility(proxyName, hide = false)
+    }
+
+    /** 恢复一个已隐藏节点。已删除节点没有恢复入口，不走这里。 */
+    fun restoreNode(proxyName: String) {
+        viewModelScope.launch {
+            val profileDir = resolveActiveProfileDir() ?: return@launch
+            val updated =
+                withContext(Dispatchers.IO) {
+                    val current = NodeVisibilityStore.load(profileDir)
+                    val next = current.copy(hidden = current.hidden - proxyName)
+                    NodeVisibilityStore.save(profileDir, next)
+                    next
+                }
+            _nodeVisibility.value = updated
+            networkSettingsController.requestRestartIfRunning()
+            showMessage("已恢复「$proxyName」")
+        }
+    }
+
+    private fun updateNodeVisibility(proxyName: String, hide: Boolean) {
+        viewModelScope.launch {
+            val profileDir = resolveActiveProfileDir()
+            if (profileDir == null) {
+                showError("没有当前配置，无法${if (hide) "隐藏" else "删除"}节点")
+                return@launch
+            }
+            if (!isRemovableNode(proxyName)) {
+                showError("策略组与内置节点不能${if (hide) "隐藏" else "删除"}")
+                return@launch
+            }
+            val blockingGroup = groupThatWouldEmpty(proxyName)
+            if (blockingGroup != null) {
+                showError("「$proxyName」是策略组「$blockingGroup」里最后一个节点，不能${if (hide) "隐藏" else "删除"}")
+                return@launch
+            }
+            val updated =
+                withContext(Dispatchers.IO) {
+                    val current = NodeVisibilityStore.load(profileDir)
+                    val next =
+                        if (hide) {
+                            current.copy(hidden = current.hidden + proxyName)
+                        } else {
+                            current.copy(
+                                hidden = current.hidden - proxyName,
+                                deleted = current.deleted + proxyName,
+                            )
+                        }
+                    NodeVisibilityStore.save(profileDir, next)
+                    next
+                }
+            _nodeVisibility.value = updated
+            networkSettingsController.requestRestartIfRunning()
+            showMessage(
+                if (hide) "已隐藏「$proxyName」，可在已隐藏节点里恢复" else "已删除「$proxyName」"
+            )
+        }
+    }
+
+    private suspend fun reloadNodeVisibility() {
+        val profileDir = resolveActiveProfileDir() ?: return
+        _nodeVisibility.value = withContext(Dispatchers.IO) { NodeVisibilityStore.load(profileDir) }
+    }
+
+    private suspend fun resolveActiveProfileDir(): java.io.File? {
+        val uuid = runCatching { profileRepository.queryActiveProfile()?.uuid }.getOrNull()
+            ?: return null
+        return appContext.importedDir.resolve(uuid.toString())
+    }
+
+    /** 只有真实出站节点可隐藏/删除；策略组条目与 DIRECT/REJECT 等内置节点不行。 */
+    private fun isRemovableNode(proxyName: String): Boolean {
+        val proxy =
+            proxyGroupRepository.proxyGroups.value
+                .firstOrNull { group -> group.proxies.any { it.name == proxyName } }
+                ?.proxies
+                ?.firstOrNull { it.name == proxyName }
+                ?: return false
+        if (proxy.isGroup) return false
+        return proxy.type !in BUILTIN_PROXY_TYPES
+    }
+
+    /** 若移除该节点会让某个策略组一个成员都不剩，返回该组名；否则 null。 */
+    private fun groupThatWouldEmpty(proxyName: String): String? {
+        val excluded = _nodeVisibility.value.excluded
+        return proxyGroupRepository.proxyGroups.value.firstOrNull { group ->
+            group.proxies.any { it.name == proxyName } &&
+                group.proxies.none { it.name != proxyName && it.name !in excluded }
+        }?.name
     }
 
     private fun showMessage(message: String) {

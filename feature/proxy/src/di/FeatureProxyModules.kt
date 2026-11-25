@@ -24,6 +24,7 @@ package com.suanran.dreambox.feature.proxy.di
 import com.suanran.dreambox.feature.proxy.domain.ProxyHealthCheckUseCase
 import com.suanran.dreambox.feature.proxy.presentation.viewmodel.ProvidersViewModel
 import com.suanran.dreambox.feature.proxy.presentation.viewmodel.ProxyViewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -32,7 +33,7 @@ val featureProxyDomainModule = module {
 }
 
 val featureProxyViewModelModule = module {
-    viewModel { ProxyViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { ProxyViewModel(get(), get(), get(), get(), get(), get(), get(), get(), androidContext()) }
     viewModel { ProvidersViewModel(get(), get()) }
 }
 
