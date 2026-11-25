@@ -33,8 +33,16 @@ fun AppConfirmDialog(
     onConfirm: () -> Unit,
     confirmText: String = FlyTxt.Component.Button.Confirm,
     cancelText: String = FlyTxt.Component.Button.Cancel,
+    // 确认框必须渲染在根 Scaffold 层：否则在带悬浮底栏的页面（代理页）上，
+    // 底栏会盖住按钮行，确认框只剩标题和正文、没法点（1.209 删除节点实测）。
+    renderInRootScaffold: Boolean = true,
 ) {
-    AppDialog(show = show, title = title, onDismissRequest = onDismissRequest) {
+    AppDialog(
+        show = show,
+        title = title,
+        onDismissRequest = onDismissRequest,
+        renderInRootScaffold = renderInRootScaffold,
+    ) {
         AppConfirmDialogContent(
             message = message,
             onCancel = onDismissRequest,
